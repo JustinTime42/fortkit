@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "fortkit",
+  "project_id": "6fa04123-af36-439a-ac8e-2c6ecfdc7eb6"
+}
