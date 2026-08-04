@@ -4,6 +4,8 @@ Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `for
 
 ## Schema
 
+**Time basis (decided 2026-08-04, fortkit-dpu):** `ts` carries an explicit offset and is an unambiguous instant; consumers group and order by **parsed UTC, never by filename**. The daily filename (`events-YYYY-MM-DD.jsonl`, writer-local date) is a **shard key, not a fact** — a file may contain instants from adjacent UTC days. Reader implementations must include the pinning test: an event stamped `23:24-08:00` belongs to the NEXT UTC day (`07:24Z`).
+
 ```json
 {"ts":"2026-08-03T17:30:00-08:00","actor":"veyra","seat":"forge","category":"bead.claimed","target":"ForgeOs-mij","detail":"Veyra claims the CI bead","payload":null}
 ```
