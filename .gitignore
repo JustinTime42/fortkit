@@ -11,3 +11,6 @@ fort/events/*.jsonl
 .env*
 fort/telemetry/
 .forge.lock*
+
+# Machine-written harness state (regenerated at session start)
+.claude-flow/
