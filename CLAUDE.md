@@ -75,3 +75,7 @@ _Add a brief overview of your project architecture_
 ## Conventions & Patterns
 
 _Add your project-specific conventions here_
+
+## The fortkit Fort
+
+This repo is operated by an agent fort of Justin's civilization (registry: ~/.claude/civilization.json). Before any work: read fort/charter.md (gates, standing orders), fort/remember.md, your seat file in fort/seats/ (session protocols + handoff schema). Work flows through beads: bd ready, claim atomically, reference bead IDs in commits, close only after verifiers green + review. Emit events via fort/scripts/emit.sh. Hard rules: never read .env*; never git add . ; path-scoped staging only.
