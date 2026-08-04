@@ -23,6 +23,20 @@ bd close <id>         # Complete work
 bd dolt push          # Push beads data to remote
 ```
 
+## Build & Test
+
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm test
+fort/scripts/verify.sh
+```
+
+`fort/scripts/verify.sh` is the authoritative fail-fast verifier. It runs
+typecheck, lint, test, then ShellCheck over the shipped shell surface. Pass
+`--no-emit` (or set `CI`) to suppress event-stream writes.
+
 ## Non-Interactive Shell Commands
 
 **ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.

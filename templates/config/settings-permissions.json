@@ -75,9 +75,7 @@
       "Write(.env*)",
       "Write(fort/events/*.jsonl)"
     ],
-    "additionalDirectories": [
-      "{{REPO_PATH}}-worktrees"
-    ]
+    "additionalDirectories": ["{{REPO_PATH}}-worktrees"]
   },
   "hooks": {
     "PermissionRequest": [
