@@ -8,6 +8,9 @@
     "npm": ">=11.0.0 <12"
   },
   "packageManager": "npm@11.9.0",
+  "bin": {
+    "fortkit": "./src/cli.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
@@ -15,6 +18,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.0",
+    "@types/node": "^22.19.7",
     "typescript": "^5.9.3",
     "vitest": "^4.0.0"
   }
