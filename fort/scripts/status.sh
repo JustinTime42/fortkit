@@ -2,7 +2,7 @@
 # ForgeOS city status — fast, read-only. Usage: fort/scripts/status.sh
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/fortkit)"
 
-echo "══════════════════ FORTKIT FORT STATUS (moot pending) ══════════════════"
+echo "══════════════════ MANYHALLS FORT STATUS (FORTKIT) ══════════════════"
 echo
 echo "── Work in progress ──"
 bd list --status in_progress 2>/dev/null | grep -v '^─\|^Total\|^Status' | head -8

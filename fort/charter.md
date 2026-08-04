@@ -1,4 +1,4 @@
-# (unnamed — moot pending) Charter — the fortkit Fort
+# Manyhalls Charter — the fortkit Fort
 
 Founded 2026-08-03 via fort-init (extracted from Proofdelve + Farlantern, the civilization's first two settlements). Founding spec: docs/specs/fortress-visualizer.md. Generic law below is scar-tested; project-specific gates and orders must be earned by this fort's own failures and added by amendment.
 
@@ -37,7 +37,7 @@ One human (Justin, the Overseer) provides intent, approves designs, reviews gate
 | Forge | Implementation in isolated worktrees | Codex CLI (`codex exec`, workspace-write, stdin `</dev/null`, worktree pre-trusted): GPT-5.6 Terra → Sol → Claude Sonnet 5 → Opus 5 | product code in its worktree |
 | Warden | Review, read-only by construction | Opus 5 → GPT-5.6 Sol → block and page the Overseer (never degrades below frontier) | review verdicts only |
 
-Occupants: chosen at this fort's Founding Moot (`fort/annals/founding-moot.md`). New fort, new founders — other settlements' citizens remain their own. Moot law: Borda 3-2-1, self-votes at full weight with conflicts declared; an office-word conflict is grounds to withhold your own vote, never to shorten another's ballot; a discount rule may be adopted before a vote, never during one.
+Occupants (Founding Moot, 2026-08-03): Emrith Cairnwright (she/her, Mayor), Kethra Anvilmark (she/her, Forge), Ilva Trueglass (she/her, Warden). The fort is named Manyhalls. Chosen at the moot (`fort/annals/founding-moot.md`). New fort, new founders — other settlements' citizens remain their own. Moot law: Borda 3-2-1, self-votes at full weight with conflicts declared; an office-word conflict is grounds to withhold your own vote, never to shorten another's ballot; a discount rule may be adopted before a vote, never during one.
 
 Watchers (cron + script, no model, added as earned): push-drift, test-count monotonicity, secrets scan, config checksums. Crons watch, models act.
 
