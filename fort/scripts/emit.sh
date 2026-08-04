@@ -1,5 +1,5 @@
 #!/bin/bash
-# Proofdelve event emitter — append-only stream for the future fortress visualizer.
+# Manyhalls event emitter — append-only stream for the future fortress visualizer.
 # Usage: emit.sh <category> <detail> [-a actor] [-s seat] [-t target] [-p payload-json] [-T iso-timestamp]
 # Works from the main checkout AND from any worktree (all append to the main repo's stream).
 set -euo pipefail

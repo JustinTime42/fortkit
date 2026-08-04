@@ -1,5 +1,5 @@
 #!/bin/bash
-# Launch Veyra Flintledger (Forge seat) on a bead, in an isolated worktree, with event emission.
+# Launch Kethra Anvilmark (Forge seat) on a bead, in an isolated worktree, with event emission.
 # Usage: fort/scripts/forge.sh <bead-id> [model]   (model defaults to gpt-5.6-terra per ladder)
 # Encodes the hard-won headless-codex recipe: stdin MUST be </dev/null, worktree MUST be trusted.
 set -euo pipefail
@@ -10,14 +10,14 @@ suffix="${bead##*-}"
 wt="/home/justin/dev/fortkit-worktrees/$suffix"
 
 title=$(bd show "$bead" 2>/dev/null | head -2 | tail -1 || echo "$bead")
-bd update "$bead" --claim -a veyra >/dev/null 2>&1 || true
-"$emit" bead.claimed "Veyra claims $bead" -a veyra -s forge -t "$bead"
+bd update "$bead" --claim -a kethra >/dev/null 2>&1 || true
+"$emit" bead.claimed "Kethra claims $bead" -a kethra -s forge -t "$bead"
 
 if [ ! -d "$wt" ]; then
   git -C "$root" worktree add "$wt" -b "bead/$suffix" >/dev/null
 fi
 
-"$emit" session.start "Veyra begins work on $bead ($model)" -a veyra -s forge -t "$bead" -p "{\"model\":\"$model\"}"
+"$emit" session.start "Kethra begins work on $bead ($model)" -a kethra -s forge -t "$bead" -p "{\"model\":\"$model\"}"
 desc=$(bd show "$bead" 2>/dev/null || echo "See bead $bead")
 set +e
 (cd "$wt" && codex exec --sandbox workspace-write \
@@ -29,6 +29,6 @@ BEAD:
 $desc" </dev/null 2>&1) | tee "/tmp/forge-$suffix.log" | tail -30
 rc=${PIPESTATUS[0]}
 set -e
-"$emit" session.end "Veyra's session on $bead ended (exit $rc)" -a veyra -s forge -t "$bead" -p "{\"exit\":$rc,\"log\":\"/tmp/forge-$suffix.log\"}"
+"$emit" session.end "Kethra's session on $bead ended (exit $rc)" -a kethra -s forge -t "$bead" -p "{\"exit\":$rc,\"log\":\"/tmp/forge-$suffix.log\"}"
 echo "--- forge.sh: session ended (exit $rc). Worktree: $wt  Log: /tmp/forge-$suffix.log"
 echo "--- Next: harness verifies (build+test in $wt), Warden reviews, then merge."

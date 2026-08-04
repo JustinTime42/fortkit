@@ -1,5 +1,5 @@
 #!/bin/bash
-# ForgeOS city status — fast, read-only. Usage: fort/scripts/status.sh
+# Manyhalls fort status — fast, read-only. Usage: fort/scripts/status.sh
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/fortkit)"
 
 echo "══════════════════ MANYHALLS FORT STATUS (FORTKIT) ══════════════════"
