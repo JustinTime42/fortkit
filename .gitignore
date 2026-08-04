@@ -7,3 +7,4 @@
 fort/events/*.jsonl
 .env*
 fort/telemetry/
+.forge.lock*
