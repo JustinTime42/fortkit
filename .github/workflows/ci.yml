@@ -18,5 +18,7 @@ jobs:
         with:
           node-version: 24.14.0
           cache: npm
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install --yes shellcheck
       - run: npm ci
       - run: fort/scripts/verify.sh --no-emit

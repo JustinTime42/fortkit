@@ -23,7 +23,18 @@ done
 
 emit() {
   if [ "$emit_events" = true ]; then
-    fort/scripts/emit.sh "$@" -a kethra -s forge
+    local actor="${FORT_ACTOR:-harness}"
+    local status=0
+
+    if [ -n "${FORT_SEAT:-}" ]; then
+      fort/scripts/emit.sh "$@" -a "$actor" -s "$FORT_SEAT" || status=$?
+    else
+      fort/scripts/emit.sh "$@" -a "$actor" || status=$?
+    fi
+
+    if [ "$status" -ne 0 ]; then
+      printf 'WARNING: failed to emit verifier event (exit %s); continuing verification.\n' "$status" >&2
+    fi
   fi
 }
 
@@ -35,7 +46,11 @@ run_step() {
     return 0
   else
     local status=$?
-    emit verify.fail "Verifier failed at ${step}" -p "{\"step\":\"${step}\",\"exitCode\":${status}}"
+    local payload="{\"step\":\"${step}\",\"exitCode\":${status}}"
+    if [ "$status" -eq 127 ]; then
+      payload="{\"step\":\"${step}\",\"exitCode\":${status},\"toolMissing\":true}"
+    fi
+    emit verify.fail "Verifier failed at ${step}" -p "$payload"
     exit "$status"
   fi
 }
