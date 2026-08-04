@@ -19,7 +19,12 @@ export async function readLastEvent(
   for (const file of files.filter((name) =>
     /^events-\d{4}-\d{2}-\d{2}\.jsonl$/.test(name),
   )) {
-    const contents = await readFile(join(eventsDirectory, file), "utf8");
+    let contents: string;
+    try {
+      contents = await readFile(join(eventsDirectory, file), "utf8");
+    } catch {
+      continue;
+    }
     for (const line of contents.split(/\r?\n/)) {
       try {
         const record = JSON.parse(line) as EventRecord;

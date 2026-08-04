@@ -19,7 +19,7 @@ async function git(path: string, args: string[]): Promise<string | null> {
 export async function readGitState(path: string): Promise<GitState> {
   const [insideWorkTree, status, worktreeOutput] = await Promise.all([
     git(path, ["rev-parse", "--is-inside-work-tree"]),
-    git(path, ["status", "--porcelain"]),
+    git(path, ["--no-optional-locks", "status", "--porcelain"]),
     git(path, ["worktree", "list", "--porcelain"]),
   ]);
   if (insideWorkTree?.trim() !== "true") {

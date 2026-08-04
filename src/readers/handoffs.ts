@@ -26,11 +26,16 @@ export async function readLastHandoff(
   if (candidate === undefined) {
     return null;
   }
-  const firstLine =
-    (await readFile(join(directory, candidate.file), "utf8")).split(
-      /\r?\n/,
-      1,
-    )[0] ?? "";
+  let firstLine: string;
+  try {
+    firstLine =
+      (await readFile(join(directory, candidate.file), "utf8")).split(
+        /\r?\n/,
+        1,
+      )[0] ?? "";
+  } catch {
+    return null;
+  }
   return {
     seat: candidate.seat,
     date: candidate.date,

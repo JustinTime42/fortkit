@@ -18,9 +18,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.0",
-    "@types/node": "file:../../../../../tmp/types-node-22.19.7.tgz",
+    "@types/node": "^22.19.7",
     "typescript": "^5.9.3",
-    "undici-types": "file:../../../../../tmp/undici-types-6.21.0.tgz",
     "vitest": "^4.0.0"
   }
 }
