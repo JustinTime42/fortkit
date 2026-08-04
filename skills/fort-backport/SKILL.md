@@ -18,6 +18,16 @@ jq -c '.forts[]' ~/.claude/civilization.json
 ```
 Per fort derive: `REPO` (`.repo`), `WT="$REPO-worktrees"`, `PROJECT` (`.project`). Skip the origin fort for changes it already has (verify, don't assume — check the actual file).
 
+## Artifact classes that propagate (not just code)
+
+1. **Scripts** (`fort/scripts/*.sh`) — patch by hunk, never overwrite: launchers diverge structurally per fort.
+2. **Config** (`.claude/settings.json`, profiles) — targeted `jq` only.
+3. **Prompt/behavioral law** — seat prompts inside launchers, seat-file protocols, verdict vocabularies, review discipline. A seat's *prompt* is as propagatable as its code, and a defect in it (e.g. a reviewer with unbounded blocking scope) reproduces in every fort running a copy.
+4. **Charter law** — threat models, standing orders, gates. Append as amendments with their originating incident.
+5. **Structure** (`bin/fort-init` additions).
+
+**Ship fixes WITH the component, never after.** If a fort doesn't have the machinery yet (e.g. no `warden.sh` outside Proofdelve), the fix isn't a follow-up backport — it's a precondition of the first delivery. A component with a known open defect does not flow; fix it at origin, then ship the corrected version everywhere at once. The factory's entire value is that settlement N+1 never inherits a bug settlement N already found.
+
 ## Step 2 — apply to each live fort
 Write ONE parameterized transform, apply per-fort with substitutions. By artifact type:
 - **`.claude/settings.json`**: targeted `jq` edits ONLY (set specific keys, `+ [...] | unique` for arrays). NEVER wholesale-replace or shallow-merge (`jq -s '.[0] * .[1]'` clobbers arrays and hooks). Preserve the `bd prime` SessionStart hook and the PermissionRequest telemetry hook. Deny rules always win over allow — additions to allow cannot open denied paths. Validate: `jq -e . file`.
