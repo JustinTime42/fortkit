@@ -1,6 +1,8 @@
 #!/bin/bash
+# TEMPLATE — rendered by fort-init.
+# shellcheck disable=SC1083
 # ForgeOS city status — fast, read-only. Usage: fort/scripts/status.sh
-cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo {{REPO_PATH}})"
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo {{REPO_PATH}})" || exit 1
 
 echo "══════════════════ {{FORT_BANNER}} ══════════════════"
 echo
@@ -17,9 +19,12 @@ echo "── Worktrees (active Forge sessions) ──"
 git worktree list | tail -n +2
 echo
 echo "── Recent handoffs ──"
-ls -t fort/handoffs/*.md 2>/dev/null | grep -v gitkeep | head -3 | while read -r f; do
-  echo "  $f  ($(date -r "$f" '+%b %d %H:%M'))"
-done || echo "  (none yet)"
+found=0
+while read -r _ f; do
+  echo "  $f  ($(date -r "$f" '+%b %d %H:%M'))"; found=1
+done < <(find fort/handoffs -name '*.md' -printf '%T@ %p
+' 2>/dev/null | sort -rn | head -3)
+[ "$found" = 1 ] || echo "  (none yet)"
 echo
 echo "── Git ──"
 AHEAD=$(git rev-list --count origin/main..main 2>/dev/null)
