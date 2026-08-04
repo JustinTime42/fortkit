@@ -1,6 +1,4 @@
 #!/bin/bash
-# TEMPLATE — rendered by fort-init.
-# shellcheck disable=SC1083
 # {{PROJECT}} verifier — fill in the fort's own gates below. Exit 0 only after every required quality gate passes.
 set -euo pipefail
 
@@ -61,5 +59,6 @@ emit verify.run "Verifier started" -p '{"steps":["typecheck","lint","test","shel
 run_step typecheck npm run typecheck
 run_step lint npm run lint
 run_step test npm run test
-run_step shellcheck shellcheck bin/fort-init fort/scripts/*.sh
+# -x follows sourced files so fort/scripts/lib/* is linted too, not skipped.
+run_step shellcheck shellcheck -x bin/fort-init fort/scripts/*.sh fort/scripts/lib/*.sh
 emit verify.pass "Verifier passed" -p '{"steps":["typecheck","lint","test","shellcheck"]}'

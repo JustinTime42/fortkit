@@ -19,6 +19,8 @@
 # Each seat type keeps its OWN runtime's credentials readable — masking them
 # breaks the launch outright — and masks the other runtime's entirely.
 
+# OUTPUT: sets the global array `mask` (consumers declare mask=() before sourcing).
+# shellcheck disable=SC2034  # mask is consumed by the sourcing script
 build_mask() {
   local seat="$1" root="$2"; shift 2
   local extra_ro=("$@")
