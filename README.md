@@ -5,3 +5,4 @@ Civilization-level tooling for Justin's agent forts:
 - **schema/events.md** — canonical event schema (forts vendor it; add-only)
 - **the viewer** (unnamed product) — DF-style visualizer: world view over all forts, embark into any colony. Spec: docs/specs/fortress-visualizer.md
 - Registry: ~/.claude/civilization.json
+- **skills/fort-backport** — the /fort-backport skill (canonical; deployed copy at ~/.claude/skills/)
