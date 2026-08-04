@@ -1,0 +1,61 @@
+#!/bin/bash
+# fort-init — found a new fort in an existing git repo.
+# Extracted 2026-08-04 from the diff of Proofdelve (~/dev/ForgeOs) and Farlantern (~/dev/longburn).
+# Usage: fort-init <repo-path> <project-name> "<purpose sentence>" [founding-spec-path]
+set -euo pipefail
+REPO="$(cd "$1" && pwd)"; PROJECT="$2"; PURPOSE="$3"; SPEC="${4:-"(none yet — the Mayor's first work)"}"
+KIT="$(cd "$(dirname "$0")/.." && pwd)"
+T="$KIT/templates"
+DATE=$(date +%F)
+cd "$REPO"
+git rev-parse --git-dir >/dev/null 2>&1 || { echo "fort-init: $REPO is not a git repo" >&2; exit 1; }
+[ -d fort ] && { echo "fort-init: $REPO already has a fort/" >&2; exit 1; }
+[ -d .beads ] || bd init
+
+mkdir -p fort/{seats,handoffs,annals,events,specs,scripts}
+touch fort/handoffs/.gitkeep
+render() { sed -e "s|{{REPO_PATH}}|$REPO|g" -e "s|{{PROJECT}}|$PROJECT|g" -e "s|{{DATE}}|$DATE|g" \
+  -e "s|{{FORT_NAME}}|(unnamed — moot pending)|g" -e "s|{{FORT_BANNER}}|${PROJECT^^} FORT STATUS (moot pending)|g" \
+  -e "s|{{FOUNDING_SPEC}}|$SPEC|g" -e "s|{{PURPOSE}}|$PURPOSE|g" -e "s|{{EXTRA_GATES}}||g" -e "s|{{EXTRA_ORDERS}}||g" "$1" > "$2"; }
+render "$T/fort/charter.md" fort/charter.md
+for s in mayor forge warden; do render "$T/fort/seats/$s.md" "fort/seats/$s.md"; done
+for sc in emit status mayor forge; do render "$T/fort/scripts/$sc.sh" "fort/scripts/$sc.sh"; done
+chmod +x fort/scripts/*.sh
+cp "$T/fort/events/README.md" fort/events/README.md
+printf "# %s operational facts (inject every session)\n\n- Fort founded %s via fort-init; fort name pending the Founding Moot.\n- Founding spec: %s\n- Codex launch recipe: cd into the worktree, --sandbox workspace-write -c 'projects.\"<worktree>\".trust_level=\"trusted\"' -m <model> \"<prompt>\" </dev/null — the stdin redirect is mandatory.\n- No verifiers yet: CI-from-commit-one should be an early bead.\n" "$PROJECT" "$DATE" "$SPEC" > fort/remember.md
+
+# Permission profile: merge template permissions with any existing settings (preserving bd's hook)
+mkdir -p .claude
+PERMS=$(sed "s|{{REPO_PATH}}|$REPO|g" "$T/config/settings-permissions.json")
+if [ -f .claude/settings.json ]; then
+  jq -s '.[0] * .[1]' .claude/settings.json <(printf '%s' "$PERMS") > .claude/settings.json.new && mv .claude/settings.json.new .claude/settings.json
+else
+  printf '%s' "$PERMS" > .claude/settings.json
+fi
+
+# AGENTS.md / CLAUDE.md fort section
+for f in AGENTS.md CLAUDE.md; do
+  grep -q "operated by an agent fort" "$f" 2>/dev/null || cat >> "$f" << EOF
+
+## The $PROJECT Fort
+
+This repo is operated by an agent fort of Justin's civilization (registry: ~/.claude/civilization.json). Before any work: read fort/charter.md (gates, standing orders), fort/remember.md, your seat file in fort/seats/ (session protocols + handoff schema). Work flows through beads: bd ready, claim atomically, reference bead IDs in commits, close only after verifiers green + review. Emit events via fort/scripts/emit.sh. Hard rules: never read .env*; never git add . ; path-scoped staging only.
+EOF
+done
+
+# Gitignore
+grep -q "fort/events/" .gitignore 2>/dev/null || printf "fort/events/*.jsonl\n.env*\n" >> .gitignore
+
+# Register in the civilization
+REG="$HOME/.claude/civilization.json"
+[ -f "$REG" ] || echo '{"civilization":"Justin","forts":[]}' > "$REG"
+jq --arg p "$PROJECT" --arg r "$REPO" --arg d "$DATE" \
+  '.forts += [{"project":$p,"repo":$r,"founded":$d,"fort_name":null}]' "$REG" > "$REG.new" && mv "$REG.new" "$REG"
+
+fort/scripts/emit.sh fort.founded "The $PROJECT fort is founded via fort-init" -a overseer
+for s in mayor forge warden; do fort/scripts/emit.sh seat.founded "The ${s^} seat stands empty, awaiting the moot" -s "$s"; done
+
+echo ""
+echo "fort-init: the $PROJECT fort is founded at $REPO"
+echo "Next: (1) commit; (2) hold the Founding Moot (names, pronouns, personalities, fort name — ballot per charter moot law);"
+echo "      (3) update charter/seats/banner/registry with moot outcomes; (4) file founding beads; (5) maiden bead, supervised."
