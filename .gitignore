@@ -6,3 +6,4 @@
 .beads/proxieddb/
 fort/events/*.jsonl
 .env*
+fort/telemetry/
