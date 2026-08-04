@@ -19,7 +19,9 @@ render() { sed -e "s|{{REPO_PATH}}|$REPO|g" -e "s|{{PROJECT}}|$PROJECT|g" -e "s|
   -e "s|{{FOUNDING_SPEC}}|$SPEC|g" -e "s|{{PURPOSE}}|$PURPOSE|g" -e "s|{{EXTRA_GATES}}||g" -e "s|{{EXTRA_ORDERS}}||g" "$1" > "$2"; }
 render "$T/fort/charter.md" fort/charter.md
 for s in mayor forge warden; do render "$T/fort/seats/$s.md" "fort/seats/$s.md"; done
-for sc in emit status mayor forge; do render "$T/fort/scripts/$sc.sh" "fort/scripts/$sc.sh"; done
+for sc in emit status mayor forge warden verify; do render "$T/fort/scripts/$sc.sh" "fort/scripts/$sc.sh"; done
+mkdir -p fort/profiles
+render "$T/fort/profiles/warden-settings.json" fort/profiles/warden-settings.json
 chmod +x fort/scripts/*.sh
 cp "$T/fort/events/README.md" fort/events/README.md
 printf "# %s operational facts (inject every session)\n\n- Fort founded %s via fort-init; fort name pending the Founding Moot.\n- Founding spec: %s\n- Codex launch recipe: cd into the worktree, --sandbox workspace-write -c 'projects.\"<worktree>\".trust_level=\"trusted\"' -m <model> \"<prompt>\" </dev/null — the stdin redirect is mandatory.\n- No verifiers yet: CI-from-commit-one should be an early bead.\n" "$PROJECT" "$DATE" "$SPEC" > fort/remember.md
