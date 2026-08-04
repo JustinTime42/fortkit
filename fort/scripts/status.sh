@@ -1,6 +1,6 @@
 #!/bin/bash
 # Manyhalls fort status — fast, read-only. Usage: fort/scripts/status.sh
-cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/fortkit)"
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/fortkit)" || exit 1
 
 echo "══════════════════ MANYHALLS FORT STATUS (FORTKIT) ══════════════════"
 echo
@@ -17,9 +17,12 @@ echo "── Worktrees (active Forge sessions) ──"
 git worktree list | tail -n +2
 echo
 echo "── Recent handoffs ──"
-ls -t fort/handoffs/*.md 2>/dev/null | grep -v gitkeep | head -3 | while read -r f; do
+found=0
+while IFS= read -r f; do
+  found=1
   echo "  $f  ($(date -r "$f" '+%b %d %H:%M'))"
-done || echo "  (none yet)"
+done < <(find fort/handoffs -maxdepth 1 -name '*.md' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -3 | cut -d' ' -f2-)
+[ "$found" -eq 1 ] || echo "  (none yet)"
 echo
 echo "── Git ──"
 AHEAD=$(git rev-list --count origin/main..main 2>/dev/null)

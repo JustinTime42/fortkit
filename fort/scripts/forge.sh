@@ -9,7 +9,6 @@ emit="$root/fort/scripts/emit.sh"
 suffix="${bead##*-}"
 wt="/home/justin/dev/fortkit-worktrees/$suffix"
 
-title=$(bd show "$bead" 2>/dev/null | head -2 | tail -1 || echo "$bead")
 bd update "$bead" --claim -a kethra >/dev/null 2>&1 || true
 "$emit" bead.claimed "Kethra claims $bead" -a kethra -s forge -t "$bead"
 
