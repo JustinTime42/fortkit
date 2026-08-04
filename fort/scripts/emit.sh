@@ -9,6 +9,7 @@ while getopts "a:s:t:p:T:" opt; do
   case $opt in
     a) actor="$OPTARG";; s) seat="$OPTARG";; t) target="$OPTARG";;
     p) payload="$OPTARG";; T) ts="$OPTARG";;
+    *) echo "emit.sh: unknown flag" >&2; exit 2;;
   esac
 done
 # Resolve the MAIN repo root even when called from a linked worktree.
