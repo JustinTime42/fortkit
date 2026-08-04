@@ -60,13 +60,17 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 
 ## Build & Test
 
-_Add your build and test commands here_
-
 ```bash
-# Example:
-# npm install
-# npm test
+npm ci
+npm run typecheck
+npm run lint
+npm test
+fort/scripts/verify.sh
 ```
+
+`fort/scripts/verify.sh` is the authoritative fail-fast verifier. It runs
+typecheck, lint, test, then ShellCheck over the shipped shell surface. Pass
+`--no-emit` (or set `CI`) to suppress event-stream writes.
 
 ## Architecture Overview
 
