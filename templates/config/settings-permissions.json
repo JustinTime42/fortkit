@@ -49,8 +49,13 @@
       "Bash(npx vitest run*)",
       "Bash({{REPO_PATH}}/fort/scripts/emit.sh *)",
       "Bash({{REPO_PATH}}/fort/scripts/status.sh*)",
+      "Edit(README.md)",
+      "Edit(docs/**)",
+      "Edit(fort/**)",
       "WebFetch",
-      "WebSearch"
+      "WebSearch",
+      "Write(docs/**)",
+      "Write(fort/**)"
     ],
     "deny": [
       "Bash(cat *.env*)",
@@ -69,6 +74,9 @@
       "Write(**/.env*)",
       "Write(.env*)",
       "Write(fort/events/*.jsonl)"
+    ],
+    "additionalDirectories": [
+      "{{REPO_PATH}}-worktrees"
     ]
   },
   "hooks": {
@@ -83,6 +91,13 @@
           }
         ]
       }
+    ]
+  },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "File operations (cp, mv, rm, python/node file writes, in-place edits) whose paths are ALL confined to the session scratchpad under /tmp/claude-* are safe exploration — allow them, including overwrite flags like -f.",
+      "Commands whose working directory or target paths are inside {{REPO_PATH}}-worktrees (this project's git worktrees) are normal project work — treat those paths exactly like in-project paths."
     ]
   }
 }
