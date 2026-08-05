@@ -10,6 +10,19 @@ type RegistryDocument = {
 export async function readRegistry(
   registryPath: string,
 ): Promise<RegistryFort[]> {
+  return (await readRegistryEntries(registryPath)).flatMap((entry) =>
+    entry.path === null ? [] : [{ name: entry.name, path: entry.path }],
+  );
+}
+
+export type RegistryEntry = {
+  name: string;
+  path: string | null;
+};
+
+export async function readRegistryEntries(
+  registryPath: string,
+): Promise<RegistryEntry[]> {
   let document: RegistryDocument;
   try {
     document = JSON.parse(
@@ -23,9 +36,9 @@ export async function readRegistry(
     return [];
   }
 
-  return document.forts.flatMap((entry) => {
+  return document.forts.flatMap<RegistryEntry>((entry, index) => {
     if (typeof entry !== "object" || entry === null) {
-      return [];
+      return [{ name: `[malformed registry entry ${index + 1}]`, path: null }];
     }
     const fort = entry as Record<string, unknown>;
     const path = typeof fort.repo === "string" ? fort.repo : null;
@@ -37,7 +50,7 @@ export async function readRegistry(
           : null;
 
     return path === null || name === null
-      ? []
+      ? [{ name: `[malformed registry entry ${index + 1}]`, path: null }]
       : [
           {
             name,
