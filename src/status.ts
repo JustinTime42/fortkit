@@ -30,7 +30,13 @@ export async function readFortStatus(
       beads: null,
       lastEvent: null,
       lastHandoff: null,
-      git: { ahead: null, behind: null, dirty: null, worktrees: null },
+      git: {
+        branch: null,
+        ahead: null,
+        behind: null,
+        dirty: null,
+        worktrees: null,
+      },
     };
   }
   const [beads, lastEvent, lastHandoff, git] = await Promise.all([

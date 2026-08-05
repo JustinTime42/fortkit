@@ -1,1 +1,3 @@
 {"ts":"2026-08-04T07:23:00Z","actor":"emrith","seat":"mayor","category":"bead.filed","target":"a","detail":"Earlier instant","payload":null}
+{"ts":"2026-08-04T08:25:00Z","actor":"kethra","seat":"forge","category":"bead.claimed","target":"b","detail":"Build a bridge","payload":{"model":"gpt-5.6-terra"}}
+{"ts":"2026-08-04T08:26:00Z","actor":"watcher:gate","seat":null,"category":"watcher.alert","target":"b","detail":"Watch the gate","payload":null}

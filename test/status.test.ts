@@ -22,8 +22,8 @@ describe("fort status", () => {
       present: true,
       beads: { open: 1, inProgress: 1, blocked: 1, closed: 1, malformed: 1 },
       lastEvent: {
-        ts: "2026-08-04T07:24:00.000Z",
-        actor: "kethra",
+        ts: "2026-08-04T08:26:00.000Z",
+        actor: "watcher:gate",
         utcDay: "2026-08-04",
       },
       lastHandoff: {
@@ -37,7 +37,7 @@ describe("fort status", () => {
   test("uses parsed UTC timestamps instead of event shard filenames", async () => {
     const [fort] = await readCivilizationStatus(registryPath);
     expect(fort?.lastEvent?.utcDay).toBe("2026-08-04");
-    expect(fort?.lastEvent?.ts).toBe("2026-08-04T07:24:00.000Z");
+    expect(fort?.lastEvent?.ts).toBe("2026-08-04T08:26:00.000Z");
   });
 
   test("counts malformed bead lines without throwing", async () => {

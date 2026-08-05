@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import type { BeadCounts } from "../types.ts";
+import type { Bead, BeadCounts } from "../types.ts";
 
 const statuses = new Map<string, keyof Omit<BeadCounts, "malformed">>([
   ["open", "open"],
@@ -10,6 +10,13 @@ const statuses = new Map<string, keyof Omit<BeadCounts, "malformed">>([
 ]);
 
 export async function readBeads(path: string): Promise<BeadCounts | null> {
+  const records = await readBeadRecords(path);
+  return records === null ? null : records.counts;
+}
+
+export async function readBeadRecords(
+  path: string,
+): Promise<{ counts: BeadCounts; inProgress: Bead[] } | null> {
   let contents: string;
   try {
     contents = await readFile(path, "utf8");
@@ -24,12 +31,13 @@ export async function readBeads(path: string): Promise<BeadCounts | null> {
     closed: 0,
     malformed: 0,
   };
+  const inProgress: Bead[] = [];
   for (const line of contents.split(/\r?\n/)) {
     if (line.trim() === "") {
       continue;
     }
     try {
-      const record = JSON.parse(line) as { status?: unknown };
+      const record = JSON.parse(line) as Record<string, unknown>;
       const status =
         typeof record.status === "string"
           ? statuses.get(record.status)
@@ -38,10 +46,18 @@ export async function readBeads(path: string): Promise<BeadCounts | null> {
         counts.malformed += 1;
       } else {
         counts[status] += 1;
+        if (status === "inProgress" && typeof record.id === "string") {
+          inProgress.push({
+            id: record.id,
+            title: typeof record.title === "string" ? record.title : null,
+            assignee:
+              typeof record.assignee === "string" ? record.assignee : null,
+          });
+        }
       }
     } catch {
       counts.malformed += 1;
     }
   }
-  return counts;
+  return { counts, inProgress };
 }

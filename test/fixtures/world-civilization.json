@@ -1,0 +1,7 @@
+{
+  "forts": [
+    { "fort_name": "Alpha", "repo": "./fort-alpha" },
+    { "fort_name": "No Beads", "repo": "./fort-no-beads" },
+    { "fort_name": "Missing", "repo": "./does-not-exist" }
+  ]
+}
