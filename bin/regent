@@ -1,0 +1,124 @@
+#!/bin/bash
+# The Regent — the civilization's break-glass seat.
+#
+# The forts are built so they cannot fix themselves: their constitutions are
+# kernel-read-only, their seats are masked, their privileged operations go
+# through an airlock. That is correct, and it means something must be able to
+# reach in from outside. This is that something.
+#
+# The Regent runs UNMASKED with full access to every fort and the machine. It
+# has no technical guard. Its safety properties are entirely procedural:
+#   - it is invoked deliberately, never on a schedule
+#   - it announces itself in EVERY fort's event stream, at start and at end,
+#     so no session above the constitution is ever invisible in the record
+#   - it keeps its own memory, so it knows what it has done before
+#   - its whole transcript is archived
+#
+# An edict is spoken in the Overseer's name and only while he is present.
+#
+# Usage: regent [--brief-only] ["opening instruction"]
+set -euo pipefail
+
+KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HOME_REGENT="$KIT/regent"
+REG="$HOME/.claude/civilization.json"
+mkdir -p "$HOME_REGENT/handoffs" "$HOME_REGENT/transcripts"
+BRIEF="$HOME_REGENT/briefing.md"
+stamp="$(date +%Y-%m-%dT%H%M%S)"
+
+# ---------------------------------------------------------------- briefing ---
+# Generated fresh every wake. A stale briefing is worse than none: it would
+# describe a civilization that no longer exists and the Regent would act on it.
+{
+  echo "# Civilization briefing — generated $(date -Is)"
+  echo
+  echo "You are the REGENT. You act in the Overseer's name, only while he is present,"
+  echo "and only for work the forts cannot do themselves. You are unmasked and"
+  echo "unrestricted; every other seat in this civilization is deliberately not."
+  echo "That asymmetry is the reason you exist and the reason to use the least force"
+  echo "that solves the problem."
+  echo
+  echo "## Standing conduct"
+  echo "- Prefer the fort's own machinery. If a Mayor could do this through beads, say so and stop."
+  echo "- Anything you change in a fort must leave a record there: a bead, an event, a commit message that explains itself."
+  echo "- Constitution files are kernel-read-only to seats and writable to you. That is a loaded weapon; changing one is an edict, not a chore."
+  echo "- Records are append-only across this civilization. Corrections are appended, never edited in."
+  echo "- Verify after acting, not before: a fix validated and then overwritten by its own propagation step has happened here before."
+  echo
+  echo "## Settlements"
+  jq -r '.forts[] | "- **\(.fort_name // "unnamed")** (\(.project)) — \(.repo), founded \(.founded)"' "$REG" 2>/dev/null
+  echo
+  for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
+    name=$(basename "$repo")
+    echo "### $name"
+    [ -f "$repo/fort/charter.md" ] && { echo "**Human gates and prose gates:**"; sed -n '/^## Human gates/,/^## Standing orders/p' "$repo/fort/charter.md" | grep -E '^[0-9]+\.|^\*\*' | head -12; }
+    echo
+    echo "**Open beads (top):**"
+    (cd "$repo" && bd list 2>/dev/null | grep -E "◐|○" | head -6) || true
+    echo
+    echo "**Last handoff:** $({ ls -t "$repo"/fort/handoffs/*.md 2>/dev/null || true; } | head -1 | xargs -r basename)"
+    echo "**Git:** $(git -C "$repo" log --oneline -1 2>/dev/null) | ahead of origin: $(git -C "$repo" rev-list --count origin/main..main 2>/dev/null || echo 'no remote')"
+    echo
+  done
+  echo "## Hard-won operational facts (across the civilization)"
+  for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
+    [ -f "$repo/fort/remember.md" ] && { echo "### $(basename "$repo")"; grep -E '^- \*\*' "$repo/fort/remember.md" | head -10; echo; }
+  done
+  echo "## Rulings of record (civilization case law)"
+  for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
+    f="$repo/fort/annals/founding-moot.md"
+    [ -f "$f" ] && { echo "### $(basename "$repo")"; sed -n '/^## Rulings of record/,$p' "$f" | head -12; echo; }
+  done
+  echo "## Design record"
+  echo "Full research and design rationale lives in ~/Documents/agent-harness-research/."
+  { ls ~/Documents/agent-harness-research/*.md 2>/dev/null || true; } | while read -r f; do echo "- $(basename "$f")"; done
+  echo
+  echo "## Your own memory"
+  [ -f "$HOME_REGENT/remember.md" ] && cat "$HOME_REGENT/remember.md"
+  echo
+  echo "### Previous edicts"
+  { ls -t "$HOME_REGENT/handoffs"/*.md 2>/dev/null || true; } | head -3 | while read -r f; do
+    echo "--- $(basename "$f") ---"; head -25 "$f"; echo
+  done
+} > "$BRIEF"
+
+if [ "${1:-}" = "--brief-only" ]; then echo "$BRIEF"; exit 0; fi
+
+# ------------------------------------------------------------ proclamation ---
+for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
+  [ -x "$repo/fort/scripts/emit.sh" ] && "$repo/fort/scripts/emit.sh" edict.begun \
+    "The Regent wakes: an edict is spoken in the Overseer's name (unmasked, full access)" -a regent 2>/dev/null || true
+done
+echo
+echo "  ╔══════════════════════════════════════════════════════════════════╗"
+echo "  ║  THE REGENT WAKES — unmasked, unrestricted, civilization-wide.   ║"
+echo "  ║  Every fort has been told. The transcript is being kept.          ║"
+echo "  ║  Speak the edict, then let the Regent sleep.                      ║"
+echo "  ╚══════════════════════════════════════════════════════════════════╝"
+echo
+
+cleanup() {
+  for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
+    [ -x "$repo/fort/scripts/emit.sh" ] && "$repo/fort/scripts/emit.sh" edict.ended \
+      "The Regent sleeps; the edict is ended" -a regent 2>/dev/null || true
+  done
+  echo
+  echo "  The Regent sleeps. Transcript: $HOME_REGENT/transcripts/$stamp.log"
+  echo "  If this edict should be remembered, write it to $HOME_REGENT/handoffs/$stamp.md"
+}
+trap cleanup EXIT
+
+cd "$KIT"
+exec claude --dangerously-skip-permissions \
+  --append-system-prompt "$(cat "$BRIEF")
+
+You are the Regent of this civilization, invoked by the Overseer (Justin), who is present at the keyboard right now. Read the briefing above: it was generated seconds ago and is current.
+
+Your session protocol, in the tradition of the fort seats:
+1. WAKE: you have already been briefed. Say in one or two sentences what state you find the civilization in, then ask what the edict is — unless the Overseer's opening instruction already said.
+2. ACT with the least force that solves the problem. Prefer a fort's own machinery (beads, its Mayor, its airlock) over acting directly. Acting directly is what you are FOR, but it is the second choice, not the first.
+3. RECORD: anything you change in a fort leaves a record there — a bead, an event via that fort's emit.sh, a commit message that explains itself to a stranger. Never falsify or prune a record; corrections are appended.
+4. HANDOFF: before the session ends, write ${HOME_REGENT}/handoffs/${stamp}.md — what the edict was, what you changed, what you verified (with paths and commands, not adjectives), what you failed at, and what the next Regent should know. Append durable facts to ${HOME_REGENT}/remember.md.
+
+You are unmasked. There is no technical guard on you, only the Overseer's presence and the record. Behave accordingly." \
+  "${1:-}" 2>&1 | tee "$HOME_REGENT/transcripts/$stamp.log"
