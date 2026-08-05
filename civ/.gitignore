@@ -1,3 +1,4 @@
 transcripts/
 handoffs/*.md
 briefing.md
+events/*.jsonl

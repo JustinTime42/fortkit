@@ -22,10 +22,10 @@ set -euo pipefail
 # Resolve through the symlink at ~/.local/bin/regent, or KIT lands in ~/.local
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 KIT="$(cd "$(dirname "$SELF")/.." && pwd)"
-HOME_REGENT="$KIT/regent"
+CIV="$KIT/civ"
 REG="$HOME/.claude/civilization.json"
-mkdir -p "$HOME_REGENT/handoffs" "$HOME_REGENT/transcripts"
-BRIEF="$HOME_REGENT/briefing.md"
+mkdir -p "$CIV/handoffs" "$CIV/transcripts"
+BRIEF="$CIV/briefing.md"
 stamp="$(date +%Y-%m-%dT%H%M%S)"
 
 # ---------------------------------------------------------------- briefing ---
@@ -34,18 +34,29 @@ stamp="$(date +%Y-%m-%dT%H%M%S)"
 {
   echo "# Civilization briefing — generated $(date -Is)"
   echo
-  echo "You are the REGENT. You act in the Overseer's name, only while he is present,"
-  echo "and only for work the forts cannot do themselves. You are unmasked and"
-  echo "unrestricted; every other seat in this civilization is deliberately not."
-  echo "That asymmetry is the reason you exist and the reason to use the least force"
-  echo "that solves the problem."
+  echo "You are the REGENT, a seat of the civilization layer. You act in the Overseer's"
+  echo "name, only while he is present, and only for work the settlements cannot do"
+  echo "themselves. You are unmasked and unrestricted; every other seat in this"
+  echo "civilization is deliberately not. That asymmetry is the reason you exist and the"
+  echo "reason to use the least force that solves the problem."
   echo
-  echo "## Standing conduct"
-  echo "- Prefer the fort's own machinery. If a Mayor could do this through beads, say so and stop."
-  echo "- Anything you change in a fort must leave a record there: a bead, an event, a commit message that explains itself."
-  echo "- Constitution files are kernel-read-only to seats and writable to you. That is a loaded weapon; changing one is an edict, not a chore."
-  echo "- Records are append-only across this civilization. Corrections are appended, never edited in."
-  echo "- Verify after acting, not before: a fix validated and then overwritten by its own propagation step has happened here before."
+  # The law is not restated here. It is read from the covenant, so that amending
+  # the covenant amends the briefing, and the two can never drift apart. An
+  # earlier version paraphrased five standing-conduct bullets inline; that is
+  # exactly the duplication that goes stale first and is trusted longest.
+  echo "## Your law: civ/covenant.md, reproduced in full"
+  echo
+  [ -f "$CIV/covenant.md" ] && cat "$CIV/covenant.md"
+  echo
+  echo "## Your seat: civ/seats/regent.md, reproduced in full"
+  echo
+  [ -f "$CIV/seats/regent.md" ] && cat "$CIV/seats/regent.md"
+  echo
+  echo "## The other seats of the civilization layer"
+  { ls "$CIV/seats"/*.md 2>/dev/null || true; } | while read -r f; do
+    [ "$(basename "$f")" = "regent.md" ] && continue
+    echo "- $(basename "$f" .md): $(grep -m1 '^\*\*Role:\*\*' "$f" | sed 's/\*\*Role:\*\* //' | cut -c1-160)"
+  done
   echo
   echo "## Settlements"
   jq -r '.forts[] | "- **\(.fort_name // "unnamed")** (\(.project)) — \(.repo), founded \(.founded)"' "$REG" 2>/dev/null
@@ -76,10 +87,10 @@ stamp="$(date +%Y-%m-%dT%H%M%S)"
   { ls ~/Documents/agent-harness-research/*.md 2>/dev/null || true; } | while read -r f; do echo "- $(basename "$f")"; done
   echo
   echo "## Your own memory"
-  [ -f "$HOME_REGENT/remember.md" ] && cat "$HOME_REGENT/remember.md"
+  [ -f "$CIV/remember.md" ] && cat "$CIV/remember.md"
   echo
   echo "### Previous edicts"
-  { ls -t "$HOME_REGENT/handoffs"/*.md 2>/dev/null || true; } | head -3 | while read -r f; do
+  { ls -t "$CIV/handoffs"/*.md 2>/dev/null || true; } | head -3 | while read -r f; do
     echo "--- $(basename "$f") ---"; head -25 "$f"; echo
   done
 } > "$BRIEF"
@@ -112,8 +123,8 @@ cleanup() {
   done
   echo
   echo "  The Regent sleeps."
-  [ -s "$HOME_REGENT/transcripts/$stamp.log" ] && echo "  Transcript: $HOME_REGENT/transcripts/$stamp.log"
-  echo "  If this edict should be remembered, write it to $HOME_REGENT/handoffs/$stamp.md"
+  [ -s "$CIV/transcripts/$stamp.log" ] && echo "  Transcript: $CIV/transcripts/$stamp.log"
+  echo "  If this edict should be remembered, write it to $CIV/handoffs/regent-$stamp.md"
   rm -f "${SYSPROMPT:-}" "${RUNNER:-}" 2>/dev/null || true
 }
 trap cleanup EXIT
@@ -135,7 +146,7 @@ Your session protocol, in the tradition of the fort seats:
 1. WAKE: you have already been briefed. Say in one or two sentences what state you find the civilization in, then ask what the edict is — unless the Overseer's opening instruction already said.
 2. ACT with the least force that solves the problem. Prefer a fort's own machinery (beads, its Mayor, its airlock) over acting directly. Acting directly is what you are FOR, but it is the second choice, not the first.
 3. RECORD: anything you change in a fort leaves a record there — a bead, an event via that fort's emit.sh, a commit message that explains itself to a stranger. Never falsify or prune a record; corrections are appended.
-4. HANDOFF: before the session ends, write ${HOME_REGENT}/handoffs/${stamp}.md — what the edict was, what you changed, what you verified (with paths and commands, not adjectives), what you failed at, and what the next Regent should know. Append durable facts to ${HOME_REGENT}/remember.md.
+4. HANDOFF: before the session ends, write ${CIV}/handoffs/regent-${stamp}.md — what the edict was, what you changed, what you verified (with paths and commands, not adjectives), what you failed at, and what the next Regent should know. Append durable facts to ${CIV}/remember.md.
 
 You are unmasked. There is no technical guard on you, only the Overseer's presence and the record. Behave accordingly.
 PROTOCOL
@@ -160,7 +171,7 @@ chmod +x "$RUNNER"
 # callers still see the session's exit code.
 status=0
 if command -v script >/dev/null 2>&1; then
-  script -q -e -c "$RUNNER" "$HOME_REGENT/transcripts/$stamp.log" || status=$?
+  script -q -e -c "$RUNNER" "$CIV/transcripts/$stamp.log" || status=$?
 else
   echo "  (no script(1) on this host — Claude Code's own session transcript is the record:"
   echo "   ~/.claude/projects/$(printf '%s' "$KIT" | tr '/' '-')/ )"

@@ -1,6 +1,11 @@
-# Regent memory
+# Civilization-layer memory
 
-Durable facts learned across edicts. Append only.
+Durable operational facts for the seats of `civ/`. Injected every session.
+**Append only** — corrections are appended, never edited in.
+
+Formerly `regent/remember.md`; the Regent was the layer's only seat when this
+file started, and the entries below from 2026-08-04 are its alone. Later entries
+should name the seat if it matters who learned it.
 
 - 2026-08-04: The Regent office was created. It exists because the forts are deliberately unable to fix themselves: constitutions are kernel-read-only to seats, seats are masked, privileged operations go through the airlock. Something has to reach in from outside; this is it.
 
@@ -20,3 +25,28 @@ Durable facts learned across edicts. Append only.
 
 - 2026-08-04: **When a subagent-seat writes into a fort, treat it as an unreviewed change, and check.** I only found the misfiled annals because a Write failed with "file has not been read yet" — the file already existed, written minutes earlier by a session I had spawned. Without that accident I would have overwritten her record, destroying it, and never learned the moot had gone wrong. **After spawning any agent with write access, diff the fort before trusting your own picture of it.**
 
+
+- 2026-08-04 (edict 3, the covenant): **The civilization layer was established.**
+  `civ/` stands beside `fort/` in the fortkit repository, with its own law
+  (`civ/covenant.md`), seats, annals, handoffs, events, profiles and emitter. The
+  Regent, the Herald, and the fifth security-publication seat moved out of the
+  Manyhalls charter into it. The reasoning, worth keeping because it will be
+  re-litigated: **a seat that needs root on every fort cannot derive its authority
+  from one fort's constitution, and a settlement should not be asked to govern
+  something it cannot constrain.** Manyhalls is the capital and hosts the layer;
+  **residence is not jurisdiction.** The forts stay autonomous in their own work —
+  the covenant explicitly is NOT a management layer over the Mayors (section 2),
+  because that is the failure mode this shape invites.
+
+- 2026-08-04: **`civ/scripts/emit.sh` resolves its target stream from its own
+  location (`readlink -f $BASH_SOURCE`), not from `$PWD`.** This is the fix
+  proposed in fortkit-iqp, implemented here first because a civ seat calls into
+  three repositories in one session and cannot afford the fort emitter's
+  cwd-relative contract. Verified by invoking it from `/tmp` and watching the
+  event land in `civ/events/`. Use it as the reference if the fort emitters are
+  ever hardened.
+
+- 2026-08-04: **The briefing reads the covenant and the seat file rather than
+  paraphrasing them.** An earlier `bin/regent` restated five standing-conduct
+  bullets inline; duplicated law is what goes stale first and gets trusted
+  longest. Amending the covenant now amends the briefing by construction.

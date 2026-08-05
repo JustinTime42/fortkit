@@ -1,4 +1,4 @@
-# Applying the fifth seat's founding papers (fortkit-zud.1, gate 1)
+# Applying the fifth seat's founding papers (fortkit-zud.1, covenant gate 4)
 
 Drafted by the Regent under edict 2026-08-04. **Nothing here has been applied.**
 Five artifacts, applied by the Overseer's hand. `<office>` is the title the
@@ -6,27 +6,30 @@ Second Naming Moot returned; substitute it lowercase in filenames and
 capitalised in prose.
 
 1. **Seat file:**
-   `cp docs/proposals/publication-founding/seat-file.md fort/seats/<office>.md`
+   `cp docs/proposals/publication-founding/seat-file.md civ/seats/<office>.md`
 2. **Seat law:**
-   `cp docs/proposals/publication-founding/seat-spec.md docs/specs/<office>.md`
+   `mkdir -p civ/law && cp docs/proposals/publication-founding/seat-spec.md civ/law/<office>.md`
 3. **Permission profile:**
-   `cp docs/proposals/publication-founding/seat-settings.json fort/profiles/<office>-settings.json`
-4. **Charter:** apply the four edits in `charter-amendment.md` by hand (a table
-   row, an occupants append, a strengthened gate 3, and a new standing order 12).
+   `cp docs/proposals/publication-founding/seat-settings.json civ/profiles/<office>-settings.json`
+4. **Covenant:** apply the two edits in `covenant-amendment.md` by hand (a seats-table
+   row and a section-5 append). NO fort charter edits are made — see that file.
 5. **Extraction plan:** `extraction-plan.md` stays where it is. It is a working
    document for the seat, not a constitution file.
 
-Then tell Emrith; she verifies all of it per standing order 5, records on
-fortkit-zud.1, and closes it.
+Verification is NOT Emrith's. She is the Mayor of a settlement and has no
+jurisdiction over a civilization seat (covenant section 1: residence is not
+jurisdiction). The Regent verifies the application on its next wake and records
+it on `fortkit-zud.1`; the occupant verifies his own access schedule on his first
+run and files anything that does not match.
 
 ## Decisions the Overseer must make before or during application
 
 These are collected on **fortkit-zud.8** and should not be inherited by default.
 
-1. **The staging root.** The profile currently names `~/Documents/assay/`
-   **provisionally**, written before the ballot returned. It must be corrected to
-   whatever is chosen, in both `seat-settings.json` (three allow rules) and the
-   seat file. Do not apply the profile with the placeholder in it.
+1. **The staging root.** The profile carries the literal string `PLACEHOLDER-STAGING-ROOT`
+   and MUST NOT be applied as-is. It must be replaced with the chosen path in
+   `seat-settings.json` (three allow rules) and in the
+   seat file.
 2. **Web access.** The draft profile denies `curl` and `wget` and does **not**
    allow `WebFetch`/`WebSearch`, matching the Herald. The argument for allowing
    them: the "already publicly known" bar genuinely cannot be judged offline, and
