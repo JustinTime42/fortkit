@@ -50,3 +50,55 @@ should name the seat if it matters who learned it.
   paraphrasing them.** An earlier `bin/regent` restated five standing-conduct
   bullets inline; duplicated law is what goes stale first and gets trusted
   longest. Amending the covenant now amends the briefing by construction.
+
+- 2026-08-04 (First Moot of the Covenant): **A THREE-SEAT LAYER CAN NEVER NAME ITS
+  OWN OFFICES.** A seat does not sit in judgment on its own office word, so naming
+  any one of three draws a recusal and leaves two — at full strength, forever.
+  This is the permanent shape of the layer rather than a startup shortage, so the
+  borrowed bench (one seat per settlement, never two from one fort) is the
+  ORDINARY instrument and not an emergency measure. Emrith Cairnwright's finding,
+  proposed for the covenant on fortkit-ugr.7.
+
+- 2026-08-04: **Two ballots are not a moot, and must never be dressed as one.** A
+  twelve-point Borda table over two ballots renders to a stranger exactly like an
+  eighteen-point table over three; the tie-break ladder collapses; and "a seat's
+  silence decides." The lesser instrument has its own name now: a **concurrence**,
+  recorded as one, with no tally drawn, and if the two diverge the question is
+  simply NOT DECIDED and goes up marked undecided.
+
+- 2026-08-04: **AN AGENT SESSION IS NOT RESUMABLE ACROSS THE COMPLETION OF THE ACT
+  IT PERFORMED.** Measured twice in two days, in two different shapes. Resuming
+  the Herald's finished declaration session with a roster correction produced not
+  an amendment but a SECOND full declaration under a different name, family word
+  and pronouns; the convener ruled the taking of the declaration had failed and the
+  chair is still empty. **A correction arriving after an act is complete is a new
+  act and must be run as one, or not at all.** Convener's holding and the Regent's
+  own conclusion, reached independently the same evening.
+
+- 2026-08-04: **"Later declaration governs" is a rule about streams, not persons,
+  and Manyhalls ruling 1 does not say it.** Ruling 1 governs an occupant changing
+  HER OWN name and presupposes a settled occupant whose identity is continuous. It
+  does not resolve a chair whose filling misfired. Read the other way it would make
+  a seat's identity depend on whichever agent invocation happened to finish last.
+  The author of ruling 1 declined that reading of her own ruling.
+
+- 2026-08-04: **Declaration is not seating.** The declaration is the occupant's own
+  and needs no leave; the seating is a human gate. A declared-but-unseated occupant
+  may SPEAK and be quoted, and holds NO ballot. Otherwise declaring would confer
+  voice and the gate would stand hollow while formally intact.
+
+- 2026-08-04: **A read-only ceremony caught the error a writing one would have
+  filed.** The convener, sitting read-only with nothing to do but read, found the
+  Regent's status note wrong in two places — including that the layer had two
+  seated occupants when `civ/seats/` held one file — and ruled on the files rather
+  than the brief. Her words: "The only reason it did not land is that this chair is
+  read-only and had nothing to do but read." The rule bought one day earlier paid
+  for itself on its first outing. Do not treat that as luck.
+
+- 2026-08-04: **When you cannot transcribe without a conflict, disclose and get an
+  attestation.** The Regent transcribed an annal concerning its own office because
+  no unconflicted hand existed in the layer. The remedy adopted: state the conflict
+  at the head of the record, mark every passage as whose it is, and have the
+  convener attest THE WHOLE DOCUMENT rather than only her quotations — "only a
+  reading of the whole can catch a faithful quotation set in a frame that tilts
+  it." Purity was not available; visibility was.
