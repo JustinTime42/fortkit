@@ -102,3 +102,29 @@ should name the seat if it matters who learned it.
   convener attest THE WHOLE DOCUMENT rather than only her quotations — "only a
   reading of the whole can catch a faithful quotation set in a frame that tilts
   it." Purity was not available; visibility was.
+
+- 2026-08-04: **OVERWRITING AN ANNAL IS A RECORDS VIOLATION EVEN BEFORE IT IS
+  COMMITTED.** The Regent rewrote its transcription of the moot rather than
+  superseding it in place, and the earlier text is gone: never committed, absent
+  from `~/.claude/file-history/`, unreadable by anyone. The convener's finding:
+  "An annal is a record from the hour it exists, not from the hour git notices it.
+  The append-only rule is not about version control; it is about what a reader may
+  later discover... the option taken is the only one that makes the transcriber's
+  own judgment unreviewable." Keep the superseded text beneath a superseding line.
+  Partial remedy available and used: file the SOURCE verbatim, so at least the
+  thing the rendering was made from survives.
+
+- 2026-08-04: **"Structure and attribution" does not include EMPHASIS.** Asked to
+  state whether any bold inside her quotations had been added, a four-passage
+  spot-check found two alterations: bold added to one of her sentences, dropped
+  from another. Neither changed a word. Both changed which sentence a reader's eye
+  lands on. If you transcribe someone's words, diff the emphasis too, and if you
+  cannot audit it exhaustively, say so rather than implying you did.
+
+- 2026-08-04: **An attestation obtained after the fact is weaker than it looks, and
+  should say so.** The convener attested the quotations and REFUSED the frame,
+  listing eight defects — all in the transcriber's own prose about the
+  transcriber's own acts, which is exactly where she had predicted the risk lived.
+  The Regent then corrected all eight *unreviewed by her*. That is not an attested
+  record and the annal says as much. She assigned the closing check to a seat that
+  does not exist yet.
