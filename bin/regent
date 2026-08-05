@@ -82,6 +82,9 @@ stamp="$(date +%Y-%m-%dT%H%M%S)"
     f="$repo/fort/annals/founding-moot.md"
     [ -f "$f" ] && { echo "### $(basename "$repo")"; sed -n '/^## Rulings of record/,$p' "$f" | head -12; echo; }
   done
+  echo "## The handbook"
+  echo "The full roster, gates, record locations and command reference were just regenerated at $KIT/civ/CIVILIZATION.md. Read it before acting on any fort; it is current as of this wake. The /civ skill is the same lookup path for any other session."
+  echo
   echo "## Design record"
   echo "Full research and design rationale lives in ~/Documents/agent-harness-research/."
   { ls ~/Documents/agent-harness-research/*.md 2>/dev/null || true; } | while read -r f; do echo "- $(basename "$f")"; done

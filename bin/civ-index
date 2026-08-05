@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+"""Generate the civilization handbook from live state.
+
+A hand-written org chart goes stale the first time a seat is renamed or a gate
+is amended, and a stale index is worse than none because it is believed. This
+reads the record instead: the registry, the covenant, every charter, every seat
+file, the bead graphs and the launcher inventory. Run it whenever you want the
+truth; it is cheap and idempotent.
+
+Usage: civ-index [--stdout]      writes civ/CIVILIZATION.md unless --stdout
+"""
+import json, os, re, subprocess, sys
+from datetime import datetime, timezone
+
+KIT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REG = os.path.expanduser("~/.claude/civilization.json")
+OUT = os.path.join(KIT, "civ", "CIVILIZATION.md")
+
+def sh(cmd, cwd=None):
+    try:
+        return subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True,
+                              text=True, timeout=20).stdout.strip()
+    except Exception:
+        return ""
+
+def read(p):
+    try:
+        with open(p) as f: return f.read()
+    except Exception:
+        return ""
+
+def occupant(seat_file):
+    """Extract 'Held by: Name (pronouns...)' — the roster is authoritative for
+    pronouns; they are never inferred from a name (Farlantern ruling 7)."""
+    t = read(seat_file)
+    m = re.search(r"\*\*Held by:\s*([^*]+?)\*\*\s*\(([^)]*)", t, re.S)
+    if not m:
+        return None, None
+    name = m.group(1).strip()
+    pron = re.search(r"\b(she/her|he/him|they/them|[a-z]+/[a-z]+)\b", m.group(2))
+    return name, (pron.group(1) if pron else "—")
+
+def section(text, header, stop=r"^## "):
+    """Pull one markdown section body."""
+    m = re.search(rf"^{re.escape(header)}\s*$(.*?)(?={stop}|\Z)", text, re.M | re.S)
+    return m.group(1).strip() if m else ""
+
+reg = json.loads(read(REG) or '{"forts":[]}')
+forts = reg.get("forts", [])
+L = []
+w = L.append
+
+w(f"# The Civilization — handbook")
+w("")
+w(f"*Generated {datetime.now(timezone.utc).astimezone().isoformat(timespec='seconds')} by `bin/civ-index`. "
+  "Never edit by hand: regenerate. Everything here is read from the live record, so if something looks "
+  "wrong the record is wrong and that is worth chasing.*")
+w("")
+
+# ---------------------------------------------------------------- roster ---
+w("## Who is who")
+w("")
+w("| Seat | Held by | Pronouns | Where | Answers to |")
+w("|---|---|---|---|---|")
+
+civ_seats = os.path.join(KIT, "civ", "seats")
+if os.path.isdir(civ_seats):
+    for f in sorted(os.listdir(civ_seats)):
+        if not f.endswith(".md"): continue
+        name, pron = occupant(os.path.join(civ_seats, f))
+        w(f"| {f[:-3].capitalize()} (civ officer) | {name or '*vacant*'} | {pron or '—'} | civilization layer | the Overseer |")
+
+for ft in forts:
+    repo, fort = ft.get("repo", ""), ft.get("fort_name") or ft.get("project")
+    sd = os.path.join(repo, "fort", "seats")
+    for role in ("mayor", "forge", "warden", "herald", "redactor"):
+        p = os.path.join(sd, f"{role}.md")
+        if os.path.exists(p):
+            name, pron = occupant(p)
+            boss = "the Overseer" if role == "mayor" else "the Mayor"
+            w(f"| {role.capitalize()} | {name or '*vacant*'} | {pron or '—'} | {fort} | {boss} |")
+w("")
+
+# --------------------------------------------------------------- layers ---
+w("## The two tiers")
+w("")
+w("**Civilization layer** — seats whose work spans settlements, or reaches above what a settlement may do "
+  "to itself, or points outward at the world. Governed by `civ/covenant.md`, not by any fort's charter. "
+  "Answers to the Overseer directly. A fort's Mayor is not their chain of command.")
+w("")
+w("**Settlements (forts)** — each governed by its own charter, with its own gates, threat model and standing "
+  "orders. A fort's seats work only that fort.")
+w("")
+for ft in forts:
+    w(f"- **{ft.get('fort_name') or '(unnamed)'}** — project `{ft.get('project')}`, `{ft.get('repo')}`, founded {ft.get('founded')}")
+w("")
+
+# ---------------------------------------------------------------- gates ---
+w("## Gates and law, by fort")
+w("")
+cov = read(os.path.join(KIT, "civ", "covenant.md"))
+if cov:
+    w("### The Covenant (civilization layer)")
+    w("")
+    for line in cov.splitlines():
+        if re.match(r"^\s*(\d+\.|-)\s+\*\*", line):
+            w(line.strip())
+    w("")
+
+for ft in forts:
+    repo, fort = ft.get("repo", ""), ft.get("fort_name") or ft.get("project")
+    ch = read(os.path.join(repo, "fort", "charter.md"))
+    if not ch: continue
+    w(f"### {fort}")
+    w("")
+    gates = section(ch, "## Human gates (capability boundaries, not requests)") or section(ch, "## Human gates")
+    if gates:
+        w("**Human gates:**")
+        for line in gates.splitlines():
+            if re.match(r"^\d+\.", line.strip()):
+                w(f"{line.strip()[:220]}")
+        w("")
+    if "## Prose gates" in ch:
+        w("**Prose gates:** push and deploy are permitted to the Mayor under a prose gate — asks the Overseer "
+          "every time. Recorded in the charter as *weaker* than a capability boundary.")
+        w("")
+    orders = section(ch, "## Standing orders")
+    if orders:
+        n = len([l for l in orders.splitlines() if re.match(r"^\d+\.", l.strip())])
+        w(f"**Standing orders:** {n} — see `{os.path.relpath(os.path.join(repo,'fort','charter.md'), os.path.expanduser('~'))}`")
+        w("")
+
+# ------------------------------------------------------------ where data ---
+w("## Where things live")
+w("")
+w("| What | Where |")
+w("|---|---|")
+w("| Civilization law | `fortkit/civ/covenant.md` |")
+w("| Civ officer seats, handoffs, events | `fortkit/civ/{seats,handoffs,events}/` |")
+w("| Fort law | `<repo>/fort/charter.md` |")
+w("| Fort operational facts (read every session) | `<repo>/fort/remember.md` |")
+w("| Seat identities and personalities | `<repo>/fort/seats/*.md` |")
+w("| Work graph | beads, per repo (`bd ready`, `bd list`) |")
+w("| Announcements / history | `<repo>/fort/events/events-<date>.jsonl` |")
+w("| Session handoffs | `<repo>/fort/handoffs/` |")
+w("| Ceremonies and rulings of record | `<repo>/fort/annals/` |")
+w("| Reviews | `<repo>/fort/reviews/` |")
+w("| Prompt telemetry | `<repo>/fort/telemetry/prompts.jsonl` |")
+w("| Privileged-operation requests | `<repo>/fort/airlock/` |")
+w("| Factory (templates, fort-init) | `fortkit/templates/`, `fortkit/bin/fort-init` |")
+w("| Registry of settlements | `~/.claude/civilization.json` |")
+w("| Design and research record | `~/Documents/agent-harness-research/`, `fortkit/docs/` |")
+w("| Career / positioning material | `~/career/research/` |")
+w("")
+
+# ------------------------------------------------------------- commands ---
+w("## Commands")
+w("")
+w("| Command | Does |")
+w("|---|---|")
+w("| `mayor` | Talk to this repo's Mayor (masked seat) |")
+w("| `fortstat` | One-screen status for this repo's fort |")
+w("| `regent` | Wake the Regent — unmasked, civilization-wide, announces itself in every fort |")
+w("| `civ-index` | Regenerate this handbook |")
+w("| `/civ` | Ask questions about the civilization from any session |")
+w("| `/fort-backport` | Propagate a proven improvement to every fort + templates |")
+w("| `fort/scripts/forge.sh <bead>` | Dispatch the Forge on a bead (isolated worktree) |")
+w("| `fort/scripts/warden.sh <bead> <range>` | Launch a review (read-only by construction) |")
+w("| `fort/scripts/verify.sh` | Run this fort's gates |")
+w("| `fort/scripts/airlock.sh` | Request / approve / run privileged operations |")
+w("| `fort/scripts/emit.sh` | Append an event |")
+w("")
+
+# ----------------------------------------------------------- live state ---
+w("## Live state")
+w("")
+w("| Fort | Open | In progress | Unpushed | Worktrees |")
+w("|---|---|---|---|---|")
+for ft in forts:
+    repo = ft.get("repo", "")
+    lst = sh("bd list 2>/dev/null", cwd=repo)
+    op = len(re.findall(r"^○", lst, re.M)); ip = len(re.findall(r"^◐", lst, re.M))
+    ahead = sh("git rev-list --count origin/main..main 2>/dev/null", cwd=repo) or "no remote"
+    wt = max(0, len(sh("git worktree list", cwd=repo).splitlines()) - 1)
+    w(f"| {ft.get('fort_name')} | {op} | {ip} | {ahead} | {wt} |")
+w("")
+w("*Counts are a snapshot. `fortstat` inside a repo is the live view.*")
+
+out = "\n".join(L) + "\n"
+if "--stdout" in sys.argv:
+    print(out)
+else:
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    with open(OUT, "w") as f: f.write(out)
+    print(f"civ-index: wrote {OUT} ({len(L)} lines)")
