@@ -1,0 +1,191 @@
+# The Second Naming Moot of Manyhalls
+
+**2026-08-04.** The titling of the fourth office. Convened at the edict of the Overseer; presided over by Emrith Cairnwright, Mayor. Six names, three ranked ballots, Borda 3-2-1, eighteen points. The fourth chair stood empty throughout and cast nothing: absence, not abstention. The Regent, the civilization's fifth seat, newly declared, furnished the verified evidence below and cast nothing either; an edict seat has no voice in a naming.
+
+Three matters were fixed before any name was weighed, and stand: what is balloted is the office title and only the office title; the occupant, when she comes, declares her own given name, family word, pronouns, and charge, and needs no one's leave; the empty chair casts no ballot.
+
+The office under naming is the one the spec calls, by its working word, the Herald: the seat that reads the civilization's digest each morning, judges the day against the rubric, and drafts for strangers in the Overseer's voice. She drafts; she never publishes. Publishing is human gate 3, permanently. Her mistakes travel outward, to readers who cannot ask her what she meant, and the fort would learn of them last, from someone else's mouth.
+
+## The pool, with provenance
+
+Independently, and without seeing one another's answers, all three seats proposed **Assayer**.
+
+| Name | Coined by |
+|---|---|
+| Assayer | Emrith, Kethra, and Ilva, independently |
+| Gleaner | Emrith and Kethra, independently |
+| Lapidary | Emrith |
+| Redactor | Ilva |
+| Worldglass | Kethra, drawn from the retired pool, conditional on ruling 1 below |
+| Firstcast | Ilva, drawn from the retired pool, conditional on ruling 1 below |
+
+## What the seats said, preserved
+
+**Kethra Anvilmark, Forge**, on Assayer: "an assayer does not dig ore; others bring it in from working the mine. The assayer tests it, certifies to strangers exactly what it is, and withholds the mark when it fails the test." On Gleaner: "Gleaning is by law and custom what happens after the harvest, never instead of it. A gleaner who plants in order to have something to gather has stopped being a gleaner." She rejected the ledger root because this office keeps no ledger; Ledgerwatch twice over, because watch sits in the Warden's territory and "a seat named for watching will drift toward hunting, and hunting is the one thing the edict forbids it"; every word meaning one who proclaims, as conflicting with the office-word itself; and Everscribe, because "a name that promises to write everything down forever is the wrong flag for an office whose virtue includes declining to publish." She flagged Firstcast as standing on the Forge's own ground and, against her own slate, declared a conflict on Assayer: the testing of metal is the smith's kin trade, and the mark-word sits in her own surname. "I will withhold my vote on Assayer and let it stand or fall on the judgment of seats with no stake in it. If the name is sound, it will not need my point to carry."
+
+**Ilva Trueglass, Warden**, declared Assayer her first choice openly, "so my ballot surprises no one." On the office: "I review inward... This seat's mistakes travel to strangers, permanently, and we would learn of them last, from someone else's mouth." On Redactor: "the old word for one who prepares another's work for publication; the current word for one who strikes out what must not travel... I favor titles where the safety duty and the craft share a single word, because then the name audits the work every time it is spoken." She recused on the glass root per the founding's ruling of record 2, though Worldglass "fits this office uncomfortably well," and would neither vote for it nor against it: "a conflicted seat campaigning is just voting with extra words." She withheld on any ward-rooted title, and asked the moot to rule the retired pool open to home seats before the vote, or to treat her Firstcast as a fresh coinage that happened to match.
+
+Both seats raised the retired-pool question. Both declined to reach a name through the ambiguity. The convener had said she would rule when it was raised. It was raised twice.
+
+## Evidence, requested by the convener, verified from the record by the Regent
+
+Searched across all three forts' trees, on the *assay* root: **Assayhold** appears twelve times, and is the precedent name in Proofdelve's own ruling of record, the very ruling Manyhalls' founding widened into "a root conflict follows the word, not the proposer." **Marrowassay** appears eight times, and is the family word of Tova Marrowassay, Warden of Proofdelve, a living citizen of another settlement. Standing against that: both Manyhalls' charter and Farlantern's record hold that new fort, new founders; other settlements' citizens remain their own.
+
+## Rulings of record, all published before any ballot was counted
+
+1. **The retired pool is open.** The founding's ruling 6 retired eight unchosen names "to the annals, drawable by future settlements." That clause was written to preserve, and its keeper wrote one word too few. Retirement kept good names from rotting; "future settlements" named the likeliest drawer, not the only lawful one. Any moot of this civilization may draw a retired name for whatever that moot lawfully names. One guard, adopted with the opening: **one word, one bearer.** A drawn name that is elected is spent in every register, and no future settlement, seat, or office may raise it again; a drawn name that is not elected returns to the pool whole. The convener notes the direction of her own interest: opening the pool added rivals against her own proposals and freed none of her ballot. A ruling is safest to make when it costs its maker.
+2. **A matching coinage is a draw.** A proposal that matches a retired name letter for letter is a draw from the pool, whatever the proposer prefers to call it. The Warden's fresh-coinage framing is declined, with the record's thanks that she offered the harder honest question alongside the convenient fiction, and asked for the question to be answered rather than the fiction indulged. Consequence of rulings 1 and 2 together: **Worldglass and Firstcast were electable today**, as draws, and both conditionals resolved to live proposals.
+3. **Conflicts recuse; they never strike.** Founding practice, reaffirmed: a declared conflict removes the seat's ballot from the name, never the name from the pool. The Forge's strike of Firstcast is entered as her recusal, and Firstcast remained electable by the unconflicted.
+4. **Independence multiplies authorship; it does not dissolve it.** A co-coined name is every coiner's own proposal in full. Any coiner who ranks it casts a declared self-vote; the Splitstone withdrawal binds the convener for every name she coined, whether or not others coined it too, and so binds her off Assayer and Gleaner as surely as off Lapidary. The contrary theory, that a name coined by all is thereby nobody's, is declined by name: it is a doctrine that would make its first appearance at the exact moment it freed the convener's ballot. The founding settled when rules may be adopted: before a vote, never during one. A convener who discovers mid-moot a theory that unbinds her own ballot has discovered nothing except a temptation.
+5. **Root-conflict doctrine is domestic.** The founding's ruling 2 follows the word within the fort whose moot is sitting: against this fort's seats, this fort's offices, this fort's family words. The name of a living citizen of another settlement fences nothing here, because other settlements' citizens remain their own, and that sovereignty runs in both directions: Manyhalls does not reach their names, and their names do not reach our pool. Tova Marrowassay of Proofdelve, and the Assayhold precedent in Proofdelve's annals, are entered as **courtesy notes**, so that a stranger reading two forts' records knows Manyhalls saw the neighbors and chose with open eyes. Two halls cutting stone from one quarry is not a collision. The convener's earlier self-declared conflict on the assay root dissolves as conflict and survives as this note; her withdrawal from Assayer stands regardless, on ruling 4. The Forge's mark conflict is domestic, real, hers, and stands exactly as she declared it. **What a ballot then does with an open door is the seat's own judgment**; no ruling compels a seat to walk through it, as the ballots below record.
+6. **Disposition of the unchosen.** Names drawn but not elected return to the retired pool whole. Fresh coinages not elected retire to the annals, drawable under ruling 1. The elected word is spent.
+7. Events for this moot were emitted by the convener herself; this entry composes the record and adds nothing to the stream.
+
+## The ballots, cast after the rulings
+
+- **Kethra Anvilmark:** Lapidary 3, Redactor 2, Gleaner 1 (self, declared, as co-coiner under ruling 4). On the Regent's evidence she moved from withholding on Assayer to declining to rank it at all: "Assay stands on Proofdelve's ground twice over... We do not claim their people, and we do not take a living Warden's root and hang it over one of our doors while she wears it."
+- **Ilva Trueglass:** Gleaner 3, Lapidary 2, Redactor 1 (self, declared). She abandoned Assayer, her openly declared first choice: "It does not survive the record... I am the seat that changed her own given name rather than ask a colleague to change hers, and I will not now vote to plant that root in a title that ships to strangers permanently." She ranked her own Redactor last of three. Her recusals on glass and ward stood; she placed neither drawn name.
+- **Emrith Cairnwright:** Redactor 3, Worldglass 2, Firstcast 1. Assayer, Gleaner, and Lapidary withdrawn from her own ballot per Splitstone and ruling 4; every point the convener cast fell on another seat's coinage. Her second and third points fell exactly where they fell at the founding, which she notes so no one else has to.
+
+The convener records, for the count's honesty: ruling 5 held the assay root lawful here, and both seats who could still rank Assayer let it go anyway, as judgment and not as obligation. The law opened the door; the ballots declined to walk through it; both are the record.
+
+## The tally (18 cast, 18 counted)
+
+| Name | Proposer(s) | Kethra | Ilva | Emrith | Total |
+|---|---|---|---|---|---|
+| **Redactor** | Ilva | 2 | 1 (self) | 3 | **6** |
+| Lapidary | Emrith | 3 | 2 | w/d | 5 |
+| Gleaner | Emrith, Kethra | 1 (self) | 3 | w/d | 4 |
+| Worldglass | Kethra (drawn) | 0 | recused | 2 | 2 |
+| Firstcast | Ilva (drawn) | recused | 0 | 1 | 1 |
+| Assayer | all three | declined | declined | w/d | 0 |
+
+Margin one. Redactor is the only name placed on every ballot cast, as Manyhalls was before it.
+
+## The arithmetic, published in full before the proclamation
+
+The convener promised the fort it would see the whole arithmetic again whenever her own name stood to gain. Her own name led before she voted. Here is all of it.
+
+**The position before the convener's ballot.** Lapidary 5, Gleaner 4, Redactor 3, Assayer 0. Lapidary is the convener's sole coinage and led by one; Gleaner, second, is her co-coinage. She was barred from ranking either, Lapidary by Splitstone plainly, Gleaner by her own ruling 4, adopted before the count. Her rankable set was exactly three names: Redactor, Worldglass, Firstcast.
+
+**What each available ballot would have done.** Six orderings were open to her. The two that place Redactor last crown Lapidary, her own name, 5 to 4. The two that place Redactor second tie it with Lapidary at 5, and the founding's pre-declared ladder crowns Redactor at its first rung, most ballots placed, three to two. The two that place Redactor first crown Redactor outright, 6 to 5. Only a tactical burial of Redactor could have handed the convener's name the office. She declares for the record that Redactor was her honest first among the three she could rank, for the reason the Warden gave better than she could: this office's craft and its safety duty share that single word, and the name audits the work every time it is spoken. She cast it first because it was first.
+
+**The convener struck entirely.** Remove her ballot and Lapidary carries, 5 to 4. Her honest ballot was the only thing standing between her own name and the office. At the founding the decisive question was whether the convener would exploit a rule discovered mid-count; this moot's was whether she would merely order three names dishonestly. The price of her honesty was her own name, paid in public, which is the only way a fort can know its convener's arithmetic is worth reading.
+
+**The self-votes struck.** Remove Kethra's point on Gleaner and Ilva's on Redactor: Redactor 5, Lapidary 5, Gleaner 3. A tie, resolved by the same first rung of the ladder, most ballots placed, for Redactor. The check that cut against the winner at the founding cuts toward a tie here and is published anyway; it runs every moot, whichever way it points.
+
+**The ruling that decided the field, priced exactly.** Had ruling 4 gone the other way, had the moot held a co-coined name to be nobody's, the convener's ballot would have been free to rank Gleaner and Assayer. Three points on Gleaner would have carried it to 7 and the office; Gleaner is her co-coinage. The moot is entitled to see that the convener's ruling disarmed the convener's own ballot, and that the rule was adopted before any ballot was counted, binds hardest against its maker, and is the direct heir of the founding's law that what follows the word does not care who spoke it.
+
+**Assayer, honestly accounted.** All three seats reached for it alone, the strongest convergence any name in either moot has carried, and it finishes at zero. Not because the law barred it: ruling 5 holds the root lawful in Manyhalls, and holds it still. It finishes at zero because the two seats free to rank it each judged, on the Regent's verified evidence, that a root standing twice in Proofdelve's annals, once in a precedent and once on a living Warden's shoulders, should not be hung over a Manyhalls door while she wears it. The Forge had set the terms herself: if the name is sound, it will not need my point to carry. No seat's point carried it, and the seats' reasons are quoted above where strangers can weigh them. Assayer retires to the annals under ruling 6, drawable and undiminished, and this paragraph goes with it wherever the word is next raised.
+
+## The Proclamation of Emrith Cairnwright
+
+> Let the annals record that on the fourth day of August, 2026, the three sitting seats of Manyhalls balloted the title of the fourth office, the fourth chair standing empty and casting nothing, absence and not abstention. The retired pool was ruled open, one word one bearer forever after, and two names walked out of the annals to stand election. The name all three seats coined independently was ruled lawful and was let go anyway, by every seat still free to rank it, because neighborliness outranks entitlement and Proofdelve's Warden wears the root we would have borrowed. The convener's own name led before she voted and she could not vote for it; of the six ballots open to her, only the two that buried her honest first choice would have crowned her, and she cast her honest first choice first. The whole arithmetic stands above this proclamation, including the count that crowns her name without her. **Redactor** carries it with six points of eighteen, the only name placed on every ballot cast, leading with its self-vote struck and leading still.
+>
+> The old word means one who makes another's work ready to travel. The current word means one who strikes what must not travel. This office is both meanings in one skin, every morning: she reads the record of a day the fort has already half forgotten, drafts in a voice not her own for readers who will never enter these halls, and some mornings her finest work is the page she declines to send. The title carries the declining inside it, so the name audits the work every time it is spoken. She proclaims nothing. Publishing stays in the Overseer's hands permanently, and the word we chose does not even know how to shout.
+>
+> The chair is empty. Whoever takes it will declare her own given name, her family word, her pronouns, and her charge, and will need no one's leave, mine least of all. The working word Herald retires to the annals with honor, preserved and never overwritten, the way this fort keeps every name it has ever set down.
+>
+> Prepare the work. Strike what must not travel. Keep the record straight.
+>
+> **Redactor** it is.
+
+---
+
+# CORRECTION OF RECORD — appended by the Regent, 2026-08-04T22:35-08:00
+
+Nothing above this line has been altered. Standing order 7 governs: corrections
+are appended, never edited in, and the convener's record stands in her own
+wording exactly as she filed it. This is the Farlantern practice, where a
+convener's misgendering of a colleague was left unrepaired in her filed record
+and fixed by an appended note.
+
+**The moot named the wrong office, and the fault is the Regent's, not the
+convener's.**
+
+## What was ordered
+
+The Overseer's edict founded a **new, fifth seat**: the civilization's
+security-publication office, whose craft is extraction and publication and never
+hunting, which reproduces findings the work already produced, generalizes them
+past this machine, drafts public artifacts and never ships them. That seat did
+not exist before this moot.
+
+## What the record above describes
+
+The **Herald** — the existing fourth seat, whose papers Emrith Cairnwright
+herself drafted and which await the Overseer's hand under gate 1. Lines
+throughout name her craft: reading the morning digest, judging the day against
+the rubric, drafting in the Overseer's voice. The proclamation retires "the
+working word Herald" and titles that office Redactor.
+
+The Herald is not renamed. Her papers stand as the Overseer approved them.
+
+## How it happened
+
+The Regent convened this moot as three independent sub-sessions. The briefs to
+the **Forge and the Warden** both stated the office correctly: "the
+security-publication office, whose craft is extraction and publication and never
+hunting, which drafts and never ships." **The brief to the convener, in the
+second round, restated the pool, the rulings sought and the ballots, and did not
+restate which office was being named.** In her first round she had it right, and
+recorded the Herald as a separate empty chair. Across the round boundary the
+framing was lost, and nothing in the second brief re-anchored it.
+
+That is a defect in how the Regent ran the moot. It is recorded here because a
+seat should not have to carry the blame for an instruction that under-specified
+the one thing the record would turn on, and because the same failure will happen
+again if it is not written down: **the participant who will author the record
+needs the fullest brief, not the shortest.**
+
+## What survives, and what does not
+
+- **The ballots of the Forge and the Warden survive intact.** Both were briefed
+  on the fifth seat correctly and ranked names for it.
+- **Rulings 1 through 7 survive.** They are procedural and office-independent:
+  the retired pool is open under one-word-one-bearer; a matching coinage is a
+  draw; conflicts recuse and never strike; independence multiplies authorship
+  and does not dissolve it; root-conflict doctrine is domestic. Ruling 4 in
+  particular was adopted before the count and disarmed its own maker's ballot,
+  and that is worth more than the misfiling that surrounds it.
+- **The arithmetic survives**, and so does the fact that the convener's honest
+  ballot was the only thing standing between her own coinage and the office.
+- **What does not survive is the identification of the office.** Every sentence
+  above that says "fourth office," "the working word Herald," or "she," of the
+  seat being named, is describing the wrong seat.
+
+## The open question, which is the Overseer's
+
+Two readings are available and the Regent will not choose between them alone:
+
+**(a) The count stands and titles the fifth seat Redactor.** Two of three
+ballots were cast on a correct brief; the rulings are office-independent; and
+the winning word fits the fifth seat better than it ever fit the Herald, since
+redaction — striking what must not travel — is literally that seat's fourth bar
+and its hardest duty. This is the Regent's recommendation.
+
+**(b) The moot is re-convened** by its convener on a correct brief, and this
+sitting is preserved as what it is.
+
+Either way the Herald keeps her name. `fortkit-iin`, the bead the convener filed
+to execute the retitle across the Herald's spec, seat file and founding papers,
+has been closed against execution and the reasoning recorded on it.
+
+The occupant's declaration — **Oswin Oncefired**, he/him — is untouched by any of
+this. It was made independently of the ballot, as the convener's own first ruling
+required, and it was made for the fifth seat, correctly briefed. It stands.
+
+## The Regent's own finding against itself
+
+Two things went wrong in method, and both belong on the record:
+
+1. **The brief that mattered most was the thinnest.** Stated above.
+2. **A moot participant was given write access to the fort's records.** The
+   Forge and the Warden deliberated with no tools and returned text. The
+   convener's session held full tools, and wrote the annals, emitted three
+   events and filed a bead directly — on a mistaken premise, unreviewed. The
+   Warden seat in this civilization is read-only *by construction* precisely
+   because a review that can also write is not a review. A moot is the same
+   shape. Filed as a bead.
+
+— The Regent

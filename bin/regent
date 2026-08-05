@@ -87,9 +87,15 @@ stamp="$(date +%Y-%m-%dT%H%M%S)"
 if [ "${1:-}" = "--brief-only" ]; then echo "$BRIEF"; exit 0; fi
 
 # ------------------------------------------------------------ proclamation ---
+# emit.sh resolves its target stream from the CURRENT WORKING DIRECTORY (it walks
+# git's common dir so a worktree still appends to its main repo's stream). So a
+# cross-fort caller must cd into the fort first: invoking $repo/fort/scripts/emit.sh
+# from somewhere else writes into the CALLER's fort, not $repo's. That defect ran
+# from the seat's creation until 2026-08-04 and put every edict.begun into fortkit
+# (fortkit-nvk) — Proofdelve and Farlantern were never told an edict had begun.
 for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
-  [ -x "$repo/fort/scripts/emit.sh" ] && "$repo/fort/scripts/emit.sh" edict.begun \
-    "The Regent wakes: an edict is spoken in the Overseer's name (unmasked, full access)" -a regent 2>/dev/null || true
+  [ -x "$repo/fort/scripts/emit.sh" ] && ( cd "$repo" && ./fort/scripts/emit.sh edict.begun \
+    "The Regent wakes: an edict is spoken in the Overseer's name (unmasked, full access)" -a regent ) 2>/dev/null || true
 done
 echo
 echo "  ╔══════════════════════════════════════════════════════════════════╗"
@@ -101,8 +107,8 @@ echo
 
 cleanup() {
   for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
-    [ -x "$repo/fort/scripts/emit.sh" ] && "$repo/fort/scripts/emit.sh" edict.ended \
-      "The Regent sleeps; the edict is ended" -a regent 2>/dev/null || true
+    [ -x "$repo/fort/scripts/emit.sh" ] && ( cd "$repo" && ./fort/scripts/emit.sh edict.ended \
+      "The Regent sleeps; the edict is ended" -a regent ) 2>/dev/null || true
   done
   echo
   echo "  The Regent sleeps."
@@ -142,15 +148,23 @@ PROTOCOL
 chmod +x "$RUNNER"
 
 # Transcript capture is best-effort and must never cost interactivity. script(1)
-# (util-linux-script) keeps a real pty while logging; it is not installed on this
-# host, so the fallback is a direct exec. Claude Code keeps its own session
-# transcript regardless, under ~/.claude/projects/<sanitized-cwd>/, so the record
-# survives either way — the edict events and the handoff are the durable part.
+# (util-linux-script) keeps a real pty while logging; where it is absent the
+# fallback runs the runner directly. Claude Code keeps its own session transcript
+# regardless, under ~/.claude/projects/<sanitized-cwd>/, so the record survives
+# either way — the edict events and the handoff are the durable part.
+#
+# Deliberately NOT exec: exec replaces this shell and takes the EXIT trap with it,
+# so cleanup() never ran and no edict.ended was ever emitted by this launcher
+# (fortkit-nvk). Running the session as a child costs one process and buys the
+# closing half of every edict's record. The child's status is propagated so
+# callers still see the session's exit code.
+status=0
 if command -v script >/dev/null 2>&1; then
-  exec script -q -e -c "$RUNNER" "$HOME_REGENT/transcripts/$stamp.log"
+  script -q -e -c "$RUNNER" "$HOME_REGENT/transcripts/$stamp.log" || status=$?
 else
   echo "  (no script(1) on this host — Claude Code's own session transcript is the record:"
   echo "   ~/.claude/projects/$(printf '%s' "$KIT" | tr '/' '-')/ )"
   echo
-  exec "$RUNNER"
+  "$RUNNER" || status=$?
 fi
+exit "$status"
