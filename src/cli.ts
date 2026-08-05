@@ -15,7 +15,8 @@ if (command === "world") {
     port < 1 ||
     port > 65535 ||
     args.some(
-      (argument, index) => argument !== "--port" && index !== portFlag + 1,
+      (argument, index) =>
+        argument !== "--port" && (portFlag === -1 || index !== portFlag + 1),
     )
   ) {
     console.error("Usage: fortkit world [--port <1-65535>]");

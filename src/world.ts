@@ -15,7 +15,7 @@ export type WorldFort = {
   beads: { ready: number; malformed: number } | null;
   inProgress: Array<Bead & { seat: string | null; model: string | null }>;
   announcements: string[];
-  watcherAlerts: string[];
+  watcherAlerts: Array<{ detail: string; ts: string }>;
   gaps: string[];
 };
 
@@ -110,11 +110,13 @@ export async function readWorld(registryPath: string): Promise<WorldFort[]> {
         announcements: events
           .flatMap((event) => (event.detail === null ? [] : [event.detail]))
           .slice(0, 5),
-        watcherAlerts: events.flatMap((event) =>
-          event.category === "watcher.alert" && event.detail !== null
-            ? [event.detail]
-            : [],
-        ),
+        watcherAlerts: events
+          .flatMap((event) =>
+            event.category === "watcher.alert" && event.detail !== null
+              ? [{ detail: event.detail, ts: event.ts }]
+              : [],
+          )
+          .slice(0, 5),
         gaps,
       };
     }),
