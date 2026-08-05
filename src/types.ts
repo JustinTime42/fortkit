@@ -19,10 +19,32 @@ export type LastHandoff = {
 };
 
 export type GitState = {
+  branch: string | null;
   ahead: number | null;
   behind: number | null;
   dirty: boolean | null;
   worktrees: string[] | null;
+};
+
+export type Bead = {
+  id: string;
+  title: string | null;
+  assignee: string | null;
+};
+
+export type EventDetail = {
+  ts: string;
+  actor: string;
+  seat: string | null;
+  category: string | null;
+  target: string | null;
+  detail: string | null;
+  payload: unknown;
+};
+
+export type EventFeed = {
+  events: EventDetail[];
+  malformed: number;
 };
 
 export type FortSummary = {
