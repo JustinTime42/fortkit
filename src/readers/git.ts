@@ -17,12 +17,14 @@ async function git(path: string, args: string[]): Promise<string | null> {
 }
 
 export async function readGitState(path: string): Promise<GitState> {
-  const [insideWorkTree, branch, status, worktreeOutput] = await Promise.all([
-    git(path, ["rev-parse", "--is-inside-work-tree"]),
-    git(path, ["branch", "--show-current"]),
-    git(path, ["--no-optional-locks", "status", "--porcelain"]),
-    git(path, ["worktree", "list", "--porcelain"]),
-  ]);
+  const [insideWorkTree, branch, shortSha, status, worktreeOutput] =
+    await Promise.all([
+      git(path, ["rev-parse", "--is-inside-work-tree"]),
+      git(path, ["branch", "--show-current"]),
+      git(path, ["rev-parse", "--short", "HEAD"]),
+      git(path, ["--no-optional-locks", "status", "--porcelain"]),
+      git(path, ["worktree", "list", "--porcelain"]),
+    ]);
   if (insideWorkTree?.trim() !== "true") {
     return {
       branch: null,
@@ -51,7 +53,7 @@ export async function readGitState(path: string): Promise<GitState> {
   const ahead = counts?.[0] ?? null;
   const behind = counts?.[1] ?? null;
   return {
-    branch: branch?.trim() || null,
+    branch: branch?.trim() || shortSha?.trim() || null,
     ahead: Number.isFinite(ahead) ? ahead : null,
     behind: Number.isFinite(behind) ? behind : null,
     dirty: status === null ? null : status !== "",
