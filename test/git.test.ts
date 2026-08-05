@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 
 import { describe, expect, test } from "vitest";
 
-import { readGitState } from "../src/readers/git.js";
+import { readGitLog, readGitState } from "../src/readers/git.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -50,6 +50,49 @@ describe("git reader", () => {
       await expect(readGitState(path)).resolves.toMatchObject({
         branch: stdout.trim(),
       });
+    } finally {
+      await rm(path, { recursive: true, force: true });
+    }
+  });
+
+  test("uses parsed date-only bounds with an inclusive since boundary", async () => {
+    const path = await mkdtemp(join(tmpdir(), "fortkit-git-digest-"));
+    const commit = async (message: string, date: string) => {
+      await writeFile(join(path, "README.md"), `${message}\n`);
+      await execFileAsync("git", ["-C", path, "add", "README.md"]);
+      await execFileAsync(
+        "git",
+        ["-C", path, "commit", "--quiet", "--date", date, "-m", message],
+        {
+          env: {
+            ...process.env,
+            GIT_AUTHOR_DATE: date,
+            GIT_COMMITTER_DATE: date,
+          },
+        },
+      );
+    };
+    try {
+      await execFileAsync("git", ["init", "--quiet", path]);
+      await execFileAsync("git", [
+        "-C",
+        path,
+        "config",
+        "user.email",
+        "test@example.test",
+      ]);
+      await execFileAsync("git", ["-C", path, "config", "user.name", "Test"]);
+      await commit("before", "2026-08-03T23:59:59Z");
+      await commit("at since", "2026-08-04T00:00:00Z");
+      await commit("inside", "2026-08-04T12:00:00Z");
+      await commit("at until", "2026-08-05T00:00:00Z");
+
+      await expect(
+        readGitLog(path, Date.parse("2026-08-04"), Date.parse("2026-08-05")),
+      ).resolves.toEqual([
+        expect.stringContaining("inside"),
+        expect.stringContaining("at since"),
+      ]);
     } finally {
       await rm(path, { recursive: true, force: true });
     }

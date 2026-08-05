@@ -27,9 +27,9 @@ export async function readEventFeed(
 
   const events: Array<{ instant: number; event: EventDetail }> = [];
   let malformed = 0;
-  for (const file of files.filter((name) =>
-    /^events-\d{4}-\d{2}-\d{2}\.jsonl$/.test(name),
-  )) {
+  for (const file of files
+    .filter((name) => /^events-\d{4}-\d{2}-\d{2}\.jsonl$/.test(name))
+    .sort()) {
     let contents: string;
     try {
       contents = await readFile(join(eventsDirectory, file), "utf8");

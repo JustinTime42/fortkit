@@ -11,4 +11,20 @@ describe("world CLI", () => {
       execFileAsync("node", ["src/cli.ts", "world", "nonsense"]),
     ).rejects.toMatchObject({ code: 2 });
   });
+
+  test("requires a valid non-empty digest window", async () => {
+    await expect(
+      execFileAsync("node", ["src/cli.ts", "digest", "--since", "invalid"]),
+    ).rejects.toMatchObject({ code: 2 });
+    await expect(
+      execFileAsync("node", [
+        "src/cli.ts",
+        "digest",
+        "--since",
+        "2026-08-04T09:00:00Z",
+        "--until",
+        "2026-08-04T09:00:00Z",
+      ]),
+    ).rejects.toMatchObject({ code: 2 });
+  });
 });
