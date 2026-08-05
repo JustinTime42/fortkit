@@ -1,6 +1,16 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
 
 import type { Bead, BeadCounts } from "../types.ts";
+
+const execFileAsync = promisify(execFile);
+
+export type ClosedBead = {
+  id: string;
+  title: string | null;
+  closedAt: string | null;
+};
 
 const statuses = new Map<string, keyof Omit<BeadCounts, "malformed">>([
   ["open", "open"],
@@ -60,4 +70,60 @@ export async function readBeadRecords(
     }
   }
   return { counts, inProgress };
+}
+
+export async function readClosedBeads(
+  path: string,
+  since: number,
+  until: number,
+): Promise<ClosedBead[] | null> {
+  let stdout: string;
+  try {
+    ({ stdout } = await execFileAsync(
+      "bd",
+      [
+        "--readonly",
+        "-C",
+        path,
+        "list",
+        "--all",
+        "--status=closed",
+        "--limit=0",
+        `--closed-after=${new Date(since).toISOString()}`,
+        `--closed-before=${new Date(until).toISOString()}`,
+        "--json",
+      ],
+      { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
+    ));
+  } catch {
+    return null;
+  }
+  try {
+    const records = JSON.parse(stdout) as unknown;
+    if (!Array.isArray(records)) {
+      return null;
+    }
+    // The digest intentionally includes every bead type: gate, infrastructure,
+    // and template work are all part of a fort's complete activity record.
+    return records
+      .flatMap((record) => {
+        if (typeof record !== "object" || record === null) {
+          return [];
+        }
+        const value = record as Record<string, unknown>;
+        return typeof value.id === "string"
+          ? [
+              {
+                id: value.id,
+                title: typeof value.title === "string" ? value.title : null,
+                closedAt:
+                  typeof value.closed_at === "string" ? value.closed_at : null,
+              },
+            ]
+          : [];
+      })
+      .sort((left, right) => left.id.localeCompare(right.id));
+  } catch {
+    return null;
+  }
 }

@@ -16,6 +16,35 @@ async function git(path: string, args: string[]): Promise<string | null> {
   }
 }
 
+export async function readGitLog(
+  path: string,
+  since: number,
+  until: number,
+): Promise<string[] | null> {
+  // Git's --since is exclusive, whereas all digest sources include `since`.
+  // Query one second early (commit timestamps have second precision), then apply
+  // the canonical half-open interval below.
+  const querySince = new Date(since - 1000).toISOString();
+  const queryUntil = new Date(until).toISOString();
+  const output = await git(path, [
+    "log",
+    "--format=%cI%x09%h%x09%s",
+    `--since=${querySince}`,
+    `--before=${queryUntil}`,
+  ]);
+  if (output === null) {
+    return null;
+  }
+  return output
+    .trimEnd()
+    .split("\n")
+    .filter((line) => line !== "")
+    .filter((line) => {
+      const instant = Date.parse(line.split("\t", 1)[0] ?? "");
+      return !Number.isNaN(instant) && instant >= since && instant < until;
+    });
+}
+
 export async function readGitState(path: string): Promise<GitState> {
   const [insideWorkTree, branch, shortSha, status, worktreeOutput] =
     await Promise.all([

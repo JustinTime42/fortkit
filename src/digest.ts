@@ -1,15 +1,15 @@
-import { execFile } from "node:child_process";
 import { access } from "node:fs/promises";
 import { join } from "node:path";
-import { promisify } from "node:util";
-import type { ClosedBead, TelemetryCounts } from "./readers/digest.ts";
-import { readClosedBeads, readTelemetryCounts } from "./readers/digest.ts";
+import type { ClosedBead } from "./readers/beads.ts";
+import { readClosedBeads } from "./readers/beads.ts";
 import { readEventFeed } from "./readers/events.ts";
+import { readGitLog } from "./readers/git.ts";
+import type { HandoffSection } from "./readers/handoffs.ts";
 import { readHandoffSections } from "./readers/handoffs.ts";
 import { readRegistryEntries } from "./readers/registry.ts";
+import type { TelemetryCounts } from "./readers/telemetry.ts";
+import { readTelemetryCounts } from "./readers/telemetry.ts";
 import type { EventDetail } from "./types.ts";
-
-const execFileAsync = promisify(execFile);
 
 type DigestFort = {
   name: string;
@@ -18,7 +18,7 @@ type DigestFort = {
   events: EventDetail[] | null;
   eventsMalformed: number | null;
   closedBeads: ClosedBead[] | null;
-  handoffSections: Awaited<ReturnType<typeof readHandoffSections>>;
+  handoffSections: HandoffSection[] | null;
   gitLog: string[] | null;
   telemetry: TelemetryCounts | null;
 };
@@ -38,30 +38,6 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-async function readGitLog(
-  path: string,
-  since: string,
-  until: string,
-): Promise<string[] | null> {
-  try {
-    const { stdout } = await execFileAsync(
-      "git",
-      [
-        "-C",
-        path,
-        "log",
-        "--format=%cI%x09%h%x09%s",
-        `--since=${since}`,
-        `--before=${until}`,
-      ],
-      { encoding: "utf8" },
-    );
-    return stdout.trim() === "" ? [] : stdout.trimEnd().split("\n");
-  } catch {
-    return null;
-  }
-}
-
 function inWindow(ts: string, since: number, until: number): boolean {
   const instant = Date.parse(ts);
   return !Number.isNaN(instant) && instant >= since && instant < until;
@@ -70,8 +46,6 @@ function inWindow(ts: string, since: number, until: number): boolean {
 async function readDigestFort(
   name: string,
   path: string | null,
-  since: string,
-  until: string,
   sinceInstant: number,
   untilInstant: number,
 ): Promise<DigestFort> {
@@ -91,9 +65,9 @@ async function readDigestFort(
   const [eventFeed, closedBeads, handoffSections, gitLog, telemetry] =
     await Promise.all([
       readEventFeed(join(path, "fort", "events")),
-      readClosedBeads(path),
+      readClosedBeads(path, sinceInstant, untilInstant),
       readHandoffSections(join(path, "fort", "handoffs")),
-      readGitLog(path, since, until),
+      readGitLog(path, sinceInstant, untilInstant),
       readTelemetryCounts(
         join(path, "fort", "telemetry"),
         sinceInstant,
@@ -139,20 +113,19 @@ export async function readCivilizationDigest(
 ): Promise<CivilizationDigest> {
   const sinceInstant = Date.parse(since);
   const untilInstant = Date.parse(until);
+  if (Number.isNaN(sinceInstant) || Number.isNaN(untilInstant)) {
+    throw new Error("Digest window timestamps must be valid dates");
+  }
+  if (sinceInstant >= untilInstant) {
+    throw new Error("Digest window must have since before until");
+  }
   const forts = await readRegistryEntries(registryPath);
   return {
     since: new Date(sinceInstant).toISOString(),
     until: new Date(untilInstant).toISOString(),
     forts: await Promise.all(
       forts.map((fort) =>
-        readDigestFort(
-          fort.name,
-          fort.path,
-          since,
-          until,
-          sinceInstant,
-          untilInstant,
-        ),
+        readDigestFort(fort.name, fort.path, sinceInstant, untilInstant),
       ),
     ),
   };

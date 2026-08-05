@@ -11,6 +11,19 @@ export type HandoffSection = {
   body: string;
 };
 
+type HandoffCandidate = Pick<HandoffSection, "file" | "seat" | "date">;
+
+function handoffCandidates(files: string[]): HandoffCandidate[] {
+  return files.flatMap((file) => {
+    const match = /^([a-z0-9_-]+)-(\d{4}-\d{2}-\d{2})\.md$/i.exec(file);
+    const seat = match?.[1];
+    const date = match?.[2];
+    return seat === undefined || date === undefined
+      ? []
+      : [{ file, seat, date }];
+  });
+}
+
 export async function readLastHandoff(
   directory: string,
 ): Promise<LastHandoff | null> {
@@ -21,14 +34,7 @@ export async function readLastHandoff(
     return null;
   }
 
-  const candidates = files.flatMap((file) => {
-    const match = /^([a-z0-9_-]+)-(\d{4}-\d{2}-\d{2})\.md$/i.exec(file);
-    const seat = match?.[1];
-    const date = match?.[2];
-    return seat === undefined || date === undefined
-      ? []
-      : [{ file, seat, date }];
-  });
+  const candidates = handoffCandidates(files);
   candidates.sort((left, right) => right.date.localeCompare(left.date));
   const candidate = candidates[0];
   if (candidate === undefined) {
@@ -61,16 +67,9 @@ export async function readHandoffSections(
     return null;
   }
 
-  const candidates = files
-    .flatMap((file) => {
-      const match = /^([a-z0-9_-]+)-(\d{4}-\d{2}-\d{2})\.md$/i.exec(file);
-      const seat = match?.[1];
-      const date = match?.[2];
-      return seat === undefined || date === undefined
-        ? []
-        : [{ file, seat, date }];
-    })
-    .sort((left, right) => left.file.localeCompare(right.file));
+  const candidates = handoffCandidates(files).sort((left, right) =>
+    left.file.localeCompare(right.file),
+  );
 
   const sections: HandoffSection[] = [];
   for (const candidate of candidates) {
