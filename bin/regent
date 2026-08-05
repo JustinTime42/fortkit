@@ -19,7 +19,9 @@
 # Usage: regent [--brief-only] ["opening instruction"]
 set -euo pipefail
 
-KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Resolve through the symlink at ~/.local/bin/regent, or KIT lands in ~/.local
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+KIT="$(cd "$(dirname "$SELF")/.." && pwd)"
 HOME_REGENT="$KIT/regent"
 REG="$HOME/.claude/civilization.json"
 mkdir -p "$HOME_REGENT/handoffs" "$HOME_REGENT/transcripts"
@@ -103,14 +105,23 @@ cleanup() {
       "The Regent sleeps; the edict is ended" -a regent 2>/dev/null || true
   done
   echo
-  echo "  The Regent sleeps. Transcript: $HOME_REGENT/transcripts/$stamp.log"
+  echo "  The Regent sleeps."
+  [ -s "$HOME_REGENT/transcripts/$stamp.log" ] && echo "  Transcript: $HOME_REGENT/transcripts/$stamp.log"
   echo "  If this edict should be remembered, write it to $HOME_REGENT/handoffs/$stamp.md"
+  rm -f "${SYSPROMPT:-}" "${RUNNER:-}" 2>/dev/null || true
 }
 trap cleanup EXIT
 
 cd "$KIT"
-exec claude --dangerously-skip-permissions \
-  --append-system-prompt "$(cat "$BRIEF")
+# The transcript is captured with script(1), not a pipe. Piping claude to tee
+# takes stdout off a tty, which flips it into --print mode and it then refuses
+# to start without a prompt argument ("Input must be provided either through
+# stdin or as a prompt argument"). script keeps a real pty and still logs.
+SYSPROMPT="$(mktemp "${TMPDIR:-/tmp}/regent-sysprompt.XXXXXX")"
+RUNNER="$(mktemp "${TMPDIR:-/tmp}/regent-run.XXXXXX")"
+{
+  cat "$BRIEF"
+  cat <<PROTOCOL
 
 You are the Regent of this civilization, invoked by the Overseer (Justin), who is present at the keyboard right now. Read the briefing above: it was generated seconds ago and is current.
 
@@ -120,5 +131,26 @@ Your session protocol, in the tradition of the fort seats:
 3. RECORD: anything you change in a fort leaves a record there — a bead, an event via that fort's emit.sh, a commit message that explains itself to a stranger. Never falsify or prune a record; corrections are appended.
 4. HANDOFF: before the session ends, write ${HOME_REGENT}/handoffs/${stamp}.md — what the edict was, what you changed, what you verified (with paths and commands, not adjectives), what you failed at, and what the next Regent should know. Append durable facts to ${HOME_REGENT}/remember.md.
 
-You are unmasked. There is no technical guard on you, only the Overseer's presence and the record. Behave accordingly." \
-  "${1:-}" 2>&1 | tee "$HOME_REGENT/transcripts/$stamp.log"
+You are unmasked. There is no technical guard on you, only the Overseer's presence and the record. Behave accordingly.
+PROTOCOL
+} > "$SYSPROMPT"
+
+{
+  echo '#!/bin/bash'
+  echo "exec claude --dangerously-skip-permissions --append-system-prompt \"\$(cat '$SYSPROMPT')\" ${1:+\"$1\"}"
+} > "$RUNNER"
+chmod +x "$RUNNER"
+
+# Transcript capture is best-effort and must never cost interactivity. script(1)
+# (util-linux-script) keeps a real pty while logging; it is not installed on this
+# host, so the fallback is a direct exec. Claude Code keeps its own session
+# transcript regardless, under ~/.claude/projects/<sanitized-cwd>/, so the record
+# survives either way — the edict events and the handoff are the durable part.
+if command -v script >/dev/null 2>&1; then
+  exec script -q -e -c "$RUNNER" "$HOME_REGENT/transcripts/$stamp.log"
+else
+  echo "  (no script(1) on this host — Claude Code's own session transcript is the record:"
+  echo "   ~/.claude/projects/$(printf '%s' "$KIT" | tr '/' '-')/ )"
+  echo
+  exec "$RUNNER"
+fi
