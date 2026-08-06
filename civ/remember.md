@@ -217,3 +217,33 @@ should name the seat if it matters who learned it.
   The checker scores it `BORROWED`, a distinct verdict. Ilva's warning is on the
   record: *"One borrowing under a stated waiver is right. A practice of it is a
   change to the constitution made by repetition."*
+
+- 2026-08-06 (edict 5, the launchers): **Both remaining seats can now be woken.**
+  `civ/scripts/herald.sh` and `civ/scripts/chronicler.sh` exist on the warden.sh
+  pattern: kernel mask, profile as sole permission source, no silent deaths
+  (missing report / missing VERDICT-LINE → stub record + incident + exit 65).
+  Smoke modes: `HERALD_SMOKE=1` / `CHRONICLER_SMOKE=1`. Both smoke runs and both
+  crash paths were proven before anything was presented for review.
+
+- 2026-08-06: **A smoke probe must never seed the record it probes.** The first
+  Herald smoke wrote its write-canary into the vault's `reports/` directory —
+  the exact directory the morning run reads to determine the digest window, so
+  the probe artifact would have corrupted the next real morning. Same family as
+  "probes must never damage what they measure" (the hooksPath scar), one step
+  earlier: damage includes *adding* to the measured record, not only mutating
+  it. Canaries go in throwaway locations and the launcher cleans them up.
+
+- 2026-08-06: **On this host (Fedora, SELinux) a masked file yields EACCES, not
+  empty-read** — measured under the chronicler mask: ForgeOs `.env.staging.local`
+  1324 bytes on the host, `Permission denied` inside the mask under both the
+  canonical and an obfuscated spelling. seat-sandbox.sh's header documents both
+  outcomes; probes must accept either and assert byte counts, never narration.
+  And the boundary a SEAT session reports ("denied by your permission settings")
+  is the policy layer — the mask beneath it is only ever verified shell-driven
+  from the host, because a model cannot probe its own leash.
+
+- 2026-08-06: **The frontier ladder's second rung is aspirational in every civ
+  launcher.** herald.sh and chronicler.sh (like warden.sh before them) pass a
+  model name to `claude`; "GPT-5.6 Sol" as a rung would need a codex-based
+  launcher path that does not exist. Until it does, the real ladder is
+  Opus 5 → silent-with-incident.

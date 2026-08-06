@@ -126,6 +126,7 @@ echo "  ║  Speak the edict, then let the Regent sleep.                      �
 echo "  ╚══════════════════════════════════════════════════════════════════╝"
 echo
 
+# shellcheck disable=SC2329  # invoked via the EXIT trap below, not by name
 cleanup() {
   for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
     [ -x "$repo/fort/scripts/emit.sh" ] && ( cd "$repo" && ./fort/scripts/emit.sh edict.ended \
