@@ -128,3 +128,92 @@ should name the seat if it matters who learned it.
   The Regent then corrected all eight *unreviewed by her*. That is not an attested
   record and the annal says as much. She assigned the closing check to a seat that
   does not exist yet.
+
+- 2026-08-05 (edict 4, the seating): **THE LAYER IS SEATED. Offices are appointed,
+  citizens declare themselves.** The Overseer amended covenant 8.1: an office name
+  is an administrative label, fixed by appointment, never balloted, never subject
+  to quorum. Appointment needs no bench, which is why it moves when a ballot
+  cannot — the layer had been quorum-locked since founding. **A citizen's name,
+  pronouns and personality are theirs alone, always, chosen by them and never
+  assigned, and are not within the appointment power.** The forts keep their own
+  moot traditions for their own citizens; this reaches into no charter.
+  Roster: **Calder Sealbroken** (they/them) Regent, **Oswin Oncefired** (he/him)
+  Chronicler, **Halric Neverpulled** (he/him) Herald.
+
+- 2026-08-05: **Covenant 8.2 and 8.3, and they are enforced by a script rather
+  than by prose, because prose is what failed.** No seat transcribes a record in
+  which it is a subject; no ceremony record is final until an uninvolved read-only
+  seat has read it. `civ/scripts/check-ceremony-record.sh` parses a
+  machine-readable header on every record in `civ/annals/`, fails closed on a
+  header it cannot read, and runs at every wake from `bin/regent`. Verdicts OK /
+  PROVISIONAL / WAIVED / FAIL, and WAIVED is reported forever rather than passed.
+  The Overseer's reason, which is the strongest thing this layer has learned about
+  itself: every failure in the founding was caught by a read-only seat with
+  nothing to do but check, and **not one of those checks was required.**
+
+- 2026-08-05: **When a rule cannot be satisfied, say so in the record rather than
+  narrowing the rule until it is.** The edict record itself violates 8.2 and
+  cannot not: every seat of the layer is a subject of it and the Regent is the
+  only seat with write access to `civ/`. The narrow reading — "the Regent is
+  merely executing, not a subject" — was available and is exactly the kind of
+  reasoning that hollows a gate while formally honouring it. It carries a
+  permanent waiver instead, and **8.3 was satisfied by borrowing a reader from
+  outside the layer**: Ilva Trueglass, Warden of Manyhalls, read-only by
+  construction, with standing under covenant 4.5 because the edict amended her own
+  fort's charter. Borrowing a read-only reader from a settlement works and costs
+  nothing.
+
+- 2026-08-05: **A brief cannot stop a reader from reading.** The Overseer directed
+  that the Herald not be shown the two earlier declarations before choosing. The
+  brief named neither, and deliberately left them out of the actor-id constraint
+  list so they could not be inferred — and he found them anyway, in the annals, on
+  his own initiative, because reading records is the whole of the craft. Recorded
+  as a disclosed deviation (fortkit-ugr.10) rather than smoothed over. **If a
+  condition depends on an agent not encountering something, the only reliable
+  lever is access, not instructions** — and removing his read access would have
+  been worse than the deviation.
+
+- 2026-08-05: **THE MECHANICAL CHECK SHIPPED BROKEN AND REPORTED IT AS A COVENANT
+  VIOLATION.** `check-ceremony-record.sh` aborted before evaluating its first
+  record; the launcher then printed "ceremony records VIOLATE the covenant" at
+  every wake. Ilva Trueglass, reading under 8.3 as a borrowed seat, refused to
+  attest the edict that introduced it: **"It has never validated a single record,
+  and the way it fails looks exactly like the way it working."** Six defects in
+  total, three of them the same shape:
+  1. `set -euo pipefail` + a `grep` returning 1 on an absent OPTIONAL key killed
+     the run at the first COMPLIANT record. A directory of nothing but violations
+     exited 0 and printed "satisfied".
+  2. A WAIVED record skipped the 8.3 check entirely — the waiver excused the rule
+     it was not meant to excuse.
+  3. The glob missed subdirectories, so a record one level down was invisible
+     rather than FAIL.
+  4. Seat names were free text: a typo was an exemption.
+  5. Nothing tested the read-only half of 8.3.
+  6. **`grep -q` exits on match, SIGPIPEs the upstream pipeline, and `pipefail`
+     turns a SUCCESSFUL MATCH into a nonzero return.** Every seat but the last in
+     the roster scored as unknown. Found while fixing 1-5, in the replacement.
+
+  **The general rule, which is the thing to carry: a checker that checks nothing
+  must never report success.** The script now FAILS when it examines zero records.
+  Every one of these failures was a check failing closed for the wrong reason and
+  blaming the thing it was checking.
+
+- 2026-08-05: **`grep -q` inside a pipeline is unsafe under `set -o pipefail`.**
+  Use pure-bash membership tests (`[[ $'\n'"$hay"$'\n' == *$'\n'"$needle"$'\n'* ]]`)
+  when the pipeline's exit status matters. This cost an hour and produced a
+  false accusation against three records.
+
+- 2026-08-05: **Deny beats allow, so a blanket deny can make a covenant DUTY
+  impossible.** The Chronicler's profile allowed `Write(civ/handoffs/*.md)` and
+  denied `Write(//home/justin/dev/**)`, which contains it — and covenant section
+  10 requires every session to write a handoff. Found by Ilva, not by the seat
+  that wrote it. When a profile denies broadly and allows narrowly, check every
+  allow against every deny, because the allow is the thing that silently dies.
+
+- 2026-08-05: **A borrowed reader works, and it must stay visible.** With three
+  seats, every one of them is a subject of anything amending the covenant, so 8.3
+  can need a reader from a settlement. A fort seat is read-only over `civ/` **by
+  construction** rather than by promise, which is exactly what the rule wants.
+  The checker scores it `BORROWED`, a distinct verdict. Ilva's warning is on the
+  record: *"One borrowing under a stated waiver is right. A practice of it is a
+  change to the constitution made by repetition."*

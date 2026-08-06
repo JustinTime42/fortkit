@@ -1,3 +1,10 @@
+<!-- ceremony-record
+subjects: regent, chronicler, herald
+transcribed-by: regent
+read-by: PENDING
+waiver: predates covenant 8.2 (adopted 2026-08-05). The Regent transcribed a record concerning its own office because the layer held no other seated occupant. The conflict is disclosed at the head of the record, the convener REFUSED to attest its frame, and the reading required by 8.3 is filed as fortkit-ugr.9. Kept as a waiver rather than a pass so that every run of this check reports it.
+-->
+
 # The First Moot of the Covenant
 
 **2026-08-04.** Convened at the Overseer's appointment by **Emrith Cairnwright,

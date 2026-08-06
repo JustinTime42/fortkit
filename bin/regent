@@ -112,6 +112,13 @@ for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
     "The Regent wakes: an edict is spoken in the Overseer's name (unmasked, full access)" -a regent ) 2>/dev/null || true
 done
 echo
+# Covenant 8.2/8.3 are enforced mechanically, not by prose, because prose is what
+# failed. Reported at every wake and never blocking: a failing record is work for
+# the Regent, so refusing to wake it would be exactly the wrong response.
+if [ -x "$CIV/scripts/check-ceremony-record.sh" ]; then
+  "$CIV/scripts/check-ceremony-record.sh" || echo "  ^^ ceremony records VIOLATE the covenant. This is your first work."
+fi
+echo
 echo "  ╔══════════════════════════════════════════════════════════════════╗"
 echo "  ║  THE REGENT WAKES — unmasked, unrestricted, civilization-wide.   ║"
 echo "  ║  Every fort has been told. The transcript is being kept.          ║"
