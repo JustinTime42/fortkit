@@ -23,14 +23,15 @@ async function readCitizens(path: string): Promise<ColonyCitizen[] | null> {
         try {
           const contents = await readFile(join(path, file), "utf8");
           const seat = /^# Seat:\s*(.+)$/m.exec(contents)?.[1]?.trim();
-          const holder = /\*\*Held by:\*\*\s*([^(*]+?)\s*\*\*\(([^)]+)\)/.exec(
+          const holder = /\*\*Held by:\s*([^*]+?)\*\*\s*\(([^)]*)/.exec(
             contents,
           );
+          const pronouns = /\b([a-z]+\/[a-z]+)\b/.exec(holder?.[2] ?? "")?.[1];
           return seat === undefined || holder === null
             ? null
             : {
                 name: holder[1]?.trim() ?? "unknown",
-                pronouns: holder[2]?.trim() ?? "unknown",
+                pronouns: pronouns ?? "unknown",
                 seat,
               };
         } catch {

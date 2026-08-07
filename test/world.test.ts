@@ -6,6 +6,7 @@ import { createContext, Script } from "node:vm";
 
 import { describe, expect, test, vi } from "vitest";
 
+import { readColony } from "../src/colony-reader.js";
 import {
   colonyPage,
   composeColonyPage,
@@ -71,7 +72,7 @@ describe("world view", () => {
     expect(worldPage).toContain("/colony-view?fort=");
   });
 
-  test("has a checked canvas colony page with a distinct actor style per pair", () => {
+  test("has a checked canvas colony page with a distinct actor style per parsed citizen pair", async () => {
     expect(colonyPage).not.toContain("<!-- colony-page-script -->");
     expect(colonyPage).toContain("<title>Bartizan — colony</title>");
     expect(colonyPage).toContain('<canvas id="colony"');
@@ -87,23 +88,47 @@ describe("world view", () => {
       URLSearchParams,
     });
     new Script(script).runInContext(context);
-    const styles = (
-      context.actorStyles as (projection: unknown) => Map<string, unknown>
-    )({
-      citizens: [
-        { name: "Emrith", pronouns: "she/her", seat: "mayor" },
-        { name: "Kethra", pronouns: "she/her", seat: "forge" },
-        { name: "Ilva", pronouns: "she/her", seat: "warden" },
-      ],
-      benches: [],
-      workshops: [],
-      dungeon: [],
-      unassigned: [],
-      announcements: [],
-      gaps: [],
-    });
-    const rendered = [...styles.values()].map((style) => JSON.stringify(style));
-    expect(new Set(rendered).size).toBe(rendered.length);
+    const root = await mkdtemp(join(tmpdir(), "fortkit-colony-"));
+    const fort = join(root, "fort");
+    const seats = join(fort, "fort", "seats");
+    try {
+      await mkdir(seats, { recursive: true });
+      await Promise.all([
+        writeFile(
+          join(seats, "mayor.md"),
+          "# Seat: Mayor\n\n**Held by: Emrith Cairnwright** (she/her, declared 2026-08-03 at the Founding Moot)\n",
+        ),
+        writeFile(
+          join(seats, "forge.md"),
+          "# Seat: Forge\n\n**Held by: Kethra Anvilmark** (she/her, declared 2026-08-03 at the Founding Moot)\n",
+        ),
+        writeFile(
+          join(seats, "warden.md"),
+          "# Seat: Warden\n\n**Held by: Ilva Trueglass** (she/her, declared 2026-08-03 at the Founding Moot)\n",
+        ),
+      ]);
+      const temporaryRegistry = join(root, "civilization.json");
+      await writeFile(
+        temporaryRegistry,
+        JSON.stringify({ forts: [{ fort_name: "Temporary", repo: fort }] }),
+      );
+      const projection = await readColony(temporaryRegistry, "Temporary");
+      expect(projection?.citizens).toEqual([
+        { name: "Kethra Anvilmark", pronouns: "she/her", seat: "Forge" },
+        { name: "Emrith Cairnwright", pronouns: "she/her", seat: "Mayor" },
+        { name: "Ilva Trueglass", pronouns: "she/her", seat: "Warden" },
+      ]);
+      if (projection === null) throw new Error("colony projection is missing");
+      const styles = (
+        context.actorStyles as (projection: unknown) => Map<string, unknown>
+      )(projection);
+      const rendered = [...styles.values()].map((style) =>
+        JSON.stringify(style),
+      );
+      expect(new Set(rendered).size).toBe(rendered.length);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   test("renders colony projection fixtures as named fort buildings and a ticker", () => {
