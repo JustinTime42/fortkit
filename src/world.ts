@@ -1,23 +1,12 @@
 import { access } from "node:fs/promises";
 import { join } from "node:path";
 
+import type { WorldFort } from "./page-types.ts";
 import { readBeadRecords } from "./readers/beads.ts";
 import { readEventFeed } from "./readers/events.ts";
 import { readGitState } from "./readers/git.ts";
 import { readRegistry } from "./readers/registry.ts";
-import type { Bead, EventDetail, GitState } from "./types.ts";
-
-export type WorldFort = {
-  name: string;
-  path: string;
-  present: boolean;
-  git: GitState;
-  beads: { open: number; malformed: number } | null;
-  inProgress: Array<Bead & { seat: string | null; model: string | null }>;
-  announcements: string[];
-  watcherAlerts: Array<{ detail: string; ts: string }>;
-  gaps: string[];
-};
+import type { Bead, EventDetail } from "./types.ts";
 
 async function exists(path: string): Promise<boolean> {
   try {

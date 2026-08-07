@@ -1,12 +1,11 @@
 import type {
-  Bead,
   ColonyBench,
   ColonyCitizen,
   ColonyProjection,
   ColonySession,
   ColonyWorkType,
-  EventDetail,
-} from "./types.ts";
+} from "./page-types.ts";
+import type { Bead, EventDetail } from "./types.ts";
 
 export type ColonySources = {
   beads: Bead[] | null;

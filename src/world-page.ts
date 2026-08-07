@@ -1,4 +1,4 @@
-import type { WorldFort } from "./world.ts";
+import type { WorldFort } from "./page-types.ts";
 
 // This checked ES module is composed into a classic browser script. Keep its
 // imports type-only: runtime imports or exports would remain in the served JS.
