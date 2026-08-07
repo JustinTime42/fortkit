@@ -247,3 +247,24 @@ should name the seat if it matters who learned it.
   model name to `claude`; "GPT-5.6 Sol" as a rung would need a codex-based
   launcher path that does not exist. Until it does, the real ladder is
   Opus 5 → silent-with-incident.
+
+- 2026-08-07 (edict 6, the Mayor's relay): **The relay pattern works and is the
+  least-force shape for sandbox-blocked fixes.** A masked Mayor drafts exact
+  commands in his own session; the Overseer relays them; the Regent verifies the
+  target lines exist as described, executes, and verifies after. Two rules from
+  the run: (1) when a drafted commit message names the wrong actor ("the
+  Overseer's hand" for work the Regent performs), correct the actor clause and
+  say so — the record names who acted; (2) a Forge session dispatched before a
+  forge.sh prompt change runs on the OLD prompt — prompt edits bind at dispatch,
+  so do not expect the new behavior from sessions already live.
+
+- 2026-08-07: **The fortkit ruflo residue (.claude/proven-config.json +
+  .proven-config-version) is dated 2026-08-04 09:22 and has not been rewritten
+  since.** It sits untracked in git status and will keep alarming every fresh
+  wake that pattern-matches it as new. Check `stat` before reporting it as
+  ongoing writing; this session got that wrong at wake and corrected it in the
+  handoff. It stays in place as fortkit-agf evidence.
+
+- 2026-08-07: **herald.timer is installed, enabled, lingering, first fire
+  2026-08-08 05:00 AKDT** — units byte-identical to civ/systemd/ drafts
+  (fortkit-r6x.7 confirmed).
