@@ -55,12 +55,13 @@ run_step() {
   fi
 }
 
-emit verify.run "Verifier started" -p '{"steps":["typecheck","lint","test","shellcheck"]}'
+emit verify.run "Verifier started" -p '{"steps":["typecheck","browser-typecheck","lint","test","shellcheck"]}'
 run_step typecheck npm run typecheck
+run_step browser-typecheck npm run typecheck:browser
 run_step lint npm run lint
 run_step test npm run test
 # -x follows sourced files so fort/scripts/lib/* is linted too, not skipped.
 # civ/scripts and bin/regent joined the surface 2026-08-06 (fortkit-1ca: the
 # most privileged scripts in the civilization had never been ShellChecked).
 run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh civ/scripts/*.sh
-emit verify.pass "Verifier passed" -p '{"steps":["typecheck","lint","test","shellcheck"]}'
+emit verify.pass "Verifier passed" -p '{"steps":["typecheck","browser-typecheck","lint","test","shellcheck"]}'

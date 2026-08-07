@@ -12,7 +12,8 @@
     "fortkit": "./src/cli.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "typecheck:browser": "tsc --noEmit --project tsconfig.browser.json",
     "lint": "biome check .",
     "test": "vitest run"
   },

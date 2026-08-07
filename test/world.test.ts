@@ -7,6 +7,7 @@ import { createContext, Script } from "node:vm";
 import { describe, expect, test, vi } from "vitest";
 
 import {
+  composeWorldPage,
   createWorldHandler,
   createWorldServer,
   worldPage,
@@ -65,6 +66,22 @@ describe("world view", () => {
     expect(worldPage).toContain("setInterval(load, 5000)");
     expect(worldPage).toContain(`open \${fort.beads.open}`);
     expect(worldPage).not.toContain("ready");
+  });
+
+  test("composes literal dollar sequences without replacement expansion", () => {
+    const script = 'const token = "$& $` $\' $$";';
+    const page = composeWorldPage(
+      "<body><!-- world-page-script --></body>",
+      script,
+    );
+
+    expect(page).toContain(script);
+  });
+
+  test("rejects a page template without a script marker", () => {
+    expect(() => composeWorldPage("<body></body>", "load();")).toThrow(
+      "World page template is missing its script marker",
+    );
   });
 
   test("escapes hostile bead titles rendered by card", () => {

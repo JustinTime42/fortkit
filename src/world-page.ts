@@ -1,8 +1,10 @@
 import type { WorldFort } from "./world.ts";
 
+// This checked ES module is composed into a classic browser script. Keep its
+// imports type-only: runtime imports or exports would remain in the served JS.
+
 /**
  * Escape text before placing it in HTML generated from fort data.
- *
  */
 const esc = (value: unknown) =>
   String(value).replace(/[&<>"']/g, (character) => {
@@ -16,10 +18,9 @@ const esc = (value: unknown) =>
     return replacements[character] ?? character;
   });
 
-/**
- */
+/** Escape all dynamic list content, including headings and class names. */
 const list = (title: string, items: string[], className = "") =>
-  `<h3>${title}</h3><ul class="${className}">${
+  `<h3>${esc(title)}</h3><ul class="${esc(className)}">${
     items.length
       ? items.map((item) => `<li>${esc(item)}</li>`).join("")
       : '<li class="muted">none</li>'
