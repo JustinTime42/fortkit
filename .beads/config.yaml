@@ -48,12 +48,15 @@
 # The output remains a read-only projection; do not import or edit it during
 # ordinary workflow. Use relative paths under .beads/ for portability.
 export:
-  auto: true
-  path: issues.jsonl
-  interval: 60s
-  git-add: false
+    auto: true
+    path: issues.jsonl
+    interval: 60s
+    git-add: false
 # import:
 #   path: issues.jsonl
+
+sync:
+    remote: "git@github.com:JustinTime42/fortkit.git"
 
 # Integration settings (access with 'bd config get/set')
 # Non-secret keys (stored in the database):
