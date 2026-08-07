@@ -1,4 +1,5 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
+import { once } from "node:events";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,6 +10,33 @@ import { describe, expect, test } from "vitest";
 
 const execFileAsync = promisify(execFile);
 const cliPath = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
+
+function cliChild(args: string[]): string {
+  return `
+    console.log = (...values) => process.send?.({ stdout: values.join(" ") });
+    console.error = (...values) => process.send?.({ stderr: values.join(" ") });
+    process.argv = [process.execPath, ${JSON.stringify(cliPath)}, ...${JSON.stringify(args)}];
+    await import(${JSON.stringify(cliPath)});
+  `;
+}
+
+function childMessage(
+  child: ReturnType<typeof spawn>,
+  property: string,
+  expected: string,
+) {
+  return new Promise<unknown>((resolve) => {
+    child.on("message", (message) => {
+      const value =
+        typeof message === "object" && message !== null
+          ? (message as Record<string, unknown>)[property]
+          : undefined;
+      if (typeof value === "string" && value.includes(expected)) {
+        resolve(message);
+      }
+    });
+  });
+}
 
 describe("world CLI", () => {
   test("rejects unknown arguments when --port is absent", async () => {
@@ -54,21 +82,54 @@ describe("world CLI", () => {
         join(home, ".claude", "civilization.json"),
         JSON.stringify({ forts: [{ fort_name: "Test Fort", repo: fort }] }),
       );
-      await expect(
-        execFileAsync(
-          process.execPath,
-          [cliPath, "ambient", "kethra", "--on", "2026-08-07T12:30:00Z"],
-          { cwd: fort, env: { ...process.env, HOME: home } },
+      const child = spawn(
+        process.execPath,
+        [
+          "--input-type=module",
+          "--eval",
+          cliChild(["ambient", "kethra", "--on", "2026-08-07T12:30:00Z"]),
+        ],
+        {
+          cwd: fort,
+          env: { ...process.env, HOME: home },
+          stdio: ["ignore", "pipe", "pipe", "ipc"],
+        },
+      );
+      const [message, [code]] = await Promise.all([
+        childMessage(child, "stdout", "Ambient schedule for kethra"),
+        once(child, "close"),
+      ]);
+      expect(code).toBe(0);
+      expect(message).toMatchObject({
+        stdout: expect.stringContaining(
+          "Ambient schedule for kethra — 2026-08-07 UTC",
         ),
-      ).resolves.toEqual(expect.anything());
+      });
+      expect((message as { stdout: string }).stdout).toContain(
+        "lunching at tavern",
+      );
 
-      await expect(
-        execFileAsync(
-          process.execPath,
-          [cliPath, "ambient", "kethra", "--on", "2026-08-07T12:30:00Z"],
-          { cwd: root, env: { ...process.env, HOME: home } },
-        ),
-      ).rejects.toMatchObject({ code: 1 });
+      const unregistered = spawn(
+        process.execPath,
+        [
+          "--input-type=module",
+          "--eval",
+          cliChild(["ambient", "kethra", "--on", "2026-08-07T12:30:00Z"]),
+        ],
+        {
+          cwd: root,
+          env: { ...process.env, HOME: home },
+          stdio: ["ignore", "pipe", "pipe", "ipc"],
+        },
+      );
+      const [error, [errorCode]] = await Promise.all([
+        childMessage(unregistered, "stderr", "is not a registered fort"),
+        once(unregistered, "close"),
+      ]);
+      expect(errorCode).toBe(1);
+      expect(error).toMatchObject({
+        stderr: expect.stringContaining("is not a registered fort"),
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

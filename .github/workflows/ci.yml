@@ -12,6 +12,8 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
+    env:
+      TZ: America/Anchorage
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,4 +23,7 @@ jobs:
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install --yes shellcheck
       - run: npm ci
-      - run: fort/scripts/verify.sh --no-emit
+      - name: Verify outside UTC
+        run: |
+          date +'%Y-%m-%dT%H:%M:%S %Z %z'
+          fort/scripts/verify.sh --no-emit

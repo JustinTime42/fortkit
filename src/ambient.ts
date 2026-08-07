@@ -22,6 +22,7 @@ export type AmbientTimestamp = Date | number | string;
 
 const dayMilliseconds = 24 * 60 * 60 * 1000;
 const quarterHourMilliseconds = 15 * 60 * 1000;
+const maximumWindowMilliseconds = 31 * dayMilliseconds;
 
 // Keep fishing last: Kethra's identity hash selects it as her favourite.
 const pursuits: ReadonlyArray<readonly [AmbientActivity, AmbientPlace]> = [
@@ -77,8 +78,10 @@ function sharedWindow(
 ): boolean {
   // Everyone shares the core; deterministic approach/departure jitter gives
   // the Tavern arrivals and exits without ever making a citizen eat alone.
-  const approach = hash(`${identity}\u0000${name}\u0000arrival`) % 2;
-  const departure = hash(`${identity}\u0000${name}\u0000departure`) % 2;
+  // FNV-1a's low bit is preserved by its odd multiplier. Sample higher bits
+  // so arrival and departure have independent, useful entropy.
+  const approach = (hash(`${identity}\u0000${name}\u0000arrival`) >>> 8) % 2;
+  const departure = (hash(`${identity}\u0000${name}\u0000departure`) >>> 8) % 2;
   return (
     minute >= coreStart - 15 * (approach + 1) &&
     minute < coreEnd + 15 * (departure + 1)
@@ -144,6 +147,10 @@ function clock(timestamp: number): string {
   return `${String(date.getUTCHours()).padStart(2, "0")}:${String(date.getUTCMinutes()).padStart(2, "0")}`;
 }
 
+function datedClock(timestamp: number): string {
+  return `${new Date(timestamp).toISOString().slice(0, 10)} ${clock(timestamp)}`;
+}
+
 function formatAmbientWindow(
   citizenId: string,
   start: number,
@@ -152,6 +159,14 @@ function formatAmbientWindow(
 ): string[] {
   if (start >= end)
     throw new RangeError("Ambient interval must have a positive duration");
+  if (end - start > maximumWindowMilliseconds) {
+    throw new RangeError(
+      "Ambient interval exceeds 31 days; choose a more recent --since timestamp",
+    );
+  }
+  const includeDates =
+    Math.floor(start / dayMilliseconds) !==
+    Math.floor((end - 1) / dayMilliseconds);
   const spans: Array<{ start: number; end: number; state: AmbientState }> = [];
   for (let cursor = start; cursor < end; ) {
     const next = Math.min(
@@ -174,7 +189,7 @@ function formatAmbientWindow(
   }
   return spans.map(
     ({ start: spanStart, end: spanEnd, state }) =>
-      `${clock(spanStart)}–${clock(spanEnd)} ${state.activity} at ${state.place}`,
+      `${includeDates ? datedClock(spanStart) : clock(spanStart)}–${includeDates ? datedClock(spanEnd) : clock(spanEnd)} ${state.activity} at ${state.place}`,
   );
 }
 
