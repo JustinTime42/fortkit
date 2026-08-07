@@ -61,7 +61,14 @@ describe("colony projection", () => {
       worktrees: ["/fortkit-worktrees/other", "/fortkit-worktrees/bzx.2"],
       events: [event()],
       citizens: [
-        { name: "Kethra Anvilmark", pronouns: "she/her", seat: "forge" },
+        {
+          name: "Kethra Anvilmark",
+          pronouns: "she/her",
+          seat: "forge",
+          personality: "Builds instruments.",
+          currentBead: null,
+          lastHandoff: "Forge handoff",
+        },
       ],
     });
 
@@ -95,7 +102,11 @@ describe("colony projection", () => {
     ]);
     expect(result.dungeon).toEqual([expect.objectContaining({ id: "bug" })]);
     expect(result.citizens).toEqual([
-      { name: "Kethra Anvilmark", pronouns: "she/her", seat: "forge" },
+      expect.objectContaining({
+        name: "Kethra Anvilmark",
+        pronouns: "she/her",
+        currentBead: "fortkit-bzx.2",
+      }),
     ]);
     expect(result.unassigned.map(({ id }) => id)).toEqual(["bug", "no-job"]);
   });

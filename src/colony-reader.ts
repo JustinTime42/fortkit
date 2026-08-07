@@ -6,9 +6,13 @@ import type { ColonyCitizen, ColonyProjection } from "./page-types.ts";
 import { readBeadRecords } from "./readers/beads.ts";
 import { readEventFeed } from "./readers/events.ts";
 import { readGitState } from "./readers/git.ts";
+import { readLatestHandoffs } from "./readers/handoffs.ts";
 import { readRegistry } from "./readers/registry.ts";
 
-async function readCitizens(path: string): Promise<ColonyCitizen[] | null> {
+async function readCitizens(
+  path: string,
+  handoffs: Map<string, string | null> | null,
+): Promise<ColonyCitizen[] | null> {
   let files: string[];
   try {
     files = await readdir(path);
@@ -27,12 +31,19 @@ async function readCitizens(path: string): Promise<ColonyCitizen[] | null> {
             contents,
           );
           const pronouns = /\b([a-z]+\/[a-z]+)\b/.exec(holder?.[2] ?? "")?.[1];
+          const personality =
+            /\*\*Personality \(in their own words\):\*\*\s*[“"]([^”"]*)[”"]/s
+              .exec(contents)?.[1]
+              ?.trim();
           return seat === undefined || holder === null
             ? null
             : {
                 name: holder[1]?.trim() ?? "unknown",
                 pronouns: pronouns ?? "unknown",
                 seat,
+                personality: personality ?? null,
+                currentBead: null,
+                lastHandoff: handoffs?.get(seat.toLocaleLowerCase()) ?? null,
               };
         } catch {
           return null;
@@ -51,12 +62,17 @@ export async function readColony(
     (candidate) => candidate.name === fortName,
   );
   if (fort === undefined) return null;
-  const [beads, events, git, citizens] = await Promise.all([
+  const handoffDirectory = join(fort.path, "fort", "handoffs");
+  const [beads, events, git, handoffs] = await Promise.all([
     readBeadRecords(join(fort.path, ".beads", "issues.jsonl")),
     readEventFeed(join(fort.path, "fort", "events")),
     readGitState(fort.path),
-    readCitizens(join(fort.path, "fort", "seats")),
+    readLatestHandoffs(handoffDirectory),
   ]);
+  const citizens = await readCitizens(
+    join(fort.path, "fort", "seats"),
+    handoffs,
+  );
   return projectColony({
     beads: beads?.beads ?? null,
     worktrees: git.worktrees,

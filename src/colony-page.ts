@@ -2,6 +2,71 @@ import type { ColonyProjection } from "./page-types.ts";
 
 type ActorStyle = { glyph: string; color: string };
 
+function esc(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return entities[character] ?? character;
+  });
+}
+
+function display(value: string | number | null): string {
+  return value === null ? "unknown" : String(value);
+}
+
+function detailList(fields: Array<[string, string | number | null]>): string {
+  return `<dl>${fields
+    .map(
+      ([name, value]) => `<dt>${esc(name)}</dt><dd>${esc(display(value))}</dd>`,
+    )
+    .join("")}</dl>`;
+}
+
+function seatPanel(citizen: ColonyProjection["citizens"][number]): string {
+  return `<h2>Seat: ${esc(citizen.seat)}</h2>${detailList([
+    ["name", citizen.name],
+    ["pronouns", citizen.pronouns],
+    ["personality", citizen.personality],
+    ["current bead", citizen.currentBead],
+    ["last handoff", citizen.lastHandoff],
+  ])}`;
+}
+
+function beadPanel(bead: ColonyProjection["unassigned"][number]): string {
+  const fields: Array<[string, string | number | null]> = [
+    ["id", bead.id],
+    ["title", bead.title],
+    ["description", bead.description],
+    ["design", bead.design],
+    ["notes", bead.notes],
+    ["acceptance criteria", bead.acceptanceCriteria],
+    ["status", bead.status],
+    ["priority", bead.priority],
+    ["type", bead.issueType],
+    ["assignee", bead.assignee],
+    ["owner", bead.owner],
+    ["labels", bead.labels?.join(", ") ?? null],
+    ["created", bead.createdAt],
+    ["created by", bead.createdBy],
+    ["updated", bead.updatedAt],
+    ["started", bead.startedAt],
+    ["closed", bead.closedAt],
+    ["close reason", bead.closeReason],
+  ];
+  const provenance = (bead.dependencies ?? [])
+    .map(
+      (edge) =>
+        `<li>${esc(edge.type)}: ${esc(edge.issueId)} → ${esc(edge.dependsOnId)}; created ${esc(display(edge.createdAt))} by ${esc(display(edge.createdBy))}; metadata ${esc(display(edge.metadata))}</li>`,
+    )
+    .join("");
+  return `<h2>Bead: ${esc(bead.id)}</h2>${detailList(fields)}<h3>Provenance edges</h3><ul>${provenance || "<li>none</li>"}</ul>`;
+}
+
 function actorStyles(projection: ColonyProjection): Map<string, ActorStyle> {
   const actors = [
     ...new Set([
@@ -51,8 +116,15 @@ function render(projection: ColonyProjection) {
   const canvas = document.querySelector<HTMLCanvasElement>("#colony");
   const ticker = document.querySelector<HTMLElement>("#ticker");
   const gaps = document.querySelector<HTMLElement>("#gaps");
+  const detailPanel = document.querySelector<HTMLElement>("#detail-panel");
   const context = canvas?.getContext("2d");
-  if (canvas === null || ticker === null || gaps === null || context == null)
+  if (
+    canvas === null ||
+    ticker === null ||
+    gaps === null ||
+    detailPanel === null ||
+    context == null
+  )
     return;
   context.fillStyle = "#17140f";
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -124,6 +196,33 @@ function render(projection: ColonyProjection) {
     projection.gaps.length === 0
       ? ""
       : `Source gaps: ${projection.gaps.join(" · ")}`;
+  canvas.onclick = (event) => {
+    const bounds = canvas.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) * canvas.width) / bounds.width;
+    const y = ((event.clientY - bounds.top) * canvas.height) / bounds.height;
+    const workshop =
+      y >= 230 && y <= 342
+        ? projection.workshops[Math.floor((x - 30) / 265)]
+        : undefined;
+    const detailIndex = (buildingTop: number): number =>
+      Math.floor((y - (buildingTop + 46)) / 13);
+    const bead =
+      x >= 30 && x <= 240 && y >= 35 && y <= 147
+        ? projection.unassigned[detailIndex(35)]
+        : x >= 765 && x <= 975 && y >= 35 && y <= 147
+          ? projection.dungeon[detailIndex(35)]
+          : workshop?.beads[detailIndex(230)];
+    const citizen =
+      y >= 515 && y <= 565
+        ? projection.citizens[Math.floor((x - 48) / 170)]
+        : undefined;
+    detailPanel.innerHTML =
+      citizen === undefined
+        ? bead === undefined
+          ? ""
+          : beadPanel(bead)
+        : seatPanel(citizen);
+  };
 }
 
 async function load() {

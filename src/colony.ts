@@ -103,6 +103,20 @@ function comparePaths(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+function citizensWithActivity(
+  citizens: ColonyCitizen[],
+  sessions: ColonySession[],
+): ColonyCitizen[] {
+  return citizens.map((citizen) => {
+    const session = sessions.find(
+      (candidate) =>
+        candidate.seat?.toLocaleLowerCase() ===
+        citizen.seat.toLocaleLowerCase(),
+    );
+    return { ...citizen, currentBead: session?.beadId ?? null };
+  });
+}
+
 /**
  * Projects read-only fort data into colony entities. Beads supply present state;
  * events only decorate active benches and their absence never changes that state.
@@ -129,7 +143,7 @@ export function projectColony(sources: ColonySources): ColonyProjection {
       .sort(comparePaths)
       .map((worktree) => benchFor(worktree, sessions)),
     dungeon: beads.filter((bead) => bead.issueType === "bug"),
-    citizens: (sources.citizens ?? []).slice(),
+    citizens: citizensWithActivity((sources.citizens ?? []).slice(), sessions),
     // Never disappear a bead merely because its workflow label is absent or unknown.
     unassigned: beads.filter((bead) => !hasWorkType(bead)),
     announcements: (sources.events ?? [])

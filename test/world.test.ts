@@ -114,9 +114,21 @@ describe("world view", () => {
       );
       const projection = await readColony(temporaryRegistry, "Temporary");
       expect(projection?.citizens).toEqual([
-        { name: "Kethra Anvilmark", pronouns: "she/her", seat: "Forge" },
-        { name: "Emrith Cairnwright", pronouns: "she/her", seat: "Mayor" },
-        { name: "Ilva Trueglass", pronouns: "she/her", seat: "Warden" },
+        expect.objectContaining({
+          name: "Kethra Anvilmark",
+          pronouns: "she/her",
+          seat: "Forge",
+        }),
+        expect.objectContaining({
+          name: "Emrith Cairnwright",
+          pronouns: "she/her",
+          seat: "Mayor",
+        }),
+        expect.objectContaining({
+          name: "Ilva Trueglass",
+          pronouns: "she/her",
+          seat: "Warden",
+        }),
       ]);
       if (projection === null) throw new Error("colony projection is missing");
       const styles = (
@@ -150,6 +162,7 @@ describe("world view", () => {
     };
     const ticker = { textContent: "" };
     const gaps = { textContent: "" };
+    const detailPanel = { textContent: "", innerHTML: "" };
     const context = createContext({
       fetch: () => new Promise(() => undefined),
       setInterval: () => undefined,
@@ -162,7 +175,9 @@ describe("world view", () => {
               ? ticker
               : selector === "#gaps"
                 ? gaps
-                : null,
+                : selector === "#detail-panel"
+                  ? detailPanel
+                  : null,
       },
       URLSearchParams,
     });
@@ -173,7 +188,16 @@ describe("world view", () => {
       ],
       benches: [],
       dungeon: [{ id: "bug", title: "Repair" }],
-      citizens: [{ name: "Kethra", pronouns: "she/her", seat: "forge" }],
+      citizens: [
+        {
+          name: "Kethra",
+          pronouns: "she/her",
+          seat: "forge",
+          personality: null,
+          currentBead: null,
+          lastHandoff: null,
+        },
+      ],
       unassigned: [{ id: "intake", title: null }],
       announcements: ["The gate is watched"],
       gaps: ["event stream ABSENT"],
@@ -244,6 +268,71 @@ describe("world view", () => {
     );
     expect(markup).not.toContain(hostileTitle);
     expect(markup).not.toContain("<img");
+  });
+
+  test("renders escaped seat and bead detail panels from fixtures", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "" },
+      document: { querySelector: () => null },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    const hostile = '<img src=x onerror="alert(1)">';
+    const renderSeatPanel = context.seatPanel as (citizen: unknown) => string;
+    const renderBeadPanel = context.beadPanel as (bead: unknown) => string;
+
+    const seatMarkup = renderSeatPanel({
+      name: hostile,
+      pronouns: hostile,
+      seat: hostile,
+      personality: hostile,
+      currentBead: hostile,
+      lastHandoff: hostile,
+    });
+    const beadMarkup = renderBeadPanel({
+      id: hostile,
+      title: hostile,
+      description: hostile,
+      design: hostile,
+      notes: hostile,
+      acceptanceCriteria: hostile,
+      status: hostile,
+      priority: 1,
+      issueType: hostile,
+      assignee: hostile,
+      owner: hostile,
+      labels: [hostile],
+      createdAt: hostile,
+      createdBy: hostile,
+      updatedAt: hostile,
+      startedAt: hostile,
+      closedAt: hostile,
+      closeReason: hostile,
+      dependencies: [
+        {
+          issueId: hostile,
+          dependsOnId: hostile,
+          type: hostile,
+          createdAt: hostile,
+          createdBy: hostile,
+          metadata: hostile,
+        },
+      ],
+    });
+
+    for (const markup of [seatMarkup, beadMarkup]) {
+      expect(markup).toContain(
+        "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;",
+      );
+      expect(markup).not.toContain(hostile);
+      expect(markup).not.toContain("<img");
+    }
+    expect(beadMarkup).toContain("Provenance edges");
   });
 
   test("caps watcher alerts and timestamps each entry", async () => {
