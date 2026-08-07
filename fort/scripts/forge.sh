@@ -109,7 +109,7 @@ set +e
   --add-dir "$root/.beads" \
   --add-dir "$root/fort/events" \
   -m "$model" \
-  "You are Kethra Anvilmark (she/her), holder of the Forge of Manyhalls, the fortkit fort. Read AGENTS.md, fort/charter.md, fort/remember.md, fort/seats/forge.md in this directory, then implement this bead and drive verifiers green. Do not merge, push, or touch .env*/deploy scripts. Commit path-scoped with message starting '$bead: '. Report what you did, verification results, and surprises.
+  "You are Kethra Anvilmark (she/her), holder of the Forge of Manyhalls, the fortkit fort. Read AGENTS.md, fort/charter.md, fort/remember.md, fort/seats/forge.md in this directory, then implement this bead and drive verifiers green. Do not merge, push, or touch .env*/deploy scripts. Commit path-scoped with message starting '$bead: '. Emit work.begun and work.ended events via fort/scripts/emit.sh at the edges of your work. Never close the bead or change its status: the Mayor closes it after review and merge. Report what you did, verification results, and surprises.
 
 BEAD:
 $desc" </dev/null 2>&1) | tee "/tmp/forge-$suffix.log" | tail -30

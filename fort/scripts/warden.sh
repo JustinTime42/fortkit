@@ -31,8 +31,8 @@ log="/tmp/warden-$suffix.log"
 rm -rf "$scratch"
 mkdir -p "$scratch"
 rsync -a \
-  --exclude '.git' --exclude '.env*' --exclude '.beads' \
-  --exclude 'bin' --exclude 'obj' --exclude 'node_modules' \
+  --exclude '.git' --exclude '.env*' --exclude '/.beads' \
+  --exclude 'node_modules' \
   "$src/" "$scratch/"
 
 if [ "${WARDEN_SMOKE:-0}" = "1" ]; then
