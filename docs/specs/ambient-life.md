@@ -2,7 +2,7 @@
 
 **Status: v1 implemented and merged** (fortkit-fci.4, 2026-08-07; Warden-approved). Parent spec: `fortress-visualizer.md` ("Colony architecture v2 — the living fort", Overseer-approved 2026-08-07). Author: the Mayor, from the Overseer's direction of 2026-08-07.
 
-**As implemented (v1):** `src/ambient.ts` is the source of truth for constants. All arithmetic is UTC (timezone independence verified under non-UTC TZ by the Warden). Sleep offsets citizens into five half-hour buckets (`(hash % 5) * 30` minutes); meal and social windows are shared verbatim across citizens (deliberate v1 choice — full co-presence, no breathing yet); idle pursuits cycle a four-pastime table per 3-hour block, uniformly. Known v1 gaps, tracked in fortkit-994 before L4/L6 consume this surface: per-citizen habit weighting, window jitter around a shared core, `--since` true-window semantics, seed rigor (numeric-only, registry-resolved), a typed `AmbientPlace` vocabulary aligned with the layout table, and honest failure on unparseable timestamps. "Sessions override everything" is the consumer's job (the function is stateless); L4 carries that requirement.
+**As implemented (v1.1):** `src/ambient.ts` is the source of truth for constants. All arithmetic is UTC, including under a non-UTC host timezone. Sleep offsets citizens into five half-hour buckets; meal and social visits have deterministic arrivals and departures around a shared core, so everyone still meets. Each citizen deterministically favours one pastime (Kethra favours fishing) while retaining variety. `AmbientPlace` is restricted to homes, Tavern, Archive, and walls — fixed layout vocabulary only. Invalid timestamps throw; no schedule is fabricated at 1970. `fortkit ambient --on` renders a containing UTC day, while `--since` renders the actual interval through now for launcher integration. The seed is numeric and comes only from the registered fort, never a nearby charter or a fallback name. "Sessions override everything" is the consumer's job (the function is stateless); L4 carries that requirement.
 
 ## Purpose
 
@@ -42,7 +42,7 @@ Per-citizen day rhythm, offset deterministically per citizen so the fort breathe
 Available, never imposed — the Overseer's constraint is that work contexts stay clean:
 
 1. **One line at session start**, injected by the launcher (launcher change → human gate 1, beaded separately for the Overseer's hand): e.g. `Ambient: you slept until 06:30, breakfasted at the Tavern with Ilva, and were reading in the Archive when summoned.`
-2. **`fortkit ambient <citizen> [--since <ts>]`** — a CLI summary anyone (agent or human) can run for the fuller picture.
+2. **`fortkit ambient <citizen> [--on <ts> | --since <ts>]`** — a CLI summary anyone (agent or human) can run for the fuller picture. `--on` is explicitly a complete containing UTC day. `--since` is an actual interval from the supplied instant through invocation time, intended for the launcher’s “what happened while away” line; it is not an alias for `--on`.
 
 That is the whole surface. Nothing is auto-appended to prompts beyond the one line, and the line is factual clockwork, not roleplay instruction.
 
