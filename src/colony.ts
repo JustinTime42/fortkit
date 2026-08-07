@@ -51,7 +51,9 @@ function activeSessions(events: EventDetail[]): ColonySession[] {
     }
     const key = sessionKey(event);
     const previous = latest.get(key);
-    if (previous === undefined || eventTime(event) > eventTime(previous)) {
+    // Event files are append-only, so later records settle equal (including
+    // unparseable) timestamps. An end event must therefore clear its start.
+    if (previous === undefined || eventTime(event) >= eventTime(previous)) {
       latest.set(key, event);
     }
   }
@@ -93,6 +95,14 @@ function hasWorkType(bead: Bead): boolean {
   );
 }
 
+function isLive(bead: Bead): boolean {
+  return bead.status !== "closed";
+}
+
+function comparePaths(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 /**
  * Projects read-only fort data into colony entities. Beads supply present state;
  * events only decorate active benches and their absence never changes that state.
@@ -104,7 +114,10 @@ export function projectColony(sources: ColonySources): ColonyProjection {
   if (sources.events === null) gaps.push("event stream ABSENT");
   if (sources.citizens === null) gaps.push("seats roster ABSENT");
 
-  const beads = sources.beads ?? [];
+  // Closed beads belong to the replay/history view, rather than the live
+  // colony. Keep every other workflow state visible: an in-progress or
+  // blocked bug is still in rehabilitation until it is closed.
+  const beads = (sources.beads ?? []).filter(isLive);
   const sessions = activeSessions(sources.events ?? []);
   return {
     workshops: workTypes.map((type) => ({
@@ -113,11 +126,9 @@ export function projectColony(sources: ColonySources): ColonyProjection {
     })),
     benches: (sources.worktrees ?? [])
       .slice()
-      .sort((left, right) => left.localeCompare(right))
+      .sort(comparePaths)
       .map((worktree) => benchFor(worktree, sessions)),
-    dungeon: beads.filter(
-      (bead) => bead.status === "open" && bead.issueType === "bug",
-    ),
+    dungeon: beads.filter((bead) => bead.issueType === "bug"),
     citizens: (sources.citizens ?? []).slice(),
     // Never disappear a bead merely because its workflow label is absent or unknown.
     unassigned: beads.filter((bead) => !hasWorkType(bead)),
