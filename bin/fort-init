@@ -12,6 +12,16 @@ git rev-parse --git-dir >/dev/null 2>&1 || { echo "fort-init: $REPO is not a git
 [ -d fort ] && { echo "fort-init: $REPO already has a fort/" >&2; exit 1; }
 [ -d .beads ] || bd init
 
+# The colony projection reads this passive export.  Use Beads' built-in
+# post-write exporter; do not install a hook under .beads, whose hook trees are
+# deliberately masked by the seat sandbox because they execute on the host.
+# Keep staging explicit so the founding commit remains path-scoped.
+bd config set export.auto true
+bd config set export.path issues.jsonl
+bd config set export.interval 60s
+bd config set export.git-add false
+bd export -o .beads/issues.jsonl
+
 mkdir -p fort/{seats,handoffs,annals,events,specs,scripts,telemetry}
 touch fort/handoffs/.gitkeep
 render() { sed -e "s|{{REPO_PATH}}|$REPO|g" -e "s|{{PROJECT}}|$PROJECT|g" -e "s|{{DATE}}|$DATE|g" \
