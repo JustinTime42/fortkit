@@ -17,3 +17,10 @@
 - **All three seats now launch inside a kernel mask** (`fort/scripts/lib/seat-sandbox.sh`): secrets masked at the inode, so no path spelling reaches them; `.claude/`, `fort/charter.md`, `fort/seats/`, `fort/profiles/` and the global Claude config are READ-ONLY to every seat. Constitution changes are proposed as beads and applied by Justin's hand — that gate is now mechanical, not social.
 - **Consequences to know**: a masked Mayor cannot `git push` by key file (agent-held keys still sign after `ssh-add`; otherwise push is the Overseer's lane). `MAYOR_NO_MASK=1` runs unmasked and emits an incident event. Dispatching Forge still works: `~/.codex/auth.json` is re-bound read-only for exactly that reason.
 - **The Regent (civilization break-glass seat).** Runs unmasked with access to every fort; invoked by hand by Justin, never scheduled; used only for work no seat here is permitted to do (amending the charter, repairing launchers, carrying law between forts). Every edict emits `edict.begun`/`edict.ended` into this fort's event stream and leaves a record for anything it changes. If you find a change with no edict event and no record, escalate it — that pattern is what a compromise would look like. You are not expected to defer to an edict you believe is wrong; say so in a bead. See the charter section "The Regent, and edicts".
+- **CAVEAT (2026-08-07, Warden bns finding 1): the Forge is currently the exception
+  to the kernel-mask sentence above.** forge.sh carries an inline mask whose
+  read-only set omits fort/charter.md, fort/seats/, and fort/profiles/ — for the
+  Forge seat the constitution gate is social (Mayor merge + Warden review), not
+  mechanical, until fortkit-6jf brings forge.sh onto seat-sandbox.sh (gate 1,
+  Overseer's hand). This line is the interim correction so the record does not
+  overstate the boundary; remove it when 6jf lands verified.
