@@ -63,7 +63,7 @@ describe("colony reader", () => {
         ),
         writeFile(
           join(fort, "fort", "seats", "forge.md"),
-          '# Seat: Forge\n\n**Held by: Kethra Anvilmark** (she/her)\n\n**Personality (in his own words):** "Builds durable lenses"\n',
+          '# Seat: Forge\n\n**Held by: Dorin Stoneward** (he/him)\n\n**Personality (in his own words):** "Builds durable lenses"\n',
         ),
         writeFile(
           join(fort, "fort", "handoffs", "forge-2026-08-07.md"),
@@ -87,8 +87,8 @@ describe("colony reader", () => {
         announcements: ["Reader fixture"],
         citizens: [
           {
-            name: "Kethra Anvilmark",
-            pronouns: "she/her",
+            name: "Dorin Stoneward",
+            pronouns: "he/him",
             seat: "Forge",
             personality: "Builds durable lenses",
             currentBead: "fortkit-test",
@@ -102,6 +102,33 @@ describe("colony reader", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  test.each([
+    ["his", "Builds durable lenses"],
+    ["their", "Builds durable lenses"],
+    ["Their", null],
+  ])(
+    "parses personality phrasing case-sensitively: in %s own words",
+    async (pronoun, personality) => {
+      const root = await mkdtemp(join(tmpdir(), "fortkit-colony-reader-"));
+      try {
+        const fort = await createFort(root);
+        await writeFile(
+          join(fort, "fort", "seats", "forge.md"),
+          `# Seat: Forge\n\n**Held by: Ari Vale** (they/them)\n\n**Personality (in ${pronoun} own words):** "Builds durable lenses"\n`,
+        );
+        const registry = await writeRegistry(root, [
+          { fort_name: "Temporary", repo: fort },
+        ]);
+
+        expect((await readColony(registry, "Temporary"))?.citizens).toEqual([
+          expect.objectContaining({ personality }),
+        ]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
 
   test("propagates absent fort and zero-parse roster gaps", async () => {
     const root = await mkdtemp(join(tmpdir(), "fortkit-colony-reader-"));

@@ -17,6 +17,7 @@ type Building = BuildingLayout & {
   details: string[];
   targetAt: (index: number) => DetailTarget | undefined;
 };
+type VisibleDetail = { text: string; index: number | undefined };
 
 const buildingWidth = 210;
 const buildingHeight = 112;
@@ -31,15 +32,36 @@ const citizenColumnWidth = 170;
 const citizenStartY = 530;
 const citizenRowHeight = 48;
 const citizenGlyphAscent = 15;
+const buildingStartX = 30;
+const buildingStride = 245;
 
 const buildingLayouts = {
-  gate: { x: 30, y: 35, name: "GATE", color: "#6b4e2d" },
-  depot: { x: 275, y: 35, name: "TRADE DEPOT", color: "#785a2d" },
-  archive: { x: 520, y: 35, name: "ARCHIVE", color: "#3b5a63" },
-  dungeon: { x: 765, y: 35, name: "DUNGEON", color: "#70404b" },
-  workshop: { x: 30, y: 230, name: "WORKSHOP", color: "#48643d" },
+  gate: { x: buildingStartX, y: 35, name: "GATE", color: "#6b4e2d" },
+  depot: {
+    x: buildingStartX + buildingStride,
+    y: 35,
+    name: "TRADE DEPOT",
+    color: "#785a2d",
+  },
+  archive: {
+    x: buildingStartX + buildingStride * 2,
+    y: 35,
+    name: "ARCHIVE",
+    color: "#3b5a63",
+  },
+  dungeon: {
+    x: buildingStartX + buildingStride * 3,
+    y: 35,
+    name: "DUNGEON",
+    color: "#70404b",
+  },
+  workshop: {
+    x: buildingStartX,
+    y: 230,
+    name: "WORKSHOP",
+    color: "#48643d",
+  },
 } as const satisfies Record<string, BuildingLayout>;
-const workshopStride = 265;
 
 let selectedTarget: DetailTarget | undefined;
 
@@ -132,11 +154,12 @@ function label(bead: { id: string; title: string | null }): string {
   return bead.title === null ? bead.id : `${bead.id} — ${bead.title}`;
 }
 
-function visibleDetails(details: string[]): string[] {
-  if (details.length <= detailRows) return details;
+function visibleDetails(details: string[]): VisibleDetail[] {
+  if (details.length <= detailRows)
+    return details.map((text, index) => ({ text, index }));
   return [
-    ...details.slice(0, detailRows - 1),
-    `… +${details.length - (detailRows - 1)} more`,
+    ...details.slice(0, detailRows - 1).map((text, index) => ({ text, index })),
+    { text: `… +${details.length - (detailRows - 1)} more`, index: undefined },
   ];
 }
 
@@ -157,7 +180,7 @@ function building(context: CanvasRenderingContext2D, layout: Building) {
   context.font = "12px system-ui";
   visibleDetails(layout.details).forEach((detail, index) => {
     context.fillText(
-      truncateDetail(detail),
+      truncateDetail(detail.text),
       layout.x + 10,
       layout.y + detailBaselineOffset + index * detailRowHeight,
     );
@@ -207,7 +230,7 @@ function buildings(projection: ColonyProjection): Building[] {
       beadBuilding(
         {
           ...buildingLayouts.workshop,
-          x: buildingLayouts.workshop.x + index * workshopStride,
+          x: buildingLayouts.workshop.x + index * buildingStride,
           name: `${workshop.type.toUpperCase()} WORKSHOP`,
         },
         workshop.beads,
@@ -231,11 +254,7 @@ function detailIndex(
   const index = Math.floor(
     (y - (building.y + detailHitStartOffset)) / detailRowHeight,
   );
-  const visibleTargetCount = Math.min(
-    building.details.length,
-    building.details.length > detailRows ? detailRows - 1 : detailRows,
-  );
-  return index < visibleTargetCount ? index : undefined;
+  return visibleDetails(building.details)[index]?.index;
 }
 
 function detailTargetAt(
@@ -322,7 +341,9 @@ function render(projection: ColonyProjection) {
     projection.gaps.length === 0
       ? ""
       : `Source gaps: ${projection.gaps.join(" · ")}`;
-  detailPanel.innerHTML = selectedPanel(projection, selectedTarget);
+  const panelMarkup = selectedPanel(projection, selectedTarget);
+  if (detailPanel.innerHTML !== panelMarkup)
+    detailPanel.innerHTML = panelMarkup;
   canvas.onclick = (event) => {
     const bounds = canvas.getBoundingClientRect();
     const x = ((event.clientX - bounds.left) * canvas.width) / bounds.width;
@@ -348,7 +369,9 @@ function render(projection: ColonyProjection) {
       citizen === undefined
         ? buildingTarget
         : { kind: "citizen", seat: citizen.seat };
-    detailPanel.innerHTML = selectedPanel(projection, selectedTarget);
+    const panelMarkup = selectedPanel(projection, selectedTarget);
+    if (detailPanel.innerHTML !== panelMarkup)
+      detailPanel.innerHTML = panelMarkup;
   };
 }
 
