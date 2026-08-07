@@ -30,8 +30,8 @@ async function readCitizens(path: string): Promise<ColonyCitizen[] | null> {
           return seat === undefined || holder === null
             ? null
             : {
-                name: holder[1]?.trim() ?? "unknown",
-                pronouns: pronouns ?? "unknown",
+                name: holder[1]?.trim() || "—",
+                pronouns: pronouns ?? "—",
                 seat,
               };
         } catch {
