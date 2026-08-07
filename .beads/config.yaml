@@ -44,14 +44,14 @@
 #   git-push: false    # Disable git push (backup locally only)
 #   git-repo: ""       # Separate git repo for backups (default: project repo)
 
-# Optional JSONL auto-export for viewers, interchange, and issue-level migration.
-# Disabled by default; enable only when an integration needs fresh .beads/issues.jsonl.
-# Use relative paths under .beads/ for JSONL import/export filenames.
-# export:
-#   auto: false
-#   path: issues.jsonl
-#   interval: 60s
-#   git-add: false
+# JSONL auto-export for the canonical cross-fort Beads state artifact.
+# The output remains a read-only projection; do not import or edit it during
+# ordinary workflow. Use relative paths under .beads/ for portability.
+export:
+  auto: true
+  path: issues.jsonl
+  interval: 60s
+  git-add: false
 # import:
 #   path: issues.jsonl
 
