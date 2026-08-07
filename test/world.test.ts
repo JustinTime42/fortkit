@@ -75,6 +75,8 @@ describe("world view", () => {
   test("has a checked canvas colony page with distinct actor styles", () => {
     expect(colonyPage).not.toContain("<!-- colony-page-script -->");
     expect(colonyPage).toContain("<title>Bartizan — colony</title>");
+    expect(colonyPage).toContain('id="colony-title"');
+    expect(colonyPage).not.toContain('id="ticker" aria-live');
     expect(colonyPage).toContain('<canvas id="colony"');
     expect(colonyPage).toContain("fetch(`/colony?fort=");
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
@@ -100,6 +102,101 @@ describe("world view", () => {
     });
     const rendered = [...styles.values()].map((style) => JSON.stringify(style));
     expect(new Set(rendered).size).toBe(rendered.length);
+  });
+
+  test("names the colony tab and header after its selected fort", async () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const title = { textContent: "Bartizan — colony" };
+    const document = {
+      title: "Bartizan — colony",
+      querySelector: (selector: string) =>
+        selector === "#colony-title" ? title : null,
+    };
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "?fort=Alpha%20Fort" },
+      document,
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+
+    expect(document.title).toBe("Bartizan — Alpha Fort colony");
+    expect(title.textContent).toBe("Bartizan — Alpha Fort colony");
+  });
+
+  test("labels truncated building rows and wraps citizens after six columns", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const fillText = vi.fn();
+    const canvas = {
+      width: 1100,
+      height: 620,
+      getContext: () => ({
+        fillStyle: "",
+        strokeStyle: "",
+        font: "",
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        fillText,
+      }),
+    };
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "" },
+      document: {
+        querySelector: (selector: string) =>
+          selector === "#colony" ? canvas : { textContent: "", innerHTML: "" },
+      },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    (
+      context.building as (
+        context: unknown,
+        x: number,
+        y: number,
+        name: string,
+        details: string[],
+        color: string,
+      ) => void
+    )(
+      canvas.getContext(),
+      0,
+      0,
+      "TEST",
+      Array.from(
+        { length: 7 },
+        (_, index) => `detail-${index}-${"x".repeat(30)}`,
+      ),
+      "#000",
+    );
+    expect(fillText.mock.calls.map(([value]) => value)).toEqual(
+      expect.arrayContaining([`detail-0-${"x".repeat(17)}…`, "… +3 more"]),
+    );
+
+    (context.render as (projection: unknown) => void)({
+      workshops: [],
+      benches: [],
+      dungeon: [],
+      citizens: Array.from({ length: 7 }, (_, index) => ({
+        name: `Citizen ${index + 1}`,
+        pronouns: "they/them",
+        seat: "forge",
+        personality: null,
+        currentBead: null,
+        lastHandoff: null,
+      })),
+      unassigned: [],
+      announcements: [],
+      gaps: [],
+    });
+    expect(canvas.height).toBe(646);
+    expect(fillText).toHaveBeenCalledWith("Citizen 7 (they/them)", 48, 598);
   });
 
   test("renders colony projection fixtures as named fort buildings and a ticker", () => {

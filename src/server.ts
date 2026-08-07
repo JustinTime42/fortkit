@@ -76,7 +76,8 @@ export function createWorldHandler(
       return;
     }
     try {
-      const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+      const requestUrl = new URL(request.url ?? "/", "http://localhost");
+      const { pathname } = requestUrl;
       if (pathname === "/world") {
         response.writeHead(200, {
           "content-type": "application/json; charset=utf-8",
@@ -85,10 +86,7 @@ export function createWorldHandler(
         return;
       }
       if (pathname === "/colony") {
-        const fort = new URL(
-          request.url ?? "/",
-          "http://localhost",
-        ).searchParams.get("fort");
+        const fort = requestUrl.searchParams.get("fort");
         const colony =
           fort === null ? null : await readColony(registryPath, fort);
         if (colony === null) {

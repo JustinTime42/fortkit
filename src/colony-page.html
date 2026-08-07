@@ -12,8 +12,8 @@
     #detail-panel { background: #302719; border: 1px solid #79633d; padding: 1rem; color: #e8ddbf; } #detail-panel:empty { display: none; }
     #detail-panel dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: .75rem 0; } #detail-panel dt { color: #f1cc77; } #detail-panel dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   </style>
-  <header><strong>Bartizan — colony</strong><a href="/">← world</a></header>
-  <div id="ticker" aria-live="polite">Loading colony announcements…</div>
+  <header><strong id="colony-title">Bartizan — colony</strong><a href="/">← world</a></header>
+  <div id="ticker">Loading colony announcements…</div>
   <canvas id="colony" width="1100" height="620" aria-label="Fort colony view"></canvas>
   <section id="detail-panel" aria-live="polite"></section>
   <p id="gaps" class="muted"></p>
