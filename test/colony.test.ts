@@ -166,7 +166,10 @@ describe("colony projection", () => {
     expect(result.benches).toEqual([
       { worktree: "/fortkit-worktrees/bzx.2", session: null },
     ]);
-    expect(result.gaps).toEqual(["event stream ABSENT"]);
+    expect(result.gaps).toEqual([
+      "event stream ABSENT",
+      "seats roster present, nothing parsed",
+    ]);
   });
 
   test("represents absent sources as gaps without throwing", () => {

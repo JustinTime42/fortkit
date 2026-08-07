@@ -127,6 +127,9 @@ export function projectColony(sources: ColonySources): ColonyProjection {
   if (sources.worktrees === null) gaps.push("git worktree list ABSENT");
   if (sources.events === null) gaps.push("event stream ABSENT");
   if (sources.citizens === null) gaps.push("seats roster ABSENT");
+  if (sources.citizens?.length === 0) {
+    gaps.push("seats roster present, nothing parsed");
+  }
 
   // Closed beads belong to the replay/history view, rather than the live
   // colony. Keep every other workflow state visible: an in-progress or

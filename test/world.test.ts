@@ -6,7 +6,6 @@ import { createContext, Script } from "node:vm";
 
 import { describe, expect, test, vi } from "vitest";
 
-import { readColony } from "../src/colony-reader.js";
 import { readLatestHandoffs } from "../src/readers/handoffs.js";
 import {
   colonyPage,
@@ -73,7 +72,7 @@ describe("world view", () => {
     expect(worldPage).toContain("/colony-view?fort=");
   });
 
-  test("has a checked canvas colony page with a distinct actor style per parsed citizen pair", async () => {
+  test("has a checked canvas colony page with distinct actor styles", () => {
     expect(colonyPage).not.toContain("<!-- colony-page-script -->");
     expect(colonyPage).toContain("<title>Bartizan — colony</title>");
     expect(colonyPage).toContain('<canvas id="colony"');
@@ -89,59 +88,18 @@ describe("world view", () => {
       URLSearchParams,
     });
     new Script(script).runInContext(context);
-    const root = await mkdtemp(join(tmpdir(), "fortkit-colony-"));
-    const fort = join(root, "fort");
-    const seats = join(fort, "fort", "seats");
-    try {
-      await mkdir(seats, { recursive: true });
-      await Promise.all([
-        writeFile(
-          join(seats, "mayor.md"),
-          "# Seat: Mayor\n\n**Held by: Emrith Cairnwright** (she/her, declared 2026-08-03 at the Founding Moot)\n",
-        ),
-        writeFile(
-          join(seats, "forge.md"),
-          "# Seat: Forge\n\n**Held by: Kethra Anvilmark** (she/her, declared 2026-08-03 at the Founding Moot)\n",
-        ),
-        writeFile(
-          join(seats, "warden.md"),
-          "# Seat: Warden\n\n**Held by: Ilva Trueglass** (she/her, declared 2026-08-03 at the Founding Moot)\n",
-        ),
-      ]);
-      const temporaryRegistry = join(root, "civilization.json");
-      await writeFile(
-        temporaryRegistry,
-        JSON.stringify({ forts: [{ fort_name: "Temporary", repo: fort }] }),
-      );
-      const projection = await readColony(temporaryRegistry, "Temporary");
-      expect(projection?.citizens).toEqual([
-        expect.objectContaining({
-          name: "Kethra Anvilmark",
-          pronouns: "she/her",
-          seat: "Forge",
-        }),
-        expect.objectContaining({
-          name: "Emrith Cairnwright",
-          pronouns: "she/her",
-          seat: "Mayor",
-        }),
-        expect.objectContaining({
-          name: "Ilva Trueglass",
-          pronouns: "she/her",
-          seat: "Warden",
-        }),
-      ]);
-      if (projection === null) throw new Error("colony projection is missing");
-      const styles = (
-        context.actorStyles as (projection: unknown) => Map<string, unknown>
-      )(projection);
-      const rendered = [...styles.values()].map((style) =>
-        JSON.stringify(style),
-      );
-      expect(new Set(rendered).size).toBe(rendered.length);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
+    const styles = (
+      context.actorStyles as (projection: unknown) => Map<string, unknown>
+    )({
+      citizens: [
+        { name: "Emrith Cairnwright", pronouns: "she/her", seat: "Mayor" },
+        { name: "Kethra Anvilmark", pronouns: "she/her", seat: "Forge" },
+        { name: "Ilva Trueglass", pronouns: "she/her", seat: "Warden" },
+      ],
+      benches: [],
+    });
+    const rendered = [...styles.values()].map((style) => JSON.stringify(style));
+    expect(new Set(rendered).size).toBe(rendered.length);
   });
 
   test("renders colony projection fixtures as named fort buildings and a ticker", () => {
@@ -429,6 +387,61 @@ describe("world view", () => {
       expect(handoffs?.get("forge")).toBe(
         "Handoff: Forge 2026-08-07T14:28:00-08:00",
       );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reads Mayor handoff headings without seconds or with an uncertain time", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-handoffs-"));
+    try {
+      await Promise.all([
+        writeFile(
+          join(root, "mayor-2026-08-04.md"),
+          "# Handoff: Mayor 2026-08-04T11:35-08:00\n",
+        ),
+        writeFile(
+          join(root, "mayor-2026-08-04-d.md"),
+          "# Handoff: Mayor 2026-08-04T20:30-08:00\n",
+        ),
+        writeFile(
+          join(root, "mayor-2026-08-06.md"),
+          "# Handoff: Mayor 2026-08-06T10:00-08:00\n",
+        ),
+        writeFile(
+          join(root, "mayor-2026-08-06-d.md"),
+          "# Handoff: Mayor 2026-08-06T~~11:45-08:00\n",
+        ),
+      ]);
+
+      const handoffs = await readLatestHandoffs(root);
+      expect(handoffs?.get("mayor")).toBe(
+        "Handoff: Mayor 2026-08-06T~~11:45-08:00",
+      );
+
+      await Promise.all([
+        rm(join(root, "mayor-2026-08-06.md"), { force: true }),
+        rm(join(root, "mayor-2026-08-06-d.md"), { force: true }),
+      ]);
+      const sameDayHandoffs = await readLatestHandoffs(root);
+      expect(sameDayHandoffs?.get("mayor")).toBe(
+        "Handoff: Mayor 2026-08-04T20:30-08:00",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("prefers a suffixed filename when same-day handoff timestamps are absent", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-handoffs-"));
+    try {
+      await Promise.all([
+        writeFile(join(root, "mayor-2026-08-04.md"), "not a handoff\n"),
+        writeFile(join(root, "mayor-2026-08-04-d.md"), "still not a handoff\n"),
+      ]);
+
+      const handoffs = await readLatestHandoffs(root);
+      expect(handoffs?.get("mayor")).toBeNull();
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -31,13 +31,25 @@ function handoffCandidates(files: string[]): HandoffCandidate[] {
 }
 
 function handoffTimestamp(heading: string | null): number | null {
-  const isoTimestamp =
-    /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\b/.exec(
+  const timestampParts =
+    /\b(\d{4}-\d{2}-\d{2}T)~{0,2}(\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2}))\b/.exec(
       heading ?? "",
-    )?.[0];
-  if (isoTimestamp === undefined) return null;
-  const timestamp = Date.parse(isoTimestamp);
+    );
+  if (timestampParts === null) return null;
+  const timestamp = Date.parse(`${timestampParts[1]}${timestampParts[2]}`);
   return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function filenameTiebreak(
+  candidate: ReadHandoffCandidate,
+  previous: ReadHandoffCandidate,
+): boolean {
+  const plainFilename = (handoff: ReadHandoffCandidate) =>
+    `${handoff.seat}-${handoff.date}.md`;
+  const candidateIsSuffixed = candidate.file !== plainFilename(candidate);
+  const previousIsSuffixed = previous.file !== plainFilename(previous);
+  if (candidateIsSuffixed !== previousIsSuffixed) return candidateIsSuffixed;
+  return candidate.file > previous.file;
 }
 
 async function readHandoffCandidate(
@@ -80,7 +92,7 @@ export async function readLatestHandoffs(
           (previous.timestamp ?? Number.NEGATIVE_INFINITY)) ||
       (readCandidate.date === previous.date &&
         readCandidate.timestamp === previous.timestamp &&
-        readCandidate.file > previous.file)
+        filenameTiebreak(readCandidate, previous))
     ) {
       latest.set(candidate.seat.toLocaleLowerCase(), readCandidate);
     }
