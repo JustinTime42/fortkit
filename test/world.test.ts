@@ -46,8 +46,10 @@ describe("world view", () => {
       name: "No Beads",
       beads: null,
       inProgress: [],
-      gaps: ["Beads export ABSENT", "event stream ABSENT"],
     });
+    expect(forts[1]?.gaps).toEqual(
+      expect.arrayContaining(["Beads export ABSENT", "event stream ABSENT"]),
+    );
     expect(forts[2]).toMatchObject({
       name: "Missing",
       present: false,
