@@ -78,7 +78,8 @@ _Add a brief overview of your project architecture_
 
 ## Conventions & Patterns
 
-_Add your project-specific conventions here_
+- **Browser page scripts live in checked TypeScript modules** (e.g. `src/world-page.ts`), type-checked and linted like all other source, and composed into their HTML shell at server startup via `stripTypeScriptTypes` at an HTML comment marker. No bundler, no runtime dependencies. Decided on fortkit-b18 (Overseer, 2026-08-07); the colony renderer and any future page follow the same pattern. Hardening items for the pattern are tracked in fortkit-12z.
+- **The viewer product is named Bartizan** (Overseer decision, fortkit-zgp, 2026-08-07). CLI command names are unchanged.
 
 ## Manyhalls — the fortkit Fort
 

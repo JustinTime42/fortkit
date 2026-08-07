@@ -140,6 +140,11 @@ bd prime                # Refresh Beads context
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
 
+## Conventions & Patterns
+
+- **Browser page scripts live in checked TypeScript modules** (e.g. `src/world-page.ts`), type-checked and linted like all other source, and composed into their HTML shell at server startup via `stripTypeScriptTypes` at an HTML comment marker. No bundler, no runtime dependencies. Decided on fortkit-b18 (Overseer, 2026-08-07); the colony renderer and any future page follow the same pattern. Hardening items for the pattern are tracked in fortkit-12z.
+- **The viewer product is named Bartizan** (Overseer decision, fortkit-zgp, 2026-08-07). CLI command names are unchanged.
+
 ## Manyhalls — the fortkit Fort
 
 This repo is operated by an agent fort of Justin's civilization (registry: ~/.claude/civilization.json). Before any work: read fort/charter.md (gates, standing orders), fort/remember.md, your seat file in fort/seats/ (session protocols + handoff schema). Work flows through beads: bd ready, claim atomically, reference bead IDs in commits, close only after verifiers green + review. Emit events via fort/scripts/emit.sh. Hard rules: never read .env*; never git add . ; path-scoped staging only.
