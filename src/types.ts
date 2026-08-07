@@ -5,7 +5,7 @@ export type BeadCounts = {
   blocked: number;
   closed: number;
   malformed: number;
-  gaps: number;
+  schemaGaps: number;
 };
 
 export type LastEvent = {
