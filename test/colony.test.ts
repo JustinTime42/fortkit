@@ -46,6 +46,11 @@ describe("colony projection", () => {
     const result = projectColony({
       beads: [
         bead({ id: "implementation", labels: ["implementation"] }),
+        bead({
+          id: "finished-implementation",
+          labels: ["implementation"],
+          status: "closed",
+        }),
         bead({ id: "spec", labels: ["spec"] }),
         bead({ id: "test", labels: ["test"] }),
         bead({ id: "infra", labels: ["infra"] }),
@@ -92,10 +97,47 @@ describe("colony projection", () => {
     expect(result.citizens).toEqual([
       { name: "Kethra Anvilmark", pronouns: "she/her", seat: "forge" },
     ]);
+    expect(result.unassigned.map(({ id }) => id)).toEqual(["bug", "no-job"]);
+  });
+
+  test("keeps working bugs in rehabilitation and removes closed beads from the live colony", () => {
+    const result = projectColony({
+      beads: [
+        bead({ id: "open-bug", issueType: "bug" }),
+        bead({ id: "repairing-bug", issueType: "bug", status: "in_progress" }),
+        bead({ id: "blocked-bug", issueType: "bug", status: "blocked" }),
+        bead({ id: "released-bug", issueType: "bug", status: "closed" }),
+        bead({
+          id: "active-job",
+          labels: ["implementation"],
+          status: "in_progress",
+        }),
+        bead({
+          id: "historic-job",
+          labels: ["implementation"],
+          status: "closed",
+        }),
+        bead({ id: "active-untyped", status: "blocked" }),
+        bead({ id: "historic-untyped", status: "closed" }),
+      ],
+      worktrees: [],
+      events: [],
+      citizens: [],
+    });
+
+    expect(result.dungeon.map(({ id }) => id)).toEqual([
+      "open-bug",
+      "repairing-bug",
+      "blocked-bug",
+    ]);
+    expect(result.workshops[0]?.beads.map(({ id }) => id)).toEqual([
+      "active-job",
+    ]);
     expect(result.unassigned.map(({ id }) => id)).toEqual([
-      "bug",
-      "fixed-bug",
-      "no-job",
+      "open-bug",
+      "repairing-bug",
+      "blocked-bug",
+      "active-untyped",
     ]);
   });
 
@@ -184,5 +226,44 @@ describe("colony projection", () => {
     });
 
     expect(afterForgeEnds.benches[0]?.session).toBeNull();
+  });
+
+  test("uses append order for tied or unparseable session timestamps", () => {
+    const sources = {
+      beads: [],
+      worktrees: ["/fortkit-worktrees/bzx.2"],
+      citizens: [],
+    };
+
+    expect(
+      projectColony({
+        ...sources,
+        events: [event(), event({ category: "session.end" })],
+      }).benches[0]?.session,
+    ).toBeNull();
+
+    expect(
+      projectColony({
+        ...sources,
+        events: [
+          event({ ts: "not-a-timestamp" }),
+          event({ ts: "not-a-timestamp", category: "session.end" }),
+        ],
+      }).benches[0]?.session,
+    ).toBeNull();
+  });
+
+  test("sorts worktree paths by code point rather than locale", () => {
+    const result = projectColony({
+      beads: [],
+      worktrees: ["/fortkit-worktrees/a", "/fortkit-worktrees/B"],
+      events: [],
+      citizens: [],
+    });
+
+    expect(result.benches.map(({ worktree }) => worktree)).toEqual([
+      "/fortkit-worktrees/B",
+      "/fortkit-worktrees/a",
+    ]);
   });
 });
