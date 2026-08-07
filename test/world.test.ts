@@ -83,8 +83,13 @@ describe("world view", () => {
     expect(statusTag).toBeDefined();
     expect(statusTag).toMatch(/\brole="status"/);
     expect(statusTag).not.toMatch(/\bclass="muted"/);
-    expect(colonyPage).toContain("#status:empty { display: none; }");
-    expect(colonyPage).toContain('<canvas id="colony"');
+    expect(colonyPage).toContain(
+      "#status:empty { margin: 0; padding: 0; border-width: 0; }",
+    );
+    expect(colonyPage).not.toContain("#status:empty { display: none; }");
+    const canvasTag = colonyPage.match(/<canvas\b[^>]*>/)?.[0];
+    expect(canvasTag).toBeDefined();
+    expect(canvasTag).toMatch(/\bid="colony"/);
     expect(colonyPage).toContain("fetch(`/colony?fort=");
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     expect(script).toBeDefined();
@@ -134,6 +139,94 @@ describe("world view", () => {
     expect(title.textContent).toBe("Bartizan — Alpha Fort colony");
   });
 
+  test("does not rewrite identical apostrophe-bearing panels or status on polls", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const canvas = {
+      width: 1100,
+      height: 620,
+      onclick: undefined as
+        | undefined
+        | ((event: { clientX: number; clientY: number }) => void),
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        width: 1100,
+        height: 620,
+      }),
+      getContext: () => ({
+        fillStyle: "",
+        strokeStyle: "",
+        font: "",
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        fillText: vi.fn(),
+      }),
+    };
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "" },
+      URLSearchParams,
+    });
+    const panelSetter = vi.fn();
+    const statusSetter = vi.fn();
+    const panel = {
+      set innerHTML(value: string) {
+        panelSetter(value);
+      },
+    };
+    const status = {
+      set textContent(value: string) {
+        statusSetter(value);
+      },
+    };
+    context.document = {
+      querySelector: (selector: string) =>
+        selector === "#colony"
+          ? canvas
+          : selector === "#detail-panel"
+            ? panel
+            : selector === "#status"
+              ? status
+              : { textContent: "" },
+    };
+    new Script(script).runInContext(context);
+    const projection = {
+      workshops: [],
+      benches: [],
+      dungeon: [],
+      citizens: [],
+      announcements: [],
+      gaps: [],
+      unassigned: [{ id: "apostrophe", title: "Kethra's panel" }],
+    };
+    (context.render as (value: unknown) => void)(projection);
+    if (canvas.onclick === undefined)
+      throw new Error("click handler is missing");
+    canvas.onclick({ clientX: 40, clientY: 81 });
+    expect(panelSetter).toHaveBeenLastCalledWith(
+      expect.stringContaining("Kethra&#39;s panel"),
+    );
+    panelSetter.mockClear();
+    (context.render as (value: unknown) => void)(projection);
+
+    const outage = "Colony data unavailable: network outage";
+    (context.updateStatus as (element: typeof status, value: string) => void)(
+      status,
+      outage,
+    );
+    (context.updateStatus as (element: typeof status, value: string) => void)(
+      status,
+      outage,
+    );
+
+    expect(panelSetter).not.toHaveBeenCalled();
+    expect(statusSetter).toHaveBeenCalledTimes(1);
+    expect(statusSetter).toHaveBeenCalledWith(outage);
+  });
+
   test("labels truncated building rows and wraps citizens after six columns", () => {
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     expect(script).toBeDefined();
@@ -167,7 +260,11 @@ describe("world view", () => {
       (_, index) => `detail-${index}-${"x".repeat(30)}`,
     );
     expect(
-      (context.visibleDetails as (values: string[]) => string[])(details),
+      (
+        context.visibleDetails as (
+          values: string[],
+        ) => Array<{ text: string; index: number | undefined }>
+      )(details),
     ).toEqual([
       ...details.slice(0, 4).map((text, index) => ({ text, index })),
       { text: "… +3 more", index: undefined },

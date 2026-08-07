@@ -70,6 +70,8 @@ Supersedes the founding table's workshop/bench/archive rows and the v1 bullet's 
 
 **Watchers render as watchdogs** (decided 2026-08-07): cron + script, no model — not citizens, so never dwarves; not towers, because watchers *sweep*. A watcher is a dog patrolling its route at its cron cadence; `watcher.alert` = the dog runs to the offending building and barks. Reserved in spec; implemented only when the first real watcher exists.
 
+**Source gaps are amber warnings** (fortkit-ouu, 2026-08-07): unavailable or incomplete inputs are more visible than ordinary copy, never muted into the background. They describe observation limits, not a healthy state.
+
 ## Build plan
 
 - **v1 — Renderer (a weekend):** single self-contained HTML page + canvas (Smallville/AI-Town lineage: sprites pathing between buildings). Buildings: Mayor's office, one workshop per active worktree, trade depot (merge), archive (handoffs/annals), gate (intake). Poll the JSONL sources every few seconds; animate transitions on new events; announcements ticker from `detail` lines; click any entity for a DF-style panel (seat: name/pronouns/personality/current bead/last handoff; bead: full detail + provenance edges). **Replay scrubber** over the event files: watch any day back, including founding day.
