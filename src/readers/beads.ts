@@ -2,9 +2,14 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
-import type { Bead, BeadCounts } from "../types.ts";
+import type { Bead, BeadCounts, BeadDependency } from "../types.ts";
 
 const execFileAsync = promisify(execFile);
+
+type CountedStatus = keyof Omit<
+  BeadCounts,
+  "malformed" | "ready" | "schemaGaps"
+>;
 
 export type ClosedBead = {
   id: string;
@@ -12,7 +17,7 @@ export type ClosedBead = {
   closedAt: string | null;
 };
 
-const statuses = new Map<string, keyof Omit<BeadCounts, "malformed">>([
+const statuses = new Map<string, CountedStatus>([
   ["open", "open"],
   ["in_progress", "inProgress"],
   ["blocked", "blocked"],
@@ -26,7 +31,7 @@ export async function readBeads(path: string): Promise<BeadCounts | null> {
 
 export async function readBeadRecords(
   path: string,
-): Promise<{ counts: BeadCounts; inProgress: Bead[] } | null> {
+): Promise<{ counts: BeadCounts; beads: Bead[]; inProgress: Bead[] } | null> {
   let contents: string;
   try {
     contents = await readFile(path, "utf8");
@@ -36,40 +41,172 @@ export async function readBeadRecords(
 
   const counts: BeadCounts = {
     open: 0,
+    ready: 0,
     inProgress: 0,
     blocked: 0,
     closed: 0,
     malformed: 0,
+    schemaGaps: 0,
   };
+  const beads: Bead[] = [];
   const inProgress: Bead[] = [];
+  const dependencySchemaGaps = new Set<Bead>();
   for (const line of contents.split(/\r?\n/)) {
     if (line.trim() === "") {
       continue;
     }
     try {
       const record = JSON.parse(line) as Record<string, unknown>;
-      const status =
-        typeof record.status === "string"
-          ? statuses.get(record.status)
-          : undefined;
-      if (status === undefined) {
+      const bead = parseBead(record);
+      if (bead === null) {
         counts.malformed += 1;
       } else {
+        const status = statuses.get(bead.status) as CountedStatus;
         counts[status] += 1;
-        if (status === "inProgress" && typeof record.id === "string") {
-          inProgress.push({
-            id: record.id,
-            title: typeof record.title === "string" ? record.title : null,
-            assignee:
-              typeof record.assignee === "string" ? record.assignee : null,
-          });
-        }
+        const dependencyGap = hasDependencySchemaGap(record);
+        if (hasSchemaGap(record, dependencyGap)) counts.schemaGaps += 1;
+        beads.push(bead);
+        if (dependencyGap) dependencySchemaGaps.add(bead);
+        if (status === "inProgress") inProgress.push(bead);
       }
     } catch {
       counts.malformed += 1;
     }
   }
-  return { counts, inProgress };
+  counts.ready = beads.filter((bead) =>
+    isReady(bead, beads, dependencySchemaGaps),
+  ).length;
+  return { counts, beads, inProgress };
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function stringArrayOrNull(value: unknown): string[] | null {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? value
+    : null;
+}
+
+function parseDependency(value: unknown): BeadDependency | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const dependency = value as Record<string, unknown>;
+  if (
+    typeof dependency.issue_id !== "string" ||
+    typeof dependency.depends_on_id !== "string" ||
+    typeof dependency.type !== "string"
+  ) {
+    return null;
+  }
+  return {
+    issueId: dependency.issue_id,
+    dependsOnId: dependency.depends_on_id,
+    type: dependency.type,
+    createdAt: stringOrNull(dependency.created_at),
+    createdBy: stringOrNull(dependency.created_by),
+    metadata: stringOrNull(dependency.metadata),
+  };
+}
+
+function dependenciesOrNull(value: unknown): BeadDependency[] | null {
+  if (!Array.isArray(value)) return null;
+  const dependencies = value.map(parseDependency);
+  return dependencies.every((dependency) => dependency !== null)
+    ? (dependencies as BeadDependency[])
+    : null;
+}
+
+function parseBead(record: Record<string, unknown>): Bead | null {
+  const status = stringOrNull(record.status);
+  if (
+    typeof record.id !== "string" ||
+    status === null ||
+    !statuses.has(status)
+  ) {
+    return null;
+  }
+  return {
+    id: record.id,
+    title: stringOrNull(record.title),
+    description: stringOrNull(record.description),
+    design: stringOrNull(record.design),
+    notes: stringOrNull(record.notes),
+    acceptanceCriteria: stringOrNull(record.acceptance_criteria),
+    status,
+    priority: typeof record.priority === "number" ? record.priority : null,
+    issueType: stringOrNull(record.issue_type),
+    assignee: stringOrNull(record.assignee),
+    owner: stringOrNull(record.owner),
+    labels: stringArrayOrNull(record.labels),
+    dependencies: dependenciesOrNull(record.dependencies),
+    createdAt: stringOrNull(record.created_at),
+    createdBy: stringOrNull(record.created_by),
+    updatedAt: stringOrNull(record.updated_at),
+    startedAt: stringOrNull(record.started_at),
+    closedAt: stringOrNull(record.closed_at),
+    closeReason: stringOrNull(record.close_reason),
+  };
+}
+
+function hasDependencySchemaGap(record: Record<string, unknown>): boolean {
+  const hasDependencies = Object.hasOwn(record, "dependencies");
+  const hasDependencyCount = Object.hasOwn(record, "dependency_count");
+  const dependencyCount = record.dependency_count;
+  const validDependencyCount =
+    typeof dependencyCount === "number" &&
+    Number.isInteger(dependencyCount) &&
+    dependencyCount >= 0;
+  const dependencies = dependenciesOrNull(record.dependencies);
+
+  if (hasDependencies) {
+    if (dependencies === null) return true;
+    return (
+      hasDependencyCount &&
+      (!validDependencyCount ||
+        dependencies.filter((dependency) => dependency.type === "blocks")
+          .length !== dependencyCount)
+    );
+  }
+
+  // bd omits an empty dependency array. An omitted count has the same
+  // backwards-compatible meaning; a positive or malformed count does not.
+  return hasDependencyCount && (!validDependencyCount || dependencyCount > 0);
+}
+
+function hasSchemaGap(
+  record: Record<string, unknown>,
+  dependencyGap: boolean,
+): boolean {
+  return (
+    stringArrayOrNull(record.labels) === null ||
+    dependencyGap ||
+    typeof record.issue_type !== "string" ||
+    typeof record.created_at !== "string" ||
+    typeof record.updated_at !== "string"
+  );
+}
+
+function isReady(
+  bead: Bead,
+  beads: Bead[],
+  dependencySchemaGaps: Set<Bead>,
+): boolean {
+  if (bead.status !== "open") return false;
+  if (dependencySchemaGaps.has(bead)) return false;
+  const dependencies = bead.dependencies ?? [];
+  const prerequisiteIds = dependencies.flatMap((dependency) =>
+    dependency.type === "blocks" &&
+    dependency.issueId === bead.id &&
+    dependency.dependsOnId !== null
+      ? [dependency.dependsOnId]
+      : [],
+  );
+  return prerequisiteIds.every(
+    (id) => beads.find((candidate) => candidate.id === id)?.status === "closed",
+  );
 }
 
 export async function readClosedBeads(

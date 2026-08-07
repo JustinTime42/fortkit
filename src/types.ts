@@ -1,9 +1,11 @@
 export type BeadCounts = {
   open: number;
+  ready: number;
   inProgress: number;
   blocked: number;
   closed: number;
   malformed: number;
+  schemaGaps: number;
 };
 
 export type LastEvent = {
@@ -29,7 +31,32 @@ export type GitState = {
 export type Bead = {
   id: string;
   title: string | null;
+  description: string | null;
+  design: string | null;
+  notes: string | null;
+  acceptanceCriteria: string | null;
+  status: string;
+  priority: number | null;
+  issueType: string | null;
   assignee: string | null;
+  owner: string | null;
+  labels: string[] | null;
+  dependencies: BeadDependency[] | null;
+  createdAt: string | null;
+  createdBy: string | null;
+  updatedAt: string | null;
+  startedAt: string | null;
+  closedAt: string | null;
+  closeReason: string | null;
+};
+
+export type BeadDependency = {
+  issueId: string | null;
+  dependsOnId: string | null;
+  type: string | null;
+  createdAt: string | null;
+  createdBy: string | null;
+  metadata: string | null;
 };
 
 export type EventDetail = {
