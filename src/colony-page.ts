@@ -2,6 +2,13 @@ import type { ColonyProjection } from "./page-types.ts";
 
 type ActorStyle = { glyph: string; color: string };
 
+const buildingWidth = 210;
+const buildingHeight = 112;
+const detailBaselineOffset = 46;
+const detailRowHeight = 13;
+const detailRows = 5;
+const detailHitStartOffset = detailBaselineOffset - 10;
+
 function esc(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
@@ -100,15 +107,19 @@ function building(
   color: string,
 ) {
   context.fillStyle = color;
-  context.fillRect(x, y, 210, 112);
+  context.fillRect(x, y, buildingWidth, buildingHeight);
   context.strokeStyle = "#e8ddbf";
-  context.strokeRect(x, y, 210, 112);
+  context.strokeRect(x, y, buildingWidth, buildingHeight);
   context.fillStyle = "#17140f";
   context.font = "bold 16px system-ui";
   context.fillText(name, x + 10, y + 24);
   context.font = "12px system-ui";
-  details.slice(0, 5).forEach((detail, index) => {
-    context.fillText(detail.slice(0, 27), x + 10, y + 46 + index * 13);
+  details.slice(0, detailRows).forEach((detail, index) => {
+    context.fillText(
+      detail.slice(0, 27),
+      x + 10,
+      y + detailBaselineOffset + index * detailRowHeight,
+    );
   });
 }
 
@@ -200,18 +211,33 @@ function render(projection: ColonyProjection) {
     const bounds = canvas.getBoundingClientRect();
     const x = ((event.clientX - bounds.left) * canvas.width) / bounds.width;
     const y = ((event.clientY - bounds.top) * canvas.height) / bounds.height;
-    const workshop =
-      y >= 230 && y <= 342
-        ? projection.workshops[Math.floor((x - 30) / 265)]
-        : undefined;
-    const detailIndex = (buildingTop: number): number =>
-      Math.floor((y - (buildingTop + 46)) / 13);
+    const detailIndex = (left: number, top: number): number | undefined => {
+      if (
+        x < left ||
+        x > left + buildingWidth ||
+        y < top + detailHitStartOffset ||
+        y >= top + detailHitStartOffset + detailRows * detailRowHeight
+      )
+        return undefined;
+      return Math.floor((y - (top + detailHitStartOffset)) / detailRowHeight);
+    };
+    const gateIndex = detailIndex(30, 35);
+    const dungeonIndex = detailIndex(765, 35);
+    const workshopIndex = projection.workshops.findIndex(
+      (_, index) => detailIndex(30 + index * 265, 230) !== undefined,
+    );
+    const workshopDetailIndex =
+      workshopIndex === -1
+        ? undefined
+        : detailIndex(30 + workshopIndex * 265, 230);
     const bead =
-      x >= 30 && x <= 240 && y >= 35 && y <= 147
-        ? projection.unassigned[detailIndex(35)]
-        : x >= 765 && x <= 975 && y >= 35 && y <= 147
-          ? projection.dungeon[detailIndex(35)]
-          : workshop?.beads[detailIndex(230)];
+      gateIndex === undefined
+        ? dungeonIndex === undefined
+          ? workshopDetailIndex === undefined
+            ? undefined
+            : projection.workshops[workshopIndex]?.beads[workshopDetailIndex]
+          : projection.dungeon[dungeonIndex]
+        : projection.unassigned[gateIndex];
     const citizen =
       y >= 515 && y <= 565
         ? projection.citizens[Math.floor((x - 48) / 170)]

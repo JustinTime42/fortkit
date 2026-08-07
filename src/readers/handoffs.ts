@@ -13,6 +13,11 @@ export type HandoffSection = {
 
 type HandoffCandidate = Pick<HandoffSection, "file" | "seat" | "date">;
 
+type ReadHandoffCandidate = HandoffCandidate & {
+  heading: string | null;
+  timestamp: number | null;
+};
+
 function handoffCandidates(files: string[]): HandoffCandidate[] {
   return files.flatMap((file) => {
     const match =
@@ -25,6 +30,34 @@ function handoffCandidates(files: string[]): HandoffCandidate[] {
   });
 }
 
+function handoffTimestamp(heading: string | null): number | null {
+  const isoTimestamp =
+    /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})\b/.exec(
+      heading ?? "",
+    )?.[0];
+  if (isoTimestamp === undefined) return null;
+  const timestamp = Date.parse(isoTimestamp);
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+async function readHandoffCandidate(
+  directory: string,
+  candidate: HandoffCandidate,
+): Promise<ReadHandoffCandidate> {
+  try {
+    const firstLine = (await readFile(join(directory, candidate.file), "utf8"))
+      .split(/\r?\n/, 1)[0]
+      ?.trim();
+    const heading =
+      firstLine?.startsWith("#") === true
+        ? firstLine.replace(/^#+\s*/, "")
+        : null;
+    return { ...candidate, heading, timestamp: handoffTimestamp(heading) };
+  } catch {
+    return { ...candidate, heading: null, timestamp: null };
+  }
+}
+
 /** Reads the newest handoff heading for each seat without treating filenames as paths. */
 export async function readLatestHandoffs(
   directory: string,
@@ -35,32 +68,26 @@ export async function readLatestHandoffs(
   } catch {
     return null;
   }
-  const latest = new Map<string, HandoffCandidate>();
+  const latest = new Map<string, ReadHandoffCandidate>();
   for (const candidate of handoffCandidates(files)) {
+    const readCandidate = await readHandoffCandidate(directory, candidate);
     const previous = latest.get(candidate.seat.toLocaleLowerCase());
     if (
       previous === undefined ||
-      `${candidate.date}\u0000${candidate.file}` >
-        `${previous.date}\u0000${previous.file}`
+      readCandidate.date > previous.date ||
+      (readCandidate.date === previous.date &&
+        (readCandidate.timestamp ?? Number.NEGATIVE_INFINITY) >
+          (previous.timestamp ?? Number.NEGATIVE_INFINITY)) ||
+      (readCandidate.date === previous.date &&
+        readCandidate.timestamp === previous.timestamp &&
+        readCandidate.file > previous.file)
     ) {
-      latest.set(candidate.seat.toLocaleLowerCase(), candidate);
+      latest.set(candidate.seat.toLocaleLowerCase(), readCandidate);
     }
   }
   const handoffs = new Map<string, string | null>();
   for (const [seat, candidate] of latest) {
-    try {
-      const firstLine = (
-        await readFile(join(directory, candidate.file), "utf8")
-      )
-        .split(/\r?\n/, 1)[0]
-        ?.trim();
-      handoffs.set(
-        seat,
-        firstLine?.startsWith("#") ? firstLine.replace(/^#+\s*/, "") : null,
-      );
-    } catch {
-      handoffs.set(seat, null);
-    }
+    handoffs.set(seat, candidate.heading);
   }
   return handoffs;
 }

@@ -7,6 +7,7 @@ import { createContext, Script } from "node:vm";
 import { describe, expect, test, vi } from "vitest";
 
 import { readColony } from "../src/colony-reader.js";
+import { readLatestHandoffs } from "../src/readers/handoffs.js";
 import {
   colonyPage,
   composeColonyPage,
@@ -333,6 +334,104 @@ describe("world view", () => {
       expect(markup).not.toContain("<img");
     }
     expect(beadMarkup).toContain("Provenance edges");
+  });
+
+  test("opens the bead drawn at each detail-row baseline, not a neighbour", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const canvas = {
+      width: 1100,
+      height: 620,
+      onclick: undefined as
+        | undefined
+        | ((event: { clientX: number; clientY: number }) => void),
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        width: 1100,
+        height: 620,
+      }),
+      getContext: () => ({
+        fillStyle: "",
+        strokeStyle: "",
+        font: "",
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        fillText: vi.fn(),
+      }),
+    };
+    const detailPanel = { textContent: "", innerHTML: "" };
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "" },
+      document: {
+        querySelector: (selector: string) =>
+          selector === "#colony"
+            ? canvas
+            : selector === "#detail-panel"
+              ? detailPanel
+              : { textContent: "" },
+      },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    const beads = Array.from({ length: 5 }, (_, index) => ({
+      id: `bead-${index}`,
+      title: `Bead ${index}`,
+    }));
+    (context.render as (projection: unknown) => void)({
+      workshops: [{ type: "implementation", beads }],
+      benches: [],
+      dungeon: beads,
+      citizens: [],
+      unassigned: beads,
+      announcements: [],
+      gaps: [],
+    });
+    if (canvas.onclick === undefined)
+      throw new Error("click handler is missing");
+
+    const buildings: Array<[number, number]> = [
+      [30, 35],
+      [765, 35],
+      [30, 230],
+    ];
+    for (const [left, top] of buildings) {
+      for (const [index, bead] of beads.entries()) {
+        canvas.onclick({ clientX: left + 10, clientY: top + 46 + index * 13 });
+        expect(detailPanel.innerHTML).toContain(`Bead: ${bead.id}`);
+      }
+    }
+
+    canvas.onclick({ clientX: 241, clientY: 276 });
+    expect(detailPanel.innerHTML).toBe("");
+    canvas.onclick({ clientX: 40, clientY: 146 });
+    expect(detailPanel.innerHTML).toBe("");
+  });
+
+  test("uses the handoff heading timestamp to break same-day filename ties", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-handoffs-"));
+    try {
+      await Promise.all([
+        writeFile(
+          join(root, "forge-2026-08-07.md"),
+          "# Handoff: Forge 2026-08-07T13:59:13-08:00\n",
+        ),
+        writeFile(
+          join(root, "forge-2026-08-07-bzx.4.md"),
+          "# Handoff: Forge 2026-08-07T14:28:00-08:00\n",
+        ),
+      ]);
+
+      const handoffs = await readLatestHandoffs(root);
+      expect(handoffs?.get("forge")).toBe(
+        "Handoff: Forge 2026-08-07T14:28:00-08:00",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   test("caps watcher alerts and timestamps each entry", async () => {
