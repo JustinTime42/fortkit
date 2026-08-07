@@ -177,6 +177,7 @@ describe("colony projection", () => {
       dungeon: [],
       citizens: [],
       unassigned: [],
+      announcements: [],
       gaps: [
         "Beads export ABSENT",
         "git worktree list ABSENT",
