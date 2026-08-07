@@ -2,6 +2,8 @@
 
 **Status: dormant by choice.** Bead: `ForgeOs-din` (P3, trigger-gated). Written 2026-08-03, founding day, so the idea survives until its time. The v0 prerequisite (event stream) is DONE and accumulating history; everything below builds on it.
 
+> **Product name (decision, 2026-08-07): Bartizan.** This brief remains a historical record; the name applies to its world and future colony viewer surfaces without revising the original text.
+
 ## Vision
 
 A Dwarf-Fortress-style colony view of Proofdelve: a simple sprite world you can leave on a second monitor, where ambient activity is legible at a glance and every entity drills down to detail. Watchability is the monitoring strategy: a dashboard nobody opens protects nothing, but a fortress you enjoy watching is observability that gets used. Eventually: control (v2) and presence (v3).
