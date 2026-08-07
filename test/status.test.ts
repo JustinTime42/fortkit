@@ -70,7 +70,7 @@ describe("fort status", () => {
       createdAt: "2026-08-04T07:23:00Z",
     });
     expect(records?.beads.find((bead) => bead.id === "legacy")).toMatchObject({
-      labels: null,
+      labels: [],
       dependencies: null,
       issueType: null,
     });
@@ -80,16 +80,25 @@ describe("fort status", () => {
     const records = await readBeadRecords(
       fileURLToPath(new URL("./fixtures/beads-golden.jsonl", import.meta.url)),
     );
-    expect(records?.counts).toMatchObject({ open: 2, ready: 2 });
+    expect(records?.counts).toMatchObject({ open: 3, ready: 2, schemaGaps: 0 });
     expect(
       records?.beads.find((bead) => bead.id === "fortkit-zgp"),
     ).toMatchObject({
+      labels: [],
       dependencies: null,
     });
     expect(
       records?.beads.find((bead) => bead.id === "fortkit-bzx.5"),
     ).toMatchObject({
       dependencies: [{ type: "parent-child", dependsOnId: "fortkit-bzx" }],
+    });
+    expect(
+      records?.beads.find((bead) => bead.id === "fortkit-bzx.2"),
+    ).toMatchObject({
+      dependencies: [
+        { type: "blocks", dependsOnId: "fortkit-bzx.1" },
+        { type: "parent-child", dependsOnId: "fortkit-bzx" },
+      ],
     });
   });
 
@@ -100,9 +109,9 @@ describe("fort status", () => {
       ),
     );
     expect(records?.counts).toMatchObject({
-      open: 3,
+      open: 4,
       ready: 0,
-      schemaGaps: 3,
+      schemaGaps: 4,
       malformed: 0,
     });
   });

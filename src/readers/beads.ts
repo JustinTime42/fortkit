@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 
-import type { Bead, BeadCounts, BeadDependency } from "../types.ts";
+import type { Bead, BeadCounts, BeadDependency, BeadStatus } from "../types.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -17,12 +17,16 @@ export type ClosedBead = {
   closedAt: string | null;
 };
 
-const statuses = new Map<string, CountedStatus>([
-  ["open", "open"],
-  ["in_progress", "inProgress"],
-  ["blocked", "blocked"],
-  ["closed", "closed"],
-]);
+const statuses: Record<BeadStatus, CountedStatus> = {
+  open: "open",
+  in_progress: "inProgress",
+  blocked: "blocked",
+  closed: "closed",
+};
+
+function isBeadStatus(value: unknown): value is BeadStatus {
+  return typeof value === "string" && Object.hasOwn(statuses, value);
+}
 
 export async function readBeads(path: string): Promise<BeadCounts | null> {
   const records = await readBeadRecords(path);
@@ -61,7 +65,7 @@ export async function readBeadRecords(
       if (bead === null) {
         counts.malformed += 1;
       } else {
-        const status = statuses.get(bead.status) as CountedStatus;
+        const status = statuses[bead.status];
         counts[status] += 1;
         const dependencyGap = hasDependencySchemaGap(record);
         if (hasSchemaGap(record, dependencyGap)) counts.schemaGaps += 1;
@@ -113,19 +117,17 @@ function parseDependency(value: unknown): BeadDependency | null {
 
 function dependenciesOrNull(value: unknown): BeadDependency[] | null {
   if (!Array.isArray(value)) return null;
-  const dependencies = value.map(parseDependency);
-  return dependencies.every((dependency) => dependency !== null)
-    ? (dependencies as BeadDependency[])
-    : null;
+  const dependencies: BeadDependency[] = [];
+  for (const item of value) {
+    const dependency = parseDependency(item);
+    if (dependency === null) return null;
+    dependencies.push(dependency);
+  }
+  return dependencies;
 }
 
 function parseBead(record: Record<string, unknown>): Bead | null {
-  const status = stringOrNull(record.status);
-  if (
-    typeof record.id !== "string" ||
-    status === null ||
-    !statuses.has(status)
-  ) {
+  if (typeof record.id !== "string" || !isBeadStatus(record.status)) {
     return null;
   }
   return {
@@ -135,12 +137,14 @@ function parseBead(record: Record<string, unknown>): Bead | null {
     design: stringOrNull(record.design),
     notes: stringOrNull(record.notes),
     acceptanceCriteria: stringOrNull(record.acceptance_criteria),
-    status,
+    status: record.status,
     priority: typeof record.priority === "number" ? record.priority : null,
     issueType: stringOrNull(record.issue_type),
     assignee: stringOrNull(record.assignee),
     owner: stringOrNull(record.owner),
-    labels: stringArrayOrNull(record.labels),
+    labels: Object.hasOwn(record, "labels")
+      ? stringArrayOrNull(record.labels)
+      : [],
     dependencies: dependenciesOrNull(record.dependencies),
     createdAt: stringOrNull(record.created_at),
     createdBy: stringOrNull(record.created_by),
@@ -149,6 +153,13 @@ function parseBead(record: Record<string, unknown>): Bead | null {
     closedAt: stringOrNull(record.closed_at),
     closeReason: stringOrNull(record.close_reason),
   };
+}
+
+function isPrerequisiteEdge(
+  dependency: BeadDependency,
+  beadId: string,
+): boolean {
+  return dependency.type === "blocks" && dependency.issueId === beadId;
 }
 
 function hasDependencySchemaGap(record: Record<string, unknown>): boolean {
@@ -166,8 +177,12 @@ function hasDependencySchemaGap(record: Record<string, unknown>): boolean {
     return (
       hasDependencyCount &&
       (!validDependencyCount ||
-        dependencies.filter((dependency) => dependency.type === "blocks")
-          .length !== dependencyCount)
+        dependencyCount >
+          dependencies.filter(
+            (dependency) =>
+              typeof record.id === "string" &&
+              isPrerequisiteEdge(dependency, record.id),
+          ).length)
     );
   }
 
@@ -181,7 +196,8 @@ function hasSchemaGap(
   dependencyGap: boolean,
 ): boolean {
   return (
-    stringArrayOrNull(record.labels) === null ||
+    (Object.hasOwn(record, "labels") &&
+      stringArrayOrNull(record.labels) === null) ||
     dependencyGap ||
     typeof record.issue_type !== "string" ||
     typeof record.created_at !== "string" ||
@@ -198,11 +214,7 @@ function isReady(
   if (dependencySchemaGaps.has(bead)) return false;
   const dependencies = bead.dependencies ?? [];
   const prerequisiteIds = dependencies.flatMap((dependency) =>
-    dependency.type === "blocks" &&
-    dependency.issueId === bead.id &&
-    dependency.dependsOnId !== null
-      ? [dependency.dependsOnId]
-      : [],
+    isPrerequisiteEdge(dependency, bead.id) ? [dependency.dependsOnId] : [],
   );
   return prerequisiteIds.every(
     (id) => beads.find((candidate) => candidate.id === id)?.status === "closed",

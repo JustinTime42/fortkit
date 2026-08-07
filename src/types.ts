@@ -35,7 +35,7 @@ export type Bead = {
   design: string | null;
   notes: string | null;
   acceptanceCriteria: string | null;
-  status: string;
+  status: BeadStatus;
   priority: number | null;
   issueType: string | null;
   assignee: string | null;
@@ -51,13 +51,15 @@ export type Bead = {
 };
 
 export type BeadDependency = {
-  issueId: string | null;
-  dependsOnId: string | null;
-  type: string | null;
+  issueId: string;
+  dependsOnId: string;
+  type: string;
   createdAt: string | null;
   createdBy: string | null;
   metadata: string | null;
 };
+
+export type BeadStatus = "open" | "in_progress" | "blocked" | "closed";
 
 export type EventDetail = {
   ts: string;
