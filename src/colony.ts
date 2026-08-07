@@ -17,13 +17,19 @@ export type ColonySources = {
 
 const workTypes: ColonyWorkType[] = ["implementation", "spec", "test", "infra"];
 
+// A bench represents a git worktree, not every seat that emits session events.
+// Today only Forge sessions create the per-bead worktrees that can occupy one;
+// review sessions run in scratch copies and must never decorate a Forge bench.
+const worktreeHoldingSeats = new Set(["forge"]);
+
 function eventTime(event: EventDetail): number {
   const time = Date.parse(event.ts);
   return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
 }
 
 function sessionKey(event: EventDetail): string {
-  return event.target ?? event.seat ?? event.actor;
+  const seatOrActor = event.seat ?? event.actor;
+  return `${seatOrActor}\u0000${event.target ?? ""}`;
 }
 
 function modelFor(event: EventDetail): string | null {
@@ -71,8 +77,12 @@ function benchFor(worktree: string, sessions: ColonySession[]): ColonyBench {
   return {
     worktree,
     session:
-      sessions.find((session) => worktreeForBead(worktree, session.beadId)) ??
-      null,
+      sessions.find(
+        (session) =>
+          session.seat !== null &&
+          worktreeHoldingSeats.has(session.seat) &&
+          worktreeForBead(worktree, session.beadId),
+      ) ?? null,
   };
 }
 

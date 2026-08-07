@@ -144,17 +144,45 @@ describe("colony projection", () => {
     });
   });
 
-  test("ends a bench session only when a newer end event names the same bead", () => {
-    const result = projectColony({
+  test("keeps a Forge bench separate from overlapping Warden sessions", () => {
+    const sources = {
       beads: [],
       worktrees: ["/fortkit-worktrees/bzx.2"],
       events: [
         event(),
-        event({ ts: "2026-08-07T21:00:00Z", category: "session.end" }),
+        event({
+          ts: "2026-08-07T20:05:00Z",
+          actor: "ilva",
+          seat: "warden",
+        }),
+        event({
+          ts: "2026-08-07T20:10:00Z",
+          actor: "ilva",
+          seat: "warden",
+          category: "session.end",
+        }),
       ],
       citizens: [],
+    };
+
+    const whileForgeWorks = projectColony(sources);
+    expect(whileForgeWorks.benches[0]?.session).toEqual(
+      expect.objectContaining({ actor: "kethra", seat: "forge" }),
+    );
+
+    const afterForgeEnds = projectColony({
+      ...sources,
+      events: [
+        ...sources.events,
+        event({ ts: "2026-08-07T20:15:00Z", category: "session.end" }),
+        event({
+          ts: "2026-08-07T20:16:00Z",
+          actor: "ilva",
+          seat: "warden",
+        }),
+      ],
     });
 
-    expect(result.benches[0]?.session).toBeNull();
+    expect(afterForgeEnds.benches[0]?.session).toBeNull();
   });
 });
