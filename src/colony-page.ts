@@ -4,6 +4,19 @@ import type { ColonyProjection } from "./page-types.ts";
 // imports type-only: runtime imports or exports would remain in the served JS.
 
 type ActorStyle = { glyph: string; color: string };
+type DetailTarget =
+  | { kind: "bead"; id: string }
+  | { kind: "citizen"; seat: string };
+type BuildingLayout = {
+  x: number;
+  y: number;
+  name: string;
+  color: string;
+};
+type Building = BuildingLayout & {
+  details: string[];
+  targetAt: (index: number) => DetailTarget | undefined;
+};
 
 const buildingWidth = 210;
 const buildingHeight = 112;
@@ -17,6 +30,18 @@ const citizenStartX = 48;
 const citizenColumnWidth = 170;
 const citizenStartY = 530;
 const citizenRowHeight = 48;
+const citizenGlyphAscent = 15;
+
+const buildingLayouts = {
+  gate: { x: 30, y: 35, name: "GATE", color: "#6b4e2d" },
+  depot: { x: 275, y: 35, name: "TRADE DEPOT", color: "#785a2d" },
+  archive: { x: 520, y: 35, name: "ARCHIVE", color: "#3b5a63" },
+  dungeon: { x: 765, y: 35, name: "DUNGEON", color: "#70404b" },
+  workshop: { x: 30, y: 230, name: "WORKSHOP", color: "#48643d" },
+} as const satisfies Record<string, BuildingLayout>;
+const workshopStride = 265;
+
+let selectedTarget: DetailTarget | undefined;
 
 function esc(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
@@ -121,29 +146,129 @@ function truncateDetail(detail: string): string {
     : `${detail.slice(0, detailTextLength - 1)}…`;
 }
 
-function building(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  name: string,
-  details: string[],
-  color: string,
-) {
-  context.fillStyle = color;
-  context.fillRect(x, y, buildingWidth, buildingHeight);
+function building(context: CanvasRenderingContext2D, layout: Building) {
+  context.fillStyle = layout.color;
+  context.fillRect(layout.x, layout.y, buildingWidth, buildingHeight);
   context.strokeStyle = "#e8ddbf";
-  context.strokeRect(x, y, buildingWidth, buildingHeight);
+  context.strokeRect(layout.x, layout.y, buildingWidth, buildingHeight);
   context.fillStyle = "#17140f";
   context.font = "bold 16px system-ui";
-  context.fillText(name, x + 10, y + 24);
+  context.fillText(layout.name, layout.x + 10, layout.y + 24);
   context.font = "12px system-ui";
-  visibleDetails(details).forEach((detail, index) => {
+  visibleDetails(layout.details).forEach((detail, index) => {
     context.fillText(
       truncateDetail(detail),
-      x + 10,
-      y + detailBaselineOffset + index * detailRowHeight,
+      layout.x + 10,
+      layout.y + detailBaselineOffset + index * detailRowHeight,
     );
   });
+}
+
+function beadBuilding(
+  layout: BuildingLayout,
+  beads: ColonyProjection["unassigned"],
+): Building {
+  return {
+    ...layout,
+    details: beads.map(label),
+    targetAt: (index) => {
+      const bead = beads[index];
+      return bead === undefined ? undefined : { kind: "bead", id: bead.id };
+    },
+  };
+}
+
+function buildings(projection: ColonyProjection): Building[] {
+  return [
+    beadBuilding(buildingLayouts.gate, projection.unassigned),
+    {
+      ...buildingLayouts.depot,
+      details: projection.benches.map((bench) =>
+        bench.session === null
+          ? (bench.worktree.split("/").at(-1) ?? "bench")
+          : `${bench.session.actor}: ${bench.session.beadId ?? "working"}`,
+      ),
+      targetAt: () => undefined,
+    },
+    {
+      ...buildingLayouts.archive,
+      details: projection.citizens.map(
+        (citizen) => `${citizen.seat}: ${citizen.name}`,
+      ),
+      targetAt: (index) => {
+        const citizen = projection.citizens[index];
+        return citizen === undefined
+          ? undefined
+          : { kind: "citizen", seat: citizen.seat };
+      },
+    },
+    beadBuilding(buildingLayouts.dungeon, projection.dungeon),
+    ...projection.workshops.map((workshop, index) =>
+      beadBuilding(
+        {
+          ...buildingLayouts.workshop,
+          x: buildingLayouts.workshop.x + index * workshopStride,
+          name: `${workshop.type.toUpperCase()} WORKSHOP`,
+        },
+        workshop.beads,
+      ),
+    ),
+  ];
+}
+
+function detailIndex(
+  x: number,
+  y: number,
+  building: Building,
+): number | undefined {
+  if (
+    x < building.x ||
+    x > building.x + buildingWidth ||
+    y < building.y + detailHitStartOffset ||
+    y >= building.y + detailHitStartOffset + detailRows * detailRowHeight
+  )
+    return undefined;
+  const index = Math.floor(
+    (y - (building.y + detailHitStartOffset)) / detailRowHeight,
+  );
+  const visibleTargetCount = Math.min(
+    building.details.length,
+    building.details.length > detailRows ? detailRows - 1 : detailRows,
+  );
+  return index < visibleTargetCount ? index : undefined;
+}
+
+function detailTargetAt(
+  x: number,
+  y: number,
+  buildingList: Building[],
+): DetailTarget | undefined {
+  for (const building of buildingList) {
+    const index = detailIndex(x, y, building);
+    if (index !== undefined) return building.targetAt(index);
+  }
+  return undefined;
+}
+
+function selectedPanel(
+  projection: ColonyProjection,
+  target: DetailTarget | undefined,
+): string {
+  if (target?.kind === "bead") {
+    const bead = [
+      ...projection.unassigned,
+      ...projection.dungeon,
+      ...projection.workshops.flatMap((workshop) => workshop.beads),
+    ].find((candidate) => candidate.id === target.id);
+    return bead === undefined ? "" : beadPanel(bead);
+  }
+  if (target?.kind === "citizen") {
+    const citizen = projection.citizens.find(
+      (candidate) => candidate.seat === target.seat,
+    );
+    return citizen === undefined ? "" : seatPanel(citizen);
+  }
+  return "";
 }
 
 function render(projection: ColonyProjection) {
@@ -170,51 +295,9 @@ function render(projection: ColonyProjection) {
   );
   context.fillStyle = "#17140f";
   context.fillRect(0, 0, canvas.width, canvas.height);
-  building(
-    context,
-    30,
-    35,
-    "GATE",
-    projection.unassigned.map(label),
-    "#6b4e2d",
-  );
-  building(
-    context,
-    275,
-    35,
-    "TRADE DEPOT",
-    projection.benches.map((bench) =>
-      bench.session === null
-        ? (bench.worktree.split("/").at(-1) ?? "bench")
-        : `${bench.session.actor}: ${bench.session.beadId ?? "working"}`,
-    ),
-    "#785a2d",
-  );
-  building(
-    context,
-    520,
-    35,
-    "ARCHIVE",
-    projection.citizens.map((citizen) => `${citizen.seat}: ${citizen.name}`),
-    "#3b5a63",
-  );
-  building(
-    context,
-    765,
-    35,
-    "DUNGEON",
-    projection.dungeon.map(label),
-    "#70404b",
-  );
-  projection.workshops.forEach((workshop, index) => {
-    building(
-      context,
-      30 + index * 265,
-      230,
-      `${workshop.type.toUpperCase()} WORKSHOP`,
-      workshop.beads.map(label),
-      "#48643d",
-    );
+  const buildingList = buildings(projection);
+  buildingList.forEach((layout) => {
+    building(context, layout);
   });
   const styles = actorStyles(projection);
   projection.citizens.forEach((citizen, index) => {
@@ -239,70 +322,33 @@ function render(projection: ColonyProjection) {
     projection.gaps.length === 0
       ? ""
       : `Source gaps: ${projection.gaps.join(" · ")}`;
+  detailPanel.innerHTML = selectedPanel(projection, selectedTarget);
   canvas.onclick = (event) => {
     const bounds = canvas.getBoundingClientRect();
     const x = ((event.clientX - bounds.left) * canvas.width) / bounds.width;
     const y = ((event.clientY - bounds.top) * canvas.height) / bounds.height;
-    const detailIndex = (
-      left: number,
-      top: number,
-      detailCount: number,
-    ): number | undefined => {
-      if (
-        x < left ||
-        x > left + buildingWidth ||
-        y < top + detailHitStartOffset ||
-        y >= top + detailHitStartOffset + detailRows * detailRowHeight
-      )
-        return undefined;
-      const index = Math.floor(
-        (y - (top + detailHitStartOffset)) / detailRowHeight,
-      );
-      const visibleBeadCount = Math.min(
-        detailCount,
-        detailCount > detailRows ? detailRows - 1 : detailRows,
-      );
-      return index < visibleBeadCount ? index : undefined;
-    };
-    const gateIndex = detailIndex(30, 35, projection.unassigned.length);
-    const dungeonIndex = detailIndex(765, 35, projection.dungeon.length);
-    const workshopIndex = projection.workshops.findIndex(
-      (workshop, index) =>
-        detailIndex(30 + index * 265, 230, workshop.beads.length) !== undefined,
-    );
-    const workshopDetailIndex =
-      workshopIndex === -1
-        ? undefined
-        : detailIndex(
-            30 + workshopIndex * 265,
-            230,
-            projection.workshops[workshopIndex]?.beads.length ?? 0,
-          );
-    const bead =
-      gateIndex === undefined
-        ? dungeonIndex === undefined
-          ? workshopDetailIndex === undefined
-            ? undefined
-            : projection.workshops[workshopIndex]?.beads[workshopDetailIndex]
-          : projection.dungeon[dungeonIndex]
-        : projection.unassigned[gateIndex];
+    const buildingTarget = detailTargetAt(x, y, buildingList);
     const citizenRow = Math.floor(
-      (y - (citizenStartY - 15)) / citizenRowHeight,
+      (y - (citizenStartY - citizenGlyphAscent)) / citizenRowHeight,
     );
     const citizenColumn = Math.floor((x - citizenStartX) / citizenColumnWidth);
     const citizen =
       citizenRow >= 0 &&
       citizenColumn >= 0 &&
       citizenColumn < citizenColumns &&
-      y <= canvas.height
+      y >= citizenStartY - citizenGlyphAscent &&
+      y <
+        citizenStartY -
+          citizenGlyphAscent +
+          Math.ceil(projection.citizens.length / citizenColumns) *
+            citizenRowHeight
         ? projection.citizens[citizenRow * citizenColumns + citizenColumn]
         : undefined;
-    detailPanel.innerHTML =
+    selectedTarget =
       citizen === undefined
-        ? bead === undefined
-          ? ""
-          : beadPanel(bead)
-        : seatPanel(citizen);
+        ? buildingTarget
+        : { kind: "citizen", seat: citizen.seat };
+    detailPanel.innerHTML = selectedPanel(projection, selectedTarget);
   };
 }
 
@@ -316,10 +362,12 @@ async function load() {
     const response = await fetch(`/colony?fort=${encodeURIComponent(fort)}`);
     if (!response.ok) throw new Error("Colony unavailable");
     render((await response.json()) as ColonyProjection);
+    const status = document.querySelector<HTMLElement>("#status");
+    if (status !== null) status.textContent = "";
   } catch (error) {
-    const ticker = document.querySelector<HTMLElement>("#ticker");
-    if (ticker !== null)
-      ticker.textContent = `Colony data unavailable: ${error}`;
+    const status = document.querySelector<HTMLElement>("#status");
+    if (status !== null)
+      status.textContent = `Colony data unavailable: ${error}`;
   }
 }
 

@@ -15,6 +15,7 @@ async function createFort(root: string, name = "Temporary"): Promise<string> {
   await Promise.all([
     mkdir(join(fort, ".beads"), { recursive: true }),
     mkdir(join(fort, "fort", "events"), { recursive: true }),
+    mkdir(join(fort, "fort", "handoffs"), { recursive: true }),
     mkdir(join(fort, "fort", "seats"), { recursive: true }),
   ]);
   await execFileAsync("git", ["init", "--quiet", fort]);
@@ -54,7 +55,7 @@ describe("colony reader", () => {
             ts: "2026-08-07T12:00:00Z",
             actor: "Kethra Anvilmark",
             seat: "forge",
-            category: "work.begun",
+            category: "session.start",
             target: "fortkit-test",
             detail: "Reader fixture",
             payload: null,
@@ -62,7 +63,11 @@ describe("colony reader", () => {
         ),
         writeFile(
           join(fort, "fort", "seats", "forge.md"),
-          "# Seat: Forge\n\n**Held by: Kethra Anvilmark** (she/her)\n",
+          '# Seat: Forge\n\n**Held by: Kethra Anvilmark** (she/her)\n\n**Personality (in his own words):** "Builds durable lenses"\n',
+        ),
+        writeFile(
+          join(fort, "fort", "handoffs", "forge-2026-08-07.md"),
+          "# Handoff: Forge 2026-08-07T12:00:00Z\n",
         ),
       ]);
       const registry = await writeRegistry(root, [
@@ -85,9 +90,9 @@ describe("colony reader", () => {
             name: "Kethra Anvilmark",
             pronouns: "she/her",
             seat: "Forge",
-            personality: null,
-            currentBead: null,
-            lastHandoff: null,
+            personality: "Builds durable lenses",
+            currentBead: "fortkit-test",
+            lastHandoff: "Handoff: Forge 2026-08-07T12:00:00Z",
           },
         ],
         gaps: [],
