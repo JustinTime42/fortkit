@@ -39,6 +39,36 @@ The mapping is nearly isomorphic — DF is a colony-management interface and thi
 - **Emitters**: `fort/scripts/emit.sh` (worktree-safe via git-common-dir, flock-guarded); wired into `mayor.sh`, `forge.sh`; seat duties documented in AGENTS.md/CLAUDE.md.
 - **Live-colony semantics** (fortkit-d0b, 2026-08-07): the colony view renders the *live* fort — closed beads leave workshops, dungeon, and unassigned alike; history is the replay scrubber's job (v1 bullet below). The dungeon holds bug beads through their whole arrest: open (jailed), in_progress/blocked (rehabilitation), released only at close.
 
+## Colony architecture v2 — the living fort (amendment, Overseer-approved 2026-08-07)
+
+Supersedes the founding table's workshop/bench/archive rows and the v1 bullet's "one workshop per active worktree" (kept above as historical record). Motivation, in the Overseer's words: DF workshops are semi-permanent structures that crank out items; the map must make sense from one day to the next so a user learns where to find info. The founding table mapped workshops to bead *types*, which makes the skyline a function of the week's queue. The stable things in a fort are the **seats**.
+
+**Principles:** fixed spatial layout from the roster, never from data volume; state shows in-place (occupancy, queue lengths); history accumulates in dedicated rooms; every question has one fixed place you look. New buildings only when the fort itself changes shape (a new seat, a new watcher) — a rare, meaningful event.
+
+**Permanent buildings** (one fixed position each):
+
+| Building | Maps to | The question it answers |
+|---|---|---|
+| Mayor's Office | Mayor seat | is design/triage happening? |
+| The Forge (interior: benches, one per active worktree) | Forge seat | is code being made, on how many benches? |
+| Warden's Tower | Warden seat | is review happening? |
+| The Gate | bead intake (newly filed) | what just arrived? |
+| The Job Board | ready/blocked queue | what's waiting, what's stuck? |
+| Trade Depot | merge flow (branches under review, departing on merge) | what's between done and landed? |
+| The Dungeon | bug beads (jailed → rehabilitation → released) | how much is broken? |
+| The Archive | handoffs, annals, specs | what's the record? |
+| The Keep | the Overseer: petitions awaiting the human (gated beads, decisions, `bd human`) | what's blocked on me? |
+| The Palace (capital only) | civ/ seats (Herald, Regent, Chronicler, …): one government building, a bench per office | is the civilization layer at work? |
+| Homes district | one home per citizen, with a bed | who lives here; who's asleep? |
+
+**Work-type labels become the item, not the building**: an implementation bead, a spec bead, a bug are goods being crafted, each with its own glyph, moving Gate → Job Board → a seat's workshop → Depot → closed (bugs detour through the Dungeon). Untyped beads remain conspicuous as unlabeled crates at the Job Board and Gate (risk 1's mitigation survives the re-map).
+
+**Citizens always exist** (roster permanence + model welfare): a citizen's sprite is never absent — working at their seat, or living ambient life. A small **deterministic ambient-life tracker** (script, no model, no tokens) schedules normal DF activities (sleep, eat, socialize, idle pursuits) and records them in a state file the renderer reads. That record is *available* to the agent when a session wakes (a short line of context, or a file it may read) without polluting working context. Future direction, recorded: the Overseer intends play and leisure to eventually be real token spend (v3 below).
+
+**Movement**: sprites path between fixed places. When a session starts while a citizen is at home, the sprite walks bed → workshop; at session end, walks back. Rendering may lag reality (the agent is already working while the sprite walks); perceived motion is the point. Pathing is renderer-side and deterministic from events + ambient state.
+
+**Watchers render as watchdogs** (decided 2026-08-07): cron + script, no model — not citizens, so never dwarves; not towers, because watchers *sweep*. A watcher is a dog patrolling its route at its cron cadence; `watcher.alert` = the dog runs to the offending building and barks. Reserved in spec; implemented only when the first real watcher exists.
+
 ## Build plan
 
 - **v1 — Renderer (a weekend):** single self-contained HTML page + canvas (Smallville/AI-Town lineage: sprites pathing between buildings). Buildings: Mayor's office, one workshop per active worktree, trade depot (merge), archive (handoffs/annals), gate (intake). Poll the JSONL sources every few seconds; animate transitions on new events; announcements ticker from `detail` lines; click any entity for a DF-style panel (seat: name/pronouns/personality/current bead/last handoff; bead: full detail + provenance edges). **Replay scrubber** over the event files: watch any day back, including founding day.
