@@ -164,7 +164,7 @@ describe("colony reader", () => {
       const fort = await createFort(root);
       await writeFile(
         join(fort, "fort", "seats", "forge.md"),
-        "# Seat: Forge\n\n**Held by: Kethra Anvilmark** (unparseable)\n",
+        "# Seat: Forge\n\n**Held by: Brunna Stonevein** (unparseable)\n",
       );
       const registry = await writeRegistry(root, [
         { fort_name: "Temporary", repo: fort },
@@ -172,7 +172,7 @@ describe("colony reader", () => {
 
       expect((await readColony(registry, "Temporary"))?.citizens).toEqual([
         {
-          name: "Kethra Anvilmark",
+          name: "Brunna Stonevein",
           pronouns: "—",
           seat: "Forge",
           personality: null,

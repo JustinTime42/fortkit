@@ -9,7 +9,9 @@
     a { color: #f1cc77; } canvas { display: block; width: 100%; max-width: 1100px; margin: 1rem auto; background: #211b13; border: 1px solid #79633d; }
     #ticker { overflow: hidden; white-space: nowrap; background: #302719; border-block: 1px solid #79633d; padding: .65rem 1rem; color: #ffcf8b; }
     #gaps, #detail-panel, #status { max-width: 1100px; margin: 0 auto 1rem; } .muted { color: #b9aa8d; }
-    #status { padding: .65rem 1rem; background: #5c2424; border: 1px solid #ffba8c; color: #fff0c2; } #status:empty { display: none; }
+    /* Source gaps are warnings: amber makes missing data conspicuous, never muted. */
+    #gaps { color: #ffcf8b; font-weight: 600; }
+    #status { padding: .65rem 1rem; background: #5c2424; border: 1px solid #ffba8c; color: #fff0c2; } #status:empty { margin: 0; padding: 0; border-width: 0; }
     #detail-panel { background: #302719; border: 1px solid #79633d; padding: 1rem; color: #e8ddbf; } #detail-panel:empty { display: none; }
     #detail-panel dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: .75rem 0; } #detail-panel dt { color: #f1cc77; } #detail-panel dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   </style>

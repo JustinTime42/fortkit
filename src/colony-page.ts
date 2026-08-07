@@ -64,6 +64,8 @@ const buildingLayouts = {
 } as const satisfies Record<string, BuildingLayout>;
 
 let selectedTarget: DetailTarget | undefined;
+let previousPanelMarkup: string | undefined;
+let previousStatusText: string | undefined;
 
 function esc(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
@@ -290,6 +292,18 @@ function selectedPanel(
   return "";
 }
 
+function updateDetailPanel(panel: HTMLElement, markup: string): void {
+  if (previousPanelMarkup === markup) return;
+  panel.innerHTML = markup;
+  previousPanelMarkup = markup;
+}
+
+function updateStatus(status: HTMLElement, text: string): void {
+  if (previousStatusText === text) return;
+  status.textContent = text;
+  previousStatusText = text;
+}
+
 function render(projection: ColonyProjection) {
   const canvas = document.querySelector<HTMLCanvasElement>("#colony");
   const ticker = document.querySelector<HTMLElement>("#ticker");
@@ -342,8 +356,7 @@ function render(projection: ColonyProjection) {
       ? ""
       : `Source gaps: ${projection.gaps.join(" · ")}`;
   const panelMarkup = selectedPanel(projection, selectedTarget);
-  if (detailPanel.innerHTML !== panelMarkup)
-    detailPanel.innerHTML = panelMarkup;
+  updateDetailPanel(detailPanel, panelMarkup);
   canvas.onclick = (event) => {
     const bounds = canvas.getBoundingClientRect();
     const x = ((event.clientX - bounds.left) * canvas.width) / bounds.width;
@@ -370,8 +383,7 @@ function render(projection: ColonyProjection) {
         ? buildingTarget
         : { kind: "citizen", seat: citizen.seat };
     const panelMarkup = selectedPanel(projection, selectedTarget);
-    if (detailPanel.innerHTML !== panelMarkup)
-      detailPanel.innerHTML = panelMarkup;
+    updateDetailPanel(detailPanel, panelMarkup);
   };
 }
 
@@ -386,11 +398,11 @@ async function load() {
     if (!response.ok) throw new Error("Colony unavailable");
     render((await response.json()) as ColonyProjection);
     const status = document.querySelector<HTMLElement>("#status");
-    if (status !== null) status.textContent = "";
+    if (status !== null) updateStatus(status, "");
   } catch (error) {
     const status = document.querySelector<HTMLElement>("#status");
     if (status !== null)
-      status.textContent = `Colony data unavailable: ${error}`;
+      updateStatus(status, `Colony data unavailable: ${error}`);
   }
 }
 
