@@ -6,7 +6,10 @@ import { createContext, Script } from "node:vm";
 
 import { describe, expect, test, vi } from "vitest";
 
+import { readColony } from "../src/colony-reader.js";
 import {
+  colonyPage,
+  composeColonyPage,
   composeWorldPage,
   createWorldHandler,
   createWorldServer,
@@ -60,12 +63,133 @@ describe("world view", () => {
 
   test("has a self-contained polling page", () => {
     expect(worldPage).not.toContain("<!-- world-page-script -->");
-    expect(worldPage).toContain("<title>Bartizan</title>");
+    expect(worldPage).toContain("<title>Bartizan — world</title>");
     expect(worldPage).toContain("Bartizan — Manyhalls world view");
     expect(worldPage).toContain('fetch("/world")');
     expect(worldPage).toContain("setInterval(load, 5000)");
     expect(worldPage).toContain(`open \${fort.beads.open}`);
     expect(worldPage).not.toContain("ready");
+    expect(worldPage).toContain("/colony-view?fort=");
+  });
+
+  test("has a checked canvas colony page with a distinct actor style per parsed citizen pair", async () => {
+    expect(colonyPage).not.toContain("<!-- colony-page-script -->");
+    expect(colonyPage).toContain("<title>Bartizan — colony</title>");
+    expect(colonyPage).toContain('<canvas id="colony"');
+    expect(colonyPage).toContain("fetch(`/colony?fort=");
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "" },
+      document: { querySelector: () => null },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    const root = await mkdtemp(join(tmpdir(), "fortkit-colony-"));
+    const fort = join(root, "fort");
+    const seats = join(fort, "fort", "seats");
+    try {
+      await mkdir(seats, { recursive: true });
+      await Promise.all([
+        writeFile(
+          join(seats, "mayor.md"),
+          "# Seat: Mayor\n\n**Held by: Emrith Cairnwright** (she/her, declared 2026-08-03 at the Founding Moot)\n",
+        ),
+        writeFile(
+          join(seats, "forge.md"),
+          "# Seat: Forge\n\n**Held by: Kethra Anvilmark** (she/her, declared 2026-08-03 at the Founding Moot)\n",
+        ),
+        writeFile(
+          join(seats, "warden.md"),
+          "# Seat: Warden\n\n**Held by: Ilva Trueglass** (she/her, declared 2026-08-03 at the Founding Moot)\n",
+        ),
+      ]);
+      const temporaryRegistry = join(root, "civilization.json");
+      await writeFile(
+        temporaryRegistry,
+        JSON.stringify({ forts: [{ fort_name: "Temporary", repo: fort }] }),
+      );
+      const projection = await readColony(temporaryRegistry, "Temporary");
+      expect(projection?.citizens).toEqual([
+        { name: "Kethra Anvilmark", pronouns: "she/her", seat: "Forge" },
+        { name: "Emrith Cairnwright", pronouns: "she/her", seat: "Mayor" },
+        { name: "Ilva Trueglass", pronouns: "she/her", seat: "Warden" },
+      ]);
+      if (projection === null) throw new Error("colony projection is missing");
+      const styles = (
+        context.actorStyles as (projection: unknown) => Map<string, unknown>
+      )(projection);
+      const rendered = [...styles.values()].map((style) =>
+        JSON.stringify(style),
+      );
+      expect(new Set(rendered).size).toBe(rendered.length);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("renders colony projection fixtures as named fort buildings and a ticker", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const fillText = vi.fn();
+    const canvas = {
+      width: 1100,
+      height: 620,
+      getContext: () => ({
+        fillStyle: "",
+        strokeStyle: "",
+        font: "",
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        fillText,
+      }),
+    };
+    const ticker = { textContent: "" };
+    const gaps = { textContent: "" };
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "" },
+      document: {
+        querySelector: (selector: string) =>
+          selector === "#colony"
+            ? canvas
+            : selector === "#ticker"
+              ? ticker
+              : selector === "#gaps"
+                ? gaps
+                : null,
+      },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    (context.render as (projection: unknown) => void)({
+      workshops: [
+        { type: "implementation", beads: [{ id: "a", title: "Build" }] },
+      ],
+      benches: [],
+      dungeon: [{ id: "bug", title: "Repair" }],
+      citizens: [{ name: "Kethra", pronouns: "she/her", seat: "forge" }],
+      unassigned: [{ id: "intake", title: null }],
+      announcements: ["The gate is watched"],
+      gaps: ["event stream ABSENT"],
+    });
+    expect(fillText.mock.calls.map(([value]) => value)).toEqual(
+      expect.arrayContaining([
+        "GATE",
+        "TRADE DEPOT",
+        "ARCHIVE",
+        "DUNGEON",
+        "IMPLEMENTATION WORKSHOP",
+        "Kethra (she/her)",
+      ]),
+    );
+    expect(ticker.textContent).toBe("The gate is watched");
+    expect(gaps.textContent).toContain("event stream ABSENT");
   });
 
   test("composes literal dollar sequences without replacement expansion", () => {
@@ -81,6 +205,12 @@ describe("world view", () => {
   test("rejects a page template without a script marker", () => {
     expect(() => composeWorldPage("<body></body>", "load();")).toThrow(
       "World page template is missing its script marker",
+    );
+  });
+
+  test("rejects a colony template without a script marker", () => {
+    expect(() => composeColonyPage("<body></body>", "load();")).toThrow(
+      "Colony page template is missing its script marker",
     );
   });
 
@@ -186,6 +316,44 @@ describe("world view", () => {
       );
       expect(loopback.result().status).toBe(200);
     }
+  });
+
+  test("serves a selected colony page and rejects an unknown colony", async () => {
+    const handler = createWorldHandler(registryPath);
+    const response = () => {
+      let status = 0;
+      let body = "";
+      return {
+        writeHead: (code: number) => {
+          status = code;
+        },
+        end: (value: string) => {
+          body = value;
+        },
+        result: () => ({ status, body }),
+      };
+    };
+    const page = response();
+    await handler(
+      {
+        url: "/colony-view?fort=Alpha",
+        headers: { host: "localhost" },
+      } as never,
+      page as never,
+    );
+    expect(page.result()).toMatchObject({
+      status: 200,
+      body: expect.stringContaining('id="colony"'),
+    });
+    const missing = response();
+    await handler(
+      { url: "/colony?fort=Unknown", headers: { host: "localhost" } } as never,
+      missing as never,
+    );
+    expect(missing.result()).toEqual({
+      status: 404,
+      body: '{"error":"Colony not found"}',
+    });
   });
 
   test("returns JSON 500 when projection fails", async () => {

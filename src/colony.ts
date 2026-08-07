@@ -1,11 +1,12 @@
 import type {
+  Bead,
   ColonyBench,
   ColonyCitizen,
   ColonyProjection,
   ColonySession,
   ColonyWorkType,
 } from "./page-types.ts";
-import type { Bead, EventDetail } from "./types.ts";
+import type { EventDetail } from "./types.ts";
 
 export type ColonySources = {
   beads: Bead[] | null;
@@ -131,6 +132,9 @@ export function projectColony(sources: ColonySources): ColonyProjection {
     citizens: (sources.citizens ?? []).slice(),
     // Never disappear a bead merely because its workflow label is absent or unknown.
     unassigned: beads.filter((bead) => !hasWorkType(bead)),
+    announcements: (sources.events ?? [])
+      .flatMap((event) => (event.detail === null ? [] : [event.detail]))
+      .slice(0, 8),
     gaps,
   };
 }

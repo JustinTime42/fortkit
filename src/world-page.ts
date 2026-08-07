@@ -40,7 +40,8 @@ function card(fort: WorldFort) {
   const alerts = fort.watcherAlerts.map(
     (alert) => `${alert.ts} — ${alert.detail}`,
   );
-  return `<article class="card"><h2>${esc(fort.name)}</h2><p>${esc(fort.present ? "present" : "ABSENT")}</p><p>Git: ${esc(git)} · ${esc(fort.git.dirty === null ? "state unavailable" : fort.git.dirty ? "dirty" : "clean")} · ${esc(drift)}</p><p>Beads: <strong>${esc(beads)}</strong></p>${list("In progress", active)}${list("Announcements", fort.announcements)}${list("Watcher alerts", alerts, "alert")}${list("Source gaps", fort.gaps, "gap")}</article>`;
+  const colonyLink = `/colony-view?fort=${encodeURIComponent(fort.name)}`;
+  return `<article class="card"><h2>${esc(fort.name)}</h2><p>${esc(fort.present ? "present" : "ABSENT")}</p><p>Git: ${esc(git)} · ${esc(fort.git.dirty === null ? "state unavailable" : fort.git.dirty ? "dirty" : "clean")} · ${esc(drift)}</p><p>Beads: <strong>${esc(beads)}</strong></p><p><a href="${esc(colonyLink)}">Enter colony</a></p>${list("In progress", active)}${list("Announcements", fort.announcements)}${list("Watcher alerts", alerts, "alert")}${list("Source gaps", fort.gaps, "gap")}</article>`;
 }
 
 async function load() {

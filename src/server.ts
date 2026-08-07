@@ -6,6 +6,7 @@ import {
 } from "node:http";
 import { stripTypeScriptTypes } from "node:module";
 
+import { readColony } from "./colony-reader.ts";
 import { readWorld } from "./world.ts";
 
 const worldPageTemplate = readFileSync(
@@ -16,19 +17,45 @@ const worldPageScript = readFileSync(
   new URL("./world-page.ts", import.meta.url),
   "utf8",
 );
+const colonyPageTemplate = readFileSync(
+  new URL("./colony-page.html", import.meta.url),
+  "utf8",
+);
+const colonyPageScript = readFileSync(
+  new URL("./colony-page.ts", import.meta.url),
+  "utf8",
+);
 
 const worldPageScriptMarker = "<!-- world-page-script -->";
+const colonyPageScriptMarker = "<!-- colony-page-script -->";
 
-export function composeWorldPage(template: string, script: string): string {
-  if (!template.includes(worldPageScriptMarker)) {
-    throw new Error("World page template is missing its script marker");
+function composePage(
+  template: string,
+  script: string,
+  marker: string,
+  pageName: string,
+): string {
+  if (!template.includes(marker)) {
+    throw new Error(`${pageName} page template is missing its script marker`);
   }
   const scriptTag = `<script>\n${stripTypeScriptTypes(script, { mode: "strip" })}</script>`;
   // A replacement callback preserves literal $ sequences in browser source.
-  return template.replace(worldPageScriptMarker, () => scriptTag);
+  return template.replace(marker, () => scriptTag);
+}
+
+export function composeWorldPage(template: string, script: string): string {
+  return composePage(template, script, worldPageScriptMarker, "World");
+}
+
+export function composeColonyPage(template: string, script: string): string {
+  return composePage(template, script, colonyPageScriptMarker, "Colony");
 }
 
 export const worldPage = composeWorldPage(worldPageTemplate, worldPageScript);
+export const colonyPage = composeColonyPage(
+  colonyPageTemplate,
+  colonyPageScript,
+);
 
 type WorldReader = (registryPath: string) => ReturnType<typeof readWorld>;
 
@@ -55,6 +82,31 @@ export function createWorldHandler(
           "content-type": "application/json; charset=utf-8",
         });
         response.end(JSON.stringify(await projectWorld(registryPath)));
+        return;
+      }
+      if (pathname === "/colony") {
+        const fort = new URL(
+          request.url ?? "/",
+          "http://localhost",
+        ).searchParams.get("fort");
+        const colony =
+          fort === null ? null : await readColony(registryPath, fort);
+        if (colony === null) {
+          response.writeHead(404, {
+            "content-type": "application/json; charset=utf-8",
+          });
+          response.end(JSON.stringify({ error: "Colony not found" }));
+          return;
+        }
+        response.writeHead(200, {
+          "content-type": "application/json; charset=utf-8",
+        });
+        response.end(JSON.stringify(colony));
+        return;
+      }
+      if (pathname === "/colony-view") {
+        response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        response.end(colonyPage);
         return;
       }
       if (pathname === "/") {
