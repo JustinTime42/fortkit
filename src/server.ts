@@ -17,10 +17,18 @@ const worldPageScript = readFileSync(
   "utf8",
 );
 
-export const worldPage = worldPageTemplate.replace(
-  "<!-- world-page-script -->",
-  `<script>\n${stripTypeScriptTypes(worldPageScript, { mode: "strip" })}</script>`,
-);
+const worldPageScriptMarker = "<!-- world-page-script -->";
+
+export function composeWorldPage(template: string, script: string): string {
+  if (!template.includes(worldPageScriptMarker)) {
+    throw new Error("World page template is missing its script marker");
+  }
+  const scriptTag = `<script>\n${stripTypeScriptTypes(script, { mode: "strip" })}</script>`;
+  // A replacement callback preserves literal $ sequences in browser source.
+  return template.replace(worldPageScriptMarker, () => scriptTag);
+}
+
+export const worldPage = composeWorldPage(worldPageTemplate, worldPageScript);
 
 type WorldReader = (registryPath: string) => ReturnType<typeof readWorld>;
 
