@@ -56,6 +56,7 @@ describe("world view", () => {
   });
 
   test("has a self-contained polling page", () => {
+    expect(worldPage).not.toContain("<!-- world-page-script -->");
     expect(worldPage).toContain('fetch("/world")');
     expect(worldPage).toContain("setInterval(load, 5000)");
     expect(worldPage).toContain(`open \${fort.beads.open}`);

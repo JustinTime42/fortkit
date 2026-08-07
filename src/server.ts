@@ -4,12 +4,22 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
+import { stripTypeScriptTypes } from "node:module";
 
 import { readWorld } from "./world.ts";
 
-export const worldPage = readFileSync(
+const worldPageTemplate = readFileSync(
   new URL("./world-page.html", import.meta.url),
   "utf8",
+);
+const worldPageScript = readFileSync(
+  new URL("./world-page.ts", import.meta.url),
+  "utf8",
+);
+
+export const worldPage = worldPageTemplate.replace(
+  "<!-- world-page-script -->",
+  `<script>\n${stripTypeScriptTypes(worldPageScript, { mode: "strip" })}</script>`,
 );
 
 type WorldReader = (registryPath: string) => ReturnType<typeof readWorld>;
