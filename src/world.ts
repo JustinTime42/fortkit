@@ -12,7 +12,7 @@ export type WorldFort = {
   path: string;
   present: boolean;
   git: GitState;
-  beads: { ready: number; malformed: number } | null;
+  beads: { open: number; malformed: number } | null;
   inProgress: Array<Bead & { seat: string | null; model: string | null }>;
   announcements: string[];
   watcherAlerts: Array<{ detail: string; ts: string }>;
@@ -98,7 +98,7 @@ export async function readWorld(registryPath: string): Promise<WorldFort[]> {
           beadRecords === null
             ? null
             : {
-                ready: beadRecords.counts.open,
+                open: beadRecords.counts.open,
                 malformed: beadRecords.counts.malformed,
               },
         inProgress:

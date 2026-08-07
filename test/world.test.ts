@@ -21,7 +21,7 @@ describe("world view", () => {
     expect(forts).toHaveLength(3);
     expect(forts[0]).toMatchObject({
       name: "Alpha",
-      beads: { ready: 1, malformed: 1 },
+      beads: { open: 1, malformed: 1 },
       inProgress: [
         {
           id: "b",
@@ -57,6 +57,8 @@ describe("world view", () => {
   test("has a self-contained polling page", () => {
     expect(worldPage).toContain("fetch('/world')");
     expect(worldPage).toContain("setInterval(load,5000)");
+    expect(worldPage).toContain("open '+f.beads.open");
+    expect(worldPage).not.toContain("ready");
   });
 
   test("caps watcher alerts and timestamps each entry", async () => {
