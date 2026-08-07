@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createContext, Script } from "node:vm";
 
 import { describe, expect, test, vi } from "vitest";
 
@@ -55,10 +56,42 @@ describe("world view", () => {
   });
 
   test("has a self-contained polling page", () => {
-    expect(worldPage).toContain("fetch('/world')");
-    expect(worldPage).toContain("setInterval(load,5000)");
-    expect(worldPage).toContain("open '+f.beads.open");
+    expect(worldPage).toContain('fetch("/world")');
+    expect(worldPage).toContain("setInterval(load, 5000)");
+    expect(worldPage).toContain(`open \${fort.beads.open}`);
     expect(worldPage).not.toContain("ready");
+  });
+
+  test("escapes hostile bead titles rendered by card", () => {
+    const script = worldPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) {
+      throw new Error("world page script is missing");
+    }
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+    });
+    new Script(script).runInContext(context);
+    const renderCard = context.card as (fort: unknown) => string;
+    const hostileTitle = '</li><img src=x onerror="alert(1)">';
+
+    const markup = renderCard({
+      name: "Alpha",
+      present: true,
+      git: { branch: "main", ahead: 0, behind: 0, dirty: false },
+      beads: { open: 1 },
+      inProgress: [{ id: "fortkit-hostile", title: hostileTitle }],
+      announcements: [],
+      watcherAlerts: [],
+      gaps: [],
+    });
+
+    expect(markup).toContain(
+      "&lt;/li&gt;&lt;img src=x onerror=&quot;alert(1)&quot;&gt;",
+    );
+    expect(markup).not.toContain(hostileTitle);
+    expect(markup).not.toContain("<img");
   });
 
   test("caps watcher alerts and timestamps each entry", async () => {

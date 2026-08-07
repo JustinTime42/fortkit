@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>fortkit world</title>
+  <style>
+    body { margin: 0; background: #17140f; color: #e8ddbf; font: 16px system-ui, sans-serif; }
+    header { padding: 1rem 2rem; background: #302719; }
+    main { padding: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+    .card { border: 1px solid #79633d; background: #211b13; padding: 1rem; }
+    .gap { color: #ffba8c; }
+    .alert { color: #ff8b7b; }
+    h2 { margin-top: 0; }
+    ul { padding-left: 1.25rem; }
+    .muted { color: #b9aa8d; }
+  </style>
+  <header>
+    <strong>Manyhalls world view</strong>
+    <span id="updated" class="muted"></span>
+  </header>
+  <main id="forts">Loading the registry…</main>
+  <script>
+    const esc = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[character]);
+
+    const list = (title, items, className = "") =>
+      `<h3>${title}</h3><ul class="${className}">${items.length
+        ? items.map((item) => `<li>${esc(item)}</li>`).join("")
+        : '<li class="muted">none</li>'}</ul>`;
+
+    function card(fort) {
+      const git = fort.git.branch || "unavailable";
+      const drift = fort.git.ahead === null
+        ? "unavailable"
+        : `ahead ${fort.git.ahead} · behind ${fort.git.behind}`;
+      const beads = fort.beads === null ? "ABSENT" : `open ${fort.beads.open}`;
+      const active = fort.inProgress.map((bead) =>
+        `${bead.id}${bead.title ? ` — ${bead.title}` : ""} [${bead.seat || bead.assignee || "seat unknown"}; ${bead.model || "model unknown"}]`
+      );
+      const alerts = fort.watcherAlerts.map((alert) => `${alert.ts} — ${alert.detail}`);
+      return `<article class="card"><h2>${esc(fort.name)}</h2><p>${esc(fort.present ? "present" : "ABSENT")}</p><p>Git: ${esc(git)} · ${esc(fort.git.dirty === null ? "state unavailable" : fort.git.dirty ? "dirty" : "clean")} · ${esc(drift)}</p><p>Beads: <strong>${esc(beads)}</strong></p>${list("In progress", active)}${list("Announcements", fort.announcements)}${list("Watcher alerts", alerts, "alert")}${list("Source gaps", fort.gaps, "gap")}</article>`;
+    }
+
+    async function load() {
+      try {
+        const response = await fetch("/world");
+        const data = await response.json();
+        document.querySelector("#forts").innerHTML = data.map(card).join("") || "<p>No registered forts found.</p>";
+        document.querySelector("#updated").textContent = `updated ${new Date().toLocaleTimeString()}`;
+      } catch (error) {
+        document.querySelector("#forts").textContent = `World data unavailable: ${error}`;
+      }
+    }
+
+    load();
+    setInterval(load, 5000);
+  </script>
+</html>
