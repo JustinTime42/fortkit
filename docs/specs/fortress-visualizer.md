@@ -60,10 +60,11 @@ Supersedes the founding table's workshop/bench/archive rows and the v1 bullet's 
 | The Keep | the Overseer: petitions awaiting the human (gated beads, decisions, `bd human`) | what's blocked on me? |
 | The Palace (capital only) | civ/ seats (Herald, Regent, Chronicler, …): one government building, a bench per office | is the civilization layer at work? |
 | Homes district | one home per citizen, with a bed | who lives here; who's asleep? |
+| The Tavern | ambient life: meals, socializing, celebration (Overseer addition, 2026-08-07) | who's off duty; is the fort alive? |
 
 **Work-type labels become the item, not the building**: an implementation bead, a spec bead, a bug are goods being crafted, each with its own glyph, moving Gate → Job Board → a seat's workshop → Depot → closed (bugs detour through the Dungeon). Untyped beads remain conspicuous as unlabeled crates at the Job Board and Gate (risk 1's mitigation survives the re-map).
 
-**Citizens always exist** (roster permanence + model welfare): a citizen's sprite is never absent — working at their seat, or living ambient life. A small **deterministic ambient-life tracker** (script, no model, no tokens) schedules normal DF activities (sleep, eat, socialize, idle pursuits) and records them in a state file the renderer reads. That record is *available* to the agent when a session wakes (a short line of context, or a file it may read) without polluting working context. Future direction, recorded: the Overseer intends play and leisure to eventually be real token spend (v3 below).
+**Citizens always exist** (roster permanence + model welfare): a citizen's sprite is never absent — working at their seat, or living ambient life. A small **deterministic ambient-life tracker** (script, no model, no tokens) schedules normal DF activities (sleep, meals and socializing at the Tavern, idle pursuits) and records them in a form the renderer reads. That record is *available* to the agent when a session wakes (a short line of context, or a file it may read) without polluting working context. Future direction, recorded: the Overseer intends play and leisure to eventually be real token spend (v3 below).
 
 **Movement**: sprites path between fixed places. When a session starts while a citizen is at home, the sprite walks bed → workshop; at session end, walks back. Rendering may lag reality (the agent is already working while the sprite walks); perceived motion is the point. Pathing is renderer-side and deterministic from events + ambient state.
 
