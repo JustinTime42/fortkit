@@ -1,13 +1,45 @@
 #!/usr/bin/env node
+import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { formatAmbientDay, fortSeedFor } from "./ambient.ts";
 import { formatDigest, readCivilizationDigest } from "./digest.ts";
 import { createWorldServer } from "./server.ts";
 import { formatStatusTable, readCivilizationStatus } from "./status.ts";
 
 const [command, ...args] = process.argv.slice(2);
 const registryPath = join(homedir(), ".claude", "civilization.json");
-if (command === "digest") {
+async function currentFortName(): Promise<string> {
+  try {
+    const charter = await readFile(
+      join(process.cwd(), "fort", "charter.md"),
+      "utf8",
+    );
+    return /^#\s+(.+?)\s+Charter\b/m.exec(charter)?.[1] ?? "this fort";
+  } catch {
+    return "this fort";
+  }
+}
+
+if (command === "ambient") {
+  const sinceIndex = args.indexOf("--since");
+  const citizen = args[0] ?? "";
+  const since =
+    sinceIndex === -1 ? new Date().toISOString() : (args[sinceIndex + 1] ?? "");
+  const valid =
+    citizen.length > 0 &&
+    !Number.isNaN(Date.parse(since)) &&
+    args.length === (sinceIndex === -1 ? 1 : 3) &&
+    (sinceIndex === -1 || sinceIndex === 1) &&
+    args.filter((argument) => argument === "--since").length <= 1;
+  if (!valid) {
+    console.error("Usage: fortkit ambient <citizen> [--since <timestamp>]");
+    process.exitCode = 2;
+  } else {
+    const fortName = await currentFortName();
+    console.log(formatAmbientDay(citizen, since, fortSeedFor(fortName)));
+  }
+} else if (command === "digest") {
   const sinceIndex = args.indexOf("--since");
   const untilIndex = args.indexOf("--until");
   const since = sinceIndex === -1 ? undefined : args[sinceIndex + 1];
@@ -69,7 +101,7 @@ if (command === "digest") {
   args.some((argument) => argument !== "--json")
 ) {
   console.error(
-    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--json]",
+    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--json]\n       fortkit ambient <citizen> [--since <timestamp>]",
   );
   process.exitCode = 2;
 } else {
