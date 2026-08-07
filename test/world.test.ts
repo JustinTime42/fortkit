@@ -77,6 +77,7 @@ describe("world view", () => {
     expect(colonyPage).toContain("<title>Bartizan — colony</title>");
     expect(colonyPage).toContain('id="colony-title"');
     expect(colonyPage).not.toContain('id="ticker" aria-live');
+    expect(colonyPage).toContain('id="status" role="status"');
     expect(colonyPage).toContain('<canvas id="colony"');
     expect(colonyPage).toContain("fetch(`/colony?fort=");
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
@@ -104,7 +105,7 @@ describe("world view", () => {
     expect(new Set(rendered).size).toBe(rendered.length);
   });
 
-  test("names the colony tab and header after its selected fort", async () => {
+  test("names the colony tab and header after its selected fort", () => {
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     expect(script).toBeDefined();
     if (script === undefined) throw new Error("colony page script is missing");
@@ -155,29 +156,16 @@ describe("world view", () => {
       URLSearchParams,
     });
     new Script(script).runInContext(context);
-    (
-      context.building as (
-        context: unknown,
-        x: number,
-        y: number,
-        name: string,
-        details: string[],
-        color: string,
-      ) => void
-    )(
-      canvas.getContext(),
-      0,
-      0,
-      "TEST",
-      Array.from(
-        { length: 7 },
-        (_, index) => `detail-${index}-${"x".repeat(30)}`,
-      ),
-      "#000",
+    const details = Array.from(
+      { length: 7 },
+      (_, index) => `detail-${index}-${"x".repeat(30)}`,
     );
-    expect(fillText.mock.calls.map(([value]) => value)).toEqual(
-      expect.arrayContaining([`detail-0-${"x".repeat(17)}…`, "… +3 more"]),
-    );
+    expect(
+      (context.visibleDetails as (values: string[]) => string[])(details),
+    ).toEqual([...details.slice(0, 4), "… +3 more"]);
+    expect(
+      (context.truncateDetail as (value: string) => string)(details[0] ?? ""),
+    ).toBe(`detail-0-${"x".repeat(17)}…`);
 
     (context.render as (projection: unknown) => void)({
       workshops: [],
@@ -195,7 +183,7 @@ describe("world view", () => {
       announcements: [],
       gaps: [],
     });
-    expect(canvas.height).toBe(646);
+    expect(canvas.height).toBe(530 + Math.ceil(7 / 6) * 48 + 20);
     expect(fillText).toHaveBeenCalledWith("Citizen 7 (they/them)", 48, 598);
   });
 
@@ -391,7 +379,94 @@ describe("world view", () => {
     expect(beadMarkup).toContain("Provenance edges");
   });
 
-  test("opens the bead drawn at each detail-row baseline, not a neighbour", () => {
+  test("opens distinct building, archive, and wrapped-citizen entities at their drawn rows", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const canvas = {
+      width: 1100,
+      height: 620,
+      onclick: undefined as
+        | undefined
+        | ((event: { clientX: number; clientY: number }) => void),
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        width: 1100,
+        height: 646,
+      }),
+      getContext: () => ({
+        fillStyle: "",
+        strokeStyle: "",
+        font: "",
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        fillText: vi.fn(),
+      }),
+    };
+    const detailPanel = { textContent: "", innerHTML: "" };
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "" },
+      document: {
+        querySelector: (selector: string) =>
+          selector === "#colony"
+            ? canvas
+            : selector === "#detail-panel"
+              ? detailPanel
+              : { textContent: "" },
+      },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    const gateBeads = Array.from({ length: 7 }, (_, index) => ({
+      id: `gate-${index}`,
+      title: `Gate ${index}`,
+    }));
+    const dungeonBeads = [{ id: "dungeon-0", title: "Dungeon 0" }];
+    const workshopBeads = [{ id: "workshop-0", title: "Workshop 0" }];
+    const citizens = Array.from({ length: 7 }, (_, index) => ({
+      name: `Citizen ${index}`,
+      pronouns: "they/them",
+      seat: `Seat ${index}`,
+      personality: null,
+      currentBead: null,
+      lastHandoff: null,
+    }));
+    (context.render as (projection: unknown) => void)({
+      workshops: [{ type: "implementation", beads: workshopBeads }],
+      benches: [],
+      dungeon: dungeonBeads,
+      citizens,
+      unassigned: gateBeads,
+      announcements: [],
+      gaps: [],
+    });
+    if (canvas.onclick === undefined)
+      throw new Error("click handler is missing");
+
+    const buildings: Array<[number, number, string]> = [
+      [30, 35, "gate-0"],
+      [765, 35, "dungeon-0"],
+      [30, 230, "workshop-0"],
+    ];
+    for (const [left, top, beadId] of buildings) {
+      canvas.onclick({ clientX: left + 10, clientY: top + 46 });
+      expect(detailPanel.innerHTML).toContain(`Bead: ${beadId}`);
+    }
+
+    canvas.onclick({ clientX: 530, clientY: 81 });
+    expect(detailPanel.innerHTML).toContain("Seat: Seat 0");
+    canvas.onclick({ clientX: 48, clientY: 578 });
+    expect(detailPanel.innerHTML).toContain("Seat: Seat 6");
+    canvas.onclick({ clientX: 40, clientY: 35 + 46 + 4 * 13 });
+    expect(detailPanel.innerHTML).toBe("");
+    canvas.onclick({ clientX: 241, clientY: 276 });
+    expect(detailPanel.innerHTML).toBe("");
+  });
+
+  test("refreshes a selected panel from current colony data", () => {
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     expect(script).toBeDefined();
     if (script === undefined) throw new Error("colony page script is missing");
@@ -421,6 +496,7 @@ describe("world view", () => {
       fetch: () => new Promise(() => undefined),
       setInterval: () => undefined,
       location: { search: "" },
+      URLSearchParams,
       document: {
         querySelector: (selector: string) =>
           selector === "#colony"
@@ -429,40 +505,26 @@ describe("world view", () => {
               ? detailPanel
               : { textContent: "" },
       },
-      URLSearchParams,
     });
     new Script(script).runInContext(context);
-    const beads = Array.from({ length: 5 }, (_, index) => ({
-      id: `bead-${index}`,
-      title: `Bead ${index}`,
-    }));
-    (context.render as (projection: unknown) => void)({
-      workshops: [{ type: "implementation", beads }],
+    const projection = {
+      workshops: [],
       benches: [],
-      dungeon: beads,
+      dungeon: [],
       citizens: [],
-      unassigned: beads,
       announcements: [],
       gaps: [],
-    });
+      unassigned: [{ id: "live", title: "Live bead" }],
+    };
+    (context.render as (value: unknown) => void)(projection);
     if (canvas.onclick === undefined)
       throw new Error("click handler is missing");
-
-    const buildings: Array<[number, number]> = [
-      [30, 35],
-      [765, 35],
-      [30, 230],
-    ];
-    for (const [left, top] of buildings) {
-      for (const [index, bead] of beads.entries()) {
-        canvas.onclick({ clientX: left + 10, clientY: top + 46 + index * 13 });
-        expect(detailPanel.innerHTML).toContain(`Bead: ${bead.id}`);
-      }
-    }
-
-    canvas.onclick({ clientX: 241, clientY: 276 });
-    expect(detailPanel.innerHTML).toBe("");
-    canvas.onclick({ clientX: 40, clientY: 146 });
+    canvas.onclick({ clientX: 40, clientY: 81 });
+    expect(detailPanel.innerHTML).toContain("Bead: live");
+    (context.render as (value: unknown) => void)({
+      ...projection,
+      unassigned: [],
+    });
     expect(detailPanel.innerHTML).toBe("");
   });
 

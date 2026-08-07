@@ -32,7 +32,7 @@ async function readCitizens(
           );
           const pronouns = /\b([a-z]+\/[a-z]+)\b/.exec(holder?.[2] ?? "")?.[1];
           const personality =
-            /\*\*Personality \(in their own words\):\*\*\s*[“"]([^”"]*)[”"]/s
+            /\*\*Personality \(in [a-z/]+ own words\):\*\*\s*[“"]([^”"]*)[”"]/s
               .exec(contents)?.[1]
               ?.trim();
           return seat === undefined || holder === null
