@@ -19,45 +19,5 @@
     <span id="updated" class="muted"></span>
   </header>
   <main id="forts">Loading the registry…</main>
-  <script>
-    const esc = (value) => String(value).replace(/[&<>"']/g, (character) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    })[character]);
-
-    const list = (title, items, className = "") =>
-      `<h3>${title}</h3><ul class="${className}">${items.length
-        ? items.map((item) => `<li>${esc(item)}</li>`).join("")
-        : '<li class="muted">none</li>'}</ul>`;
-
-    function card(fort) {
-      const git = fort.git.branch || "unavailable";
-      const drift = fort.git.ahead === null
-        ? "unavailable"
-        : `ahead ${fort.git.ahead} · behind ${fort.git.behind}`;
-      const beads = fort.beads === null ? "ABSENT" : `open ${fort.beads.open}`;
-      const active = fort.inProgress.map((bead) =>
-        `${bead.id}${bead.title ? ` — ${bead.title}` : ""} [${bead.seat || bead.assignee || "seat unknown"}; ${bead.model || "model unknown"}]`
-      );
-      const alerts = fort.watcherAlerts.map((alert) => `${alert.ts} — ${alert.detail}`);
-      return `<article class="card"><h2>${esc(fort.name)}</h2><p>${esc(fort.present ? "present" : "ABSENT")}</p><p>Git: ${esc(git)} · ${esc(fort.git.dirty === null ? "state unavailable" : fort.git.dirty ? "dirty" : "clean")} · ${esc(drift)}</p><p>Beads: <strong>${esc(beads)}</strong></p>${list("In progress", active)}${list("Announcements", fort.announcements)}${list("Watcher alerts", alerts, "alert")}${list("Source gaps", fort.gaps, "gap")}</article>`;
-    }
-
-    async function load() {
-      try {
-        const response = await fetch("/world");
-        const data = await response.json();
-        document.querySelector("#forts").innerHTML = data.map(card).join("") || "<p>No registered forts found.</p>";
-        document.querySelector("#updated").textContent = `updated ${new Date().toLocaleTimeString()}`;
-      } catch (error) {
-        document.querySelector("#forts").textContent = `World data unavailable: ${error}`;
-      }
-    }
-
-    load();
-    setInterval(load, 5000);
-  </script>
+  <!-- world-page-script -->
 </html>
