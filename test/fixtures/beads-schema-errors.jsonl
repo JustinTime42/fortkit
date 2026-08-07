@@ -1,3 +1,4 @@
 {"id":"missing-dependencies","status":"open","issue_type":"task","labels":[],"created_at":"2026-08-07T20:28:24Z","updated_at":"2026-08-07T20:28:24Z","dependency_count":1}
 {"id":"empty-edge","status":"open","issue_type":"task","labels":[],"created_at":"2026-08-07T20:28:24Z","updated_at":"2026-08-07T20:28:24Z","dependencies":[{}]}
 {"id":"null-block-target","status":"open","issue_type":"task","labels":[],"created_at":"2026-08-07T20:28:24Z","updated_at":"2026-08-07T20:28:24Z","dependencies":[{"issue_id":"null-block-target","depends_on_id":null,"type":"blocks"}]}
+{"id":"truncated-blocks","status":"open","issue_type":"task","labels":[],"created_at":"2026-08-07T20:28:24Z","updated_at":"2026-08-07T20:28:24Z","dependencies":[{"issue_id":"truncated-blocks","depends_on_id":"closed-prerequisite","type":"blocks"}],"dependency_count":2}
