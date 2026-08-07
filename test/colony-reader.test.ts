@@ -81,7 +81,14 @@ describe("colony reader", () => {
         benches: [{ worktree: fort, session: null }],
         announcements: ["Reader fixture"],
         citizens: [
-          { name: "Kethra Anvilmark", pronouns: "she/her", seat: "Forge" },
+          {
+            name: "Kethra Anvilmark",
+            pronouns: "she/her",
+            seat: "Forge",
+            personality: null,
+            currentBead: null,
+            lastHandoff: null,
+          },
         ],
         gaps: [],
       });
@@ -132,7 +139,14 @@ describe("colony reader", () => {
       ]);
 
       expect((await readColony(registry, "Temporary"))?.citizens).toEqual([
-        { name: "Kethra Anvilmark", pronouns: "—", seat: "Forge" },
+        {
+          name: "Kethra Anvilmark",
+          pronouns: "—",
+          seat: "Forge",
+          personality: null,
+          currentBead: null,
+          lastHandoff: null,
+        },
       ]);
     } finally {
       await rm(root, { recursive: true, force: true });

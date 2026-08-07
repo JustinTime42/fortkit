@@ -59,6 +59,9 @@ export type ColonyCitizen = {
   name: string;
   pronouns: string;
   seat: string;
+  personality: string | null;
+  currentBead: string | null;
+  lastHandoff: string | null;
 };
 
 export type ColonySession = {

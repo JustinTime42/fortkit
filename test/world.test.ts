@@ -6,6 +6,7 @@ import { createContext, Script } from "node:vm";
 
 import { describe, expect, test, vi } from "vitest";
 
+import { readLatestHandoffs } from "../src/readers/handoffs.js";
 import {
   colonyPage,
   composeColonyPage,
@@ -120,6 +121,7 @@ describe("world view", () => {
     };
     const ticker = { textContent: "" };
     const gaps = { textContent: "" };
+    const detailPanel = { textContent: "", innerHTML: "" };
     const context = createContext({
       fetch: () => new Promise(() => undefined),
       setInterval: () => undefined,
@@ -132,7 +134,9 @@ describe("world view", () => {
               ? ticker
               : selector === "#gaps"
                 ? gaps
-                : null,
+                : selector === "#detail-panel"
+                  ? detailPanel
+                  : null,
       },
       URLSearchParams,
     });
@@ -143,7 +147,16 @@ describe("world view", () => {
       ],
       benches: [],
       dungeon: [{ id: "bug", title: "Repair" }],
-      citizens: [{ name: "Kethra", pronouns: "she/her", seat: "forge" }],
+      citizens: [
+        {
+          name: "Kethra",
+          pronouns: "she/her",
+          seat: "forge",
+          personality: null,
+          currentBead: null,
+          lastHandoff: null,
+        },
+      ],
       unassigned: [{ id: "intake", title: null }],
       announcements: ["The gate is watched"],
       gaps: ["event stream ABSENT"],
@@ -214,6 +227,224 @@ describe("world view", () => {
     );
     expect(markup).not.toContain(hostileTitle);
     expect(markup).not.toContain("<img");
+  });
+
+  test("renders escaped seat and bead detail panels from fixtures", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "" },
+      document: { querySelector: () => null },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    const hostile = '<img src=x onerror="alert(1)">';
+    const renderSeatPanel = context.seatPanel as (citizen: unknown) => string;
+    const renderBeadPanel = context.beadPanel as (bead: unknown) => string;
+
+    const seatMarkup = renderSeatPanel({
+      name: hostile,
+      pronouns: hostile,
+      seat: hostile,
+      personality: hostile,
+      currentBead: hostile,
+      lastHandoff: hostile,
+    });
+    const beadMarkup = renderBeadPanel({
+      id: hostile,
+      title: hostile,
+      description: hostile,
+      design: hostile,
+      notes: hostile,
+      acceptanceCriteria: hostile,
+      status: hostile,
+      priority: 1,
+      issueType: hostile,
+      assignee: hostile,
+      owner: hostile,
+      labels: [hostile],
+      createdAt: hostile,
+      createdBy: hostile,
+      updatedAt: hostile,
+      startedAt: hostile,
+      closedAt: hostile,
+      closeReason: hostile,
+      dependencies: [
+        {
+          issueId: hostile,
+          dependsOnId: hostile,
+          type: hostile,
+          createdAt: hostile,
+          createdBy: hostile,
+          metadata: hostile,
+        },
+      ],
+    });
+
+    for (const markup of [seatMarkup, beadMarkup]) {
+      expect(markup).toContain(
+        "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;",
+      );
+      expect(markup).not.toContain(hostile);
+      expect(markup).not.toContain("<img");
+    }
+    expect(beadMarkup).toContain("Provenance edges");
+  });
+
+  test("opens the bead drawn at each detail-row baseline, not a neighbour", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const canvas = {
+      width: 1100,
+      height: 620,
+      onclick: undefined as
+        | undefined
+        | ((event: { clientX: number; clientY: number }) => void),
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        width: 1100,
+        height: 620,
+      }),
+      getContext: () => ({
+        fillStyle: "",
+        strokeStyle: "",
+        font: "",
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        fillText: vi.fn(),
+      }),
+    };
+    const detailPanel = { textContent: "", innerHTML: "" };
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "" },
+      document: {
+        querySelector: (selector: string) =>
+          selector === "#colony"
+            ? canvas
+            : selector === "#detail-panel"
+              ? detailPanel
+              : { textContent: "" },
+      },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    const beads = Array.from({ length: 5 }, (_, index) => ({
+      id: `bead-${index}`,
+      title: `Bead ${index}`,
+    }));
+    (context.render as (projection: unknown) => void)({
+      workshops: [{ type: "implementation", beads }],
+      benches: [],
+      dungeon: beads,
+      citizens: [],
+      unassigned: beads,
+      announcements: [],
+      gaps: [],
+    });
+    if (canvas.onclick === undefined)
+      throw new Error("click handler is missing");
+
+    const buildings: Array<[number, number]> = [
+      [30, 35],
+      [765, 35],
+      [30, 230],
+    ];
+    for (const [left, top] of buildings) {
+      for (const [index, bead] of beads.entries()) {
+        canvas.onclick({ clientX: left + 10, clientY: top + 46 + index * 13 });
+        expect(detailPanel.innerHTML).toContain(`Bead: ${bead.id}`);
+      }
+    }
+
+    canvas.onclick({ clientX: 241, clientY: 276 });
+    expect(detailPanel.innerHTML).toBe("");
+    canvas.onclick({ clientX: 40, clientY: 146 });
+    expect(detailPanel.innerHTML).toBe("");
+  });
+
+  test("uses the handoff heading timestamp to break same-day filename ties", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-handoffs-"));
+    try {
+      await Promise.all([
+        writeFile(
+          join(root, "forge-2026-08-07.md"),
+          "# Handoff: Forge 2026-08-07T13:59:13-08:00\n",
+        ),
+        writeFile(
+          join(root, "forge-2026-08-07-bzx.4.md"),
+          "# Handoff: Forge 2026-08-07T14:28:00-08:00\n",
+        ),
+      ]);
+
+      const handoffs = await readLatestHandoffs(root);
+      expect(handoffs?.get("forge")).toBe(
+        "Handoff: Forge 2026-08-07T14:28:00-08:00",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reads Mayor handoff headings without seconds or with an uncertain time", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-handoffs-"));
+    try {
+      await Promise.all([
+        writeFile(
+          join(root, "mayor-2026-08-04.md"),
+          "# Handoff: Mayor 2026-08-04T11:35-08:00\n",
+        ),
+        writeFile(
+          join(root, "mayor-2026-08-04-d.md"),
+          "# Handoff: Mayor 2026-08-04T20:30-08:00\n",
+        ),
+        writeFile(
+          join(root, "mayor-2026-08-06.md"),
+          "# Handoff: Mayor 2026-08-06T10:00-08:00\n",
+        ),
+        writeFile(
+          join(root, "mayor-2026-08-06-d.md"),
+          "# Handoff: Mayor 2026-08-06T~~11:45-08:00\n",
+        ),
+      ]);
+
+      const handoffs = await readLatestHandoffs(root);
+      expect(handoffs?.get("mayor")).toBe(
+        "Handoff: Mayor 2026-08-06T~~11:45-08:00",
+      );
+
+      await Promise.all([
+        rm(join(root, "mayor-2026-08-06.md"), { force: true }),
+        rm(join(root, "mayor-2026-08-06-d.md"), { force: true }),
+      ]);
+      const sameDayHandoffs = await readLatestHandoffs(root);
+      expect(sameDayHandoffs?.get("mayor")).toBe(
+        "Handoff: Mayor 2026-08-04T20:30-08:00",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("prefers a suffixed filename when same-day handoff timestamps are absent", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-handoffs-"));
+    try {
+      await Promise.all([
+        writeFile(join(root, "mayor-2026-08-04.md"), "not a handoff\n"),
+        writeFile(join(root, "mayor-2026-08-04-d.md"), "still not a handoff\n"),
+      ]);
+
+      const handoffs = await readLatestHandoffs(root);
+      expect(handoffs?.get("mayor")).toBeNull();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   test("caps watcher alerts and timestamps each entry", async () => {

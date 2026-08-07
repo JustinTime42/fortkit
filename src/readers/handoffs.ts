@@ -13,15 +13,95 @@ export type HandoffSection = {
 
 type HandoffCandidate = Pick<HandoffSection, "file" | "seat" | "date">;
 
+type ReadHandoffCandidate = HandoffCandidate & {
+  heading: string | null;
+  timestamp: number | null;
+};
+
 function handoffCandidates(files: string[]): HandoffCandidate[] {
   return files.flatMap((file) => {
-    const match = /^([a-z0-9_-]+)-(\d{4}-\d{2}-\d{2})\.md$/i.exec(file);
+    const match =
+      /^([a-z0-9_-]+)-(\d{4}-\d{2}-\d{2})(?:-[a-z0-9._-]+)?\.md$/i.exec(file);
     const seat = match?.[1];
     const date = match?.[2];
     return seat === undefined || date === undefined
       ? []
       : [{ file, seat, date }];
   });
+}
+
+function handoffTimestamp(heading: string | null): number | null {
+  const timestampParts =
+    /\b(\d{4}-\d{2}-\d{2}T)~{0,2}(\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2}))\b/.exec(
+      heading ?? "",
+    );
+  if (timestampParts === null) return null;
+  const timestamp = Date.parse(`${timestampParts[1]}${timestampParts[2]}`);
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function filenameTiebreak(
+  candidate: ReadHandoffCandidate,
+  previous: ReadHandoffCandidate,
+): boolean {
+  const plainFilename = (handoff: ReadHandoffCandidate) =>
+    `${handoff.seat}-${handoff.date}.md`;
+  const candidateIsSuffixed = candidate.file !== plainFilename(candidate);
+  const previousIsSuffixed = previous.file !== plainFilename(previous);
+  if (candidateIsSuffixed !== previousIsSuffixed) return candidateIsSuffixed;
+  return candidate.file > previous.file;
+}
+
+async function readHandoffCandidate(
+  directory: string,
+  candidate: HandoffCandidate,
+): Promise<ReadHandoffCandidate> {
+  try {
+    const firstLine = (await readFile(join(directory, candidate.file), "utf8"))
+      .split(/\r?\n/, 1)[0]
+      ?.trim();
+    const heading =
+      firstLine?.startsWith("#") === true
+        ? firstLine.replace(/^#+\s*/, "")
+        : null;
+    return { ...candidate, heading, timestamp: handoffTimestamp(heading) };
+  } catch {
+    return { ...candidate, heading: null, timestamp: null };
+  }
+}
+
+/** Reads the newest handoff heading for each seat without treating filenames as paths. */
+export async function readLatestHandoffs(
+  directory: string,
+): Promise<Map<string, string | null> | null> {
+  let files: string[];
+  try {
+    files = await readdir(directory);
+  } catch {
+    return null;
+  }
+  const latest = new Map<string, ReadHandoffCandidate>();
+  for (const candidate of handoffCandidates(files)) {
+    const readCandidate = await readHandoffCandidate(directory, candidate);
+    const previous = latest.get(candidate.seat.toLocaleLowerCase());
+    if (
+      previous === undefined ||
+      readCandidate.date > previous.date ||
+      (readCandidate.date === previous.date &&
+        (readCandidate.timestamp ?? Number.NEGATIVE_INFINITY) >
+          (previous.timestamp ?? Number.NEGATIVE_INFINITY)) ||
+      (readCandidate.date === previous.date &&
+        readCandidate.timestamp === previous.timestamp &&
+        filenameTiebreak(readCandidate, previous))
+    ) {
+      latest.set(candidate.seat.toLocaleLowerCase(), readCandidate);
+    }
+  }
+  const handoffs = new Map<string, string | null>();
+  for (const [seat, candidate] of latest) {
+    handoffs.set(seat, candidate.heading);
+  }
+  return handoffs;
 }
 
 export async function readLastHandoff(

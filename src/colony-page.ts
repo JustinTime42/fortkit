@@ -2,6 +2,78 @@ import type { ColonyProjection } from "./page-types.ts";
 
 type ActorStyle = { glyph: string; color: string };
 
+const buildingWidth = 210;
+const buildingHeight = 112;
+const detailBaselineOffset = 46;
+const detailRowHeight = 13;
+const detailRows = 5;
+const detailHitStartOffset = detailBaselineOffset - 10;
+
+function esc(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return entities[character] ?? character;
+  });
+}
+
+function display(value: string | number | null): string {
+  return value === null ? "unknown" : String(value);
+}
+
+function detailList(fields: Array<[string, string | number | null]>): string {
+  return `<dl>${fields
+    .map(
+      ([name, value]) => `<dt>${esc(name)}</dt><dd>${esc(display(value))}</dd>`,
+    )
+    .join("")}</dl>`;
+}
+
+function seatPanel(citizen: ColonyProjection["citizens"][number]): string {
+  return `<h2>Seat: ${esc(citizen.seat)}</h2>${detailList([
+    ["name", citizen.name],
+    ["pronouns", citizen.pronouns],
+    ["personality", citizen.personality],
+    ["current bead", citizen.currentBead],
+    ["last handoff", citizen.lastHandoff],
+  ])}`;
+}
+
+function beadPanel(bead: ColonyProjection["unassigned"][number]): string {
+  const fields: Array<[string, string | number | null]> = [
+    ["id", bead.id],
+    ["title", bead.title],
+    ["description", bead.description],
+    ["design", bead.design],
+    ["notes", bead.notes],
+    ["acceptance criteria", bead.acceptanceCriteria],
+    ["status", bead.status],
+    ["priority", bead.priority],
+    ["type", bead.issueType],
+    ["assignee", bead.assignee],
+    ["owner", bead.owner],
+    ["labels", bead.labels?.join(", ") ?? null],
+    ["created", bead.createdAt],
+    ["created by", bead.createdBy],
+    ["updated", bead.updatedAt],
+    ["started", bead.startedAt],
+    ["closed", bead.closedAt],
+    ["close reason", bead.closeReason],
+  ];
+  const provenance = (bead.dependencies ?? [])
+    .map(
+      (edge) =>
+        `<li>${esc(edge.type)}: ${esc(edge.issueId)} → ${esc(edge.dependsOnId)}; created ${esc(display(edge.createdAt))} by ${esc(display(edge.createdBy))}; metadata ${esc(display(edge.metadata))}</li>`,
+    )
+    .join("");
+  return `<h2>Bead: ${esc(bead.id)}</h2>${detailList(fields)}<h3>Provenance edges</h3><ul>${provenance || "<li>none</li>"}</ul>`;
+}
+
 function actorStyles(projection: ColonyProjection): Map<string, ActorStyle> {
   const actors = [
     ...new Set([
@@ -35,15 +107,19 @@ function building(
   color: string,
 ) {
   context.fillStyle = color;
-  context.fillRect(x, y, 210, 112);
+  context.fillRect(x, y, buildingWidth, buildingHeight);
   context.strokeStyle = "#e8ddbf";
-  context.strokeRect(x, y, 210, 112);
+  context.strokeRect(x, y, buildingWidth, buildingHeight);
   context.fillStyle = "#17140f";
   context.font = "bold 16px system-ui";
   context.fillText(name, x + 10, y + 24);
   context.font = "12px system-ui";
-  details.slice(0, 5).forEach((detail, index) => {
-    context.fillText(detail.slice(0, 27), x + 10, y + 46 + index * 13);
+  details.slice(0, detailRows).forEach((detail, index) => {
+    context.fillText(
+      detail.slice(0, 27),
+      x + 10,
+      y + detailBaselineOffset + index * detailRowHeight,
+    );
   });
 }
 
@@ -51,8 +127,15 @@ function render(projection: ColonyProjection) {
   const canvas = document.querySelector<HTMLCanvasElement>("#colony");
   const ticker = document.querySelector<HTMLElement>("#ticker");
   const gaps = document.querySelector<HTMLElement>("#gaps");
+  const detailPanel = document.querySelector<HTMLElement>("#detail-panel");
   const context = canvas?.getContext("2d");
-  if (canvas === null || ticker === null || gaps === null || context == null)
+  if (
+    canvas === null ||
+    ticker === null ||
+    gaps === null ||
+    detailPanel === null ||
+    context == null
+  )
     return;
   context.fillStyle = "#17140f";
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -124,6 +207,48 @@ function render(projection: ColonyProjection) {
     projection.gaps.length === 0
       ? ""
       : `Source gaps: ${projection.gaps.join(" · ")}`;
+  canvas.onclick = (event) => {
+    const bounds = canvas.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) * canvas.width) / bounds.width;
+    const y = ((event.clientY - bounds.top) * canvas.height) / bounds.height;
+    const detailIndex = (left: number, top: number): number | undefined => {
+      if (
+        x < left ||
+        x > left + buildingWidth ||
+        y < top + detailHitStartOffset ||
+        y >= top + detailHitStartOffset + detailRows * detailRowHeight
+      )
+        return undefined;
+      return Math.floor((y - (top + detailHitStartOffset)) / detailRowHeight);
+    };
+    const gateIndex = detailIndex(30, 35);
+    const dungeonIndex = detailIndex(765, 35);
+    const workshopIndex = projection.workshops.findIndex(
+      (_, index) => detailIndex(30 + index * 265, 230) !== undefined,
+    );
+    const workshopDetailIndex =
+      workshopIndex === -1
+        ? undefined
+        : detailIndex(30 + workshopIndex * 265, 230);
+    const bead =
+      gateIndex === undefined
+        ? dungeonIndex === undefined
+          ? workshopDetailIndex === undefined
+            ? undefined
+            : projection.workshops[workshopIndex]?.beads[workshopDetailIndex]
+          : projection.dungeon[dungeonIndex]
+        : projection.unassigned[gateIndex];
+    const citizen =
+      y >= 515 && y <= 565
+        ? projection.citizens[Math.floor((x - 48) / 170)]
+        : undefined;
+    detailPanel.innerHTML =
+      citizen === undefined
+        ? bead === undefined
+          ? ""
+          : beadPanel(bead)
+        : seatPanel(citizen);
+  };
 }
 
 async function load() {
