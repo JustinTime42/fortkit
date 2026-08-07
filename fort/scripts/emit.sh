@@ -3,7 +3,23 @@
 # Usage: emit.sh <category> <detail> [-a actor] [-s seat] [-t target] [-p payload-json] [-T iso-timestamp]
 # Works from the main checkout AND from any worktree (all append to the main repo's stream).
 set -euo pipefail
+
+usage() {
+  echo "emit.sh: usage: emit.sh <category> <detail> [-a actor] [-s seat] [-t target] [-p payload-json] [-T iso-timestamp]" >&2
+}
+
+if [ "$#" -lt 2 ]; then
+  usage
+  exit 2
+fi
+
 category="$1"; detail="$2"; shift 2
+if [[ "$detail" == -* ]]; then
+  echo "emit.sh: detail must not begin with '-'" >&2
+  usage
+  exit 2
+fi
+
 actor="harness"; seat=""; target=""; payload="null"; ts="$(date -Is)"
 while getopts "a:s:t:p:T:" opt; do
   case $opt in
@@ -12,6 +28,12 @@ while getopts "a:s:t:p:T:" opt; do
     *) echo "emit.sh: unknown flag" >&2; exit 2;;
   esac
 done
+shift "$((OPTIND - 1))"
+if [ "$#" -ne 0 ]; then
+  echo "emit.sh: unexpected argument: $1" >&2
+  usage
+  exit 2
+fi
 # Resolve the MAIN repo root even when called from a linked worktree.
 gitcommon=$(git rev-parse --git-common-dir 2>/dev/null || echo "/home/justin/dev/fortkit/.git")
 case "$gitcommon" in /*) :;; *) gitcommon="$(pwd)/$gitcommon";; esac
