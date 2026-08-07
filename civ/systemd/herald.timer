@@ -1,0 +1,14 @@
+# Herald daily timer — drafted by the Mayor under fortkit-r6x.7; the Overseer
+# installs. 05:00 local, Persistent=true so a morning missed while the machine
+# was off or asleep catches up at the next opportunity (r6x.7 acceptance:
+# catch-up verified once).
+
+[Unit]
+Description=Herald daily 05:00 morning run
+
+[Timer]
+OnCalendar=*-*-* 05:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,27 @@
+# Halric Neverpulled (he/him), Herald — unattended morning run.
+# Drafted by the Mayor under fortkit-r6x.7; the OVERSEER installs (this cron
+# ACTS — it spends money unattended — so it sat behind gate H6, the supervised
+# maiden run, closed 2026-08-07 with Overseer sign-off).
+#
+# The Herald must be launched UNMASKED at the top level (bd memory:
+# a-masked-mayor-session-cannot-launch-the-herald). A systemd user service is
+# unmasked by construction; herald.sh applies its own kernel mask internally.
+
+[Unit]
+Description=Herald morning run — civ digest and LinkedIn drafts (Halric)
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/justin/dev/fortkit
+# claude lives in ~/.local/bin; user units do not inherit a login shell PATH.
+Environment=PATH=/home/justin/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Failover ladder (herald.sh header): Opus 5 -> GPT-5.6 Sol -> silent with an
+# incident already emitted. Exit 65 = the session produced no report; the
+# launcher has filed a crash-stub report and emitted the incident, and the
+# CALLER relaunches on the next rung. Any other nonzero exit fails the unit
+# without a retry. The failed rung's transcript is moved aside first, because
+# herald.sh date-names its log and a same-day relaunch truncates it
+# (fortkit-izz); this preserves rung 1's transcript for the record.
+ExecStart=/bin/bash -c 'civ/scripts/herald.sh opus; rc=$?; if [ "$rc" -ne 65 ]; then exit "$rc"; fi; mv -f "/tmp/herald-$(date +%%F).log" "/tmp/herald-$(date +%%F).log.opus-failed" 2>/dev/null || true; mv -f "/tmp/herald-$(date +%%F).log.err" "/tmp/herald-$(date +%%F).log.err.opus-failed" 2>/dev/null || true; exec civ/scripts/herald.sh gpt-5.6-sol'
+# A maiden-run morning took ~7 minutes; two full rungs plus headroom.
+TimeoutStartSec=45min
