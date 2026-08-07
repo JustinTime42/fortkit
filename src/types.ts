@@ -76,41 +76,6 @@ export type EventFeed = {
   malformed: number;
 };
 
-export type ColonyWorkType = "implementation" | "spec" | "test" | "infra";
-
-export type ColonyCitizen = {
-  name: string;
-  pronouns: string;
-  seat: string;
-};
-
-export type ColonySession = {
-  actor: string;
-  seat: string | null;
-  beadId: string | null;
-  model: string | null;
-  startedAt: string;
-};
-
-export type ColonyBench = {
-  worktree: string;
-  session: ColonySession | null;
-};
-
-export type ColonyWorkshop = {
-  type: ColonyWorkType;
-  beads: Bead[];
-};
-
-export type ColonyProjection = {
-  workshops: ColonyWorkshop[];
-  benches: ColonyBench[];
-  dungeon: Bead[];
-  citizens: ColonyCitizen[];
-  unassigned: Bead[];
-  gaps: string[];
-};
-
 export type FortSummary = {
   name: string;
   path: string;
