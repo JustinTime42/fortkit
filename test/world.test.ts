@@ -76,8 +76,14 @@ describe("world view", () => {
     expect(colonyPage).not.toContain("<!-- colony-page-script -->");
     expect(colonyPage).toContain("<title>Bartizan — colony</title>");
     expect(colonyPage).toContain('id="colony-title"');
-    expect(colonyPage).not.toContain('id="ticker" aria-live');
-    expect(colonyPage).toContain('id="status" role="status"');
+    const tickerTag = colonyPage.match(/<[^>]*\bid="ticker"[^>]*>/)?.[0];
+    const statusTag = colonyPage.match(/<[^>]*\bid="status"[^>]*>/)?.[0];
+    expect(tickerTag).toBeDefined();
+    expect(tickerTag).not.toMatch(/\baria-live=/);
+    expect(statusTag).toBeDefined();
+    expect(statusTag).toMatch(/\brole="status"/);
+    expect(statusTag).not.toMatch(/\bclass="muted"/);
+    expect(colonyPage).toContain("#status:empty { display: none; }");
     expect(colonyPage).toContain('<canvas id="colony"');
     expect(colonyPage).toContain("fetch(`/colony?fort=");
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
@@ -162,10 +168,32 @@ describe("world view", () => {
     );
     expect(
       (context.visibleDetails as (values: string[]) => string[])(details),
-    ).toEqual([...details.slice(0, 4), "… +3 more"]);
+    ).toEqual([
+      ...details.slice(0, 4).map((text, index) => ({ text, index })),
+      { text: "… +3 more", index: undefined },
+    ]);
     expect(
       (context.truncateDetail as (value: string) => string)(details[0] ?? ""),
     ).toBe(`detail-0-${"x".repeat(17)}…`);
+    const canvasContext = canvas.getContext();
+    if (canvasContext === null) throw new Error("canvas context is missing");
+    (context.building as (context: unknown, building: unknown) => void)(
+      canvasContext,
+      {
+        x: 0,
+        y: 0,
+        name: "DETAILS",
+        color: "#000",
+        details,
+        targetAt: () => undefined,
+      },
+    );
+    expect(fillText).toHaveBeenCalledWith(
+      `detail-0-${"x".repeat(17)}…`,
+      10,
+      46,
+    );
+    expect(fillText).toHaveBeenCalledWith("… +3 more", 10, 98);
 
     (context.render as (projection: unknown) => void)({
       workshops: [],
@@ -393,7 +421,7 @@ describe("world view", () => {
         left: 0,
         top: 0,
         width: 1100,
-        height: 646,
+        height: canvas.height,
       }),
       getContext: () => ({
         fillStyle: "",
@@ -424,8 +452,14 @@ describe("world view", () => {
       id: `gate-${index}`,
       title: `Gate ${index}`,
     }));
-    const dungeonBeads = [{ id: "dungeon-0", title: "Dungeon 0" }];
-    const workshopBeads = [{ id: "workshop-0", title: "Workshop 0" }];
+    const dungeonBeads = Array.from({ length: 4 }, (_, index) => ({
+      id: `dungeon-${index}`,
+      title: `Dungeon ${index}`,
+    }));
+    const workshopBeads = Array.from({ length: 4 }, (_, index) => ({
+      id: `workshop-${index}`,
+      title: `Workshop ${index}`,
+    }));
     const citizens = Array.from({ length: 7 }, (_, index) => ({
       name: `Citizen ${index}`,
       pronouns: "they/them",
@@ -447,13 +481,18 @@ describe("world view", () => {
       throw new Error("click handler is missing");
 
     const buildings: Array<[number, number, string]> = [
-      [30, 35, "gate-0"],
-      [765, 35, "dungeon-0"],
-      [30, 230, "workshop-0"],
+      [30, 35, "gate"],
+      [765, 35, "dungeon"],
+      [30, 230, "workshop"],
     ];
-    for (const [left, top, beadId] of buildings) {
-      canvas.onclick({ clientX: left + 10, clientY: top + 46 });
-      expect(detailPanel.innerHTML).toContain(`Bead: ${beadId}`);
+    for (const [left, top, prefix] of buildings) {
+      for (let index = 0; index < 4; index += 1) {
+        canvas.onclick({
+          clientX: left + 10,
+          clientY: top + 46 + index * 13,
+        });
+        expect(detailPanel.innerHTML).toContain(`Bead: ${prefix}-${index}`);
+      }
     }
 
     canvas.onclick({ clientX: 530, clientY: 81 });
