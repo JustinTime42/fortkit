@@ -28,14 +28,16 @@ bd dolt push          # Push beads data to remote
 ```bash
 npm ci
 npm run typecheck
+npm run typecheck:browser
 npm run lint
 npm test
 fort/scripts/verify.sh
 ```
 
 `fort/scripts/verify.sh` is the authoritative fail-fast verifier. It runs
-typecheck, lint, test, then ShellCheck over the shipped shell surface. Pass
-`--no-emit` (or set `CI`) to suppress event-stream writes.
+the Node typecheck, the browser typecheck (page scripts against
+`tsconfig.browser.json`), lint, test, then ShellCheck over the shipped shell
+surface. Pass `--no-emit` (or set `CI`) to suppress event-stream writes.
 
 ## Non-Interactive Shell Commands
 

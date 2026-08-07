@@ -37,6 +37,7 @@ The mapping is nearly isomorphic — DF is a colony-management interface and thi
 - **Work graph**: `.beads/issues.jsonl` (Beads maintains it as a passive export; do NOT treat as source of truth or write to it).
 - **Seats/handoffs/annals**: markdown in `fort/`, human-and-machine readable.
 - **Emitters**: `fort/scripts/emit.sh` (worktree-safe via git-common-dir, flock-guarded); wired into `mayor.sh`, `forge.sh`; seat duties documented in AGENTS.md/CLAUDE.md.
+- **Live-colony semantics** (fortkit-d0b, 2026-08-07): the colony view renders the *live* fort — closed beads leave workshops, dungeon, and unassigned alike; history is the replay scrubber's job (v1 bullet below). The dungeon holds bug beads through their whole arrest: open (jailed), in_progress/blocked (rehabilitation), released only at close.
 
 ## Build plan
 
