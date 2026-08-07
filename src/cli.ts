@@ -1,43 +1,61 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
-import { formatAmbientDay, fortSeedFor } from "./ambient.ts";
+import { join, resolve, sep } from "node:path";
+import {
+  formatAmbientDay,
+  formatAmbientSince,
+  fortSeedFor,
+} from "./ambient.ts";
 import { formatDigest, readCivilizationDigest } from "./digest.ts";
+import { readRegistry } from "./readers/registry.ts";
 import { createWorldServer } from "./server.ts";
 import { formatStatusTable, readCivilizationStatus } from "./status.ts";
 
 const [command, ...args] = process.argv.slice(2);
 const registryPath = join(homedir(), ".claude", "civilization.json");
 async function currentFortName(): Promise<string> {
-  try {
-    const charter = await readFile(
-      join(process.cwd(), "fort", "charter.md"),
-      "utf8",
+  const cwd = resolve(process.cwd());
+  const fort = (await readRegistry(registryPath)).find(
+    ({ path }) => cwd === path || cwd.startsWith(`${path}${sep}`),
+  );
+  if (fort === undefined) {
+    throw new Error(
+      `ambient: ${cwd} is not a registered fort in ${registryPath}; refusing to invent a fort seed`,
     );
-    return /^#\s+(.+?)\s+Charter\b/m.exec(charter)?.[1] ?? "this fort";
-  } catch {
-    return "this fort";
   }
+  return fort.name;
 }
 
 if (command === "ambient") {
   const sinceIndex = args.indexOf("--since");
+  const onIndex = args.indexOf("--on");
   const citizen = args[0] ?? "";
-  const since =
-    sinceIndex === -1 ? new Date().toISOString() : (args[sinceIndex + 1] ?? "");
+  const timestampIndex = sinceIndex === -1 ? onIndex : sinceIndex;
+  const timestamp =
+    timestampIndex === -1
+      ? new Date().toISOString()
+      : (args[timestampIndex + 1] ?? "");
   const valid =
     citizen.length > 0 &&
-    !Number.isNaN(Date.parse(since)) &&
-    args.length === (sinceIndex === -1 ? 1 : 3) &&
-    (sinceIndex === -1 || sinceIndex === 1) &&
-    args.filter((argument) => argument === "--since").length <= 1;
+    !Number.isNaN(Date.parse(timestamp)) &&
+    args.length === (timestampIndex === -1 ? 1 : 3) &&
+    (timestampIndex === -1 || timestampIndex === 1) &&
+    args.filter((argument) => argument === "--since").length <= 1 &&
+    args.filter((argument) => argument === "--on").length <= 1 &&
+    !(sinceIndex !== -1 && onIndex !== -1);
   if (!valid) {
-    console.error("Usage: fortkit ambient <citizen> [--since <timestamp>]");
+    console.error(
+      "Usage: fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]",
+    );
     process.exitCode = 2;
   } else {
     const fortName = await currentFortName();
-    console.log(formatAmbientDay(citizen, since, fortSeedFor(fortName)));
+    const seed = fortSeedFor(fortName);
+    console.log(
+      sinceIndex === -1
+        ? formatAmbientDay(citizen, timestamp, seed)
+        : formatAmbientSince(citizen, timestamp, seed),
+    );
   }
 } else if (command === "digest") {
   const sinceIndex = args.indexOf("--since");
@@ -101,7 +119,7 @@ if (command === "ambient") {
   args.some((argument) => argument !== "--json")
 ) {
   console.error(
-    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--json]\n       fortkit ambient <citizen> [--since <timestamp>]",
+    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--json]\n       fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]",
   );
   process.exitCode = 2;
 } else {
