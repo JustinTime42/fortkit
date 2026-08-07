@@ -72,6 +72,8 @@ Supersedes the founding table's workshop/bench/archive rows and the v1 bullet's 
 
 **Source gaps are amber warnings** (fortkit-ouu, 2026-08-07): unavailable or incomplete inputs are more visible than ordinary copy, never muted into the background. They describe observation limits, not a healthy state.
 
+**Viewer contract** (fortkit-on6, 2026-08-07): `/` is the Bartizan world view, with `/world` as its data endpoint. An embark link opens `/colony-view?fort=<registered fort name>`; that page reads only `/colony?fort=<registered fort name>`, whose server-side registry lookup prevents a browser path from selecting a filesystem location. Citizens come from each fort's `fort/seats/*.md` roster (holder, declared pronouns, and personality); handoff headings only decorate that roster, never create citizens. Page titles use `Bartizan — <fort name> colony` for a colony and `Bartizan — world` for the world view.
+
 ## Build plan
 
 - **v1 — Renderer (a weekend):** single self-contained HTML page + canvas (Smallville/AI-Town lineage: sprites pathing between buildings). Buildings: Mayor's office, one workshop per active worktree, trade depot (merge), archive (handoffs/annals), gate (intake). Poll the JSONL sources every few seconds; animate transitions on new events; announcements ticker from `detail` lines; click any entity for a DF-style panel (seat: name/pronouns/personality/current bead/last handoff; bead: full detail + provenance edges). **Replay scrubber** over the event files: watch any day back, including founding day.

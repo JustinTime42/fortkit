@@ -83,6 +83,14 @@ export type ColonyWorkshop = {
 };
 
 export type ColonyProjection = {
+  /** Every live bead, retained so fixed buildings can render honest queues. */
+  beads: Bead[];
+  /** Beads explicitly recorded as newly filed in the event stream. */
+  intake: Bead[];
+  /** The ready/blocked work queue. */
+  jobBoard: Bead[];
+  /** Beads with a review verdict not followed by a merge event. */
+  depot: Bead[];
   workshops: ColonyWorkshop[];
   benches: ColonyBench[];
   dungeon: Bead[];

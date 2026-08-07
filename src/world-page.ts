@@ -18,6 +18,8 @@ const esc = (value: unknown) =>
     return replacements[character] ?? character;
   });
 
+let previousFortsMarkup: string | undefined;
+
 /** Escape all dynamic list content, including headings and class names. */
 const list = (title: string, items: string[], className = "") =>
   `<h3>${esc(title)}</h3><ul class="${esc(className)}">${
@@ -51,8 +53,12 @@ async function load() {
     const forts = document.querySelector<HTMLElement>("#forts");
     const updated = document.querySelector<HTMLElement>("#updated");
     if (forts === null || updated === null) return;
-    forts.innerHTML =
+    const markup =
       data.map(card).join("") || "<p>No registered forts found.</p>";
+    if (previousFortsMarkup !== markup) {
+      forts.innerHTML = markup;
+      previousFortsMarkup = markup;
+    }
     updated.textContent = `updated ${new Date().toLocaleTimeString()}`;
   } catch (error) {
     const forts = document.querySelector<HTMLElement>("#forts");
