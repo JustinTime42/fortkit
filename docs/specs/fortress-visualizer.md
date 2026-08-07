@@ -2,7 +2,7 @@
 
 **Status: dormant by choice.** Bead: `ForgeOs-din` (P3, trigger-gated). Written 2026-08-03, founding day, so the idea survives until its time. The v0 prerequisite (event stream) is DONE and accumulating history; everything below builds on it.
 
-> **Product name (decision, 2026-08-07): Bartizan.** This brief remains a historical record; the name applies to its world and future colony viewer surfaces without revising the original text.
+> **Product name (Overseer decision, 2026-08-07, recorded on `fortkit-zgp`): Bartizan.** This brief remains a historical record; the name applies to its world and future colony viewer surfaces without revising the original text.
 
 ## Vision
 
