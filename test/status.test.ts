@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, test } from "vitest";
 
-import { readBeads } from "../src/readers/beads.js";
+import { readBeadRecords, readBeads } from "../src/readers/beads.js";
 import { readCivilizationStatus, readFortStatus } from "../src/status.js";
 
 const fixtureRoot = fileURLToPath(
@@ -20,7 +20,15 @@ describe("fort status", () => {
       name: "Alpha",
       path: fixtureRoot,
       present: true,
-      beads: { open: 1, inProgress: 1, blocked: 1, closed: 1, malformed: 1 },
+      beads: {
+        open: 4,
+        ready: 2,
+        inProgress: 1,
+        blocked: 1,
+        closed: 1,
+        malformed: 1,
+        gaps: 1,
+      },
       lastEvent: {
         ts: "2026-08-04T08:26:00.000Z",
         actor: "watcher:gate",
@@ -44,6 +52,24 @@ describe("fort status", () => {
     await expect(
       readBeads(join(fixtureRoot, ".beads", "issues.jsonl")),
     ).resolves.toMatchObject({ malformed: 1 });
+  });
+
+  test("keeps the export schema and only calls unblocked open beads ready", async () => {
+    const records = await readBeadRecords(
+      join(fixtureRoot, ".beads", "issues.jsonl"),
+    );
+    expect(records?.counts).toMatchObject({ open: 4, ready: 2, gaps: 1 });
+    expect(records?.beads.find((bead) => bead.id === "e")).toMatchObject({
+      issueType: "task",
+      labels: [],
+      dependencies: [{ dependsOnId: "d", type: "blocks" }],
+      createdAt: "2026-08-04T07:23:00Z",
+    });
+    expect(records?.beads.find((bead) => bead.id === "legacy")).toMatchObject({
+      labels: null,
+      dependencies: null,
+      issueType: null,
+    });
   });
 
   test("reports a registry fort whose directory is missing as absent", async () => {

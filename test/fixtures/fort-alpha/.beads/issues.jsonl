@@ -1,5 +1,8 @@
-{"id":"a","status":"open","created_at":"2026-08-04T07:23:00Z"}
-{"id":"b","title":"Build a bridge","assignee":"kethra","status":"in_progress"}
-{"id":"c","status":"blocked"}
-{"id":"d","status":"closed"}
+{"_type":"issue","id":"a","title":"Build a gate","status":"open","priority":1,"issue_type":"task","labels":["implementation"],"created_at":"2026-08-04T07:23:00Z","updated_at":"2026-08-04T07:23:00Z","dependencies":[]}
+{"_type":"issue","id":"b","title":"Build a bridge","assignee":"kethra","status":"in_progress","priority":1,"issue_type":"task","labels":[],"created_at":"2026-08-04T07:23:00Z","updated_at":"2026-08-04T07:23:00Z","dependencies":[]}
+{"_type":"issue","id":"c","status":"blocked","priority":1,"issue_type":"bug","labels":[],"created_at":"2026-08-04T07:23:00Z","updated_at":"2026-08-04T07:23:00Z","dependencies":[]}
+{"_type":"issue","id":"d","status":"closed","priority":1,"issue_type":"task","labels":[],"created_at":"2026-08-04T07:23:00Z","updated_at":"2026-08-04T07:23:00Z","dependencies":[]}
+{"_type":"issue","id":"e","status":"open","priority":1,"issue_type":"task","labels":[],"created_at":"2026-08-04T07:23:00Z","updated_at":"2026-08-04T07:23:00Z","dependencies":[{"issue_id":"e","depends_on_id":"d","type":"blocks","created_at":"2026-08-04T07:23:00Z","created_by":"kethra","metadata":"{}"}]}
+{"_type":"issue","id":"f","status":"open","priority":1,"issue_type":"task","labels":[],"created_at":"2026-08-04T07:23:00Z","updated_at":"2026-08-04T07:23:00Z","dependencies":[{"issue_id":"f","depends_on_id":"a","type":"blocks","created_at":"2026-08-04T07:23:00Z","created_by":"kethra","metadata":"{}"}]}
+{"id":"legacy","status":"open"}
 not json

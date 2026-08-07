@@ -22,7 +22,7 @@ describe("world view", () => {
     expect(forts).toHaveLength(3);
     expect(forts[0]).toMatchObject({
       name: "Alpha",
-      beads: { open: 1, malformed: 1 },
+      beads: { open: 4, malformed: 1 },
       inProgress: [
         {
           id: "b",
