@@ -2,7 +2,7 @@
 
 **Status: v1 implemented and merged** (fortkit-fci.4, 2026-08-07; Warden-approved). Parent spec: `fortress-visualizer.md` ("Colony architecture v2 — the living fort", Overseer-approved 2026-08-07). Author: the Mayor, from the Overseer's direction of 2026-08-07.
 
-**As implemented (v1.1):** `src/ambient.ts` is the source of truth for constants. All arithmetic is UTC, including under a non-UTC host timezone. Sleep offsets citizens into five half-hour buckets; meal and social visits have deterministic arrivals and departures around a shared core, so everyone still meets. Each citizen deterministically favours one pastime (Kethra favours fishing) while retaining variety. `AmbientPlace` is restricted to homes, Tavern, Archive, and walls — fixed layout vocabulary only. Invalid timestamps throw; no schedule is fabricated at 1970. `fortkit ambient --on` renders a containing UTC day, while `--since` renders the actual interval through now for launcher integration. The seed is numeric and comes only from the registered fort, never a nearby charter or a fallback name. "Sessions override everything" is the consumer's job (the function is stateless); L4 carries that requirement.
+**As implemented (v1.1):** `src/ambient.ts` is the source of truth for constants. All arithmetic is UTC, including under a non-UTC host timezone. Sleep offsets citizens into five half-hour buckets; meal and social visits have deterministic arrivals and departures around a shared core, so everyone still meets. Each citizen deterministically favours one pastime while retaining variety; favourites are seed-dependent, so they differ across settlements (under Manyhalls' seed, Kethra favours fishing). `AmbientPlace` is restricted to homes, Tavern, Archive, and walls — fixed layout vocabulary only. Invalid timestamps throw; no schedule is fabricated at 1970. `fortkit ambient --on` renders a containing UTC day, while `--since` renders the actual interval through now for launcher integration. The seed is numeric and comes only from the registered fort, never a nearby charter or a fallback name. "Sessions override everything" is the consumer's job (the function is stateless); L4 carries that requirement.
 
 ## Purpose
 
@@ -48,7 +48,7 @@ That is the whole surface. Nothing is auto-appended to prompts beyond the one li
 
 ## Rendering hooks (consumed by L4/L6)
 
-The function's `place` vocabulary is the fixed layout table's names (home:<citizen>, tavern, archive, walls, ...). L4 renders placement; L6 interpolates walks between places on transitions, including the summons walk (bed → workshop) and the return.
+The function's `place` vocabulary is exactly the `AmbientPlace` union: `home:<citizen>`, `tavern`, `archive`, `walls` — closed, no open tail; additions go through the union and the layout table together (L1/L4 owe the Tavern and walls their table entries, and should consider restoring dedicated `river`/`tinker-bench` destinations rather than fishing at the walls). L4 renders placement; L6 interpolates walks between places on transitions, including the summons walk (bed → workshop) and the return.
 
 ## Open questions, deliberately deferred
 
