@@ -1,6 +1,8 @@
 # Ambient Life — the fort between sessions
 
-**Status: approved direction, pre-implementation.** Parent spec: `fortress-visualizer.md` ("Colony architecture v2 — the living fort", Overseer-approved 2026-08-07). Implementing bead: `fortkit-fci.4` (L5). Author: the Mayor, from the Overseer's direction of 2026-08-07.
+**Status: v1 implemented and merged** (fortkit-fci.4, 2026-08-07; Warden-approved). Parent spec: `fortress-visualizer.md` ("Colony architecture v2 — the living fort", Overseer-approved 2026-08-07). Author: the Mayor, from the Overseer's direction of 2026-08-07.
+
+**As implemented (v1):** `src/ambient.ts` is the source of truth for constants. All arithmetic is UTC (timezone independence verified under non-UTC TZ by the Warden). Sleep offsets citizens into five half-hour buckets (`(hash % 5) * 30` minutes); meal and social windows are shared verbatim across citizens (deliberate v1 choice — full co-presence, no breathing yet); idle pursuits cycle a four-pastime table per 3-hour block, uniformly. Known v1 gaps, tracked in fortkit-994 before L4/L6 consume this surface: per-citizen habit weighting, window jitter around a shared core, `--since` true-window semantics, seed rigor (numeric-only, registry-resolved), a typed `AmbientPlace` vocabulary aligned with the layout table, and honest failure on unparseable timestamps. "Sessions override everything" is the consumer's job (the function is stateless); L4 carries that requirement.
 
 ## Purpose
 
