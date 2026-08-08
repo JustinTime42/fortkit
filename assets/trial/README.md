@@ -12,6 +12,14 @@ offset before running it (for example, `PIXELLAB_SEED_OFFSET=1 node
 scripts/run-pixellab-trial.mjs`). The offset is added to every fixed card seed
 and recorded in the manifest's resulting seed values.
 
+`PIXELLAB_TIMEOUT_MS` overrides the request timeout and **applies to both
+endpoints uniformly**: the defaults are 30s for single images and 120s for the
+four-frame animation call, so do not set it below `120000` — a too-tight bound
+can be billed server-side and aborted client-side (Warden doj finding 1). Walk
+entries in the manifest carry a `frameIndex` field (1–4) and share one truthful
+animation prompt; the frame identity lives in the id and `frameIndex`, not in
+the prompt text.
+
 The script creates twelve PNGs and `provenance-manifest.json` here: Forge and
 Tavern buildings, two citizen masters, four Kethra east-walk frames, and four
 work-type glyphs. It refuses command-line arguments, reads the key only from
