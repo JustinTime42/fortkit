@@ -40,5 +40,11 @@ asset's request identity, prompt, seed, parameters, timestamp, returned USD
 cost, source reference hash (where applicable), and PNG SHA-256 so it can be
 regenerated and checked.
 
+PixelLab's animation endpoint requires a 64×64 output, while Bartizan's current
+walk-sprite contract is 32×64. The runner therefore requests 64×64 animation
+frames and records each decoded PNG's `actualImageSize` in the manifest; the
+sprite remains in its intended 32×64 region pending the Mayor's reconciliation
+of this asset-contract deviation in the art document.
+
 `assets/trial/` is deliberately committed: its sprites are the product of this
 bounded trial, and its manifest is their provenance record.

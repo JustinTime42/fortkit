@@ -20,13 +20,14 @@ import { fileURLToPath } from "node:url";
 const OUTPUT_DIRECTORY = fileURLToPath(
   new URL("../assets/trial", import.meta.url),
 );
-const PIXEN_ENDPOINT = "https://api.pixellab.ai/v2/create-image-pixen";
-const ANIMATION_ENDPOINT = "https://api.pixellab.ai/v2/animate-with-text";
-const PIXEN_MODEL = "pixen";
+const PIXFLUX_ENDPOINT = "https://api.pixellab.ai/v1/generate-image-pixflux";
+const ANIMATION_ENDPOINT = "https://api.pixellab.ai/v1/animate-with-text";
+const PIXFLUX_MODEL = "pixflux";
 const ANIMATION_MODEL = "animate-with-text";
+const ANIMATION_IMAGE_SIZE = { width: 64, height: 64 };
 const MAX_SPEND_USD = 15;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
-const PIXEN_REQUEST_TIMEOUT_MS = 30_000;
+const PIXFLUX_REQUEST_TIMEOUT_MS = 30_000;
 const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
 const PNG_SIGNATURE = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -200,10 +201,10 @@ function requestTimeoutMilliseconds(
   }
   return endpoint === ANIMATION_ENDPOINT
     ? ANIMATION_REQUEST_TIMEOUT_MS
-    : PIXEN_REQUEST_TIMEOUT_MS;
+    : PIXFLUX_REQUEST_TIMEOUT_MS;
 }
 
-function pixenRequestBody(cardDefinition) {
+function pixfluxRequestBody(cardDefinition) {
   return {
     description: cardDefinition.prompt,
     negative_description: cardDefinition.negativeConstraints,
@@ -224,7 +225,9 @@ function animationRequestBody(masterPng, walkCardDefinition) {
     description: walkCardDefinition.prompt,
     negative_description: walkCardDefinition.negativeConstraints,
     action: walkCardDefinition.params.action,
-    image_size: walkCardDefinition.imageSize,
+    // PixelLab requires 64x64 animation output. The visualizer's 32x64
+    // sprite contract is retained on the card and recorded separately.
+    image_size: ANIMATION_IMAGE_SIZE,
     seed: walkCardDefinition.seed,
     no_background: true,
     view: walkCardDefinition.params.view,
@@ -235,8 +238,7 @@ function animationRequestBody(masterPng, walkCardDefinition) {
 
 function parseUsage(usage, maximumUsd) {
   if (
-    usage?.type !== "usd" ||
-    typeof usage.usd !== "number" ||
+    typeof usage?.usd !== "number" ||
     !Number.isFinite(usage.usd) ||
     usage.usd < 0 ||
     usage.usd > maximumUsd
@@ -258,6 +260,15 @@ function pngFromBase64(encoded) {
   if (!png.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE))
     throw new Error("PixelLab returned an invalid PNG image.");
   return png;
+}
+
+function pngDimensions(png) {
+  if (png.length < 24 || png.toString("ascii", 12, 16) !== "IHDR")
+    throw new Error("PixelLab returned an invalid PNG image.");
+  return {
+    width: png.readUInt32BE(16),
+    height: png.readUInt32BE(20),
+  };
 }
 
 function confirmedModel(response) {
@@ -289,15 +300,43 @@ async function request(endpoint, body, apiKey) {
       );
     throw error;
   }
-  if (!response.ok)
-    throw new Error(`PixelLab request failed with HTTP ${response.status}.`);
+  if (!response.ok) {
+    const detail =
+      response.status >= 400 && response.status < 500
+        ? await responseDetail(response, apiKey)
+        : "";
+    throw new Error(
+      `PixelLab request failed with HTTP ${response.status}${detail ? `: ${detail}` : "."}`,
+    );
+  }
   return response.json();
 }
 
-async function generatePixen(cardDefinition, apiKey) {
+async function responseDetail(response, apiKey) {
+  try {
+    const payload = await response.json();
+    if (
+      payload === null ||
+      typeof payload !== "object" ||
+      !("detail" in payload)
+    )
+      return "";
+    const detail = payload.detail;
+    const rendered =
+      typeof detail === "string" ? detail : JSON.stringify(detail);
+    return rendered
+      .replaceAll(apiKey, "[redacted]")
+      .replace(/Bearer\\s+[^\\s"']+/gi, "Bearer [redacted]")
+      .slice(0, 4_000);
+  } catch {
+    return "";
+  }
+}
+
+async function generatePixflux(cardDefinition, apiKey) {
   const response = await request(
-    PIXEN_ENDPOINT,
-    pixenRequestBody(cardDefinition),
+    PIXFLUX_ENDPOINT,
+    pixfluxRequestBody(cardDefinition),
     apiKey,
   );
   return {
@@ -346,6 +385,7 @@ async function writeAsset(manifest, cardDefinition, result, provenance) {
     negativeConstraints: cardDefinition.negativeConstraints,
     seed: cardDefinition.seed,
     params: { imageSize: cardDefinition.imageSize, ...cardDefinition.params },
+    actualImageSize: pngDimensions(result.png),
     generatedAt: new Date().toISOString(),
     costUsd: provenance.costUsd,
     requestCostUsd: provenance.requestCostUsd,
@@ -365,7 +405,7 @@ async function main(cardDefinitions = cards) {
   const seedOffset = seedOffsetFromEnvironment();
   await mkdir(OUTPUT_DIRECTORY, { recursive: true });
   const manifest = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     generatedAt: new Date().toISOString(),
     provider: "PixelLab",
     spendCapUsd: MAX_SPEND_USD,
@@ -375,16 +415,16 @@ async function main(cardDefinitions = cards) {
   let kethraMaster;
   for (const originalCardDefinition of cardDefinitions) {
     const cardDefinition = withSeedOffset(originalCardDefinition, seedOffset);
-    const result = await generatePixen(cardDefinition, apiKey);
+    const result = await generatePixflux(cardDefinition, apiKey);
     spentUsd += result.costUsd;
     if (spentUsd > MAX_SPEND_USD)
       throw new Error(
         "Refusing to continue: actual trial spend exceeds the $15 cap.",
       );
     await writeAsset(manifest, cardDefinition, result, {
-      requestedModel: PIXEN_MODEL,
+      requestedModel: PIXFLUX_MODEL,
       confirmedModel: result.confirmedModel,
-      endpoint: PIXEN_ENDPOINT,
+      endpoint: PIXFLUX_ENDPOINT,
       costUsd: result.costUsd,
       requestCostUsd: result.costUsd,
       reference: null,
@@ -443,10 +483,15 @@ if (
 
 export {
   ANIMATION_ENDPOINT,
+  ANIMATION_IMAGE_SIZE,
   animationRequestBody,
   assertKethraCitizenCard,
   main,
-  PIXEN_ENDPOINT,
+  PIXFLUX_ENDPOINT,
+  PIXFLUX_MODEL,
+  parseUsage,
+  pixfluxRequestBody,
+  pngDimensions,
   pngFromBase64,
   request,
   requestTimeoutMilliseconds,

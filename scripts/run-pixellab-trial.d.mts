@@ -21,8 +21,17 @@ export function animationRequestBody(
     };
   },
 ): Record<string, unknown>;
+export function pixfluxRequestBody(cardDefinition: {
+  prompt: string;
+  negativeConstraints: string;
+  imageSize: { width: number; height: number };
+  seed: number;
+  params: { no_background: boolean; outline: string };
+}): Record<string, unknown>;
 
 export function pngFromBase64(encoded: string): Buffer;
+export function pngDimensions(png: Buffer): { width: number; height: number };
+export function parseUsage(usage: unknown, maximumUsd: number): number;
 
 export function assertKethraCitizenCard<T extends { id: string }>(
   cardDefinitions: T[],
@@ -46,5 +55,7 @@ export const walkCards: Array<{
   prompt: string;
   frameIndex: number;
 }>;
-export const PIXEN_ENDPOINT: string;
+export const PIXFLUX_ENDPOINT: string;
+export const PIXFLUX_MODEL: string;
 export const ANIMATION_ENDPOINT: string;
+export const ANIMATION_IMAGE_SIZE: { width: number; height: number };
