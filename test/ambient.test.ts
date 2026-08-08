@@ -6,6 +6,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   activity,
+  ambientIdFor,
   formatAmbientDay,
   formatAmbientSince,
   fortSeedFor,
@@ -13,6 +14,13 @@ import {
 
 const seed = fortSeedFor("Manyhalls");
 describe("ambient life", () => {
+  test("gives case variants one canonical citizen schedule", () => {
+    expect(ambientIdFor("Kethra")).toBe(ambientIdFor("kethra"));
+    expect(
+      activity(ambientIdFor("Kethra"), "2026-08-07T09:30:00Z", seed),
+    ).toEqual(activity(ambientIdFor("kethra"), "2026-08-07T09:30:00Z", seed));
+  });
+
   test("is pure and follows a contiguous sleep window across midnight", () => {
     expect(activity("kethra", "2026-08-07T22:00:00Z", seed)).toEqual(
       activity("kethra", "2026-08-07T22:00:00Z", seed),

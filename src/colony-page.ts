@@ -1,4 +1,4 @@
-import { activity, fortSeedFor } from "./ambient.ts";
+import { activity, ambientIdFor, fortSeedFor } from "./ambient.ts";
 import type { BuildingLayout } from "./colony-layout.ts";
 import {
   buildingHeight,
@@ -445,7 +445,7 @@ function placementFor(
       idle: false,
     };
   }
-  const state = activity(citizen.name.toLocaleLowerCase(), timestamp, fortSeed);
+  const state = activity(ambientIdFor(citizen.name), timestamp, fortSeed);
   const layout = state.place.startsWith("home:")
     ? homeLayout(index)
     : buildingLayouts[

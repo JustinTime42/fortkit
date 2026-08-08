@@ -87,7 +87,7 @@ describe("world CLI", () => {
         [
           "--input-type=module",
           "--eval",
-          cliChild(["ambient", "kethra", "--on", "2026-08-07T12:30:00Z"]),
+          cliChild(["ambient", "Kethra", "--on", "2026-08-07T12:30:00Z"]),
         ],
         {
           cwd: fort,
