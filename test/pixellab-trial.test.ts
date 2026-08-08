@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import {
   ANIMATION_ENDPOINT,
@@ -183,20 +183,30 @@ describe("PixelLab bounded trial", () => {
     expect(walkCards.map((card) => card.frameIndex)).toEqual([1, 2, 3, 4]);
   });
 
-  test("uses endpoint-specific defaults and permits one environment override", () => {
+  test("uses endpoint-specific defaults and floors one environment override", () => {
     expect(requestTimeoutMilliseconds(PIXFLUX_ENDPOINT, undefined)).toBe(
-      30_000,
+      120_000,
     );
     expect(requestTimeoutMilliseconds(ANIMATION_ENDPOINT, undefined)).toBe(
       120_000,
     );
-    expect(requestTimeoutMilliseconds(PIXFLUX_ENDPOINT, "12345")).toBe(12345);
+    expect(requestTimeoutMilliseconds(PIXFLUX_ENDPOINT, "12345")).toBe(120_000);
+    expect(requestTimeoutMilliseconds(ANIMATION_ENDPOINT, "12345")).toBe(
+      120_000,
+    );
+    expect(requestTimeoutMilliseconds(PIXFLUX_ENDPOINT, "180000")).toBe(
+      180_000,
+    );
   });
 
   test("names the timed-out endpoint", async () => {
     const originalFetch = globalThis.fetch;
     const originalTimeout = process.env.PIXELLAB_TIMEOUT_MS;
     process.env.PIXELLAB_TIMEOUT_MS = "1";
+    const abortController = new AbortController();
+    const timeoutSpy = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(abortController.signal);
     globalThis.fetch = (_input, options) =>
       new Promise((_, reject) => {
         const signal = options?.signal;
@@ -204,10 +214,13 @@ describe("PixelLab bounded trial", () => {
         signal.addEventListener("abort", () => reject(signal.reason));
       });
     try {
-      await expect(request(PIXFLUX_ENDPOINT, {}, "not-a-key")).rejects.toThrow(
-        `PixelLab request to ${PIXFLUX_ENDPOINT} timed out after 1ms.`,
+      const pendingRequest = request(PIXFLUX_ENDPOINT, {}, "not-a-key");
+      abortController.abort();
+      await expect(pendingRequest).rejects.toThrow(
+        `PixelLab request to ${PIXFLUX_ENDPOINT} timed out after 120000ms.`,
       );
     } finally {
+      timeoutSpy.mockRestore();
       globalThis.fetch = originalFetch;
       if (originalTimeout === undefined) delete process.env.PIXELLAB_TIMEOUT_MS;
       else process.env.PIXELLAB_TIMEOUT_MS = originalTimeout;

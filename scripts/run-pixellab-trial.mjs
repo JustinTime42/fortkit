@@ -27,7 +27,7 @@ const ANIMATION_MODEL = "animate-with-text";
 const ANIMATION_IMAGE_SIZE = { width: 64, height: 64 };
 const MAX_SPEND_USD = 15;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
-const PIXFLUX_REQUEST_TIMEOUT_MS = 30_000;
+const PIXFLUX_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
 const PNG_SIGNATURE = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -191,17 +191,19 @@ function requestTimeoutMilliseconds(
   endpoint,
   value = process.env.PIXELLAB_TIMEOUT_MS,
 ) {
+  const endpointDefault =
+    endpoint === ANIMATION_ENDPOINT
+      ? ANIMATION_REQUEST_TIMEOUT_MS
+      : PIXFLUX_REQUEST_TIMEOUT_MS;
   if (value !== undefined && value !== "") {
     if (!/^\d+$/.test(value) || Number(value) === 0)
       throw new Error("PIXELLAB_TIMEOUT_MS must be a positive integer.");
     const timeout = Number(value);
     if (!Number.isSafeInteger(timeout))
       throw new Error("PIXELLAB_TIMEOUT_MS must be a safe integer.");
-    return timeout;
+    return Math.max(endpointDefault, timeout);
   }
-  return endpoint === ANIMATION_ENDPOINT
-    ? ANIMATION_REQUEST_TIMEOUT_MS
-    : PIXFLUX_REQUEST_TIMEOUT_MS;
+  return endpointDefault;
 }
 
 function pixfluxRequestBody(cardDefinition) {
