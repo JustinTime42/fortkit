@@ -7,20 +7,38 @@ and the L1/L4 layout freeze.
 
 ## Decision
 
-Choose **local-first ComfyUI with a license-reviewed SDXL base/model family and
-a small, project-owned pixel-art LoRA** as the cheapest credible production
-path. Its marginal generation cost is $0 on the Overseer's already-owned GPU;
+Choose **local-first ComfyUI with the named, conditionally eligible SDXL 1.0
+base + Pixel Art XL LoRA pair below** as the cheapest credible production path.
+Its marginal generation cost is $0 on the Overseer's already-owned GPU;
 it keeps prompt/reference assets private; and a frozen workflow, seed,
 reference sheet, palette, and post-processing script make a whole set more
 repeatable than prompt-only cloud generation.
 
 This is not a claim that any arbitrary SDXL checkpoint or community LoRA is
-cleared for release. Before use, the Overseer must approve the exact weight
-hashes, upstream licenses, and training-data provenance. Use only models whose
-terms permit the intended distribution and retain a per-asset provenance
+cleared for release. Before use, the Overseer must approve the exact revision,
+weight hash, upstream licenses, and training-data provenance. Use only models
+whose terms permit the intended distribution and retain a per-asset provenance
 record. ComfyUI itself is GPL-3.0, so keep it as an internal generation tool;
 do not embed or distribute modified ComfyUI code with Bartizan without a
 license review.
+
+## Concrete weight candidates and license record
+
+Research retrieved **2026-08-07** from the public pages linked below. These
+are candidates for an Overseer authorization, not permission to download,
+accept a click-through, or use a weight. A released art asset is an *output*;
+it is not a redistribution of the weights. Distributing a checkpoint, LoRA,
+or a fine-tune is a separate event and triggers the distribution duties below.
+The authorization record must pin the repository revision and SHA-256 of every
+file actually used; a moving `main` label is insufficient.
+
+| Candidate | Public license record (quoted text) | Consequence for Bartizan distribution | Decision |
+| --- | --- | --- | --- |
+| [`stabilityai/stable-diffusion-xl-base-1.0`](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) checkpoint | The public `LICENSE.md` is **CreativeML Open RAIL++-M**. It grants a “perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license” and says that the licensor “claims no rights in the Output” (subject to the license). A distributor of the model/derivative must give recipients a copy of the license and carry its use restrictions forward. | Generated PNGs may be shipped only after the project checks the actual output and intended use against the license and other applicable rights. If Manyhalls ever ships the base, a derivative, or a fine-tune, it must include the license, notices, and enforceable use restrictions; do not bundle weights with Bartizan. | **Eligible base**, subject to a pinned hash and provenance approval. |
+| [`nerijs/pixel-art-xl`](https://huggingface.co/nerijs/pixel-art-xl) LoRA | The public model page identifies it as a LoRA for the SDXL 1.0 base and labels its license **CreativeML OpenRAIL-M**. The public repository page supplies no license-text file or training-data/provenance statement to verify the claimed distribution terms; only the license identifier is publicly reachable. | A license tag alone is not sufficient evidence to redistribute this LoRA or a derivative. Do not ship it, a merge, or a fine-tune. Outputs also remain subject to the SDXL base terms and any third-party rights. | **Conditional trial candidate only**: the Overseer must obtain and record the complete license text and provenance before download/use; otherwise train a project-owned adapter on approved material. |
+| [`black-forest-labs/FLUX.1-dev`](https://huggingface.co/black-forest-labs/FLUX.1-dev) checkpoint | The public **FLUX.1 [dev] Non-Commercial License v1.1.1** grants model/derivative rights “solely for your Non-Commercial Purposes”; it defines revenue-generating activity and end-user-impacting use as not non-commercial. The page says outputs may be used commercially, but requires filtering or review before distribution and AI disclosure where law requires it. Weight/derivative distribution additionally requires the license and the stated attribution notice. | A public Bartizan product is an end-user-facing use, so its production generation pipeline cannot rely on these dev weights without a separate commercial license. Output wording does not cure the model-use restriction. | **Not eligible for the production path**; retain only as a reference-only option pending separate commercial authorization. |
+
+The SDXL base license text is public at both the [model repository](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/LICENSE.md) and [Stability AI's source repository](https://github.com/Stability-AI/generative-models/blob/main/model_licenses/LICENSE-SDXL1.0). The Pixel Art XL page's incomplete public record is itself a finding, not an invitation to create an account or accept terms. The FLUX page is publicly readable, but its files are gated: it says a user must agree to share contact information and accept conditions to access them. No account, sign-up, download, or click-through occurred for this research.
 
 **Managed fallback: PixelLab API.** It directly supports text-to-pixel-art,
 reference/style images, forced palettes, and transparent backgrounds, at about
@@ -118,22 +136,35 @@ fallback before paying for Scenario training.
 
 ## Proposed asset contract for the later integration bead
 
-The current `src/colony-page.ts` canvas is 1100×620 and uses 210×112 pixel
-placeholder buildings. Those are UI rectangles, not an art contract. Do not
-crop generated art to them. Freeze actual world coordinates and zoom behavior
-in fci L1/L4 first, then adopt this scale:
+The `1100×620` canvas element belongs to `src/colony-page.html` (not
+`src/colony-page.ts`); the page script can later change its runtime height.
+The historical 210×112 placeholder-building rectangles are UI values, not an
+art contract. Do not crop art to either value. Freeze world coordinates and
+zoom behavior in fci L1/L4 first, then use this single grid rule.
 
-| Asset | Source/master | Runtime cell | Notes |
+**A native art cell is exactly 32×32 master pixels, and one native art pixel
+equals one CSS/world pixel at zoom 1.** A master is the canonical, native pixel
+grid; a runtime cell is a world-unit measure at zoom 1, not a smaller image.
+The renderer **must never resample a master** (including a 2× downsample). It
+may place a master at native size or scale the entire master by a positive
+integer with nearest-neighbor sampling only. The asset verifier must reject any
+manifest scale ratio other than 1 or a positive integer, and the renderer must
+set `imageSmoothingEnabled = false`.
+
+| Asset | Canonical master/frame | Zoom-1 world footprint | Sheet rule |
 | --- | ---: | ---: | --- |
-| Building | 128×128 or 192×128 PNG | 64×64 or 96×64 logical px | transparent; one footprint defined in layout data |
-| Citizen | 32×48 PNG | 16×24 logical px | consistent baseline; one master per named actor |
-| Walk cycle | 4 frames × 32×48 | 16×24/frame | N/S/E/W may mirror only if style guide permits |
-| Item glyph | 32×32 PNG | 16×16 logical px | one semantic work-type glyph per declared label |
-| Sheet | power-of-two PNG | 512×512 initial cap | JSON frame atlas; no implicit spacing |
+| Building | 128×128 PNG | 4×4 cells (128×128 world px) | origin and dimensions are multiples of 32 |
+| Citizen | 32×48 visible pixels in a 32×64 transparent frame | 1×2 cells (32×64 world px) | frame slot is grid-aligned; baseline is the frame bottom |
+| Walk cycle | 4 × 32×48 visible pixels, each in a 32×64 frame | 1×2 cells per frame | each frame slot is grid-aligned |
+| Item glyph | 32×32 PNG | 1×1 cell | origin and dimensions are multiples of 32 |
+| Sheet | exactly 512×512 PNG | 16×16 native cells | JSON frame atlas; no implicit spacing |
 
-Canvas drawing must use integer positions and `imageSmoothingEnabled = false`;
-nearest-neighbor scaling must be an integer multiple. Alpha is meaningful only
-as fully transparent (0) or fully opaque (255) for this first style: reject
+Thus 192×128 masters and alternate 64/96 logical runtime cells are not part of
+this contract. A 512×512 sheet is exactly a 16×16 grid, so every frame origin
+and allocated frame rectangle divides it cleanly. The 16-pixel transparent
+padding above a citizen's 48-pixel visible art is intentional and must be
+preserved, not cropped or rescaled. Alpha is meaningful only as fully
+transparent (0) or fully opaque (255) for this first style: reject
 semi-transparent pixels, which otherwise produce fringe colors against any
 fort background.
 
@@ -149,7 +180,7 @@ check these mechanical claims; Overseer review remains the taste gate:
 | PNG dimensions | exact master/frame dimensions and sheet dimensions allowed by manifest |
 | Palette | every non-transparent RGBA pixel exactly equals a declared palette color |
 | Alpha | alpha is exactly 0 or 255; RGB for alpha 0 is canonicalized to `0,0,0` |
-| Tile/grid | x/y/w/h are positive integers, inside sheet bounds, and aligned to cell size |
+| Tile/grid | x/y/w/h are positive integers, inside sheet bounds, and multiples of the fixed 32-pixel cell |
 | Sheet validity | frame rectangles do not overlap; no unreferenced nontransparent pixel outside declared frames (optional strict mode) |
 | Scaling | source and target scale are positive integer ratios; no smoothing policy violation |
 | Provenance | manifest captures source/output hashes and pinned workflow inputs; missing values warn in exploration, fail for release |
@@ -216,6 +247,9 @@ It is for Warden + Overseer review under Human Gate 1.
 - [Black Forest Labs current API pricing](https://docs.bfl.ai/quick_start/pricing)
 - [Black Forest Labs release notes on fixed versus preview endpoints](https://docs.bfl.ai/release-notes)
 - [ComfyUI repository and GPL-3.0 license](https://github.com/Comfy-Org/ComfyUI)
+- [SDXL 1.0 base `LICENSE.md` (CreativeML Open RAIL++-M)](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/LICENSE.md)
+- [Pixel Art XL public model page (CreativeML OpenRAIL-M label; no public full license/provenance text)](https://huggingface.co/nerijs/pixel-art-xl)
+- [FLUX.1 [dev] `LICENSE.md` (Non-Commercial License v1.1.1)](https://huggingface.co/black-forest-labs/FLUX.1-dev/blob/main/LICENSE.md)
 
 Vendor pricing, limits, availability, and terms change. Recheck these primary
 sources immediately before authorization or procurement.
