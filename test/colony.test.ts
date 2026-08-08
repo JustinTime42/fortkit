@@ -124,6 +124,38 @@ describe("colony projection", () => {
     ]);
     expect(result.intake.map(({ id }) => id)).toEqual(["no-job"]);
     expect(result.depot.map(({ id }) => id)).toEqual(["implementation"]);
+    expect(result.petitions).toEqual([]);
+  });
+
+  test("projects only recorded Overseer cues as live petitions", () => {
+    const result = projectColony({
+      beads: [
+        bead({ id: "gate-label", labels: ["gate-2"] }),
+        bead({
+          id: "text-cue",
+          description: "This is awaiting the Overseer before it can proceed.",
+        }),
+        bead({ id: "ordinary" }),
+        bead({ id: "historic", labels: ["gate-1"], status: "closed" }),
+      ],
+      worktrees: [],
+      events: [],
+      citizens: [],
+    });
+
+    expect(result.petitions).toEqual([
+      expect.objectContaining({
+        bead: expect.objectContaining({ id: "gate-label" }),
+        signals: ["gate-2"],
+      }),
+      expect.objectContaining({
+        bead: expect.objectContaining({ id: "text-cue" }),
+        signals: ["Overseer cue in Beads text"],
+      }),
+    ]);
+    expect(result.gaps).toContain(
+      "bd human flags unavailable from issues.jsonl",
+    );
   });
 
   test("keeps working bugs in rehabilitation and removes closed beads from the live colony", () => {
@@ -184,6 +216,7 @@ describe("colony projection", () => {
     expect(result.gaps).toEqual([
       "event stream ABSENT",
       "seats roster present, nothing parsed",
+      "bd human flags unavailable from issues.jsonl",
     ]);
   });
 
@@ -200,6 +233,7 @@ describe("colony projection", () => {
       intake: [],
       jobBoard: [],
       depot: [],
+      petitions: [],
       workshops: [
         { type: "implementation", beads: [] },
         { type: "spec", beads: [] },

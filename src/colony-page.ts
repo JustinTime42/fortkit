@@ -100,6 +100,14 @@ function beadPanel(bead: ColonyProjection["unassigned"][number]): string {
   return `<h2>Bead: ${esc(bead.id)}</h2>${detailList(fields)}<h3>Provenance edges</h3><ul>${provenance || "<li>none</li>"}</ul>`;
 }
 
+function petitionAge(createdAt: string | null): string {
+  if (createdAt === null) return "age unknown";
+  const timestamp = Date.parse(createdAt);
+  if (Number.isNaN(timestamp)) return "age unknown";
+  const days = Math.max(0, Math.floor((Date.now() - timestamp) / 86_400_000));
+  return days === 1 ? "1 day" : `${days} days`;
+}
+
 function actorStyles(projection: ColonyProjection): Map<string, ActorStyle> {
   const actors = [
     ...new Set([
@@ -269,6 +277,37 @@ function buildings(projection: ColonyProjection): Building[] {
     beadBuilding(buildingLayouts.gate, intake),
     beadBuilding(buildingLayouts.jobBoard, jobBoard),
     beadBuilding(buildingLayouts.depot, depot),
+    {
+      ...buildingLayouts.keep,
+      details:
+        (projection.petitions ?? []).length === 0
+          ? ["0 petitions"]
+          : [
+              `${(projection.petitions ?? []).length} petition(s)`,
+              ...(projection.petitions ?? []).map((petition) =>
+                itemLabel(petition.bead),
+              ),
+            ],
+      targetAt: (index: number): DetailTarget | undefined => {
+        if (index === 0)
+          return {
+            kind: "queue" as const,
+            name: buildingLayouts.keep.name,
+            beads: (projection.petitions ?? []).map(
+              (petition) => petition.bead.id,
+            ),
+          };
+        const petition = (projection.petitions ?? [])[index - 1];
+        return petition === undefined
+          ? undefined
+          : { kind: "bead" as const, id: petition.bead.id };
+      },
+      summaryTarget: {
+        kind: "queue" as const,
+        name: buildingLayouts.keep.name,
+        beads: (projection.petitions ?? []).map((petition) => petition.bead.id),
+      },
+    },
     beadBuilding(buildingLayouts.dungeon, projection.dungeon),
     {
       ...buildingLayouts.archive,
@@ -547,10 +586,15 @@ function selectedPanel(
     return bead === undefined ? "" : beadPanel(bead);
   }
   if (target?.kind === "queue") {
-    const beads = (projection.beads ?? []).filter((bead) =>
-      target.beads.includes(bead.id),
+    const petitions = (projection.petitions ?? []).filter((petition) =>
+      target.beads.includes(petition.bead.id),
     );
-    return `<h2>${esc(target.name)}</h2><p>${beads.length} live item(s)</p><ul>${beads.map((bead) => `<li>${esc(itemLabel(bead))}</li>`).join("")}</ul>`;
+    return `<h2>${esc(target.name)}</h2><p>${petitions.length} live petition(s)</p><ul>${petitions
+      .map(
+        (petition) =>
+          `<li>${esc(itemLabel(petition.bead))} — ${esc(petitionAge(petition.bead.createdAt))} — ${esc(petition.signals.join(", "))}</li>`,
+      )
+      .join("")}</ul>`;
   }
   if (target?.kind === "citizen") {
     const citizen = projection.citizens.find(

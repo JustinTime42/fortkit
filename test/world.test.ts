@@ -447,8 +447,8 @@ describe("world view", () => {
       announcements: [],
       gaps: [],
     });
-    expect(canvas.height).toBe(545 + Math.ceil(7 / 4) * 145 + 20);
-    expect(fillText).toHaveBeenCalledWith("Citizen 7'S HOME", 530, 714);
+    expect(canvas.height).toBe(715 + Math.ceil(7 / 4) * 145 + 20);
+    expect(fillText).toHaveBeenCalledWith("Citizen 7'S HOME", 530, 884);
   });
 
   test("renders colony projection fixtures as named fort buildings and a ticker", () => {
@@ -496,6 +496,7 @@ describe("world view", () => {
       ],
       benches: [],
       dungeon: [{ id: "bug", title: "Repair" }],
+      petitions: [],
       citizens: [
         {
           name: "Kethra",
@@ -521,6 +522,7 @@ describe("world view", () => {
         "TRADE DEPOT",
         "THE ARCHIVE",
         "THE DUNGEON",
+        "THE KEEP",
         "THE TAVERN",
         "Kethra'S HOME",
         "Kethra",
@@ -528,6 +530,27 @@ describe("world view", () => {
     );
     expect(ticker.textContent).toBe("The gate is watched");
     expect(gaps.textContent).toContain("event stream ABSENT");
+    const selectedPanel = context.selectedPanel as (
+      projection: unknown,
+      target: unknown,
+    ) => string;
+    const keepPanel = selectedPanel(
+      {
+        petitions: [
+          {
+            bead: {
+              id: "petition",
+              title: "Approve the charter",
+              createdAt: "2026-08-01T00:00:00Z",
+            },
+            signals: ["gate-1"],
+          },
+        ],
+      },
+      { kind: "queue", name: "THE KEEP", beads: ["petition"] },
+    );
+    expect(keepPanel).toContain("Approve the charter");
+    expect(keepPanel).toMatch(/\d+ days/);
   });
 
   test("composes literal dollar sequences without replacement expansion", () => {
@@ -802,7 +825,7 @@ describe("world view", () => {
 
     canvas.onclick({ clientX: 775, clientY: 81 + 4 * 13 });
     expect(detailPanel.innerHTML).toContain("THE GATE");
-    canvas.onclick({ clientX: 576, clientY: 770 });
+    canvas.onclick({ clientX: 576, clientY: 940 });
     expect(detailPanel.innerHTML).toContain("Seat: Seat 6");
     canvas.onclick({ clientX: 241, clientY: 276 });
     expect(detailPanel.innerHTML).toBe("");

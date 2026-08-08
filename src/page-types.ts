@@ -84,6 +84,12 @@ export type ColonyWorkshop = {
   beads: Bead[];
 };
 
+/** A live bead whose recorded metadata asks for the Overseer's attention. */
+export type ColonyPetition = {
+  bead: Bead;
+  signals: string[];
+};
+
 export type ColonyProjection = {
   /** Every live bead, retained so fixed buildings can render honest queues. */
   beads: Bead[];
@@ -93,6 +99,11 @@ export type ColonyProjection = {
   jobBoard: Bead[];
   /** Beads with a review verdict not followed by a merge event. */
   depot: Bead[];
+  /**
+   * The export-visible portion of the Overseer's queue. `bd human list` is
+   * authoritative, but its flags are not currently represented in issues.jsonl.
+   */
+  petitions: ColonyPetition[];
   workshops: ColonyWorkshop[];
   benches: ColonyBench[];
   dungeon: Bead[];
