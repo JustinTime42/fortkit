@@ -96,7 +96,7 @@ describe("colony reader", () => {
             lastHandoff: "Handoff: Forge 2026-08-07T12:00:00Z",
           },
         ],
-        gaps: [],
+        gaps: ["bd human flags unavailable from issues.jsonl"],
       });
       expect(await readColony(registry, fort)).toBeNull();
     } finally {

@@ -2,6 +2,7 @@ import type {
   Bead,
   ColonyBench,
   ColonyCitizen,
+  ColonyPetition,
   ColonyProjection,
   ColonySession,
   ColonyWorkType,
@@ -99,6 +100,31 @@ function isLive(bead: Bead): boolean {
   return bead.status !== "closed";
 }
 
+const gateLabels = new Set(["gate-1", "gate-2", "gate-3"]);
+const petitionCue =
+  /\b(?:overseer's hand|awaiting the overseer|gate[ -]?[123])\b/i;
+
+/**
+ * `bd human list` is the primary petition source. Cross-fort readers only
+ * receive the passive JSONL export, which carries neither that flag nor
+ * structured handoff decisions. This preserves the visible, auditable cues
+ * instead of manufacturing an equivalent signal.
+ */
+function petitions(beads: Bead[]): ColonyPetition[] {
+  return beads.flatMap((bead) => {
+    const signals = [
+      ...(bead.labels ?? []).filter((label) =>
+        gateLabels.has(label.toLocaleLowerCase()),
+      ),
+      ...[bead.description, bead.design, bead.notes, bead.acceptanceCriteria]
+        .filter((value): value is string => value !== null)
+        .filter((value) => petitionCue.test(value))
+        .map(() => "Overseer cue in Beads text"),
+    ];
+    return signals.length === 0 ? [] : [{ bead, signals }];
+  });
+}
+
 function comparePaths(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
@@ -173,6 +199,9 @@ export function projectColony(sources: ColonySources): ColonyProjection {
   if (sources.citizens?.length === 0) {
     gaps.push("seats roster present, nothing parsed");
   }
+  if (sources.beads !== null) {
+    gaps.push("bd human flags unavailable from issues.jsonl");
+  }
 
   // Closed beads belong to the replay/history view, rather than the live
   // colony. Keep every other workflow state visible: an in-progress or
@@ -187,6 +216,7 @@ export function projectColony(sources: ColonySources): ColonyProjection {
       (bead) => bead.status === "open" || bead.status === "blocked",
     ),
     depot: depotQueue(beads, events),
+    petitions: petitions(beads),
     workshops: workTypes.map((type) => ({
       type,
       beads: beads.filter((bead) => bead.labels?.includes(type) ?? false),

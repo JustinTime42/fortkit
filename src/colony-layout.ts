@@ -71,9 +71,15 @@ export const buildingLayouts = {
     name: "TINKER BENCH",
     color: "#765a3d",
   },
-  walls: {
+  keep: {
     x: buildingStartX + buildingStride * 3,
     y: 375,
+    name: "THE KEEP",
+    color: "#70533d",
+  },
+  walls: {
+    x: buildingStartX,
+    y: 545,
     name: "WALLS",
     color: "#5c554a",
   },
@@ -85,7 +91,7 @@ export type FixedAmbientPlace = keyof Pick<
 >;
 export type AmbientPlace = `home:${string}` | FixedAmbientPlace;
 
-export const homeStartY = 545;
+export const homeStartY = 715;
 const homeColumns = 4;
 
 /** Home positions are stable roster slots, never a consequence of bead volume. */
