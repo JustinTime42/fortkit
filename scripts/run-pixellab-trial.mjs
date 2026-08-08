@@ -14,15 +14,22 @@
 
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const OUTPUT_DIRECTORY = resolve("assets/trial");
+const OUTPUT_DIRECTORY = fileURLToPath(
+  new URL("../assets/trial", import.meta.url),
+);
 const PIXEN_ENDPOINT = "https://api.pixellab.ai/v2/create-image-pixen";
 const ANIMATION_ENDPOINT = "https://api.pixellab.ai/v2/animate-with-text";
 const PIXEN_MODEL = "pixen";
 const ANIMATION_MODEL = "animate-with-text";
 const MAX_SPEND_USD = 15;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
+const REQUEST_TIMEOUT_MS = 30_000;
+const PNG_SIGNATURE = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
 const NEGATIVE_CONSTRAINTS =
   "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people";
 
@@ -139,20 +146,28 @@ function rejectArguments() {
     );
 }
 
+function seedOffsetFromEnvironment(value = process.env.PIXELLAB_SEED_OFFSET) {
+  if (value === undefined || value === "") return 0;
+  if (!/^-?\d+$/.test(value))
+    throw new Error("PIXELLAB_SEED_OFFSET must be an integer.");
+  const offset = Number(value);
+  if (!Number.isSafeInteger(offset))
+    throw new Error("PIXELLAB_SEED_OFFSET must be a safe integer.");
+  return offset;
+}
+
+function withSeedOffset(cardDefinition, offset) {
+  const seed = cardDefinition.seed + offset;
+  if (!Number.isSafeInteger(seed))
+    throw new Error("PIXELLAB_SEED_OFFSET produces an unsafe seed.");
+  return { ...cardDefinition, seed };
+}
+
 function readApiKey() {
   const key = process.env.PIXELLAB_API_KEY;
   delete process.env.PIXELLAB_API_KEY;
   if (!key) throw new Error("PIXELLAB_API_KEY must be set in the environment.");
   return key;
-}
-
-function assertPreflightBudget() {
-  const estimatedTotal =
-    (cards.length + walkCards.length) * MAX_ESTIMATED_COST_PER_ASSET_USD;
-  if (estimatedTotal > MAX_SPEND_USD)
-    throw new Error(
-      "Refusing to run: estimated trial spend exceeds the $15 cap.",
-    );
 }
 
 function pixenRequestBody(cardDefinition) {
@@ -166,19 +181,22 @@ function pixenRequestBody(cardDefinition) {
   };
 }
 
-function animationRequestBody(masterPng) {
+function animationRequestBody(masterPng, walkCardDefinition) {
   return {
     reference_image: {
       type: "base64",
       base64: `data:image/png;base64,${masterPng.toString("base64")}`,
     },
     reference_image_size: { width: 32, height: 64 },
-    action: "walk",
-    image_size: { width: 32, height: 64 },
-    seed: walkCards[0].seed,
+    description: walkCardDefinition.prompt,
+    negative_description: walkCardDefinition.negativeConstraints,
+    action: walkCardDefinition.params.action,
+    image_size: walkCardDefinition.imageSize,
+    seed: walkCardDefinition.seed,
     no_background: true,
-    view: "side",
-    direction: "east",
+    view: walkCardDefinition.params.view,
+    direction: walkCardDefinition.params.direction,
+    n_frames: walkCardDefinition.params.n_frames,
   };
 }
 
@@ -204,7 +222,8 @@ function pngFromBase64(encoded) {
     ? encoded.slice(encoded.indexOf(",") + 1)
     : encoded;
   const png = Buffer.from(base64, "base64");
-  if (png.length === 0) throw new Error("PixelLab returned no PNG image.");
+  if (!png.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE))
+    throw new Error("PixelLab returned an invalid PNG image.");
   return png;
 }
 
@@ -224,6 +243,7 @@ async function request(endpoint, body, apiKey) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok)
     throw new Error(`PixelLab request failed with HTTP ${response.status}.`);
@@ -243,10 +263,10 @@ async function generatePixen(cardDefinition, apiKey) {
   };
 }
 
-async function generateWalkCycle(masterPng, apiKey) {
+async function generateWalkCycle(masterPng, walkCardDefinition, apiKey) {
   const response = await request(
     ANIMATION_ENDPOINT,
-    animationRequestBody(masterPng),
+    animationRequestBody(masterPng, walkCardDefinition),
     apiKey,
   );
   if (
@@ -269,10 +289,7 @@ function sha256(png) {
 }
 
 async function writeAsset(manifest, cardDefinition, result, provenance) {
-  await writeFile(
-    resolve(OUTPUT_DIRECTORY, cardDefinition.filename),
-    result.png,
-  );
+  await writeFile(join(OUTPUT_DIRECTORY, cardDefinition.filename), result.png);
   manifest.assets.push({
     id: cardDefinition.id,
     kind: cardDefinition.kind,
@@ -291,15 +308,15 @@ async function writeAsset(manifest, cardDefinition, result, provenance) {
     reference: provenance.reference,
   });
   await writeFile(
-    resolve(OUTPUT_DIRECTORY, "provenance-manifest.json"),
+    join(OUTPUT_DIRECTORY, "provenance-manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
 }
 
 async function main() {
   rejectArguments();
-  assertPreflightBudget();
   const apiKey = readApiKey();
+  const seedOffset = seedOffsetFromEnvironment();
   await mkdir(OUTPUT_DIRECTORY, { recursive: true });
   const manifest = {
     schemaVersion: 2,
@@ -310,7 +327,8 @@ async function main() {
   };
   let spentUsd = 0;
   let kethraMaster;
-  for (const cardDefinition of cards) {
+  for (const originalCardDefinition of cards) {
+    const cardDefinition = withSeedOffset(originalCardDefinition, seedOffset);
     const result = await generatePixen(cardDefinition, apiKey);
     spentUsd += result.costUsd;
     if (spentUsd > MAX_SPEND_USD)
@@ -330,16 +348,27 @@ async function main() {
       `Generated ${cardDefinition.id} (${manifest.assets.length}/12).\n`,
     );
   }
-  const cycle = await generateWalkCycle(kethraMaster, apiKey);
+  if (!kethraMaster)
+    throw new Error(
+      "Kethra citizen master was not generated; refusing walk cycle.",
+    );
+  const offsetWalkCards = walkCards.map((cardDefinition) =>
+    withSeedOffset(cardDefinition, seedOffset),
+  );
+  const cycle = await generateWalkCycle(
+    kethraMaster,
+    offsetWalkCards[0],
+    apiKey,
+  );
   spentUsd += cycle.costUsd;
   if (spentUsd > MAX_SPEND_USD)
     throw new Error(
       "Refusing to continue: actual trial spend exceeds the $15 cap.",
     );
   const masterHash = sha256(kethraMaster);
-  for (let index = 0; index < walkCards.length; index += 1) {
+  for (let index = 0; index < offsetWalkCards.length; index += 1) {
     const result = { png: cycle.pngs[index] };
-    await writeAsset(manifest, walkCards[index], result, {
+    await writeAsset(manifest, offsetWalkCards[index], result, {
       requestedModel: ANIMATION_MODEL,
       confirmedModel: cycle.confirmedModel,
       endpoint: ANIMATION_ENDPOINT,
@@ -348,7 +377,7 @@ async function main() {
       reference: { file: "kethra-citizen.png", sha256: masterHash },
     });
     process.stdout.write(
-      `Generated ${walkCards[index].id} (${manifest.assets.length}/12).\n`,
+      `Generated ${offsetWalkCards[index].id} (${manifest.assets.length}/12).\n`,
     );
   }
   process.stdout.write(
@@ -356,7 +385,19 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  process.exitCode = 1;
-  console.error(error.message);
-});
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main().catch((error) => {
+    process.exitCode = 1;
+    console.error(error.message);
+  });
+}
+
+export {
+  animationRequestBody,
+  pngFromBase64,
+  seedOffsetFromEnvironment,
+  withSeedOffset,
+};
