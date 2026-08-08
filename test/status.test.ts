@@ -102,6 +102,20 @@ describe("fort status", () => {
     });
   });
 
+  test("tolerates a dependency count lower than parsed prerequisites", async () => {
+    const records = await readBeadRecords(
+      fileURLToPath(
+        new URL("./fixtures/beads-low-dependency-count.jsonl", import.meta.url),
+      ),
+    );
+    expect(records?.counts).toMatchObject({
+      open: 1,
+      closed: 1,
+      ready: 1,
+      schemaGaps: 0,
+    });
+  });
+
   test("withholds readiness for incomplete dependency data", async () => {
     const records = await readBeadRecords(
       fileURLToPath(

@@ -142,6 +142,9 @@ function parseBead(record: Record<string, unknown>): Bead | null {
     issueType: stringOrNull(record.issue_type),
     assignee: stringOrNull(record.assignee),
     owner: stringOrNull(record.owner),
+    // bd exports omit `labels` when it is empty. Preserve that observed
+    // omission as an empty label set, while still flagging malformed present
+    // fields in hasSchemaGap below.
     labels: Object.hasOwn(record, "labels")
       ? stringArrayOrNull(record.labels)
       : [],
@@ -163,6 +166,10 @@ function isPrerequisiteEdge(
 }
 
 function hasDependencySchemaGap(record: Record<string, unknown>): boolean {
+  // parseBead has already checked this, but keep the identity invariant outside
+  // the per-edge filter so this helper remains sound on its own.
+  if (typeof record.id !== "string") return true;
+  const beadId = record.id;
   const hasDependencies = Object.hasOwn(record, "dependencies");
   const hasDependencyCount = Object.hasOwn(record, "dependency_count");
   const dependencyCount = record.dependency_count;
@@ -174,14 +181,16 @@ function hasDependencySchemaGap(record: Record<string, unknown>): boolean {
 
   if (hasDependencies) {
     if (dependencies === null) return true;
+    // `dependency_count` is empirically the number of `blocks` prerequisites,
+    // not all dependency edges (for example, `parent-child` is excluded). A
+    // low count is tolerated because it does not show unseen prerequisites;
+    // only a higher count proves this export may be truncated.
     return (
       hasDependencyCount &&
       (!validDependencyCount ||
         dependencyCount >
-          dependencies.filter(
-            (dependency) =>
-              typeof record.id === "string" &&
-              isPrerequisiteEdge(dependency, record.id),
+          dependencies.filter((dependency) =>
+            isPrerequisiteEdge(dependency, beadId),
           ).length)
     );
   }
