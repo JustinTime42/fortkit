@@ -285,3 +285,16 @@ It is for Warden + Overseer review under Human Gate 1.
 
 Vendor pricing, limits, availability, and terms change. Recheck these primary
 sources immediately before authorization or procurement.
+
+---
+
+**Correction (appended by the Mayor, 2026-08-08, per Warden 00h finding 7 and standing order 7):**
+the "PixelLab Pixen 64×64" model named in the cost table above, and the ~$2.41
+project estimate derived from its $0.00718/image price, reference a model name
+that does not exist in PixelLab's API. The verified endpoints (per
+`https://api.pixellab.ai/v1/openapi.json`, checked 2026-08-08 after a live 422)
+are `generate-image-pixflux`, `generate-image-bitforge`, `animate-with-text`,
+and `animate-with-skeleton`. Treat the Pixen rows as superseded; live per-asset
+costs are now observed directly in `assets/trial/provenance-manifest.json`
+(`usage.usd`) and are the figures to budget from. The original text stands
+unedited above as the record of what the research believed.
