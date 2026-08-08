@@ -184,6 +184,75 @@ describe("world view", () => {
     });
   });
 
+  test("walks between ambient and workshop placements on session transitions", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "?fort=Manyhalls" },
+      document: { querySelector: () => null },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    const placements = context.animatedCitizenPlacements as (
+      projection: unknown,
+      timestamp: number,
+      seed: number,
+    ) => Array<{ x: number; y: number; idle: boolean }>;
+    const citizen = {
+      name: "Kethra",
+      pronouns: "she/her",
+      seat: "forge",
+      currentBead: null,
+      session: null,
+    };
+    const ambient = placements({ citizens: [citizen] }, 0, 123)[0];
+    const departing = placements(
+      {
+        citizens: [
+          {
+            ...citizen,
+            currentBead: "fortkit-fci.5",
+            session: { beadId: "fortkit-fci.5" },
+          },
+        ],
+      },
+      0,
+      123,
+    )[0];
+    const atWorkshop = placements(
+      {
+        citizens: [
+          {
+            ...citizen,
+            currentBead: "fortkit-fci.5",
+            session: { beadId: "fortkit-fci.5" },
+          },
+        ],
+      },
+      1_200,
+      123,
+    )[0];
+    const returning = placements({ citizens: [citizen] }, 1_200, 123)[0];
+    const atAmbient = placements({ citizens: [citizen] }, 2_400, 123)[0];
+
+    expect(departing).toMatchObject({
+      x: ambient?.x,
+      y: ambient?.y,
+      idle: false,
+    });
+    expect(atWorkshop).toMatchObject({ x: 297, y: 130, idle: false });
+    expect(returning).toMatchObject({
+      x: atWorkshop?.x,
+      y: atWorkshop?.y,
+      idle: true,
+    });
+    expect(atAmbient).toMatchObject({ idle: true });
+    expect(atAmbient).not.toMatchObject({ x: 297, y: 130 });
+  });
+
   test("names the colony tab and header after its selected fort", () => {
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     expect(script).toBeDefined();

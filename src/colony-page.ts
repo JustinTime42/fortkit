@@ -327,6 +327,18 @@ type CitizenPlacement = {
   idle: boolean;
 };
 
+type CitizenMotion = {
+  from: Pick<CitizenPlacement, "x" | "y">;
+  to: Pick<CitizenPlacement, "x" | "y">;
+  startsAt: number;
+};
+
+const walkingDurationMilliseconds = 1_200;
+const previousPlacements = new Map<string, CitizenPlacement>();
+const previousSessionState = new Map<string, boolean>();
+const activeMotions = new Map<string, CitizenMotion>();
+let animationRequested = false;
+
 function occupantPosition(layout: BuildingLayout, index: number) {
   return {
     x: layout.x + 22 + (index % 5) * 34,
@@ -379,6 +391,92 @@ function citizenPlacements(
   return projection.citizens.map((citizen, index) =>
     placementFor(citizen, index, timestamp, fortSeed),
   );
+}
+
+function citizenKey(citizen: ColonyProjection["citizens"][number]): string {
+  // Seats are the durable colony identity; names remain in the key so a
+  // temporarily duplicated or incomplete roster never merges two sprites.
+  return `${citizen.seat.toLocaleLowerCase()}\u0000${citizen.name}`;
+}
+
+function interpolatedPlacement(
+  placement: CitizenPlacement,
+  motion: CitizenMotion | undefined,
+  timestamp: number,
+): CitizenPlacement {
+  if (motion === undefined) return placement;
+  const progress = Math.min(
+    1,
+    Math.max(0, (timestamp - motion.startsAt) / walkingDurationMilliseconds),
+  );
+  return {
+    ...placement,
+    x: motion.from.x + (motion.to.x - motion.from.x) * progress,
+    y: motion.from.y + (motion.to.y - motion.from.y) * progress,
+  };
+}
+
+/**
+ * Keep observed movement entirely client-side. The source and destination are
+ * placements from the same layout-driven function used by stationary sprites,
+ * so replay timestamps and future layout changes share one coordinate source.
+ */
+function animatedCitizenPlacements(
+  projection: ColonyProjection,
+  timestamp: number = Date.now(),
+  fortSeed: number = fortSeedFor(
+    new URLSearchParams(location.search).get("fort") ?? "unknown fort",
+  ),
+): CitizenPlacement[] {
+  const targets = citizenPlacements(projection, timestamp, fortSeed);
+  const visible = targets.map((target, index) => {
+    const key = citizenKey(target.citizen);
+    const wasInSession = previousSessionState.get(key);
+    const isInSession = target.citizen.session !== null;
+    const previous = previousPlacements.get(key);
+    const existingMotion = activeMotions.get(key);
+
+    if (
+      previous !== undefined &&
+      wasInSession !== undefined &&
+      wasInSession !== isInSession
+    ) {
+      // Take the current visible position when a second transition arrives
+      // mid-walk, avoiding a jump even in a fast replay.
+      const from =
+        existingMotion === undefined && isInSession
+          ? placementFor(
+              { ...target.citizen, currentBead: null, session: null },
+              index,
+              timestamp,
+              fortSeed,
+            )
+          : interpolatedPlacement(previous, existingMotion, timestamp);
+      activeMotions.set(key, { from, to: target, startsAt: timestamp });
+    }
+
+    previousPlacements.set(key, target);
+    previousSessionState.set(key, isInSession);
+    const motion = activeMotions.get(key);
+    const placement = interpolatedPlacement(target, motion, timestamp);
+    if (
+      motion !== undefined &&
+      timestamp - motion.startsAt >= walkingDurationMilliseconds
+    )
+      activeMotions.delete(key);
+    return placement;
+  });
+
+  const currentKeys = new Set(
+    targets.map((target) => citizenKey(target.citizen)),
+  );
+  for (const key of previousPlacements.keys()) {
+    if (currentKeys.has(key)) continue;
+    previousPlacements.delete(key);
+    previousSessionState.delete(key);
+    activeMotions.delete(key);
+  }
+  return visible;
 }
 
 function drawCitizen(
@@ -475,6 +573,16 @@ function updateStatus(status: HTMLElement, text: string): void {
   previousStatusText = text;
 }
 
+function requestAnimation(projection: ColonyProjection): void {
+  if (animationRequested || activeMotions.size === 0) return;
+  if (typeof requestAnimationFrame !== "function") return;
+  animationRequested = true;
+  requestAnimationFrame(() => {
+    animationRequested = false;
+    render(projection);
+  });
+}
+
 function render(projection: ColonyProjection) {
   const canvas = document.querySelector<HTMLCanvasElement>("#colony");
   const ticker = document.querySelector<HTMLElement>("#ticker");
@@ -501,7 +609,7 @@ function render(projection: ColonyProjection) {
     building(context, layout);
   });
   const styles = actorStyles(projection);
-  const placements = citizenPlacements(projection);
+  const placements = animatedCitizenPlacements(projection);
   placements.forEach((placement) => {
     const style = styles.get(placement.citizen.name);
     if (style === undefined) return;
@@ -537,6 +645,7 @@ function render(projection: ColonyProjection) {
     const panelMarkup = selectedPanel(projection, selectedTarget);
     updateDetailPanel(detailPanel, panelMarkup);
   };
+  requestAnimation(projection);
 }
 
 async function load() {
