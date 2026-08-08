@@ -57,13 +57,13 @@ Supersedes the founding table's workshop/bench/archive rows and the v1 bullet's 
 | Trade Depot | merge flow (branches under review, departing on merge) | what's between done and landed? |
 | The Dungeon | bug beads (jailed → rehabilitation → released) | how much is broken? |
 | The Archive | handoffs, annals, specs | what's the record? |
-| The Keep | the Overseer: petitions awaiting the human (gated beads, decisions, `bd human`) | what's blocked on me? |
+| The Keep | the Overseer: petitions awaiting the human. *Signal as implemented (fci.1, 2026-08-07): gate-1/2/3 labels (primary, none exist yet) plus a narrow prose-cue heuristic, faced honestly as "N cue(s)"; `bd human` flags do not reach the issues.jsonl export and render as a recorded gap. The intended end state — real gate labels retiring the heuristic — awaits the Overseer's tagging-convention ruling.* | what's blocked on me? |
 | The Palace (capital only) | civ/ seats (Herald, Regent, Chronicler, …): one government building, a bench per office | is the civilization layer at work? |
 | Homes district | one home per citizen, with a bed | who lives here; who's asleep? |
 | The Tavern | ambient life: meals, socializing, celebration (Overseer addition, 2026-08-07) | who's off duty; is the fort alive? |
 | The River, the Tinker Bench, the Walls | ambient idle-pursuit destinations (Overseer-authorized 2026-08-07; fortkit-fci.3) — small fixed spots, not full buildings | where do citizens wander? |
 
-*Status note (2026-08-07): all rows above render as of fortkit-on6/fci.3 except The Keep (fci.1) and The Palace (fci.2), which are specified here and pending their beads.*
+*Status note (2026-08-07, updated at fci.1's merge): all rows above render as of fortkit-on6/fci.3/fci.1 except The Palace (fci.2), which is specified here and pending its bead.*
 
 **Work-type labels become the item, not the building**: an implementation bead, a spec bead, a bug are goods being crafted, each with its own glyph, moving Gate → Job Board → a seat's workshop → Depot → closed (bugs detour through the Dungeon). Untyped beads remain conspicuous as unlabeled crates at the Job Board and Gate (risk 1's mitigation survives the re-map).
 
