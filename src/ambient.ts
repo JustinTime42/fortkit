@@ -94,9 +94,12 @@ export function fortSeedFor(fortName: string): number {
   return hash(fortName);
 }
 
-/** Return the stable ambient identity for a citizen name or CLI argument. */
+/**
+ * Return the stable ambient identity for an actor id or a roster display name.
+ * Until be4 supplies explicit roster ids, the actor id is the first name token.
+ */
 export function ambientIdFor(citizen: string): string {
-  return citizen.toLowerCase();
+  return citizen.trim().split(/\s+/, 1)[0]?.toLowerCase() ?? "";
 }
 
 /**

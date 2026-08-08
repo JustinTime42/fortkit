@@ -14,10 +14,10 @@ import {
 
 const seed = fortSeedFor("Manyhalls");
 describe("ambient life", () => {
-  test("gives case variants one canonical citizen schedule", () => {
-    expect(ambientIdFor("Kethra")).toBe(ambientIdFor("kethra"));
+  test("gives actor ids and display names one canonical citizen schedule", () => {
+    expect(ambientIdFor("Kethra Anvilmark")).toBe(ambientIdFor("kethra"));
     expect(
-      activity(ambientIdFor("Kethra"), "2026-08-07T09:30:00Z", seed),
+      activity(ambientIdFor("Kethra Anvilmark"), "2026-08-07T09:30:00Z", seed),
     ).toEqual(activity(ambientIdFor("kethra"), "2026-08-07T09:30:00Z", seed));
   });
 
