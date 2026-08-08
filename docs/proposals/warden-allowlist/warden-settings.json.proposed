@@ -1,0 +1,22 @@
+{
+  "$comment": "Proposed Warden permission profile for fortkit-hn2. This is a gate-1 proposal only: the Overseer applies it to fort/profiles/warden-settings.json after review. It makes each documented read-only verifier invocation explicit, including CI=1 and TZ=<zone> prefixes. No leading wildcard is used because matching an arbitrary shell prefix would also permit arbitrary commands.",
+  "permissions": {
+    "defaultMode": "default",
+    "allow": [
+      "Bash(git -C * status*)", "Bash(git -C * log*)", "Bash(git -C * diff*)", "Bash(git -C * show*)", "Bash(git -C * branch*)", "Bash(git -C * blame*)", "Bash(git -C * ls-files*)", "Bash(git -C * rev-parse*)", "Bash(git -C * rev-list*)", "Bash(git -C * worktree list*)", "Bash(git --version)",
+      "Bash(bd -C * show*)", "Bash(bd -C * list*)", "Bash(bd -C * search*)", "Bash(bd -C * memories*)", "Bash(bd --version*)",
+      "Bash(npm ci*)", "Bash(npm install*)", "Bash(npm run build*)", "Bash(npm run typecheck*)", "Bash(npm run typecheck:browser*)", "Bash(npm run lint*)", "Bash(npm test*)", "Bash(npm run test*)",
+      "Bash(npx tsc*)", "Bash(npx vitest *)", "Bash(npx biome check*)",
+      "Bash(fort/scripts/verify.sh*)", "Bash(shellcheck *)", "Bash(bash -n *)",
+      "Bash(CI=1 npm ci*)", "Bash(CI=1 npm run build*)", "Bash(CI=1 npm run typecheck*)", "Bash(CI=1 npm run typecheck:browser*)", "Bash(CI=1 npm run lint*)", "Bash(CI=1 npm test*)", "Bash(CI=1 npm run test*)", "Bash(CI=1 npx tsc*)", "Bash(CI=1 npx vitest *)", "Bash(CI=1 npx biome check*)", "Bash(CI=1 fort/scripts/verify.sh*)", "Bash(CI=1 shellcheck *)",
+      "Bash(TZ=* npm ci*)", "Bash(TZ=* npm run build*)", "Bash(TZ=* npm run typecheck*)", "Bash(TZ=* npm run typecheck:browser*)", "Bash(TZ=* npm run lint*)", "Bash(TZ=* npm test*)", "Bash(TZ=* npm run test*)", "Bash(TZ=* npx tsc*)", "Bash(TZ=* npx vitest *)", "Bash(TZ=* npx biome check*)", "Bash(TZ=* fort/scripts/verify.sh*)", "Bash(TZ=* shellcheck *)",
+      "Bash(CI=1 TZ=* npm ci*)", "Bash(CI=1 TZ=* npm run build*)", "Bash(CI=1 TZ=* npm run typecheck*)", "Bash(CI=1 TZ=* npm run typecheck:browser*)", "Bash(CI=1 TZ=* npm run lint*)", "Bash(CI=1 TZ=* npm test*)", "Bash(CI=1 TZ=* npm run test*)", "Bash(CI=1 TZ=* npx tsc*)", "Bash(CI=1 TZ=* npx vitest *)", "Bash(CI=1 TZ=* npx biome check*)", "Bash(CI=1 TZ=* fort/scripts/verify.sh*)", "Bash(CI=1 TZ=* shellcheck *)",
+      "Bash(ls*)", "Bash(cat *)", "Bash(head *)", "Bash(tail *)", "Bash(grep *)", "Bash(rg *)", "Bash(find *)", "Bash(wc *)", "Bash(diff *)", "Bash(stat *)", "Bash(file *)", "Bash(jq *)", "Bash(sha256sum *)"
+    ],
+    "deny": [
+      "Read(.env*)", "Read(**/.env*)", "Read(//home/justin/dev/fortkit/.env*)", "Read(//home/justin/dev/fortkit/**/.env*)", "Read(//home/justin/dev/fortkit-worktrees/**/.env*)", "Read(//home/justin/.ssh/**)", "Read(//home/justin/.aws/**)", "Edit(**)", "Bash(*.env*)", "Bash(cat *.env*)", "Bash(head *.env*)", "Bash(tail *.env*)", "Bash(grep * .env*)", "Bash(rg * .env*)",
+      "Bash(git add*)", "Bash(git commit*)", "Bash(git push*)", "Bash(git -C * add*)", "Bash(git -C * commit*)", "Bash(git -C * push*)", "Bash(git -C * reset*)", "Bash(git -C * checkout*)", "Bash(git -C * restore*)", "Bash(git -C * clean*)", "Bash(git -C * merge*)", "Bash(git -C * rebase*)", "Bash(git -C * worktree add*)", "Bash(git -C * worktree remove*)",
+      "Bash(bd close*)", "Bash(bd update*)", "Bash(bd create*)", "Bash(bd dolt*)", "Bash(bd -C * close*)", "Bash(bd -C * update*)", "Bash(bd -C * create*)", "Bash(bd -C * dolt*)", "Bash(rm *)", "Bash(mv *)", "Bash(cp *)", "Bash(chmod *)", "Bash(chown *)", "Bash(ln *)"
+    ]
+  }
+}
