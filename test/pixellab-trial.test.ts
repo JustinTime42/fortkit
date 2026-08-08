@@ -21,6 +21,7 @@ import {
   seedOffsetFromEnvironment,
   walkCards,
   withSeedOffset,
+  writeAsset,
 } from "../scripts/run-pixellab-trial.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -134,6 +135,37 @@ describe("PixelLab bounded trial", () => {
     expect(pngDimensions(png)).toEqual({ width: 64, height: 64 });
   });
 
+  test("records API-requested and decoded image sizes separately", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
+    const png = Buffer.alloc(24);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png);
+    png.write("IHDR", 12, "ascii");
+    png.writeUInt32BE(64, 16);
+    png.writeUInt32BE(64, 20);
+    const manifest: { assets: Array<Record<string, unknown>> } = { assets: [] };
+    try {
+      await writeAsset(
+        manifest,
+        {
+          id: "walk",
+          kind: "walk-frame",
+          filename: "walk.png",
+          imageSize: { width: 32, height: 64 },
+          params: {},
+        },
+        { png },
+        { requestedImageSize: { width: 64, height: 64 } },
+        directory,
+      );
+      expect(manifest.assets[0]).toMatchObject({
+        requestedImageSize: { width: 64, height: 64 },
+        actualImageSize: { width: 64, height: 64 },
+      });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   test("records one truthful animation prompt and a separate frame index", () => {
     const firstPrompt = walkCards[0]?.prompt ?? "";
     expect(walkCards.map((card) => card.prompt)).toEqual([
@@ -196,6 +228,41 @@ describe("PixelLab bounded trial", () => {
       await expect(
         request(ANIMATION_ENDPOINT, {}, "secret-key"),
       ).rejects.not.toThrow("secret-key");
+      await expect(
+        request(ANIMATION_ENDPOINT, {}, "secret-key"),
+      ).rejects.not.toThrow("other-secret");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("projects 422 detail arrays without echoed request input", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            detail: [
+              {
+                type: "value_error",
+                loc: ["body", "reference_image"],
+                msg: "invalid image",
+                input: "data:image/png;base64,should-not-appear",
+              },
+            ],
+          }),
+          { status: 422, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    try {
+      await expect(
+        request(ANIMATION_ENDPOINT, {}, "secret-key"),
+      ).rejects.toThrow(
+        '{"type":"value_error","loc":["body","reference_image"],"msg":"invalid image"}',
+      );
+      await expect(
+        request(ANIMATION_ENDPOINT, {}, "secret-key"),
+      ).rejects.not.toThrow("should-not-appear");
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -211,6 +278,38 @@ describe("PixelLab bounded trial", () => {
     expect(() =>
       pngFromBase64(Buffer.from("not png").toString("base64")),
     ).toThrow("PixelLab returned an invalid PNG image.");
+  });
+
+  test("distinguishes PNG dimension failures from base64 decoding failures", () => {
+    expect(() => pngDimensions(Buffer.alloc(24))).toThrow(
+      "PixelLab returned a PNG without valid dimensions.",
+    );
+  });
+
+  test("validates PNG dimensions before writing trial output", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
+    const manifest: { assets: Array<Record<string, unknown>> } = { assets: [] };
+    try {
+      await expect(
+        writeAsset(
+          manifest,
+          {
+            id: "invalid",
+            kind: "test",
+            filename: "invalid.png",
+            imageSize: { width: 0, height: 0 },
+            params: {},
+          },
+          { png: Buffer.alloc(24) },
+          { requestedImageSize: { width: 0, height: 0 } },
+          directory,
+        ),
+      ).rejects.toThrow("PixelLab returned a PNG without valid dimensions.");
+      await expect(readFile(join(directory, "invalid.png"))).rejects.toThrow();
+      expect(manifest.assets).toEqual([]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   test("refuses command-line key attempts without logging their value", async () => {

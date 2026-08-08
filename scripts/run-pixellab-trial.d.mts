@@ -50,6 +50,23 @@ export function request(
   apiKey: string,
 ): Promise<unknown>;
 
+export function writeAsset(
+  manifest: { assets: Array<Record<string, unknown>> },
+  cardDefinition: {
+    id: string;
+    kind: string;
+    filename: string;
+    imageSize: { width: number; height: number };
+    params: Record<string, unknown>;
+  },
+  result: { png: Buffer },
+  provenance: {
+    requestedImageSize: { width: number; height: number };
+    [key: string]: unknown;
+  },
+  outputDirectory?: string,
+): Promise<void>;
+
 export const walkCards: Array<{
   id: string;
   prompt: string;

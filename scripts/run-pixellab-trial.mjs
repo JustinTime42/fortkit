@@ -264,7 +264,7 @@ function pngFromBase64(encoded) {
 
 function pngDimensions(png) {
   if (png.length < 24 || png.toString("ascii", 12, 16) !== "IHDR")
-    throw new Error("PixelLab returned an invalid PNG image.");
+    throw new Error("PixelLab returned a PNG without valid dimensions.");
   return {
     width: png.readUInt32BE(16),
     height: png.readUInt32BE(20),
@@ -322,11 +322,14 @@ async function responseDetail(response, apiKey) {
     )
       return "";
     const detail = payload.detail;
+    const safeDetail = Array.isArray(detail)
+      ? detail.map(({ type, loc, msg }) => ({ type, loc, msg }))
+      : detail;
     const rendered =
-      typeof detail === "string" ? detail : JSON.stringify(detail);
+      typeof safeDetail === "string" ? safeDetail : JSON.stringify(safeDetail);
     return rendered
       .replaceAll(apiKey, "[redacted]")
-      .replace(/Bearer\\s+[^\\s"']+/gi, "Bearer [redacted]")
+      .replace(/Bearer\s+[^\s"']+/gi, "Bearer [redacted]")
       .slice(0, 4_000);
   } catch {
     return "";
@@ -371,8 +374,15 @@ function sha256(png) {
   return createHash("sha256").update(png).digest("hex");
 }
 
-async function writeAsset(manifest, cardDefinition, result, provenance) {
-  await writeFile(join(OUTPUT_DIRECTORY, cardDefinition.filename), result.png);
+async function writeAsset(
+  manifest,
+  cardDefinition,
+  result,
+  provenance,
+  outputDirectory = OUTPUT_DIRECTORY,
+) {
+  const actualImageSize = pngDimensions(result.png);
+  await writeFile(join(outputDirectory, cardDefinition.filename), result.png);
   manifest.assets.push({
     id: cardDefinition.id,
     kind: cardDefinition.kind,
@@ -385,7 +395,8 @@ async function writeAsset(manifest, cardDefinition, result, provenance) {
     negativeConstraints: cardDefinition.negativeConstraints,
     seed: cardDefinition.seed,
     params: { imageSize: cardDefinition.imageSize, ...cardDefinition.params },
-    actualImageSize: pngDimensions(result.png),
+    requestedImageSize: provenance.requestedImageSize,
+    actualImageSize,
     generatedAt: new Date().toISOString(),
     costUsd: provenance.costUsd,
     requestCostUsd: provenance.requestCostUsd,
@@ -393,7 +404,7 @@ async function writeAsset(manifest, cardDefinition, result, provenance) {
     reference: provenance.reference,
   });
   await writeFile(
-    join(OUTPUT_DIRECTORY, "provenance-manifest.json"),
+    join(outputDirectory, "provenance-manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
 }
@@ -427,6 +438,7 @@ async function main(cardDefinitions = cards) {
       endpoint: PIXFLUX_ENDPOINT,
       costUsd: result.costUsd,
       requestCostUsd: result.costUsd,
+      requestedImageSize: cardDefinition.imageSize,
       reference: null,
     });
     if (cardDefinition.id === kethraCitizenCard.id) kethraMaster = result.png;
@@ -460,6 +472,7 @@ async function main(cardDefinitions = cards) {
       endpoint: ANIMATION_ENDPOINT,
       costUsd: cycle.costUsd / walkCards.length,
       requestCostUsd: cycle.costUsd,
+      requestedImageSize: ANIMATION_IMAGE_SIZE,
       reference: { file: "kethra-citizen.png", sha256: masterHash },
     });
     process.stdout.write(
@@ -498,4 +511,5 @@ export {
   seedOffsetFromEnvironment,
   walkCards,
   withSeedOffset,
+  writeAsset,
 };
