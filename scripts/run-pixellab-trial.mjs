@@ -26,7 +26,8 @@ const PIXEN_MODEL = "pixen";
 const ANIMATION_MODEL = "animate-with-text";
 const MAX_SPEND_USD = 15;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
-const REQUEST_TIMEOUT_MS = 30_000;
+const PIXEN_REQUEST_TIMEOUT_MS = 30_000;
+const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
 const PNG_SIGNATURE = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 ]);
@@ -100,11 +101,14 @@ const cards = [
   ),
 ];
 
+const WALK_DESCRIPTION =
+  "dwarven forge master Kethra walking east, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame";
+
 const walkCards = [
-  walkCard("kethra-walk-east-01", 43001, "frame 1 of 4"),
-  walkCard("kethra-walk-east-02", 43001, "frame 2 of 4"),
-  walkCard("kethra-walk-east-03", 43001, "frame 3 of 4"),
-  walkCard("kethra-walk-east-04", 43001, "frame 4 of 4"),
+  walkCard("kethra-walk-east-01", 43001, 1),
+  walkCard("kethra-walk-east-02", 43001, 2),
+  walkCard("kethra-walk-east-03", 43001, 3),
+  walkCard("kethra-walk-east-04", 43001, 4),
 ];
 
 function card(id, kind, width, height, seed, subject) {
@@ -120,12 +124,13 @@ function card(id, kind, width, height, seed, subject) {
   };
 }
 
-function walkCard(id, seed, frame) {
+function walkCard(id, seed, frameIndex) {
   return {
     id,
     kind: "walk-frame",
     filename: `${id}.png`,
-    prompt: `dwarven forge master Kethra walking east, ${frame}, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame`,
+    prompt: WALK_DESCRIPTION,
+    frameIndex,
     negativeConstraints: NEGATIVE_CONSTRAINTS,
     seed,
     imageSize: { width: 32, height: 64 },
@@ -168,6 +173,34 @@ function readApiKey() {
   delete process.env.PIXELLAB_API_KEY;
   if (!key) throw new Error("PIXELLAB_API_KEY must be set in the environment.");
   return key;
+}
+
+function assertKethraCitizenCard(cardDefinitions) {
+  const kethraCitizenCard = cardDefinitions.find(
+    (cardDefinition) => cardDefinition.id === "kethra-citizen",
+  );
+  if (!kethraCitizenCard)
+    throw new Error(
+      "Trial configuration requires a kethra-citizen card before generation.",
+    );
+  return kethraCitizenCard;
+}
+
+function requestTimeoutMilliseconds(
+  endpoint,
+  value = process.env.PIXELLAB_TIMEOUT_MS,
+) {
+  if (value !== undefined && value !== "") {
+    if (!/^\d+$/.test(value) || Number(value) === 0)
+      throw new Error("PIXELLAB_TIMEOUT_MS must be a positive integer.");
+    const timeout = Number(value);
+    if (!Number.isSafeInteger(timeout))
+      throw new Error("PIXELLAB_TIMEOUT_MS must be a safe integer.");
+    return timeout;
+  }
+  return endpoint === ANIMATION_ENDPOINT
+    ? ANIMATION_REQUEST_TIMEOUT_MS
+    : PIXEN_REQUEST_TIMEOUT_MS;
 }
 
 function pixenRequestBody(cardDefinition) {
@@ -236,15 +269,26 @@ function confirmedModel(response) {
 }
 
 async function request(endpoint, body, apiKey) {
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  const timeoutMilliseconds = requestTimeoutMilliseconds(endpoint);
+  const signal = AbortSignal.timeout(timeoutMilliseconds);
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal,
+    });
+  } catch (error) {
+    if (signal.aborted)
+      throw new Error(
+        `PixelLab request to ${endpoint} timed out after ${timeoutMilliseconds}ms.`,
+      );
+    throw error;
+  }
   if (!response.ok)
     throw new Error(`PixelLab request failed with HTTP ${response.status}.`);
   return response.json();
@@ -298,6 +342,7 @@ async function writeAsset(manifest, cardDefinition, result, provenance) {
     confirmedModel: provenance.confirmedModel,
     endpoint: provenance.endpoint,
     prompt: cardDefinition.prompt,
+    frameIndex: cardDefinition.frameIndex,
     negativeConstraints: cardDefinition.negativeConstraints,
     seed: cardDefinition.seed,
     params: { imageSize: cardDefinition.imageSize, ...cardDefinition.params },
@@ -313,8 +358,9 @@ async function writeAsset(manifest, cardDefinition, result, provenance) {
   );
 }
 
-async function main() {
+async function main(cardDefinitions = cards) {
   rejectArguments();
+  const kethraCitizenCard = assertKethraCitizenCard(cardDefinitions);
   const apiKey = readApiKey();
   const seedOffset = seedOffsetFromEnvironment();
   await mkdir(OUTPUT_DIRECTORY, { recursive: true });
@@ -327,7 +373,7 @@ async function main() {
   };
   let spentUsd = 0;
   let kethraMaster;
-  for (const originalCardDefinition of cards) {
+  for (const originalCardDefinition of cardDefinitions) {
     const cardDefinition = withSeedOffset(originalCardDefinition, seedOffset);
     const result = await generatePixen(cardDefinition, apiKey);
     spentUsd += result.costUsd;
@@ -343,7 +389,7 @@ async function main() {
       requestCostUsd: result.costUsd,
       reference: null,
     });
-    if (cardDefinition.id === "kethra-citizen") kethraMaster = result.png;
+    if (cardDefinition.id === kethraCitizenCard.id) kethraMaster = result.png;
     process.stdout.write(
       `Generated ${cardDefinition.id} (${manifest.assets.length}/12).\n`,
     );
@@ -396,8 +442,15 @@ if (
 }
 
 export {
+  ANIMATION_ENDPOINT,
   animationRequestBody,
+  assertKethraCitizenCard,
+  main,
+  PIXEN_ENDPOINT,
   pngFromBase64,
+  request,
+  requestTimeoutMilliseconds,
   seedOffsetFromEnvironment,
+  walkCards,
   withSeedOffset,
 };

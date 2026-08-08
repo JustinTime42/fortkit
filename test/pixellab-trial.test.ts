@@ -7,9 +7,15 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 import {
+  ANIMATION_ENDPOINT,
   animationRequestBody,
+  main,
+  PIXEN_ENDPOINT,
   pngFromBase64,
+  request,
+  requestTimeoutMilliseconds,
   seedOffsetFromEnvironment,
+  walkCards,
   withSeedOffset,
 } from "../scripts/run-pixellab-trial.mjs";
 
@@ -75,6 +81,53 @@ describe("PixelLab bounded trial", () => {
       negative_description: "no words",
       n_frames: 4,
     });
+  });
+
+  test("records one truthful animation prompt and a separate frame index", () => {
+    const firstPrompt = walkCards[0]?.prompt ?? "";
+    expect(walkCards.map((card) => card.prompt)).toEqual([
+      firstPrompt,
+      firstPrompt,
+      firstPrompt,
+      firstPrompt,
+    ]);
+    expect(firstPrompt).not.toMatch(/frame \d of 4/);
+    expect(walkCards.map((card) => card.frameIndex)).toEqual([1, 2, 3, 4]);
+  });
+
+  test("uses endpoint-specific defaults and permits one environment override", () => {
+    expect(requestTimeoutMilliseconds(PIXEN_ENDPOINT, undefined)).toBe(30_000);
+    expect(requestTimeoutMilliseconds(ANIMATION_ENDPOINT, undefined)).toBe(
+      120_000,
+    );
+    expect(requestTimeoutMilliseconds(PIXEN_ENDPOINT, "12345")).toBe(12345);
+  });
+
+  test("names the timed-out endpoint", async () => {
+    const originalFetch = globalThis.fetch;
+    const originalTimeout = process.env.PIXELLAB_TIMEOUT_MS;
+    process.env.PIXELLAB_TIMEOUT_MS = "1";
+    globalThis.fetch = (_input, options) =>
+      new Promise((_, reject) => {
+        const signal = options?.signal;
+        if (!signal) return reject(new Error("Expected an abort signal."));
+        signal.addEventListener("abort", () => reject(signal.reason));
+      });
+    try {
+      await expect(request(PIXEN_ENDPOINT, {}, "not-a-key")).rejects.toThrow(
+        `PixelLab request to ${PIXEN_ENDPOINT} timed out after 1ms.`,
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalTimeout === undefined) delete process.env.PIXELLAB_TIMEOUT_MS;
+      else process.env.PIXELLAB_TIMEOUT_MS = originalTimeout;
+    }
+  });
+
+  test("fails Kethra-card renames at startup before a request can start", async () => {
+    await expect(main([{ id: "renamed-kethra-citizen" }])).rejects.toThrow(
+      "Trial configuration requires a kethra-citizen card before generation.",
+    );
   });
 
   test("rejects non-PNG response bytes", () => {
