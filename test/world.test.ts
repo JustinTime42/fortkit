@@ -547,7 +547,7 @@ describe("world view", () => {
           },
         ],
       },
-      { kind: "queue", name: "THE KEEP", beads: ["petition"] },
+      { kind: "petitions", name: "THE KEEP", beads: ["petition"] },
     );
     expect(keepPanel).toContain("Approve the charter");
     expect(keepPanel).toMatch(/\d+ days/);
@@ -825,6 +825,7 @@ describe("world view", () => {
 
     canvas.onclick({ clientX: 775, clientY: 81 + 4 * 13 });
     expect(detailPanel.innerHTML).toContain("THE GATE");
+    expect(detailPanel.innerHTML).toContain("gate-4 — Gate 4");
     canvas.onclick({ clientX: 576, clientY: 940 });
     expect(detailPanel.innerHTML).toContain("Seat: Seat 6");
     canvas.onclick({ clientX: 241, clientY: 276 });

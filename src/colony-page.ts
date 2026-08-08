@@ -16,7 +16,8 @@ type ActorStyle = { glyph: string; color: string };
 type DetailTarget =
   | { kind: "bead"; id: string }
   | { kind: "citizen"; seat: string }
-  | { kind: "queue"; name: string; beads: string[] };
+  | { kind: "queue"; name: string; beads: string[] }
+  | { kind: "petitions"; name: string; beads: string[] };
 type Building = BuildingLayout & {
   details: string[];
   targetAt: (index: number) => DetailTarget | undefined;
@@ -281,9 +282,9 @@ function buildings(projection: ColonyProjection): Building[] {
       ...buildingLayouts.keep,
       details:
         (projection.petitions ?? []).length === 0
-          ? ["0 petitions"]
+          ? ["0 cue(s)"]
           : [
-              `${(projection.petitions ?? []).length} petition(s)`,
+              `${(projection.petitions ?? []).length} cue(s)`,
               ...(projection.petitions ?? []).map((petition) =>
                 itemLabel(petition.bead),
               ),
@@ -291,7 +292,7 @@ function buildings(projection: ColonyProjection): Building[] {
       targetAt: (index: number): DetailTarget | undefined => {
         if (index === 0)
           return {
-            kind: "queue" as const,
+            kind: "petitions" as const,
             name: buildingLayouts.keep.name,
             beads: (projection.petitions ?? []).map(
               (petition) => petition.bead.id,
@@ -303,7 +304,7 @@ function buildings(projection: ColonyProjection): Building[] {
           : { kind: "bead" as const, id: petition.bead.id };
       },
       summaryTarget: {
-        kind: "queue" as const,
+        kind: "petitions" as const,
         name: buildingLayouts.keep.name,
         beads: (projection.petitions ?? []).map((petition) => petition.bead.id),
       },
@@ -586,6 +587,14 @@ function selectedPanel(
     return bead === undefined ? "" : beadPanel(bead);
   }
   if (target?.kind === "queue") {
+    const beads = projection.beads.filter((bead) =>
+      target.beads.includes(bead.id),
+    );
+    return `<h2>${esc(target.name)}</h2><p>${beads.length} bead(s)</p><ul>${beads
+      .map((bead) => `<li>${esc(itemLabel(bead))}</li>`)
+      .join("")}</ul>`;
+  }
+  if (target?.kind === "petitions") {
     const petitions = (projection.petitions ?? []).filter((petition) =>
       target.beads.includes(petition.bead.id),
     );
