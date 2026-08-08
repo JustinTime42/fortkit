@@ -184,7 +184,7 @@ describe("world view", () => {
     });
   });
 
-  test("walks between ambient and workshop placements on session transitions", () => {
+  test("walks from the last ambient position for a later-roster session transition", () => {
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     expect(script).toBeDefined();
     if (script === undefined) throw new Error("colony page script is missing");
@@ -201,6 +201,13 @@ describe("world view", () => {
       timestamp: number,
       seed: number,
     ) => Array<{ x: number; y: number; idle: boolean }>;
+    const mayor = {
+      name: "Emrith",
+      pronouns: "she/her",
+      seat: "mayor",
+      currentBead: "fortkit-other",
+      session: { beadId: "fortkit-other" },
+    };
     const citizen = {
       name: "Kethra",
       pronouns: "she/her",
@@ -208,10 +215,11 @@ describe("world view", () => {
       currentBead: null,
       session: null,
     };
-    const ambient = placements({ citizens: [citizen] }, 0, 123)[0];
+    const ambient = placements({ citizens: [mayor, citizen] }, 0, 123)[1];
     const departing = placements(
       {
         citizens: [
+          mayor,
           {
             ...citizen,
             currentBead: "fortkit-fci.5",
@@ -221,10 +229,11 @@ describe("world view", () => {
       },
       0,
       123,
-    )[0];
+    )[1];
     const atWorkshop = placements(
       {
         citizens: [
+          mayor,
           {
             ...citizen,
             currentBead: "fortkit-fci.5",
@@ -234,9 +243,9 @@ describe("world view", () => {
       },
       1_200,
       123,
-    )[0];
-    const returning = placements({ citizens: [citizen] }, 1_200, 123)[0];
-    const atAmbient = placements({ citizens: [citizen] }, 2_400, 123)[0];
+    )[1];
+    const returning = placements({ citizens: [mayor, citizen] }, 1_200, 123)[1];
+    const atAmbient = placements({ citizens: [mayor, citizen] }, 2_400, 123)[1];
 
     expect(departing).toMatchObject({
       x: ambient?.x,
@@ -251,6 +260,53 @@ describe("world view", () => {
     });
     expect(atAmbient).toMatchObject({ idle: true });
     expect(atAmbient).not.toMatchObject({ x: 297, y: 130 });
+  });
+
+  test("uses resolved home layouts as occupancy buckets for shared names", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "?fort=Manyhalls" },
+      document: { querySelector: () => null },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    const placements = context.citizenPlacements as (
+      projection: unknown,
+      timestamp: number,
+      seed: number,
+    ) => Array<{ x: number; y: number }>;
+
+    expect(
+      placements(
+        {
+          citizens: [
+            {
+              name: "Avery",
+              pronouns: "they/them",
+              seat: "scout",
+              currentBead: null,
+              session: { beadId: "fortkit-scout" },
+            },
+            {
+              name: "Avery",
+              pronouns: "they/them",
+              seat: "miner",
+              currentBead: null,
+              session: { beadId: "fortkit-miner" },
+            },
+          ],
+        },
+        0,
+        123,
+      ),
+    ).toMatchObject([
+      { x: 52, y: 810 },
+      { x: 297, y: 810 },
+    ]);
   });
 
   test("names the colony tab and header after its selected fort", () => {
@@ -629,8 +685,24 @@ describe("world view", () => {
     expect(page).not.toMatch(/^\s*(?:import|export)\b/m);
   });
 
+  test("rejects ESM exports that cannot become classic scripts", () => {
+    for (const [compose, marker] of [
+      [composeWorldPage, "<!-- world-page-script -->"],
+      [composeColonyPage, "<!-- colony-page-script -->"],
+    ] as const) {
+      for (const source of [
+        "export default value;",
+        'export { value } from "./shared.js";',
+      ]) {
+        expect(() => compose(`<body>${marker}</body>`, source)).toThrow(
+          "Colony page composition left ESM module syntax",
+        );
+      }
+    }
+  });
+
   test("shares home canvas extent with the layout module", () => {
-    expect(homeExtent(0)).toBe(715 + 20);
+    expect(homeExtent(0)).toBe(735);
     expect(homeExtent(7)).toBe(715 + Math.ceil(7 / 4) * 145 + 20);
   });
 
@@ -1053,7 +1125,17 @@ describe("world view", () => {
       workshops: [],
       benches: [],
       dungeon: [],
-      citizens: [],
+      citizens: [
+        {
+          name: "Kethra",
+          pronouns: "she/her",
+          seat: "forge",
+          personality: null,
+          currentBead: "fortkit-old",
+          session: { beadId: "fortkit-old" },
+          lastHandoff: null,
+        },
+      ],
       announcements: [],
       gaps: [],
       unassigned: [{ id: "live", title: "Live bead" }],
@@ -1061,16 +1143,24 @@ describe("world view", () => {
     (context.render as (value: unknown) => void)(projection);
     if (canvas.onclick === undefined)
       throw new Error("click handler is missing");
-    canvas.onclick({ clientX: 775, clientY: 81 });
-    expect(detailPanel.innerHTML).toContain("Bead: live");
+    canvas.onclick({ clientX: 297, clientY: 130 });
+    expect(detailPanel.innerHTML).toContain("Seat: forge");
+    expect(detailPanel.innerHTML).toContain("working on fortkit-old");
     (context.render as (value: unknown) => void)({
       ...projection,
       beads: [],
       intake: [],
       jobBoard: [],
       unassigned: [],
+      citizens: [
+        {
+          ...projection.citizens[0],
+          currentBead: "fortkit-new",
+          session: { beadId: "fortkit-new" },
+        },
+      ],
     });
-    expect(detailPanel.innerHTML).toBe("");
+    expect(detailPanel.innerHTML).toContain("working on fortkit-new");
   });
 
   test("uses the handoff heading timestamp to break same-day filename ties", async () => {

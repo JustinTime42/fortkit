@@ -97,16 +97,13 @@ export type FixedAmbientPlace = keyof Pick<
 >;
 export type AmbientPlace = `home:${string}` | FixedAmbientPlace;
 
-export const homeStartY = 715;
+const homeStartY = 715;
 const homeColumns = 4;
 const homeRowStride = 145;
 
 /** The canvas extent needed for the fixed fort and every roster home. */
 export function homeExtent(count: number): number {
-  return Math.max(
-    720,
-    homeStartY + Math.ceil(count / homeColumns) * homeRowStride + 20,
-  );
+  return homeStartY + Math.ceil(count / homeColumns) * homeRowStride + 20;
 }
 
 /** Home positions are stable roster slots, never a consequence of bead volume. */

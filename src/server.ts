@@ -54,7 +54,10 @@ function composePage(
 function stripModuleSyntax(source: string): string {
   return stripTypeScriptTypes(source, { mode: "strip" })
     .replace(/^\s*import\b[\s\S]*?(?:\bfrom\s+)?["'][^"']+["'];?\s*$/gm, "")
-    .replace(/^\s*export\b\s*/gm, "");
+    .replace(
+      /^\s*export\s+(?=(?:const|let|var|function|class|async\s+function)\b)/gm,
+      "",
+    );
 }
 
 function assertClassicScript(source: string): void {
@@ -64,7 +67,9 @@ function assertClassicScript(source: string): void {
 }
 
 export function composeWorldPage(template: string, script: string): string {
-  return composePage(template, script, worldPageScriptMarker, "World");
+  const composedScript = stripModuleSyntax(script);
+  assertClassicScript(composedScript);
+  return composePage(template, composedScript, worldPageScriptMarker, "World");
 }
 
 export function composeColonyPage(template: string, script: string): string {

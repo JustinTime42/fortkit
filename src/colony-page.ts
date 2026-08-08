@@ -12,12 +12,12 @@ import type { ColonyProjection } from "./page-types.ts";
 // This checked module is composed with colony-layout and ambient into one
 // classic browser script. composeColonyPage removes their module syntax; the
 // three inlined sources consequently share a scope, so their top-level names
-// must not collide. world-page remains independently import-free.
+// must not collide. world-page keeps imports type-only.
 
 type ActorStyle = { glyph: string; color: string };
 type DetailTarget =
   | { kind: "bead"; id: string }
-  | { kind: "citizen"; seat: string; activity?: string }
+  | { kind: "citizen"; seat: string }
   | { kind: "queue"; name: string; beads: string[] }
   | { kind: "petitions"; name: string; beads: string[] }
   | { kind: "palace"; name: string; seats: string[] };
@@ -414,6 +414,13 @@ type CitizenPlacement = {
   idle: boolean;
 };
 
+type CitizenDestination = Pick<
+  CitizenPlacement,
+  "activity" | "idle" | "place"
+> & {
+  layout: BuildingLayout;
+};
+
 type CitizenMotion = {
   from: Pick<CitizenPlacement, "x" | "y">;
   to: Pick<CitizenPlacement, "x" | "y">;
@@ -433,21 +440,19 @@ function occupantPosition(layout: BuildingLayout, indexWithinPlace: number) {
   };
 }
 
-function placementFor(
+function destinationFor(
   citizen: ColonyProjection["citizens"][number],
   index: number,
   timestamp: number,
   fortSeed: number,
-  indexWithinPlace: number = index,
-): CitizenPlacement {
+): CitizenDestination {
   if (citizen.session != null) {
     const seat = citizen.seat.toLocaleLowerCase();
     const layout = buildingLayouts[seat as keyof typeof buildingLayouts];
     // An unknown roster seat still has an honest, stable home fallback rather
     // than vanishing; known seats are always rendered at their fixed building.
     return {
-      citizen,
-      ...occupantPosition(layout ?? homeLayout(index), indexWithinPlace),
+      layout: layout ?? homeLayout(index),
       activity:
         citizen.currentBead === null
           ? "in live session"
@@ -463,8 +468,7 @@ function placementFor(
         state.place as Exclude<typeof state.place, `home:${string}`>
       ];
   return {
-    citizen,
-    ...occupantPosition(layout, indexWithinPlace),
+    layout,
     activity: state.activity,
     place: state.place,
     idle: true,
@@ -478,12 +482,18 @@ function citizenPlacements(
     new URLSearchParams(location.search).get("fort") ?? "unknown fort",
   ),
 ): CitizenPlacement[] {
-  const occupantsByPlace = new Map<string, number>();
+  const occupantsByLayout = new Map<BuildingLayout, number>();
   return projection.citizens.map((citizen, index) => {
-    const destination = placementFor(citizen, index, timestamp, fortSeed);
-    const indexWithinPlace = occupantsByPlace.get(destination.place) ?? 0;
-    occupantsByPlace.set(destination.place, indexWithinPlace + 1);
-    return placementFor(citizen, index, timestamp, fortSeed, indexWithinPlace);
+    const destination = destinationFor(citizen, index, timestamp, fortSeed);
+    const indexWithinPlace = occupantsByLayout.get(destination.layout) ?? 0;
+    occupantsByLayout.set(destination.layout, indexWithinPlace + 1);
+    return {
+      citizen,
+      ...occupantPosition(destination.layout, indexWithinPlace),
+      activity: destination.activity,
+      place: destination.place,
+      idle: destination.idle,
+    };
   });
 }
 
@@ -523,7 +533,7 @@ function animatedCitizenPlacements(
   ),
 ): CitizenPlacement[] {
   const targets = citizenPlacements(projection, timestamp, fortSeed);
-  const visible = targets.map((target, index) => {
+  const visible = targets.map((target) => {
     const key = citizenKey(target.citizen);
     const wasInSession = previousSessionState.get(key);
     const isInSession = target.citizen.session !== null;
@@ -537,15 +547,7 @@ function animatedCitizenPlacements(
     ) {
       // Take the current visible position when a second transition arrives
       // mid-walk, avoiding a jump even in a fast replay.
-      const from =
-        existingMotion === undefined && isInSession
-          ? placementFor(
-              { ...target.citizen, currentBead: null, session: null },
-              index,
-              timestamp,
-              fortSeed,
-            )
-          : interpolatedPlacement(previous, existingMotion, timestamp);
+      const from = interpolatedPlacement(previous, existingMotion, timestamp);
       activeMotions.set(key, { from, to: target, startsAt: timestamp });
     }
 
@@ -629,6 +631,7 @@ function detailTargetAt(
 function selectedPanel(
   projection: ColonyProjection,
   target: DetailTarget | undefined,
+  placements: CitizenPlacement[],
 ): string {
   if (target?.kind === "bead") {
     const bead = (
@@ -671,10 +674,12 @@ function selectedPanel(
       .join("")}</ul>`;
   }
   if (target?.kind === "citizen") {
-    const citizen = projection.citizens.find(
-      (candidate) => candidate.seat === target.seat,
+    const placement = placements.find(
+      (candidate) => candidate.citizen.seat === target.seat,
     );
-    return citizen === undefined ? "" : seatPanel(citizen, target.activity);
+    return placement === undefined
+      ? ""
+      : seatPanel(placement.citizen, placement.activity);
   }
   return "";
 }
@@ -739,7 +744,7 @@ function render(projection: ColonyProjection) {
     projection.gaps.length === 0
       ? ""
       : `Source gaps: ${projection.gaps.join(" · ")}`;
-  const panelMarkup = selectedPanel(projection, selectedTarget);
+  const panelMarkup = selectedPanel(projection, selectedTarget, placements);
   updateDetailPanel(detailPanel, panelMarkup);
   canvas.onclick = (event) => {
     const bounds = canvas.getBoundingClientRect();
@@ -759,9 +764,8 @@ function render(projection: ColonyProjection) {
         : {
             kind: "citizen",
             seat: citizen.citizen.seat,
-            activity: citizen.activity,
           };
-    const panelMarkup = selectedPanel(projection, selectedTarget);
+    const panelMarkup = selectedPanel(projection, selectedTarget, placements);
     updateDetailPanel(detailPanel, panelMarkup);
   };
   requestAnimation(projection);
