@@ -42,7 +42,7 @@ Per-citizen day rhythm, offset deterministically per citizen so the fort breathe
 Available, never imposed — the Overseer's constraint is that work contexts stay clean:
 
 1. **One line at session start**, injected by the launcher (launcher change → human gate 1, beaded separately for the Overseer's hand): e.g. `Ambient: you slept until 06:30, breakfasted at the Tavern with Ilva, and were reading in the Archive when summoned.`
-2. **`fortkit ambient <citizen> [--on <ts> | --since <ts>]`** — a CLI summary anyone (agent or human) can run for the fuller picture. `--on` is explicitly a complete containing UTC day. `--since` is an actual interval from the supplied instant through invocation time, intended for the launcher’s “what happened while away” line; it is not an alias for `--on`.
+2. **`fortkit ambient <citizen> [--on <ts> | --since <ts>]`** — a CLI summary anyone (agent or human) can run for the fuller picture. `--on` is explicitly a complete containing UTC day. `--since` is an actual interval from the supplied instant through invocation time, intended for the launcher’s “what happened while away” line; it is not an alias for `--on`. Intervals longer than 31 days are refused outright (exit 1) rather than rendered — a deliberate cap against accidental multi-year walks; and any window that crosses a UTC day boundary carries an ISO date on each rendered line (v1.2, fortkit-x67 — L4/L6 consume this dated format).
 
 That is the whole surface. Nothing is auto-appended to prompts beyond the one line, and the line is factual clockwork, not roleplay instruction.
 
