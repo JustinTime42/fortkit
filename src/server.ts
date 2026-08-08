@@ -53,8 +53,14 @@ function composePage(
 
 function stripModuleSyntax(source: string): string {
   return stripTypeScriptTypes(source, { mode: "strip" })
-    .replace(/import[\s\S]*?from\s+["'][^"']+["'];\n?/g, "")
-    .replace(/^export\s+/gm, "");
+    .replace(/^\s*import\b[\s\S]*?(?:\bfrom\s+)?["'][^"']+["'];?\s*$/gm, "")
+    .replace(/^\s*export\b\s*/gm, "");
+}
+
+function assertClassicScript(source: string): void {
+  if (/^\s*(?:import|export)\b/m.test(source)) {
+    throw new Error("Colony page composition left ESM module syntax");
+  }
 }
 
 export function composeWorldPage(template: string, script: string): string {
@@ -67,9 +73,11 @@ export function composeColonyPage(template: string, script: string): string {
   const shared = [colonyLayoutScript, ambientScript]
     .map(stripModuleSyntax)
     .join("\n");
+  const composedScript = `${shared}\n${stripModuleSyntax(script)}`;
+  assertClassicScript(composedScript);
   return composePage(
     template,
-    `${shared}\n${stripModuleSyntax(script)}`,
+    composedScript,
     colonyPageScriptMarker,
     "Colony",
   );

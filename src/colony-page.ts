@@ -4,18 +4,20 @@ import {
   buildingHeight,
   buildingLayouts,
   buildingWidth,
+  homeExtent,
   homeLayout,
-  homeStartY,
 } from "./colony-layout.ts";
 import type { ColonyProjection } from "./page-types.ts";
 
-// This checked ES module is composed into a classic browser script. Keep its
-// imports type-only: runtime imports or exports would remain in the served JS.
+// This checked module is composed with colony-layout and ambient into one
+// classic browser script. composeColonyPage removes their module syntax; the
+// three inlined sources consequently share a scope, so their top-level names
+// must not collide. world-page remains independently import-free.
 
 type ActorStyle = { glyph: string; color: string };
 type DetailTarget =
   | { kind: "bead"; id: string }
-  | { kind: "citizen"; seat: string }
+  | { kind: "citizen"; seat: string; activity?: string }
   | { kind: "queue"; name: string; beads: string[] }
   | { kind: "petitions"; name: string; beads: string[] }
   | { kind: "palace"; name: string; seats: string[] };
@@ -31,7 +33,9 @@ const detailRowHeight = 13;
 const detailRows = 5;
 const detailHitStartOffset = detailBaselineOffset - 10;
 const detailTextLength = 27;
-const citizenGlyphAscent = 15;
+const citizenGlyphWidth = 15;
+const citizenGlyphAscent = 18;
+const citizenGlyphDescent = 5;
 
 let selectedTarget: DetailTarget | undefined;
 let previousPanelMarkup: string | undefined;
@@ -62,11 +66,15 @@ function detailList(fields: Array<[string, string | number | null]>): string {
     .join("")}</dl>`;
 }
 
-function seatPanel(citizen: ColonyProjection["citizens"][number]): string {
+function seatPanel(
+  citizen: ColonyProjection["citizens"][number],
+  currentActivity: string | null = null,
+): string {
   return `<h2>Seat: ${esc(citizen.seat)}</h2>${detailList([
     ["name", citizen.name],
     ["pronouns", citizen.pronouns],
     ["personality", citizen.personality],
+    ["activity", currentActivity],
     ["current bead", citizen.currentBead],
     ["last handoff", citizen.lastHandoff],
   ])}`;
@@ -240,7 +248,7 @@ function homeBuilding(
   const layout = homeLayout(index);
   return {
     ...layout,
-    name: `${citizen.name}'S HOME`,
+    name: `${citizen.name}'s HOME`,
     details: [
       "bed",
       citizen.session == null ? "at rest when off duty" : "away at seat",
@@ -402,6 +410,7 @@ type CitizenPlacement = {
   x: number;
   y: number;
   activity: string;
+  place: string;
   idle: boolean;
 };
 
@@ -417,10 +426,10 @@ const previousSessionState = new Map<string, boolean>();
 const activeMotions = new Map<string, CitizenMotion>();
 let animationRequested = false;
 
-function occupantPosition(layout: BuildingLayout, index: number) {
+function occupantPosition(layout: BuildingLayout, indexWithinPlace: number) {
   return {
-    x: layout.x + 22 + (index % 5) * 34,
-    y: layout.y + buildingHeight - 17 - (Math.floor(index / 5) % 2) * 24,
+    x: layout.x + 22 + (indexWithinPlace % 5) * 34,
+    y: layout.y + buildingHeight - 17 - Math.floor(indexWithinPlace / 5) * 24,
   };
 }
 
@@ -429,6 +438,7 @@ function placementFor(
   index: number,
   timestamp: number,
   fortSeed: number,
+  indexWithinPlace: number = index,
 ): CitizenPlacement {
   if (citizen.session != null) {
     const seat = citizen.seat.toLocaleLowerCase();
@@ -437,12 +447,13 @@ function placementFor(
     // than vanishing; known seats are always rendered at their fixed building.
     return {
       citizen,
-      ...occupantPosition(layout ?? homeLayout(index), index),
+      ...occupantPosition(layout ?? homeLayout(index), indexWithinPlace),
       activity:
         citizen.currentBead === null
           ? "in live session"
           : `working on ${citizen.currentBead}`,
       idle: false,
+      place: layout === undefined ? `home:${citizen.name}` : seat,
     };
   }
   const state = activity(ambientIdFor(citizen.name), timestamp, fortSeed);
@@ -453,8 +464,9 @@ function placementFor(
       ];
   return {
     citizen,
-    ...occupantPosition(layout, index),
+    ...occupantPosition(layout, indexWithinPlace),
     activity: state.activity,
+    place: state.place,
     idle: true,
   };
 }
@@ -466,9 +478,13 @@ function citizenPlacements(
     new URLSearchParams(location.search).get("fort") ?? "unknown fort",
   ),
 ): CitizenPlacement[] {
-  return projection.citizens.map((citizen, index) =>
-    placementFor(citizen, index, timestamp, fortSeed),
-  );
+  const occupantsByPlace = new Map<string, number>();
+  return projection.citizens.map((citizen, index) => {
+    const destination = placementFor(citizen, index, timestamp, fortSeed);
+    const indexWithinPlace = occupantsByPlace.get(destination.place) ?? 0;
+    occupantsByPlace.set(destination.place, indexWithinPlace + 1);
+    return placementFor(citizen, index, timestamp, fortSeed, indexWithinPlace);
+  });
 }
 
 function citizenKey(citizen: ColonyProjection["citizens"][number]): string {
@@ -658,7 +674,7 @@ function selectedPanel(
     const citizen = projection.citizens.find(
       (candidate) => candidate.seat === target.seat,
     );
-    return citizen === undefined ? "" : seatPanel(citizen);
+    return citizen === undefined ? "" : seatPanel(citizen, target.activity);
   }
   return "";
 }
@@ -700,10 +716,7 @@ function render(projection: ColonyProjection) {
     context === undefined
   )
     return;
-  canvas.height = Math.max(
-    720,
-    homeStartY + Math.ceil(projection.citizens.length / 4) * 145 + 20,
-  );
+  canvas.height = homeExtent(projection.citizens.length);
   context.fillStyle = "#17140f";
   context.fillRect(0, 0, canvas.width, canvas.height);
   const buildingList = buildings(projection);
@@ -735,15 +748,19 @@ function render(projection: ColonyProjection) {
     const buildingTarget = detailTargetAt(x, y, buildingList);
     const citizen = placements.find(
       (placement) =>
-        x >= placement.x - citizenGlyphAscent &&
-        x <= placement.x + 46 &&
+        x >= placement.x &&
+        x <= placement.x + citizenGlyphWidth &&
         y >= placement.y - citizenGlyphAscent &&
-        y <= placement.y + 18,
-    )?.citizen;
+        y <= placement.y + citizenGlyphDescent,
+    );
     selectedTarget =
       citizen === undefined
         ? buildingTarget
-        : { kind: "citizen", seat: citizen.seat };
+        : {
+            kind: "citizen",
+            seat: citizen.citizen.seat,
+            activity: citizen.activity,
+          };
     const panelMarkup = selectedPanel(projection, selectedTarget);
     updateDetailPanel(detailPanel, panelMarkup);
   };

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { createContext, Script } from "node:vm";
 
 import { describe, expect, test, vi } from "vitest";
-
+import { homeExtent } from "../src/colony-layout.js";
 import { readLatestHandoffs } from "../src/readers/handoffs.js";
 import {
   colonyPage,
@@ -179,7 +179,7 @@ describe("world view", () => {
     expect(placements[1]).toMatchObject({
       activity: "lunching",
       idle: true,
-      x: 86,
+      x: 52,
       y: 470,
     });
   });
@@ -448,7 +448,7 @@ describe("world view", () => {
       gaps: [],
     });
     expect(canvas.height).toBe(715 + Math.ceil(7 / 4) * 145 + 20);
-    expect(fillText).toHaveBeenCalledWith("Citizen 7'S HOME", 530, 884);
+    expect(fillText).toHaveBeenCalledWith("Citizen 7's HOME", 530, 884);
   });
 
   test("renders colony projection fixtures as named fort buildings and a ticker", () => {
@@ -545,7 +545,7 @@ describe("world view", () => {
         "THE KEEP",
         "THE PALACE",
         "THE TAVERN",
-        "Kethra'S HOME",
+        "Kethra's HOME",
         "Kethra",
       ]),
     );
@@ -616,6 +616,22 @@ describe("world view", () => {
     );
 
     expect(page).toContain(script);
+  });
+
+  test("preserves import prose while composing a classic colony script", () => {
+    const script = 'const prose = "do not import cargo from elsewhere";';
+    const page = composeColonyPage(
+      "<body><!-- colony-page-script --></body>",
+      script,
+    );
+
+    expect(page).toContain(script);
+    expect(page).not.toMatch(/^\s*(?:import|export)\b/m);
+  });
+
+  test("shares home canvas extent with the layout module", () => {
+    expect(homeExtent(0)).toBe(715 + 20);
+    expect(homeExtent(7)).toBe(715 + Math.ceil(7 / 4) * 145 + 20);
   });
 
   test("rejects a page template without a script marker", () => {
@@ -881,10 +897,111 @@ describe("world view", () => {
     canvas.onclick({ clientX: 775, clientY: 81 + 4 * 13 });
     expect(detailPanel.innerHTML).toContain("THE GATE");
     expect(detailPanel.innerHTML).toContain("gate-4 — Gate 4");
-    canvas.onclick({ clientX: 576, clientY: 940 });
+    canvas.onclick({ clientX: 546, clientY: 940 });
     expect(detailPanel.innerHTML).toContain("Seat: Seat 6");
+    expect(detailPanel.innerHTML).toContain("in live session");
     canvas.onclick({ clientX: 241, clientY: 276 });
     expect(detailPanel.innerHTML).toBe("");
+  });
+
+  test("gives co-located citizens distinct glyph click targets", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const canvas = {
+      width: 1100,
+      height: 620,
+      onclick: undefined as
+        | undefined
+        | ((event: { clientX: number; clientY: number }) => void),
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        width: 1100,
+        height: canvas.height,
+      }),
+      getContext: () => ({
+        fillStyle: "",
+        strokeStyle: "",
+        font: "",
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        fillText: vi.fn(),
+      }),
+    };
+    const detailPanel = { textContent: "", innerHTML: "" };
+    class FixedDate extends Date {
+      static override now() {
+        return Date.parse("2026-08-07T12:30:00Z");
+      }
+    }
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "?fort=Manyhalls" },
+      Date: FixedDate,
+      URLSearchParams,
+      document: {
+        querySelector: (selector: string) =>
+          selector === "#colony"
+            ? canvas
+            : selector === "#detail-panel"
+              ? detailPanel
+              : { textContent: "" },
+      },
+    });
+    new Script(script).runInContext(context);
+    const citizens = Array.from({ length: 11 }, (_, index) => ({
+      name: `Citizen ${index}`,
+      pronouns: "they/them",
+      seat: `Seat ${index}`,
+      personality: null,
+      currentBead: null,
+      session: null,
+      lastHandoff: null,
+    }));
+    const placements = (
+      context.citizenPlacements as (
+        projection: unknown,
+        timestamp: number,
+        seed: number,
+      ) => Array<{
+        x: number;
+        y: number;
+      }>
+    )(
+      {
+        citizens: citizens.map((citizen, index) => ({
+          ...citizen,
+          seat: `seat-${index}`,
+        })),
+      },
+      Date.parse("2026-08-07T12:30:00Z"),
+      123,
+    );
+    expect(new Set(placements.map(({ x, y }) => `${x},${y}`)).size).toBe(11);
+
+    (context.render as (projection: unknown) => void)({
+      beads: [],
+      intake: [],
+      jobBoard: [],
+      depot: [],
+      workshops: [],
+      benches: [],
+      dungeon: [],
+      citizens: citizens.slice(0, 2).map((citizen, index) => ({
+        ...citizen,
+        seat: index === 0 ? "mayor" : "forge",
+      })),
+      unassigned: [],
+      announcements: [],
+      gaps: [],
+    });
+    if (canvas.onclick === undefined)
+      throw new Error("click handler is missing");
+    canvas.onclick({ clientX: 87, clientY: 470 });
+    expect(detailPanel.innerHTML).toContain("Seat: forge");
+    expect(detailPanel.innerHTML).toContain("lunching");
   });
 
   test("refreshes a selected panel from current colony data", () => {

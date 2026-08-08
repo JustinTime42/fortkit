@@ -21,6 +21,10 @@ describe("ambient life", () => {
     ).toEqual(activity(ambientIdFor("kethra"), "2026-08-07T09:30:00Z", seed));
   });
 
+  test("trims a roster name before deriving its ambient identity", () => {
+    expect(ambientIdFor(" kethra")).toBe("kethra");
+  });
+
   test("is pure and follows a contiguous sleep window across midnight", () => {
     expect(activity("kethra", "2026-08-07T22:00:00Z", seed)).toEqual(
       activity("kethra", "2026-08-07T22:00:00Z", seed),
