@@ -1,0 +1,2 @@
+{"id":"closed-prerequisite","status":"closed","issue_type":"task","labels":[],"created_at":"2026-08-07T20:28:24Z","updated_at":"2026-08-07T20:28:24Z","dependencies":[],"dependency_count":0}
+{"id":"low-count","status":"open","issue_type":"task","labels":[],"created_at":"2026-08-07T20:28:24Z","updated_at":"2026-08-07T20:28:24Z","dependencies":[{"issue_id":"low-count","depends_on_id":"closed-prerequisite","type":"blocks"}],"dependency_count":0}
