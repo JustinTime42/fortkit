@@ -20,6 +20,12 @@ const esc = (value: unknown) =>
 
 let previousFortsMarkup: string | undefined;
 
+function updateForts(markup: string, render: (value: string) => void): void {
+  if (previousFortsMarkup === markup) return;
+  render(markup);
+  previousFortsMarkup = markup;
+}
+
 /** Escape all dynamic list content, including headings and class names. */
 const list = (title: string, items: string[], className = "") =>
   `<h3>${esc(title)}</h3><ul class="${esc(className)}">${
@@ -55,14 +61,17 @@ async function load() {
     if (forts === null || updated === null) return;
     const markup =
       data.map(card).join("") || "<p>No registered forts found.</p>";
-    if (previousFortsMarkup !== markup) {
-      forts.innerHTML = markup;
-      previousFortsMarkup = markup;
-    }
+    updateForts(markup, (value) => {
+      forts.innerHTML = value;
+    });
     updated.textContent = `updated ${new Date().toLocaleTimeString()}`;
   } catch (error) {
     const forts = document.querySelector<HTMLElement>("#forts");
-    if (forts !== null) forts.textContent = `World data unavailable: ${error}`;
+    if (forts !== null) {
+      updateForts(`World data unavailable: ${error}`, (value) => {
+        forts.textContent = value;
+      });
+    }
   }
 }
 

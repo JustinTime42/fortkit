@@ -92,6 +92,7 @@ describe("world view", () => {
       "#detail-panel:empty { margin: 0; padding: 0; border-width: 0; }",
     );
     expect(colonyPage).not.toContain('id="gaps" class="muted"');
+    expect(colonyPage).toContain("#gaps { color: #ffcf8b; font-weight: 600; }");
     const canvasTag = colonyPage.match(/<canvas\b[^>]*>/)?.[0];
     expect(canvasTag).toBeDefined();
     expect(canvasTag).toMatch(/\bid="colony"/);
@@ -446,6 +447,64 @@ describe("world view", () => {
     );
     expect(markup).not.toContain(hostileTitle);
     expect(markup).not.toContain("<img");
+  });
+
+  test("clears a failed world poll on an identical successful response", async () => {
+    const script = worldPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("world page script is missing");
+    let fortsContent = "";
+    const forts = {
+      get innerHTML() {
+        return fortsContent;
+      },
+      set innerHTML(value: string) {
+        fortsContent = value;
+      },
+      get textContent() {
+        return fortsContent;
+      },
+      set textContent(value: string) {
+        fortsContent = value;
+      },
+    };
+    const updated = { textContent: "" };
+    const response = [
+      { json: async () => [] },
+      new Error("network outage"),
+      { json: async () => [] },
+    ];
+    const context = createContext({
+      fetch: vi.fn(() => {
+        const next = response.shift();
+        return next instanceof Error
+          ? Promise.reject(next)
+          : Promise.resolve(next);
+      }),
+      setInterval: () => undefined,
+      document: {
+        querySelector: (selector: string) =>
+          selector === "#forts"
+            ? forts
+            : selector === "#updated"
+              ? updated
+              : null,
+      },
+    });
+    new Script(script).runInContext(context);
+    await vi.waitFor(() =>
+      expect(forts.innerHTML).toBe("<p>No registered forts found.</p>"),
+    );
+
+    const load = context.load as () => Promise<void>;
+    await load();
+    expect(forts.textContent).toBe(
+      "World data unavailable: Error: network outage",
+    );
+    await load();
+
+    expect(forts.innerHTML).toBe("<p>No registered forts found.</p>");
+    expect(forts.textContent).not.toContain("World data unavailable");
   });
 
   test("renders escaped seat and bead detail panels from fixtures", () => {
