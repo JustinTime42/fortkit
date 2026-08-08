@@ -32,7 +32,8 @@ trap 'rm -f "$lock.info"' EXIT
 
 # Kernel mask layer: seat-sandbox.sh owns every shared protection. Forge adds
 # only its measured deltas: worktree .env* coverage, its local .claude config,
-# and no SSH-agent access (the launcher historically did not pass it through).
+# and its worktree constitution paths. SSH_AUTH_SOCK is passed through when set,
+# but its socket is masked to /dev/null, so no agent identities are available.
 mask=()
 # shellcheck source=fort/scripts/lib/seat-sandbox.sh
 # shellcheck disable=SC1091  # resolved at runtime; build_mask fills mask[]
@@ -41,7 +42,8 @@ if ! require_bwrap; then
   "$emit" incident "Forge launch refused: bwrap missing, kernel mask layer unavailable" -s forge -t "$bead"
   exit 78
 fi
-build_mask codex "$root" --env-root "$wt" --mask-ssh-auth-sock "$wt/.claude"
+build_mask codex "$root" --env-root "$wt" --mask-ssh-auth-sock "$wt/.claude" \
+  "$wt/fort/charter.md" "$wt/fort/seats" "$wt/fort/profiles"
 mask_env codex
 
 "$emit" session.start "The Forge begins work on $bead ($model)" -a forge -s forge -t "$bead" -p "{\"model\":\"$model\"}"

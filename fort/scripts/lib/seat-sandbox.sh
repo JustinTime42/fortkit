@@ -68,11 +68,12 @@ build_mask() {
 
   case "$seat" in
     codex)
-      # KNOWN EXCEPTION: ~/.codex stays readable — Codex reads its own auth.json
-      # from inside the sandbox, so masking it breaks the launch. config.toml is
-      # bound read-only below, closing the disarm-the-next-launch vector while
-      # leaving token refresh working. ~/.claude is masked entirely: the Forge
-      # has no business with the other runtime's credentials or memory.
+      # KNOWN EXCEPTION: ~/.codex is re-granted writable below: Codex refreshes
+      # auth.json and writes session rollouts and history there. config.toml is
+      # then bound read-only in the later RO-path pass, closing the
+      # disarm-the-next-launch vector without breaking the runtime. ~/.claude is
+      # masked entirely: the Forge has no business with the other runtime's
+      # credentials or memory.
       MASK_DIRS+=("$HOME/.claude")
       RO_PATHS+=("$HOME/.codex/config.toml")
       ;;
@@ -113,6 +114,9 @@ build_mask() {
   local RW_PATHS=("$root" "$root-worktrees" "$HOME/.claude" "${TMPDIR:-}" /tmp
                   "$HOME/.npm" "$HOME/.nuget" "$HOME/.cache" "$HOME/.bun"
                   "$HOME/.local/share/pnpm" "$HOME/.local/state")
+  # The Codex runtime must persist refreshed auth and its own state. This grant
+  # precedes the RO-path pass so ~/.codex/config.toml remains read-only.
+  [ "$seat" = codex ] && RW_PATHS+=("$HOME/.codex")
   mask=(--bind / / --dev /dev --die-with-parent --ro-bind "$HOME" "$HOME")
   local w
   for w in "${RW_PATHS[@]}"; do [ -n "$w" ] && [ -e "$w" ] && mask+=(--bind "$w" "$w"); done
