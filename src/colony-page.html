@@ -12,7 +12,7 @@
     /* Source gaps are warnings: amber makes missing data conspicuous, never muted. */
     #gaps { color: #ffcf8b; font-weight: 600; }
     #status { padding: .65rem 1rem; background: #5c2424; border: 1px solid #ffba8c; color: #fff0c2; } #status:empty { margin: 0; padding: 0; border-width: 0; }
-    #detail-panel { background: #302719; border: 1px solid #79633d; padding: 1rem; color: #e8ddbf; } #detail-panel:empty { display: none; }
+    #detail-panel { background: #302719; border: 1px solid #79633d; padding: 1rem; color: #e8ddbf; } #detail-panel:empty { margin: 0; padding: 0; border-width: 0; }
     #detail-panel dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: .75rem 0; } #detail-panel dt { color: #f1cc77; } #detail-panel dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   </style>
   <header><strong id="colony-title">Bartizan — colony</strong><a href="/">← world</a></header>
@@ -20,6 +20,6 @@
   <p id="status" role="status"></p>
   <canvas id="colony" width="1100" height="620" aria-label="Fort colony view"></canvas>
   <section id="detail-panel" aria-live="polite"></section>
-  <p id="gaps" class="muted"></p>
+  <p id="gaps"></p>
   <!-- colony-page-script -->
 </html>

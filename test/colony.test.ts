@@ -59,7 +59,11 @@ describe("colony projection", () => {
         bead({ id: "no-job", labels: [] }),
       ],
       worktrees: ["/fortkit-worktrees/other", "/fortkit-worktrees/bzx.2"],
-      events: [event()],
+      events: [
+        event(),
+        event({ category: "bead.filed", target: "no-job" }),
+        event({ category: "review.verdict", target: "implementation" }),
+      ],
       citizens: [
         {
           name: "Kethra Anvilmark",
@@ -109,6 +113,16 @@ describe("colony projection", () => {
       }),
     ]);
     expect(result.unassigned.map(({ id }) => id)).toEqual(["bug", "no-job"]);
+    expect(result.jobBoard.map(({ id }) => id)).toEqual([
+      "implementation",
+      "spec",
+      "test",
+      "infra",
+      "bug",
+      "no-job",
+    ]);
+    expect(result.intake.map(({ id }) => id)).toEqual(["no-job"]);
+    expect(result.depot.map(({ id }) => id)).toEqual(["implementation"]);
   });
 
   test("keeps working bugs in rehabilitation and removes closed beads from the live colony", () => {
@@ -181,6 +195,10 @@ describe("colony projection", () => {
         citizens: null,
       }),
     ).toEqual({
+      beads: [],
+      intake: [],
+      jobBoard: [],
+      depot: [],
       workshops: [
         { type: "implementation", beads: [] },
         { type: "spec", beads: [] },

@@ -6,16 +6,19 @@ import type { ColonyProjection } from "./page-types.ts";
 type ActorStyle = { glyph: string; color: string };
 type DetailTarget =
   | { kind: "bead"; id: string }
-  | { kind: "citizen"; seat: string };
+  | { kind: "citizen"; seat: string }
+  | { kind: "queue"; name: string; beads: string[] };
 type BuildingLayout = {
   x: number;
   y: number;
   name: string;
   color: string;
+  rendered?: boolean;
 };
 type Building = BuildingLayout & {
   details: string[];
   targetAt: (index: number) => DetailTarget | undefined;
+  summaryTarget?: DetailTarget;
 };
 type VisibleDetail = { text: string; index: number | undefined };
 
@@ -35,31 +38,70 @@ const citizenGlyphAscent = 15;
 const buildingStartX = 30;
 const buildingStride = 245;
 
+// The living fort's stable geometry. Places reserved for later districts stay
+// in this one table so ambient destinations cannot drift from the map.
 const buildingLayouts = {
-  gate: { x: buildingStartX, y: 35, name: "GATE", color: "#6b4e2d" },
-  depot: {
+  mayor: {
+    x: buildingStartX,
+    y: 35,
+    name: "MAYOR'S OFFICE",
+    color: "#6b4e2d",
+  },
+  forge: {
     x: buildingStartX + buildingStride,
     y: 35,
+    name: "THE FORGE",
+    color: "#48643d",
+  },
+  warden: {
+    x: buildingStartX + buildingStride * 2,
+    y: 35,
+    name: "WARDEN'S TOWER",
+    color: "#3b5a63",
+  },
+  gate: {
+    x: buildingStartX + buildingStride * 3,
+    y: 35,
+    name: "THE GATE",
+    color: "#6b4e2d",
+  },
+  jobBoard: {
+    x: buildingStartX,
+    y: 205,
+    name: "THE JOB BOARD",
+    color: "#785a2d",
+  },
+  depot: {
+    x: buildingStartX + buildingStride,
+    y: 205,
     name: "TRADE DEPOT",
     color: "#785a2d",
   },
-  archive: {
-    x: buildingStartX + buildingStride * 2,
-    y: 35,
-    name: "ARCHIVE",
-    color: "#3b5a63",
-  },
   dungeon: {
-    x: buildingStartX + buildingStride * 3,
-    y: 35,
-    name: "DUNGEON",
+    x: buildingStartX + buildingStride * 2,
+    y: 205,
+    name: "THE DUNGEON",
     color: "#70404b",
   },
-  workshop: {
+  archive: {
+    x: buildingStartX + buildingStride * 3,
+    y: 205,
+    name: "THE ARCHIVE",
+    color: "#3b5a63",
+  },
+  tavern: {
     x: buildingStartX,
-    y: 230,
-    name: "WORKSHOP",
-    color: "#48643d",
+    y: 375,
+    name: "THE TAVERN",
+    color: "#6c4c2a",
+    rendered: false,
+  },
+  walls: {
+    x: buildingStartX + buildingStride,
+    y: 375,
+    name: "WALLS",
+    color: "#5c554a",
+    rendered: false,
   },
 } as const satisfies Record<string, BuildingLayout>;
 
@@ -156,6 +198,27 @@ function label(bead: { id: string; title: string | null }): string {
   return bead.title === null ? bead.id : `${bead.id} — ${bead.title}`;
 }
 
+function itemLabel(
+  bead: Pick<
+    ColonyProjection["beads"][number],
+    "id" | "title" | "issueType" | "labels"
+  >,
+): string {
+  const glyph =
+    bead.issueType === "bug"
+      ? "☠"
+      : bead.labels?.includes("implementation")
+        ? "⚒"
+        : bead.labels?.includes("spec")
+          ? "✎"
+          : bead.labels?.includes("test")
+            ? "✓"
+            : bead.labels?.includes("infra")
+              ? "⚙"
+              : "□ crate";
+  return `${glyph} ${label(bead)}`;
+}
+
 function visibleDetails(details: string[]): VisibleDetail[] {
   if (details.length <= detailRows)
     return details.map((text, index) => ({ text, index }));
@@ -191,54 +254,106 @@ function building(context: CanvasRenderingContext2D, layout: Building) {
 
 function beadBuilding(
   layout: BuildingLayout,
-  beads: ColonyProjection["unassigned"],
+  beads: ColonyProjection["beads"],
 ): Building {
   return {
     ...layout,
-    details: beads.map(label),
+    details: beads.length === 0 ? ["none recorded"] : beads.map(itemLabel),
     targetAt: (index) => {
       const bead = beads[index];
       return bead === undefined ? undefined : { kind: "bead", id: bead.id };
+    },
+    ...(beads.length > detailRows
+      ? {
+          summaryTarget: {
+            kind: "queue" as const,
+            name: layout.name,
+            beads: beads.map((bead) => bead.id),
+          },
+        }
+      : {}),
+  };
+}
+
+function seatBuilding(
+  layout: BuildingLayout,
+  citizens: ColonyProjection["citizens"],
+): Building {
+  return {
+    ...layout,
+    details:
+      citizens.length === 0
+        ? ["seat roster unavailable"]
+        : citizens.map(
+            (citizen) =>
+              `${citizen.name}${citizen.currentBead === null ? " — idle" : ` — ${citizen.currentBead}`}`,
+          ),
+    targetAt: (index) => {
+      const citizen = citizens[index];
+      return citizen === undefined
+        ? undefined
+        : { kind: "citizen", seat: citizen.seat };
     },
   };
 }
 
 function buildings(projection: ColonyProjection): Building[] {
+  const beads = projection.beads ?? [
+    ...projection.unassigned,
+    ...projection.dungeon,
+    ...projection.workshops.flatMap((workshop) => workshop.beads),
+  ];
+  const mayor = projection.citizens.filter(
+    (citizen) => citizen.seat.toLocaleLowerCase() === "mayor",
+  );
+  const warden = projection.citizens.filter(
+    (citizen) => citizen.seat.toLocaleLowerCase() === "warden",
+  );
+  const intake = projection.intake ?? projection.unassigned;
+  const jobBoard = projection.jobBoard ?? projection.unassigned;
+  const depot = projection.depot ?? [];
   return [
-    beadBuilding(buildingLayouts.gate, projection.unassigned),
+    seatBuilding(buildingLayouts.mayor, mayor),
     {
-      ...buildingLayouts.depot,
+      ...buildingLayouts.forge,
       details: projection.benches.map((bench) =>
         bench.session === null
-          ? (bench.worktree.split("/").at(-1) ?? "bench")
-          : `${bench.session.actor}: ${bench.session.beadId ?? "working"}`,
+          ? `empty bench — ${bench.worktree.split("/").at(-1) ?? "bench"}`
+          : `${bench.session.actor}: ${itemLabel(beads.find((bead) => bead.id === bench.session?.beadId) ?? { id: bench.session.beadId ?? "working", title: null, issueType: null, labels: null })}`,
       ),
       targetAt: () => undefined,
     },
+    seatBuilding(buildingLayouts.warden, warden),
+    beadBuilding(buildingLayouts.gate, intake),
+    beadBuilding(buildingLayouts.jobBoard, jobBoard),
+    beadBuilding(buildingLayouts.depot, depot),
+    beadBuilding(buildingLayouts.dungeon, projection.dungeon),
     {
       ...buildingLayouts.archive,
-      details: projection.citizens.map(
-        (citizen) => `${citizen.seat}: ${citizen.name}`,
-      ),
+      details: projection.citizens
+        .filter((citizen) => citizen.lastHandoff !== null)
+        .map((citizen) => `${citizen.seat}: ${citizen.lastHandoff}`),
+      targetAt: () => undefined,
+    },
+  ].map((building) => {
+    if (building.name !== buildingLayouts.archive.name) return building;
+    const archiveCitizens = projection.citizens.filter(
+      (citizen) => citizen.lastHandoff !== null,
+    );
+    return {
+      ...building,
+      details:
+        building.details.length === 0
+          ? ["no handoffs recorded"]
+          : building.details,
       targetAt: (index) => {
-        const citizen = projection.citizens[index];
+        const citizen = archiveCitizens[index];
         return citizen === undefined
           ? undefined
           : { kind: "citizen", seat: citizen.seat };
       },
-    },
-    beadBuilding(buildingLayouts.dungeon, projection.dungeon),
-    ...projection.workshops.map((workshop, index) =>
-      beadBuilding(
-        {
-          ...buildingLayouts.workshop,
-          x: buildingLayouts.workshop.x + index * buildingStride,
-          name: `${workshop.type.toUpperCase()} WORKSHOP`,
-        },
-        workshop.beads,
-      ),
-    ),
-  ];
+    };
+  });
 }
 
 function detailIndex(
@@ -267,6 +382,14 @@ function detailTargetAt(
   for (const building of buildingList) {
     const index = detailIndex(x, y, building);
     if (index !== undefined) return building.targetAt(index);
+    if (
+      building.summaryTarget !== undefined &&
+      x >= building.x &&
+      x <= building.x + buildingWidth &&
+      y >= building.y + detailHitStartOffset &&
+      y < building.y + detailHitStartOffset + detailRows * detailRowHeight
+    )
+      return building.summaryTarget;
   }
   return undefined;
 }
@@ -276,12 +399,20 @@ function selectedPanel(
   target: DetailTarget | undefined,
 ): string {
   if (target?.kind === "bead") {
-    const bead = [
-      ...projection.unassigned,
-      ...projection.dungeon,
-      ...projection.workshops.flatMap((workshop) => workshop.beads),
-    ].find((candidate) => candidate.id === target.id);
+    const bead = (
+      projection.beads ?? [
+        ...projection.unassigned,
+        ...projection.dungeon,
+        ...projection.workshops.flatMap((workshop) => workshop.beads),
+      ]
+    ).find((candidate) => candidate.id === target.id);
     return bead === undefined ? "" : beadPanel(bead);
+  }
+  if (target?.kind === "queue") {
+    const beads = (projection.beads ?? []).filter((bead) =>
+      target.beads.includes(bead.id),
+    );
+    return `<h2>${esc(target.name)}</h2><p>${beads.length} live item(s)</p><ul>${beads.map((bead) => `<li>${esc(itemLabel(bead))}</li>`).join("")}</ul>`;
   }
   if (target?.kind === "citizen") {
     const citizen = projection.citizens.find(

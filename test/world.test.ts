@@ -70,6 +70,7 @@ describe("world view", () => {
     expect(worldPage).toContain(`open \${fort.beads.open}`);
     expect(worldPage).not.toContain("ready");
     expect(worldPage).toContain("/colony-view?fort=");
+    expect(worldPage).toContain("previousFortsMarkup");
   });
 
   test("has a checked canvas colony page with distinct actor styles", () => {
@@ -87,6 +88,11 @@ describe("world view", () => {
       "#status:empty { margin: 0; padding: 0; border-width: 0; }",
     );
     expect(colonyPage).not.toContain("#status:empty { display: none; }");
+    expect(colonyPage).toContain(
+      "#detail-panel:empty { margin: 0; padding: 0; border-width: 0; }",
+    );
+    expect(colonyPage).not.toContain('id="gaps" class="muted"');
+    expect(colonyPage).toContain("#gaps { color: #ffcf8b; font-weight: 600; }");
     const canvasTag = colonyPage.match(/<canvas\b[^>]*>/)?.[0];
     expect(canvasTag).toBeDefined();
     expect(canvasTag).toMatch(/\bid="colony"/);
@@ -97,7 +103,7 @@ describe("world view", () => {
     const context = createContext({
       fetch: () => new Promise(() => undefined),
       setInterval: () => undefined,
-      location: { search: "" },
+      location: { search: "?fort=Alpha" },
       document: { querySelector: () => null },
       URLSearchParams,
     });
@@ -139,7 +145,7 @@ describe("world view", () => {
     expect(title.textContent).toBe("Bartizan — Alpha Fort colony");
   });
 
-  test("does not rewrite identical apostrophe-bearing panels or status on polls", () => {
+  test("does not rewrite identical apostrophe-bearing panels or status on polls", async () => {
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     expect(script).toBeDefined();
     if (script === undefined) throw new Error("colony page script is missing");
@@ -167,7 +173,7 @@ describe("world view", () => {
     const context = createContext({
       fetch: () => new Promise(() => undefined),
       setInterval: () => undefined,
-      location: { search: "" },
+      location: { search: "?fort=Alpha" },
       URLSearchParams,
     });
     const panelSetter = vi.fn();
@@ -194,6 +200,10 @@ describe("world view", () => {
     };
     new Script(script).runInContext(context);
     const projection = {
+      beads: [{ id: "apostrophe", title: "Kethra's panel" }],
+      intake: [{ id: "apostrophe", title: "Kethra's panel" }],
+      jobBoard: [{ id: "apostrophe", title: "Kethra's panel" }],
+      depot: [],
       workshops: [],
       benches: [],
       dungeon: [],
@@ -205,26 +215,23 @@ describe("world view", () => {
     (context.render as (value: unknown) => void)(projection);
     if (canvas.onclick === undefined)
       throw new Error("click handler is missing");
-    canvas.onclick({ clientX: 40, clientY: 81 });
+    canvas.onclick({ clientX: 775, clientY: 81 });
     expect(panelSetter).toHaveBeenLastCalledWith(
       expect.stringContaining("Kethra&#39;s panel"),
     );
     panelSetter.mockClear();
     (context.render as (value: unknown) => void)(projection);
 
-    const outage = "Colony data unavailable: network outage";
-    (context.updateStatus as (element: typeof status, value: string) => void)(
-      status,
-      outage,
-    );
-    (context.updateStatus as (element: typeof status, value: string) => void)(
-      status,
-      outage,
-    );
+    const load = context.load as () => Promise<void>;
+    context.fetch = () => Promise.reject(new Error("network outage"));
+    await load();
+    await load();
 
     expect(panelSetter).not.toHaveBeenCalled();
     expect(statusSetter).toHaveBeenCalledTimes(1);
-    expect(statusSetter).toHaveBeenCalledWith(outage);
+    expect(statusSetter).toHaveBeenCalledWith(
+      "Colony data unavailable: Error: network outage",
+    );
   });
 
   test("labels truncated building rows and wraps citizens after six columns", () => {
@@ -373,11 +380,14 @@ describe("world view", () => {
     });
     expect(fillText.mock.calls.map(([value]) => value)).toEqual(
       expect.arrayContaining([
-        "GATE",
+        "MAYOR'S OFFICE",
+        "THE FORGE",
+        "WARDEN'S TOWER",
+        "THE GATE",
+        "THE JOB BOARD",
         "TRADE DEPOT",
-        "ARCHIVE",
-        "DUNGEON",
-        "IMPLEMENTATION WORKSHOP",
+        "THE ARCHIVE",
+        "THE DUNGEON",
         "Kethra (she/her)",
       ]),
     );
@@ -437,6 +447,64 @@ describe("world view", () => {
     );
     expect(markup).not.toContain(hostileTitle);
     expect(markup).not.toContain("<img");
+  });
+
+  test("clears a failed world poll on an identical successful response", async () => {
+    const script = worldPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("world page script is missing");
+    let fortsContent = "";
+    const forts = {
+      get innerHTML() {
+        return fortsContent;
+      },
+      set innerHTML(value: string) {
+        fortsContent = value;
+      },
+      get textContent() {
+        return fortsContent;
+      },
+      set textContent(value: string) {
+        fortsContent = value;
+      },
+    };
+    const updated = { textContent: "" };
+    const response = [
+      { json: async () => [] },
+      new Error("network outage"),
+      { json: async () => [] },
+    ];
+    const context = createContext({
+      fetch: vi.fn(() => {
+        const next = response.shift();
+        return next instanceof Error
+          ? Promise.reject(next)
+          : Promise.resolve(next);
+      }),
+      setInterval: () => undefined,
+      document: {
+        querySelector: (selector: string) =>
+          selector === "#forts"
+            ? forts
+            : selector === "#updated"
+              ? updated
+              : null,
+      },
+    });
+    new Script(script).runInContext(context);
+    await vi.waitFor(() =>
+      expect(forts.innerHTML).toBe("<p>No registered forts found.</p>"),
+    );
+
+    const load = context.load as () => Promise<void>;
+    await load();
+    expect(forts.textContent).toBe(
+      "World data unavailable: Error: network outage",
+    );
+    await load();
+
+    expect(forts.innerHTML).toBe("<p>No registered forts found.</p>");
+    expect(forts.textContent).not.toContain("World data unavailable");
   });
 
   test("renders escaped seat and bead detail panels from fixtures", () => {
@@ -566,6 +634,10 @@ describe("world view", () => {
       lastHandoff: null,
     }));
     (context.render as (projection: unknown) => void)({
+      beads: [...gateBeads, ...dungeonBeads, ...workshopBeads],
+      intake: gateBeads,
+      jobBoard: gateBeads,
+      depot: [],
       workshops: [{ type: "implementation", beads: workshopBeads }],
       benches: [],
       dungeon: dungeonBeads,
@@ -578,9 +650,9 @@ describe("world view", () => {
       throw new Error("click handler is missing");
 
     const buildings: Array<[number, number, string]> = [
-      [30, 35, "gate"],
-      [765, 35, "dungeon"],
-      [30, 230, "workshop"],
+      [765, 35, "gate"],
+      [520, 205, "dungeon"],
+      [30, 205, "gate"],
     ];
     for (const [left, top, prefix] of buildings) {
       for (let index = 0; index < 4; index += 1) {
@@ -592,12 +664,10 @@ describe("world view", () => {
       }
     }
 
-    canvas.onclick({ clientX: 530, clientY: 81 });
-    expect(detailPanel.innerHTML).toContain("Seat: Seat 0");
+    canvas.onclick({ clientX: 775, clientY: 81 + 4 * 13 });
+    expect(detailPanel.innerHTML).toContain("THE GATE");
     canvas.onclick({ clientX: 48, clientY: 578 });
     expect(detailPanel.innerHTML).toContain("Seat: Seat 6");
-    canvas.onclick({ clientX: 40, clientY: 35 + 46 + 4 * 13 });
-    expect(detailPanel.innerHTML).toBe("");
     canvas.onclick({ clientX: 241, clientY: 276 });
     expect(detailPanel.innerHTML).toBe("");
   });
@@ -644,6 +714,10 @@ describe("world view", () => {
     });
     new Script(script).runInContext(context);
     const projection = {
+      beads: [{ id: "live", title: "Live bead" }],
+      intake: [{ id: "live", title: "Live bead" }],
+      jobBoard: [{ id: "live", title: "Live bead" }],
+      depot: [],
       workshops: [],
       benches: [],
       dungeon: [],
@@ -655,10 +729,13 @@ describe("world view", () => {
     (context.render as (value: unknown) => void)(projection);
     if (canvas.onclick === undefined)
       throw new Error("click handler is missing");
-    canvas.onclick({ clientX: 40, clientY: 81 });
+    canvas.onclick({ clientX: 775, clientY: 81 });
     expect(detailPanel.innerHTML).toContain("Bead: live");
     (context.render as (value: unknown) => void)({
       ...projection,
+      beads: [],
+      intake: [],
+      jobBoard: [],
       unassigned: [],
     });
     expect(detailPanel.innerHTML).toBe("");

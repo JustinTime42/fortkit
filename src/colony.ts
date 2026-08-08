@@ -117,6 +117,45 @@ function citizensWithActivity(
   });
 }
 
+function eventQueue(
+  beads: Bead[],
+  events: EventDetail[],
+  category: string,
+): Bead[] {
+  const byId = new Map(beads.map((bead) => [bead.id, bead]));
+  const targets = new Set(
+    events
+      .filter((event) => event.category === category && event.target !== null)
+      .map((event) => event.target as string),
+  );
+  return [...targets].flatMap((target) => {
+    const bead = byId.get(target);
+    return bead === undefined ? [] : [bead];
+  });
+}
+
+/** A review remains at the depot until a later merge records its departure. */
+function depotQueue(beads: Bead[], events: EventDetail[]): Bead[] {
+  const latest = new Map<string, EventDetail>();
+  for (const event of events) {
+    if (
+      event.target === null ||
+      (event.category !== "review.verdict" && event.category !== "merge")
+    )
+      continue;
+    const previous = latest.get(event.target);
+    if (previous === undefined || eventTime(event) >= eventTime(previous)) {
+      latest.set(event.target, event);
+    }
+  }
+  const byId = new Map(beads.map((bead) => [bead.id, bead]));
+  return [...latest.entries()].flatMap(([target, event]) =>
+    event.category === "review.verdict" && byId.has(target)
+      ? [byId.get(target) as Bead]
+      : [],
+  );
+}
+
 /**
  * Projects read-only fort data into colony entities. Beads supply present state;
  * events only decorate active benches and their absence never changes that state.
@@ -136,7 +175,14 @@ export function projectColony(sources: ColonySources): ColonyProjection {
   // blocked bug is still in rehabilitation until it is closed.
   const beads = (sources.beads ?? []).filter(isLive);
   const sessions = activeSessions(sources.events ?? []);
+  const events = sources.events ?? [];
   return {
+    beads,
+    intake: eventQueue(beads, events, "bead.filed"),
+    jobBoard: beads.filter(
+      (bead) => bead.status === "open" || bead.status === "blocked",
+    ),
+    depot: depotQueue(beads, events),
     workshops: workTypes.map((type) => ({
       type,
       beads: beads.filter((bead) => bead.labels?.includes(type) ?? false),
