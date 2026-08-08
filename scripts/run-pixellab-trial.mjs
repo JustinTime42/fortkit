@@ -237,17 +237,16 @@ function animationRequestBody(masterPng, walkCardDefinition) {
 }
 
 function parseUsage(usage, maximumUsd) {
-  if (
-    typeof usage?.usd !== "number" ||
-    !Number.isFinite(usage.usd) ||
-    usage.usd < 0 ||
-    usage.usd > maximumUsd
-  ) {
+  const usd =
+    typeof usage?.usd === "number" || typeof usage?.usd === "string"
+      ? Number(usage.usd)
+      : Number.NaN;
+  if (!Number.isFinite(usd) || usd < 0 || usd > maximumUsd) {
     throw new Error(
-      "Refusing to continue: PixelLab returned unexpected pricing.",
+      `Refusing to continue: PixelLab returned unexpected pricing: ${JSON.stringify(usage)}`,
     );
   }
-  return usage.usd;
+  return usd;
 }
 
 function pngFromBase64(encoded) {
