@@ -26,7 +26,10 @@ const PIXFLUX_MODEL = "pixflux";
 const ANIMATION_MODEL = "animate-with-text";
 const ANIMATION_IMAGE_SIZE = { width: 64, height: 64 };
 const MAX_SPEND_USD = 15;
+const MAX_TOTAL_GENERATIONS = 30;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
+const MAX_GENERATIONS_PER_STILL_ASSET = 2;
+const MAX_GENERATIONS_PER_ANIMATION_CALL = 8;
 const PIXFLUX_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
 const PNG_SIGNATURE = Buffer.from([
@@ -238,17 +241,39 @@ function animationRequestBody(masterPng, walkCardDefinition) {
   };
 }
 
-function parseUsage(usage, maximumUsd) {
+function parseUsageMeter(usage, maximumUsd, maximumGenerations) {
   const usd =
     typeof usage?.usd === "number" || typeof usage?.usd === "string"
       ? Number(usage.usd)
       : Number.NaN;
-  if (!Number.isFinite(usd) || usd < 0 || usd > maximumUsd) {
+  if (Number.isFinite(usd) && usd >= 0 && usd <= maximumUsd)
+    return { meter: "usd", amount: usd };
+
+  if (
+    usage?.type === "generations" &&
+    Number.isSafeInteger(usage.generations) &&
+    usage.generations > 0 &&
+    usage.generations <= maximumGenerations
+  )
+    return { meter: "generations", amount: usage.generations };
+
+  throw new Error(
+    `Refusing to continue: PixelLab returned unexpected pricing: ${JSON.stringify(usage)}`,
+  );
+}
+
+function addUsage(totals, cost) {
+  const next = { ...totals };
+  next[cost.meter] += cost.amount;
+  if (next.usd > MAX_SPEND_USD)
     throw new Error(
-      `Refusing to continue: PixelLab returned unexpected pricing: ${JSON.stringify(usage)}`,
+      "Refusing to continue: actual trial spend exceeds the $15 cap.",
     );
-  }
-  return usd;
+  if (next.generations > MAX_TOTAL_GENERATIONS)
+    throw new Error(
+      "Refusing to continue: actual trial generation credits exceed the 30 cap.",
+    );
+  return next;
 }
 
 function pngFromBase64(encoded) {
@@ -345,7 +370,11 @@ async function generatePixflux(cardDefinition, apiKey) {
   );
   return {
     png: pngFromBase64(response.image?.base64),
-    costUsd: parseUsage(response.usage, MAX_ESTIMATED_COST_PER_ASSET_USD),
+    cost: parseUsageMeter(
+      response.usage,
+      MAX_ESTIMATED_COST_PER_ASSET_USD,
+      MAX_GENERATIONS_PER_STILL_ASSET,
+    ),
     confirmedModel: confirmedModel(response),
   };
 }
@@ -363,9 +392,10 @@ async function generateWalkCycle(masterPng, walkCardDefinition, apiKey) {
     throw new Error("PixelLab returned an unexpected walk-cycle frame count.");
   return {
     pngs: response.images.map((image) => pngFromBase64(image?.base64)),
-    costUsd: parseUsage(
+    cost: parseUsageMeter(
       response.usage,
       walkCards.length * MAX_ESTIMATED_COST_PER_ASSET_USD,
+      MAX_GENERATIONS_PER_ANIMATION_CALL,
     ),
     confirmedModel: confirmedModel(response),
   };
@@ -399,8 +429,8 @@ async function writeAsset(
     requestedImageSize: provenance.requestedImageSize,
     actualImageSize,
     generatedAt: new Date().toISOString(),
-    costUsd: provenance.costUsd,
-    requestCostUsd: provenance.requestCostUsd,
+    cost: provenance.cost,
+    requestCost: provenance.requestCost,
     sha256: sha256(result.png),
     reference: provenance.reference,
   });
@@ -421,24 +451,21 @@ async function main(cardDefinitions = cards) {
     generatedAt: new Date().toISOString(),
     provider: "PixelLab",
     spendCapUsd: MAX_SPEND_USD,
+    generationCap: MAX_TOTAL_GENERATIONS,
     assets: [],
   };
-  let spentUsd = 0;
+  let totals = { usd: 0, generations: 0 };
   let kethraMaster;
   for (const originalCardDefinition of cardDefinitions) {
     const cardDefinition = withSeedOffset(originalCardDefinition, seedOffset);
     const result = await generatePixflux(cardDefinition, apiKey);
-    spentUsd += result.costUsd;
-    if (spentUsd > MAX_SPEND_USD)
-      throw new Error(
-        "Refusing to continue: actual trial spend exceeds the $15 cap.",
-      );
+    totals = addUsage(totals, result.cost);
     await writeAsset(manifest, cardDefinition, result, {
       requestedModel: PIXFLUX_MODEL,
       confirmedModel: result.confirmedModel,
       endpoint: PIXFLUX_ENDPOINT,
-      costUsd: result.costUsd,
-      requestCostUsd: result.costUsd,
+      cost: result.cost,
+      requestCost: result.cost,
       requestedImageSize: cardDefinition.imageSize,
       reference: null,
     });
@@ -459,11 +486,7 @@ async function main(cardDefinitions = cards) {
     offsetWalkCards[0],
     apiKey,
   );
-  spentUsd += cycle.costUsd;
-  if (spentUsd > MAX_SPEND_USD)
-    throw new Error(
-      "Refusing to continue: actual trial spend exceeds the $15 cap.",
-    );
+  totals = addUsage(totals, cycle.cost);
   const masterHash = sha256(kethraMaster);
   for (let index = 0; index < offsetWalkCards.length; index += 1) {
     const result = { png: cycle.pngs[index] };
@@ -471,8 +494,11 @@ async function main(cardDefinitions = cards) {
       requestedModel: ANIMATION_MODEL,
       confirmedModel: cycle.confirmedModel,
       endpoint: ANIMATION_ENDPOINT,
-      costUsd: cycle.costUsd / walkCards.length,
-      requestCostUsd: cycle.costUsd,
+      cost: {
+        meter: cycle.cost.meter,
+        amount: cycle.cost.amount / walkCards.length,
+      },
+      requestCost: cycle.cost,
       requestedImageSize: ANIMATION_IMAGE_SIZE,
       reference: { file: "kethra-citizen.png", sha256: masterHash },
     });
@@ -481,7 +507,7 @@ async function main(cardDefinitions = cards) {
     );
   }
   process.stdout.write(
-    `Trial complete: ${manifest.assets.length} assets, $${spentUsd.toFixed(4)} recorded.\n`,
+    `Trial complete: ${manifest.assets.length} assets, $${totals.usd.toFixed(4)} and ${totals.generations} generation credits recorded.\n`,
   );
 }
 
@@ -498,12 +524,16 @@ if (
 export {
   ANIMATION_ENDPOINT,
   ANIMATION_IMAGE_SIZE,
+  addUsage,
   animationRequestBody,
   assertKethraCitizenCard,
+  MAX_GENERATIONS_PER_ANIMATION_CALL,
+  MAX_GENERATIONS_PER_STILL_ASSET,
+  MAX_TOTAL_GENERATIONS,
   main,
   PIXFLUX_ENDPOINT,
   PIXFLUX_MODEL,
-  parseUsage,
+  parseUsageMeter,
   pixfluxRequestBody,
   pngDimensions,
   pngFromBase64,

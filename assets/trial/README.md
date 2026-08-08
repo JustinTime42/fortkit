@@ -38,9 +38,17 @@ so its four frames carry that master as a PixelLab reference rather than being
 independent text-to-image generations. The trial passes only if the Overseer
 accepts a usable candidate in every category and can identify the walk-cycle
 frames as the same actor. The provenance manifest records each generated
-asset's request identity, prompt, seed, parameters, timestamp, returned USD
-cost, source reference hash (where applicable), and PNG SHA-256 so it can be
-regenerated and checked.
+asset's request identity, prompt, seed, parameters, timestamp, returned cost
+meter (`{ "meter": "usd" | "generations", "amount": number }`), source
+reference hash (where applicable), and PNG SHA-256 so it can be regenerated and
+checked. PixelLab can bill this account in USD or generation credits; credit
+pricing depends on the account's plan, so the manifest never invents a USD
+conversion.
+
+The runner caps USD spend at $15 and generation credits at 30 across the full
+trial. A still request may consume at most 2 generation credits, while the
+four-frame animation request may consume at most 8; unexpected or over-cap
+usage responses stop the run before another request begins.
 
 PixelLab's animation endpoint requires a 64×64 output, while Bartizan's current
 walk-sprite contract is 32×64. The runner therefore requests 64×64 animation
