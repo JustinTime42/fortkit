@@ -14,6 +14,11 @@ if [ "$#" -lt 2 ]; then
 fi
 
 category="$1"; detail="$2"; shift 2
+if [[ "$category" == -* ]]; then
+  echo "emit.sh: category must not begin with '-'" >&2
+  usage
+  exit 2
+fi
 if [[ "$detail" == -* ]]; then
   echo "emit.sh: detail must not begin with '-'" >&2
   usage
@@ -21,6 +26,8 @@ if [[ "$detail" == -* ]]; then
 fi
 
 actor="harness"; seat=""; target=""; payload="null"; ts="$(date -Is)"
+# Keep getopts' conventional `--` terminator: the residual-argument check below
+# still rejects anything after it, so it cannot bypass this positional contract.
 while getopts "a:s:t:p:T:" opt; do
   case $opt in
     a) actor="$OPTARG";; s) seat="$OPTARG";; t) target="$OPTARG";;
