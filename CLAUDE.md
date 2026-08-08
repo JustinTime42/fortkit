@@ -82,6 +82,7 @@ _Add a brief overview of your project architecture_
 
 - **Browser page scripts live in checked TypeScript modules** (e.g. `src/world-page.ts`), type-checked and linted like all other source, and composed into their HTML shell at server startup via `stripTypeScriptTypes` at an HTML comment marker. No bundler, no runtime dependencies. Decided on fortkit-b18 (Overseer, 2026-08-07); the colony renderer and any future page follow the same pattern. Hardening items for the pattern are tracked in fortkit-12z.
 - **The viewer product is named Bartizan** (Overseer decision, fortkit-zgp, 2026-08-07). CLI command names are unchanged.
+- **Gate labels are the single "waiting on the Overseer" signal** (Overseer adoption, 2026-08-08, from the fortkit-fci.1 proposal): any open bead waiting at a human gate carries the exact label `gate-1`, `gate-2`, or `gate-3`; the Mayor applies it at filing. A standing decision carried in a handoff becomes a bead with a gate label. `bd human` stays unused until its flags reach the export. The Keep renders these labels; its prose-cue heuristic is transitional and retires.
 
 ## Manyhalls — the fortkit Fort
 
