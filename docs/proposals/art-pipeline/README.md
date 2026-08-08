@@ -117,6 +117,14 @@ Overseer accepts at least one usable candidate in each category *and* can tell
 the citizen's four frames are the same actor. Otherwise try the managed
 fallback before paying for Scenario training.
 
+### Trial-run provenance costs
+
+The bounded PixelLab runner writes a schema-version-4 provenance manifest.
+Each asset's `requestCost` records the complete meter returned for the API call.
+For a four-frame animation, a divisible USD `cost` is the per-frame share;
+generation credits are instead recorded as `amortizedCost` so a fractional
+allocation is never presented as a separately charged generation.
+
 ## Consistency rules
 
 1. A Mayor-authored per-fort style guide owns palette, camera angle, outline

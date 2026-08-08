@@ -48,6 +48,15 @@ export function addUsage(
   cost: UsageMeter,
 ): { usd: number; generations: number };
 
+export function perFrameProvenance(
+  cost: UsageMeter,
+  frameCount: number,
+): {
+  cost?: UsageMeter;
+  amortizedCost?: UsageMeter;
+  requestCost: UsageMeter;
+};
+
 export function assertKethraCitizenCard<T extends { id: string }>(
   cardDefinitions: T[],
 ): T;
@@ -94,3 +103,4 @@ export const ANIMATION_IMAGE_SIZE: { width: number; height: number };
 export const MAX_GENERATIONS_PER_STILL_ASSET: number;
 export const MAX_GENERATIONS_PER_ANIMATION_CALL: number;
 export const MAX_TOTAL_GENERATIONS: number;
+export const MANIFEST_SCHEMA_VERSION: number;
