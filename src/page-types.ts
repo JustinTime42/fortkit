@@ -108,6 +108,8 @@ export type ColonyProjection = {
   benches: ColonyBench[];
   dungeon: Bead[];
   citizens: ColonyCitizen[];
+  /** Civilization offices are present only in the capital, which has civ/seats/. */
+  civicSeats?: ColonyCitizen[] | null;
   unassigned: Bead[];
   announcements: string[];
   gaps: string[];

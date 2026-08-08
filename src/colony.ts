@@ -14,6 +14,7 @@ export type ColonySources = {
   worktrees: string[] | null;
   events: EventDetail[] | null;
   citizens: ColonyCitizen[] | null;
+  civicSeats?: ColonyCitizen[] | null;
 };
 
 const workTypes: ColonyWorkType[] = ["implementation", "spec", "test", "infra"];
@@ -227,6 +228,14 @@ export function projectColony(sources: ColonySources): ColonyProjection {
       .map((worktree) => benchFor(worktree, sessions)),
     dungeon: beads.filter((bead) => bead.issueType === "bug"),
     citizens: citizensWithActivity((sources.citizens ?? []).slice(), sessions),
+    ...(sources.civicSeats === undefined
+      ? {}
+      : {
+          civicSeats:
+            sources.civicSeats === null
+              ? null
+              : citizensWithActivity(sources.civicSeats.slice(), sessions),
+        }),
     // Never disappear a bead merely because its workflow label is absent or unknown.
     unassigned: beads.filter((bead) => !hasWorkType(bead)),
     announcements: (sources.events ?? [])

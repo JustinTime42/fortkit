@@ -70,14 +70,17 @@ export async function readColony(
     readGitState(fort.path),
     readLatestHandoffs(handoffDirectory),
   ]);
-  const citizens = await readCitizens(
-    join(fort.path, "fort", "seats"),
-    handoffs,
-  );
+  const [citizens, civicSeats] = await Promise.all([
+    readCitizens(join(fort.path, "fort", "seats"), handoffs),
+    // A civ roster exists only at the civilization's capital. Reuse the
+    // settlement-roster parser so holder pronouns stay file-derived.
+    readCitizens(join(fort.path, "civ", "seats"), null),
+  ]);
   return projectColony({
     beads: beads?.beads ?? null,
     worktrees: git.worktrees,
     events: events?.events ?? null,
     citizens,
+    civicSeats,
   });
 }

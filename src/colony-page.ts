@@ -17,7 +17,8 @@ type DetailTarget =
   | { kind: "bead"; id: string }
   | { kind: "citizen"; seat: string }
   | { kind: "queue"; name: string; beads: string[] }
-  | { kind: "petitions"; name: string; beads: string[] };
+  | { kind: "petitions"; name: string; beads: string[] }
+  | { kind: "palace"; name: string; seats: string[] };
 type Building = BuildingLayout & {
   details: string[];
   targetAt: (index: number) => DetailTarget | undefined;
@@ -248,6 +249,41 @@ function homeBuilding(
   };
 }
 
+function palaceBuilding(
+  civicSeats: ColonyProjection["civicSeats"],
+): Building | undefined {
+  if (!Array.isArray(civicSeats)) return undefined;
+  return {
+    ...buildingLayouts.palace,
+    details:
+      civicSeats.length === 0
+        ? ["civic roster present, no benches"]
+        : civicSeats.map(
+            (citizen) =>
+              `${citizen.seat} bench — ${citizen.session === null ? "unlit" : `lit: ${citizen.name}`}`,
+          ),
+    targetAt: (index) => {
+      const citizen = civicSeats[index];
+      return citizen === undefined
+        ? undefined
+        : {
+            kind: "palace",
+            name: buildingLayouts.palace.name,
+            seats: [citizen.seat],
+          };
+    },
+    ...(civicSeats.length > detailRows
+      ? {
+          summaryTarget: {
+            kind: "palace" as const,
+            name: buildingLayouts.palace.name,
+            seats: civicSeats.map((citizen) => citizen.seat),
+          },
+        }
+      : {}),
+  };
+}
+
 function buildings(projection: ColonyProjection): Building[] {
   const beads = projection.beads ?? [
     ...projection.unassigned,
@@ -263,6 +299,7 @@ function buildings(projection: ColonyProjection): Building[] {
   const intake = projection.intake ?? projection.unassigned;
   const jobBoard = projection.jobBoard ?? projection.unassigned;
   const depot = projection.depot ?? [];
+  const palace = palaceBuilding(projection.civicSeats);
   return [
     seatBuilding(buildingLayouts.mayor, mayor),
     {
@@ -337,6 +374,7 @@ function buildings(projection: ColonyProjection): Building[] {
       details: ["idle pursuit: walking"],
       targetAt: () => undefined,
     },
+    ...(palace === undefined ? [] : [palace]),
     ...projection.citizens.map(homeBuilding),
   ].map((building) => {
     if (building.name !== buildingLayouts.archive.name) return building;
@@ -602,6 +640,17 @@ function selectedPanel(
       .map(
         (petition) =>
           `<li>${esc(itemLabel(petition.bead))} — ${esc(petitionAge(petition.bead.createdAt))} — ${esc(petition.signals.join(", "))}</li>`,
+      )
+      .join("")}</ul>`;
+  }
+  if (target?.kind === "palace") {
+    const civicSeats = (projection.civicSeats ?? []).filter((citizen) =>
+      target.seats.includes(citizen.seat),
+    );
+    return `<h2>${esc(target.name)}</h2><p>${civicSeats.length} civic bench(es)</p><ul>${civicSeats
+      .map(
+        (citizen) =>
+          `<li>${esc(citizen.seat)} — ${esc(citizen.name)} (${esc(citizen.pronouns)}) — ${citizen.session === null ? "unlit" : `lit: ${esc(citizen.session.actor)}`}</li>`,
       )
       .join("")}</ul>`;
   }

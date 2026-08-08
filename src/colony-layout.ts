@@ -83,6 +83,12 @@ export const buildingLayouts = {
     name: "WALLS",
     color: "#5c554a",
   },
+  palace: {
+    x: buildingStartX + buildingStride,
+    y: 545,
+    name: "THE PALACE",
+    color: "#67506e",
+  },
 } as const satisfies Record<string, BuildingLayout>;
 
 export type FixedAmbientPlace = keyof Pick<
