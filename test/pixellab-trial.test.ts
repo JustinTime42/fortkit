@@ -8,9 +8,13 @@ import { describe, expect, test } from "vitest";
 
 import {
   ANIMATION_ENDPOINT,
+  ANIMATION_IMAGE_SIZE,
   animationRequestBody,
   main,
-  PIXEN_ENDPOINT,
+  PIXFLUX_ENDPOINT,
+  parseUsage,
+  pixfluxRequestBody,
+  pngDimensions,
   pngFromBase64,
   request,
   requestTimeoutMilliseconds,
@@ -54,6 +58,34 @@ async function runRefusal(arguments_: string[]) {
 }
 
 describe("PixelLab bounded trial", () => {
+  test("pins the verified PixelLab endpoints", () => {
+    expect(PIXFLUX_ENDPOINT).toBe(
+      "https://api.pixellab.ai/v1/generate-image-pixflux",
+    );
+    expect(ANIMATION_ENDPOINT).toBe(
+      "https://api.pixellab.ai/v1/animate-with-text",
+    );
+  });
+
+  test("sends the verified Pixflux body to PixelLab", () => {
+    expect(
+      pixfluxRequestBody({
+        prompt: "a forge",
+        negativeConstraints: "no words",
+        imageSize: { width: 128, height: 128 },
+        seed: 41001,
+        params: { no_background: true, outline: "selective outline" },
+      }),
+    ).toEqual({
+      description: "a forge",
+      negative_description: "no words",
+      image_size: { width: 128, height: 128 },
+      seed: 41001,
+      no_background: true,
+      outline: "selective outline",
+    });
+  });
+
   test("allows an integer seed offset to reroll every card", () => {
     expect(seedOffsetFromEnvironment("17")).toBe(17);
     expect(withSeedOffset({ seed: 41001 }, 17).seed).toBe(41018);
@@ -62,7 +94,7 @@ describe("PixelLab bounded trial", () => {
     );
   });
 
-  test("sends the recorded animation fields to PixelLab", () => {
+  test("sends the verified 64x64 animation body to PixelLab", () => {
     const body = animationRequestBody(Buffer.from("master"), {
       prompt: "Kethra walks east",
       negativeConstraints: "no words",
@@ -80,7 +112,26 @@ describe("PixelLab bounded trial", () => {
       description: "Kethra walks east",
       negative_description: "no words",
       n_frames: 4,
+      image_size: { width: 64, height: 64 },
+      reference_image_size: { width: 32, height: 64 },
     });
+    expect(ANIMATION_IMAGE_SIZE).toEqual({ width: 64, height: 64 });
+  });
+
+  test("accepts the verified usage.usd shape", () => {
+    expect(parseUsage({ usd: 0.0084 }, 0.02)).toBe(0.0084);
+    expect(() => parseUsage({ type: "usd" }, 0.02)).toThrow(
+      "PixelLab returned unexpected pricing.",
+    );
+  });
+
+  test("reads actual dimensions from generated PNG data", () => {
+    const png = Buffer.alloc(24);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png);
+    png.write("IHDR", 12, "ascii");
+    png.writeUInt32BE(64, 16);
+    png.writeUInt32BE(64, 20);
+    expect(pngDimensions(png)).toEqual({ width: 64, height: 64 });
   });
 
   test("records one truthful animation prompt and a separate frame index", () => {
@@ -96,11 +147,13 @@ describe("PixelLab bounded trial", () => {
   });
 
   test("uses endpoint-specific defaults and permits one environment override", () => {
-    expect(requestTimeoutMilliseconds(PIXEN_ENDPOINT, undefined)).toBe(30_000);
+    expect(requestTimeoutMilliseconds(PIXFLUX_ENDPOINT, undefined)).toBe(
+      30_000,
+    );
     expect(requestTimeoutMilliseconds(ANIMATION_ENDPOINT, undefined)).toBe(
       120_000,
     );
-    expect(requestTimeoutMilliseconds(PIXEN_ENDPOINT, "12345")).toBe(12345);
+    expect(requestTimeoutMilliseconds(PIXFLUX_ENDPOINT, "12345")).toBe(12345);
   });
 
   test("names the timed-out endpoint", async () => {
@@ -114,13 +167,37 @@ describe("PixelLab bounded trial", () => {
         signal.addEventListener("abort", () => reject(signal.reason));
       });
     try {
-      await expect(request(PIXEN_ENDPOINT, {}, "not-a-key")).rejects.toThrow(
-        `PixelLab request to ${PIXEN_ENDPOINT} timed out after 1ms.`,
+      await expect(request(PIXFLUX_ENDPOINT, {}, "not-a-key")).rejects.toThrow(
+        `PixelLab request to ${PIXFLUX_ENDPOINT} timed out after 1ms.`,
       );
     } finally {
       globalThis.fetch = originalFetch;
       if (originalTimeout === undefined) delete process.env.PIXELLAB_TIMEOUT_MS;
       else process.env.PIXELLAB_TIMEOUT_MS = originalTimeout;
+    }
+  });
+
+  test("prints sanitized 4xx response detail", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            detail:
+              "image_size must be 64x64; token=secret-key; Bearer other-secret",
+          }),
+          { status: 422, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+    try {
+      await expect(
+        request(ANIMATION_ENDPOINT, {}, "secret-key"),
+      ).rejects.toThrow("image_size must be 64x64");
+      await expect(
+        request(ANIMATION_ENDPOINT, {}, "secret-key"),
+      ).rejects.not.toThrow("secret-key");
+    } finally {
+      globalThis.fetch = originalFetch;
     }
   });
 
