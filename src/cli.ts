@@ -53,10 +53,11 @@ if (command === "ambient") {
     try {
       const fortName = await currentFortName();
       const seed = fortSeedFor(fortName);
+      const citizenId = ambientIdFor(citizen);
       const output =
         sinceIndex === -1
-          ? formatAmbientDay(ambientIdFor(citizen), timestamp, seed)
-          : formatAmbientSince(ambientIdFor(citizen), timestamp, seed);
+          ? formatAmbientDay(citizenId, timestamp, seed)
+          : formatAmbientSince(citizenId, timestamp, seed);
       console.log(output);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
