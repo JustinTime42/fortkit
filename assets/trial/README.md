@@ -3,7 +3,8 @@
 Run from the repository root using an Overseer-held key:
 
 ```sh
-PIXELLAB_API_KEY='your PixelLab API key' node scripts/run-pixellab-trial.mjs
+read -rs PIXELLAB_API_KEY && export PIXELLAB_API_KEY
+node scripts/run-pixellab-trial.mjs
 ```
 
 The script creates twelve PNGs and `provenance-manifest.json` here: Forge and
@@ -17,7 +18,11 @@ Evaluate the generated contact set at 100%, 400%, and actual canvas scale:
 - Silhouette legibility at 1×, including the citizen's readable walk poses.
 - Palette coherence across the full set.
 
-The trial passes only if the Overseer accepts a usable candidate in every
-category and can identify the walk-cycle frames as the same actor. The
-provenance manifest records each generated asset's request identity, prompt,
-seed, parameters, timestamp, and returned USD cost so it can be regenerated.
+The walk cycle is generated in one request from the saved Kethra citizen master,
+so its four frames carry that master as a PixelLab reference rather than being
+independent text-to-image generations. The trial passes only if the Overseer
+accepts a usable candidate in every category and can identify the walk-cycle
+frames as the same actor. The provenance manifest records each generated
+asset's request identity, prompt, seed, parameters, timestamp, returned USD
+cost, source reference hash (where applicable), and PNG SHA-256 so it can be
+regenerated and checked.

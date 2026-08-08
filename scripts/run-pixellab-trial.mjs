@@ -2,22 +2,26 @@
 /**
  * Run the bounded PixelLab visual trial.
  *
- * Exact invocation (run from the repository root):
- *   PIXELLAB_API_KEY='your PixelLab API key' node scripts/run-pixellab-trial.mjs
+ * Exact invocation (run from the repository root, without putting the key in
+ * shell history):
+ *   read -rs PIXELLAB_API_KEY && export PIXELLAB_API_KEY
+ *   node scripts/run-pixellab-trial.mjs
  *
  * The key is read only from PIXELLAB_API_KEY. This program accepts no command
  * line arguments, never writes or logs the key, and does not put it in prompts,
  * manifest entries, or request bodies.
  */
 
+import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const OUTPUT_DIRECTORY = resolve("assets/trial");
-const ENDPOINT = "https://api.pixellab.ai/v2/create-image-pixen";
-const MODEL = "pixen";
+const PIXEN_ENDPOINT = "https://api.pixellab.ai/v2/create-image-pixen";
+const ANIMATION_ENDPOINT = "https://api.pixellab.ai/v2/animate-with-text";
+const PIXEN_MODEL = "pixen";
+const ANIMATION_MODEL = "animate-with-text";
 const MAX_SPEND_USD = 15;
-// A deliberately conservative preflight estimate: twelve requests at $0.02.
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
 const NEGATIVE_CONSTRAINTS =
   "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people";
@@ -56,38 +60,6 @@ const cards = [
     "dwarven tavern master, apron and tankard, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
   ),
   card(
-    "kethra-walk-east-01",
-    "walk-frame",
-    32,
-    64,
-    43001,
-    "dwarven forge master Kethra walking east, frame 1 of 4, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
-  ),
-  card(
-    "kethra-walk-east-02",
-    "walk-frame",
-    32,
-    64,
-    43002,
-    "dwarven forge master Kethra walking east, frame 2 of 4, leather apron and hammer, same actor as frame 1, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
-  ),
-  card(
-    "kethra-walk-east-03",
-    "walk-frame",
-    32,
-    64,
-    43003,
-    "dwarven forge master Kethra walking east, frame 3 of 4, leather apron and hammer, same actor as frame 1, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
-  ),
-  card(
-    "kethra-walk-east-04",
-    "walk-frame",
-    32,
-    64,
-    43004,
-    "dwarven forge master Kethra walking east, frame 4 of 4, leather apron and hammer, same actor as frame 1, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
-  ),
-  card(
     "implementation-crate",
     "item-glyph",
     32,
@@ -121,6 +93,13 @@ const cards = [
   ),
 ];
 
+const walkCards = [
+  walkCard("kethra-walk-east-01", 43001, "frame 1 of 4"),
+  walkCard("kethra-walk-east-02", 43001, "frame 2 of 4"),
+  walkCard("kethra-walk-east-03", 43001, "frame 3 of 4"),
+  walkCard("kethra-walk-east-04", 43001, "frame 4 of 4"),
+];
+
 function card(id, kind, width, height, seed, subject) {
   return {
     id,
@@ -134,33 +113,49 @@ function card(id, kind, width, height, seed, subject) {
   };
 }
 
+function walkCard(id, seed, frame) {
+  return {
+    id,
+    kind: "walk-frame",
+    filename: `${id}.png`,
+    prompt: `dwarven forge master Kethra walking east, ${frame}, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame`,
+    negativeConstraints: NEGATIVE_CONSTRAINTS,
+    seed,
+    imageSize: { width: 32, height: 64 },
+    params: {
+      no_background: true,
+      view: "side",
+      direction: "east",
+      action: "walk",
+      n_frames: 4,
+    },
+  };
+}
+
 function rejectArguments() {
-  if (process.argv.length !== 2) {
+  if (process.argv.length !== 2)
     throw new Error(
       "This script accepts no arguments. Set PIXELLAB_API_KEY in the environment.",
     );
-  }
 }
 
 function readApiKey() {
   const key = process.env.PIXELLAB_API_KEY;
   delete process.env.PIXELLAB_API_KEY;
-  if (!key) {
-    throw new Error("PIXELLAB_API_KEY must be set in the environment.");
-  }
+  if (!key) throw new Error("PIXELLAB_API_KEY must be set in the environment.");
   return key;
 }
 
 function assertPreflightBudget() {
-  const estimatedTotal = cards.length * MAX_ESTIMATED_COST_PER_ASSET_USD;
-  if (estimatedTotal > MAX_SPEND_USD) {
+  const estimatedTotal =
+    (cards.length + walkCards.length) * MAX_ESTIMATED_COST_PER_ASSET_USD;
+  if (estimatedTotal > MAX_SPEND_USD)
     throw new Error(
       "Refusing to run: estimated trial spend exceeds the $15 cap.",
     );
-  }
 }
 
-function requestBody(cardDefinition) {
+function pixenRequestBody(cardDefinition) {
   return {
     description: cardDefinition.prompt,
     negative_description: cardDefinition.negativeConstraints,
@@ -171,45 +166,134 @@ function requestBody(cardDefinition) {
   };
 }
 
-function parseResponse(response) {
-  const usage = response.usage;
+function animationRequestBody(masterPng) {
+  return {
+    reference_image: {
+      type: "base64",
+      base64: `data:image/png;base64,${masterPng.toString("base64")}`,
+    },
+    reference_image_size: { width: 32, height: 64 },
+    action: "walk",
+    image_size: { width: 32, height: 64 },
+    seed: walkCards[0].seed,
+    no_background: true,
+    view: "side",
+    direction: "east",
+  };
+}
+
+function parseUsage(usage, maximumUsd) {
   if (
     usage?.type !== "usd" ||
     typeof usage.usd !== "number" ||
     !Number.isFinite(usage.usd) ||
     usage.usd < 0 ||
-    usage.usd > MAX_ESTIMATED_COST_PER_ASSET_USD
+    usage.usd > maximumUsd
   ) {
     throw new Error(
       "Refusing to continue: PixelLab returned unexpected pricing.",
     );
   }
-  const encoded = response.image?.base64;
-  if (
-    typeof encoded !== "string" ||
-    !encoded.startsWith("data:image/png;base64,")
-  ) {
-    throw new Error("PixelLab returned no PNG image.");
-  }
-  return {
-    costUsd: usage.usd,
-    png: Buffer.from(encoded.slice(encoded.indexOf(",") + 1), "base64"),
-  };
+  return usage.usd;
 }
 
-async function generate(cardDefinition, apiKey) {
-  const response = await fetch(ENDPOINT, {
+function pngFromBase64(encoded) {
+  if (typeof encoded !== "string")
+    throw new Error("PixelLab returned no PNG image.");
+  const base64 = encoded.startsWith("data:image/png;base64,")
+    ? encoded.slice(encoded.indexOf(",") + 1)
+    : encoded;
+  const png = Buffer.from(base64, "base64");
+  if (png.length === 0) throw new Error("PixelLab returned no PNG image.");
+  return png;
+}
+
+function confirmedModel(response) {
+  return typeof response.model === "string"
+    ? response.model
+    : typeof response.metadata?.model === "string"
+      ? response.metadata.model
+      : null;
+}
+
+async function request(endpoint, body, apiKey) {
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(requestBody(cardDefinition)),
+    body: JSON.stringify(body),
   });
-  if (!response.ok) {
+  if (!response.ok)
     throw new Error(`PixelLab request failed with HTTP ${response.status}.`);
-  }
-  return parseResponse(await response.json());
+  return response.json();
+}
+
+async function generatePixen(cardDefinition, apiKey) {
+  const response = await request(
+    PIXEN_ENDPOINT,
+    pixenRequestBody(cardDefinition),
+    apiKey,
+  );
+  return {
+    png: pngFromBase64(response.image?.base64),
+    costUsd: parseUsage(response.usage, MAX_ESTIMATED_COST_PER_ASSET_USD),
+    confirmedModel: confirmedModel(response),
+  };
+}
+
+async function generateWalkCycle(masterPng, apiKey) {
+  const response = await request(
+    ANIMATION_ENDPOINT,
+    animationRequestBody(masterPng),
+    apiKey,
+  );
+  if (
+    !Array.isArray(response.images) ||
+    response.images.length !== walkCards.length
+  )
+    throw new Error("PixelLab returned an unexpected walk-cycle frame count.");
+  return {
+    pngs: response.images.map((image) => pngFromBase64(image?.base64)),
+    costUsd: parseUsage(
+      response.usage,
+      walkCards.length * MAX_ESTIMATED_COST_PER_ASSET_USD,
+    ),
+    confirmedModel: confirmedModel(response),
+  };
+}
+
+function sha256(png) {
+  return createHash("sha256").update(png).digest("hex");
+}
+
+async function writeAsset(manifest, cardDefinition, result, provenance) {
+  await writeFile(
+    resolve(OUTPUT_DIRECTORY, cardDefinition.filename),
+    result.png,
+  );
+  manifest.assets.push({
+    id: cardDefinition.id,
+    kind: cardDefinition.kind,
+    file: cardDefinition.filename,
+    requestedModel: provenance.requestedModel,
+    confirmedModel: provenance.confirmedModel,
+    endpoint: provenance.endpoint,
+    prompt: cardDefinition.prompt,
+    negativeConstraints: cardDefinition.negativeConstraints,
+    seed: cardDefinition.seed,
+    params: { imageSize: cardDefinition.imageSize, ...cardDefinition.params },
+    generatedAt: new Date().toISOString(),
+    costUsd: provenance.costUsd,
+    requestCostUsd: provenance.requestCostUsd,
+    sha256: sha256(result.png),
+    reference: provenance.reference,
+  });
+  await writeFile(
+    resolve(OUTPUT_DIRECTORY, "provenance-manifest.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
 }
 
 async function main() {
@@ -218,43 +302,53 @@ async function main() {
   const apiKey = readApiKey();
   await mkdir(OUTPUT_DIRECTORY, { recursive: true });
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     provider: "PixelLab",
     spendCapUsd: MAX_SPEND_USD,
     assets: [],
   };
   let spentUsd = 0;
-
+  let kethraMaster;
   for (const cardDefinition of cards) {
-    const result = await generate(cardDefinition, apiKey);
+    const result = await generatePixen(cardDefinition, apiKey);
     spentUsd += result.costUsd;
-    if (spentUsd > MAX_SPEND_USD) {
+    if (spentUsd > MAX_SPEND_USD)
       throw new Error(
         "Refusing to continue: actual trial spend exceeds the $15 cap.",
       );
-    }
-    const outputPath = resolve(OUTPUT_DIRECTORY, cardDefinition.filename);
-    await writeFile(outputPath, result.png);
-    manifest.assets.push({
-      id: cardDefinition.id,
-      kind: cardDefinition.kind,
-      file: cardDefinition.filename,
-      model: MODEL,
-      endpoint: ENDPOINT,
-      prompt: cardDefinition.prompt,
-      negativeConstraints: cardDefinition.negativeConstraints,
-      seed: cardDefinition.seed,
-      params: { imageSize: cardDefinition.imageSize, ...cardDefinition.params },
-      generatedAt: new Date().toISOString(),
+    await writeAsset(manifest, cardDefinition, result, {
+      requestedModel: PIXEN_MODEL,
+      confirmedModel: result.confirmedModel,
+      endpoint: PIXEN_ENDPOINT,
       costUsd: result.costUsd,
+      requestCostUsd: result.costUsd,
+      reference: null,
     });
-    await writeFile(
-      resolve(OUTPUT_DIRECTORY, "provenance-manifest.json"),
-      `${JSON.stringify(manifest, null, 2)}\n`,
-    );
+    if (cardDefinition.id === "kethra-citizen") kethraMaster = result.png;
     process.stdout.write(
-      `Generated ${cardDefinition.id} (${manifest.assets.length}/${cards.length}).\n`,
+      `Generated ${cardDefinition.id} (${manifest.assets.length}/12).\n`,
+    );
+  }
+  const cycle = await generateWalkCycle(kethraMaster, apiKey);
+  spentUsd += cycle.costUsd;
+  if (spentUsd > MAX_SPEND_USD)
+    throw new Error(
+      "Refusing to continue: actual trial spend exceeds the $15 cap.",
+    );
+  const masterHash = sha256(kethraMaster);
+  for (let index = 0; index < walkCards.length; index += 1) {
+    const result = { png: cycle.pngs[index] };
+    await writeAsset(manifest, walkCards[index], result, {
+      requestedModel: ANIMATION_MODEL,
+      confirmedModel: cycle.confirmedModel,
+      endpoint: ANIMATION_ENDPOINT,
+      costUsd: cycle.costUsd / walkCards.length,
+      requestCostUsd: cycle.costUsd,
+      reference: { file: "kethra-citizen.png", sha256: masterHash },
+    });
+    process.stdout.write(
+      `Generated ${walkCards[index].id} (${manifest.assets.length}/12).\n`,
     );
   }
   process.stdout.write(
@@ -263,7 +357,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  process.stderr.write(`${error.message}\n`, () => {
-    process.exitCode = 1;
-  });
+  process.exitCode = 1;
+  console.error(error.message);
 });
