@@ -2,6 +2,7 @@
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import {
+  ambientIdFor,
   formatAmbientDay,
   formatAmbientSince,
   fortSeedFor,
@@ -54,8 +55,8 @@ if (command === "ambient") {
       const seed = fortSeedFor(fortName);
       const output =
         sinceIndex === -1
-          ? formatAmbientDay(citizen, timestamp, seed)
-          : formatAmbientSince(citizen, timestamp, seed);
+          ? formatAmbientDay(ambientIdFor(citizen), timestamp, seed)
+          : formatAmbientSince(ambientIdFor(citizen), timestamp, seed);
       console.log(output);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

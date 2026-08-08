@@ -94,6 +94,11 @@ export function fortSeedFor(fortName: string): number {
   return hash(fortName);
 }
 
+/** Return the stable ambient identity for a citizen name or CLI argument. */
+export function ambientIdFor(citizen: string): string {
+  return citizen.toLowerCase();
+}
+
 /**
  * Return a citizen's off-duty state at an instant.
  *
