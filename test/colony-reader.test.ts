@@ -92,6 +92,7 @@ describe("colony reader", () => {
             seat: "Forge",
             personality: "Builds durable lenses",
             currentBead: "fortkit-test",
+            session: expect.objectContaining({ beadId: "fortkit-test" }),
             lastHandoff: "Handoff: Forge 2026-08-07T12:00:00Z",
           },
         ],
@@ -177,6 +178,7 @@ describe("colony reader", () => {
           seat: "Forge",
           personality: null,
           currentBead: null,
+          session: null,
           lastHandoff: null,
         },
       ]);

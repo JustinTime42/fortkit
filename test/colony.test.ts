@@ -71,6 +71,7 @@ describe("colony projection", () => {
           seat: "forge",
           personality: "Builds instruments.",
           currentBead: null,
+          session: null,
           lastHandoff: "Forge handoff",
         },
       ],

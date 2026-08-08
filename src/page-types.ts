@@ -61,6 +61,8 @@ export type ColonyCitizen = {
   seat: string;
   personality: string | null;
   currentBead: string | null;
+  /** A live session always overrides ambient placement, even without a bead target. */
+  session: ColonySession | null;
   lastHandoff: string | null;
 };
 

@@ -10,8 +10,9 @@ export type AmbientActivity =
   | "fishing"
   | "tinkering";
 
-/** Places present in the colony's fixed layout; homes are one per citizen. */
-export type AmbientPlace = `home:${string}` | "tavern" | "archive" | "walls";
+import type { AmbientPlace } from "./colony-layout.ts";
+
+export type { AmbientPlace } from "./colony-layout.ts";
 
 export type AmbientState = {
   activity: AmbientActivity;
@@ -28,8 +29,8 @@ const maximumWindowMilliseconds = 31 * dayMilliseconds;
 const pursuits: ReadonlyArray<readonly [AmbientActivity, AmbientPlace]> = [
   ["reading", "archive"],
   ["walking", "walls"],
-  ["tinkering", "archive"],
-  ["fishing", "walls"],
+  ["tinkering", "tinker-bench"],
+  ["fishing", "river"],
 ];
 
 function hash(value: string): number {

@@ -43,6 +43,7 @@ async function readCitizens(
                 seat,
                 personality: personality ?? null,
                 currentBead: null,
+                session: null,
                 lastHandoff: handoffs?.get(seat.toLocaleLowerCase()) ?? null,
               };
         } catch {
