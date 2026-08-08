@@ -119,10 +119,15 @@ describe("PixelLab bounded trial", () => {
     expect(ANIMATION_IMAGE_SIZE).toEqual({ width: 64, height: 64 });
   });
 
-  test("accepts the verified usage.usd shape", () => {
+  test("accepts numeric and numeric-string usage.usd under the cost ceiling", () => {
     expect(parseUsage({ usd: 0.0084 }, 0.02)).toBe(0.0084);
-    expect(() => parseUsage({ type: "usd" }, 0.02)).toThrow(
-      "PixelLab returned unexpected pricing.",
+    expect(parseUsage({ usd: "0.0084" }, 0.02)).toBe(0.0084);
+  });
+
+  test("rejects unexpected usage with the received object in the error", () => {
+    const usage = { type: "usd" };
+    expect(() => parseUsage(usage, 0.02)).toThrow(
+      `PixelLab returned unexpected pricing: ${JSON.stringify(usage)}`,
     );
   });
 
