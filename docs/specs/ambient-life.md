@@ -26,7 +26,7 @@ Deterministic, total, and pure. Consequences, each load-bearing:
 - **No persistence.** The renderer evaluates it client-side; the CLI evaluates it anywhere; two viewers always agree.
 - **The replay scrubber gets ambient life for free**: evaluate at any past timestamp.
 - **"What has Kethra been up to" is derivable**, not logged: integrate the function over the window since her last session.
-- `fortSeed` = hash(fort name), so settlements differ; `citizenId` = actor id (`fortkit-be4`'s explicit id when it lands; display name until then).
+- `fortSeed` = hash(fort name), so settlements differ; `citizenId` = actor id (`fortkit-be4`'s explicit id when it lands; until then, the first whitespace-delimited token of the roster display name, lowercased — page and CLI both derive it through `ambientIdFor`).
 
 ## The schedule (v1 shape, tuned during implementation)
 
