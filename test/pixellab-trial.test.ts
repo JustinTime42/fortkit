@@ -11,12 +11,14 @@ import {
   ANIMATION_IMAGE_SIZE,
   addUsage,
   animationRequestBody,
+  MANIFEST_SCHEMA_VERSION,
   MAX_GENERATIONS_PER_ANIMATION_CALL,
   MAX_GENERATIONS_PER_STILL_ASSET,
   MAX_TOTAL_GENERATIONS,
   main,
   PIXFLUX_ENDPOINT,
   parseUsageMeter,
+  perFrameProvenance,
   pixfluxRequestBody,
   pngDimensions,
   pngFromBase64,
@@ -70,6 +72,10 @@ describe("PixelLab bounded trial", () => {
     expect(ANIMATION_ENDPOINT).toBe(
       "https://api.pixellab.ai/v1/animate-with-text",
     );
+  });
+
+  test("uses schema version 4 for the current provenance shape", () => {
+    expect(MANIFEST_SCHEMA_VERSION).toBe(4);
   });
 
   test("sends the verified Pixflux body to PixelLab", () => {
@@ -137,22 +143,43 @@ describe("PixelLab bounded trial", () => {
     ).toEqual({ meter: "generations", amount: 2 });
   });
 
-  test("rejects unknown and over-cap per-meter usage with the received object", () => {
+  test("distinguishes unexpected pricing shapes from amounts over caps", () => {
     const usage = { type: "usd" };
     expect(() => parseUsageMeter(usage, 0.02, 2)).toThrow(
-      `PixelLab returned unexpected pricing: ${JSON.stringify(usage)}`,
+      `PixelLab returned an unexpected pricing shape: ${JSON.stringify(usage)}`,
     );
     const overStillCap = { type: "generations", generations: 3 };
     expect(() => parseUsageMeter(overStillCap, 0.02, 2)).toThrow(
-      JSON.stringify(overStillCap),
+      `generations amount over the per-request cap (3 > 2): ${JSON.stringify(overStillCap)}`,
     );
     const overAnimationCap = { type: "generations", generations: 9 };
     expect(() => parseUsageMeter(overAnimationCap, 0.08, 8)).toThrow(
-      JSON.stringify(overAnimationCap),
+      `generations amount over the per-request cap (9 > 8): ${JSON.stringify(overAnimationCap)}`,
     );
     expect(MAX_GENERATIONS_PER_STILL_ASSET).toBe(2);
     expect(MAX_GENERATIONS_PER_ANIMATION_CALL).toBe(8);
     expect(MAX_TOTAL_GENERATIONS).toBe(30);
+  });
+
+  test("uses the usage discriminator before an accompanying USD field", () => {
+    expect(
+      parseUsageMeter(
+        { type: "generations", generations: 2, usd: "999" },
+        0.02,
+        2,
+      ),
+    ).toEqual({ meter: "generations", amount: 2 });
+    expect(() =>
+      parseUsageMeter({ type: "unknown", usd: "0.0084" }, 0.02, 2),
+    ).toThrow("unexpected pricing shape");
+  });
+
+  test("rejects invalid generation quantities before recording them", () => {
+    for (const generations of [0, -1, 1.5]) {
+      expect(() =>
+        parseUsageMeter({ type: "generations", generations }, 0.02, 2),
+      ).toThrow("unexpected pricing shape");
+    }
   });
 
   test("caps the total generation-credit meter separately from USD", () => {
@@ -168,6 +195,20 @@ describe("PixelLab bounded trial", () => {
         { meter: "generations", amount: 2 },
       ),
     ).toThrow("actual trial generation credits exceed the 30 cap");
+    expect(() =>
+      addUsage({ usd: 14.99, generations: 0 }, { meter: "usd", amount: 0.02 }),
+    ).toThrow("actual trial spend exceeds the $15 cap");
+  });
+
+  test("only calls a per-frame generation share amortized", () => {
+    expect(perFrameProvenance({ meter: "usd", amount: 0.02 }, 4)).toEqual({
+      cost: { meter: "usd", amount: 0.005 },
+      requestCost: { meter: "usd", amount: 0.02 },
+    });
+    expect(perFrameProvenance({ meter: "generations", amount: 1 }, 4)).toEqual({
+      amortizedCost: { meter: "generations", amount: 0.25 },
+      requestCost: { meter: "generations", amount: 1 },
+    });
   });
 
   test("reads actual dimensions from generated PNG data", () => {
@@ -200,7 +241,7 @@ describe("PixelLab bounded trial", () => {
         { png },
         {
           requestedImageSize: { width: 64, height: 64 },
-          cost: { meter: "generations", amount: 1 },
+          amortizedCost: { meter: "generations", amount: 0.25 },
           requestCost: { meter: "generations", amount: 4 },
         },
         directory,
@@ -208,7 +249,8 @@ describe("PixelLab bounded trial", () => {
       expect(manifest.assets[0]).toMatchObject({
         requestedImageSize: { width: 64, height: 64 },
         actualImageSize: { width: 64, height: 64 },
-        cost: { meter: "generations", amount: 1 },
+        amortizedCost: { meter: "generations", amount: 0.25 },
+        requestCost: { meter: "generations", amount: 4 },
       });
     } finally {
       await rm(directory, { recursive: true, force: true });

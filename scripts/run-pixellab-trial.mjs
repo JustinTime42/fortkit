@@ -30,6 +30,7 @@ const MAX_TOTAL_GENERATIONS = 30;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
 const MAX_GENERATIONS_PER_STILL_ASSET = 2;
 const MAX_GENERATIONS_PER_ANIMATION_CALL = 8;
+const MANIFEST_SCHEMA_VERSION = 4;
 const PIXFLUX_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
 const PNG_SIGNATURE = Buffer.from([
@@ -242,24 +243,44 @@ function animationRequestBody(masterPng, walkCardDefinition) {
 }
 
 function parseUsageMeter(usage, maximumUsd, maximumGenerations) {
+  if (usage?.type === "generations") {
+    if (!Number.isSafeInteger(usage.generations) || usage.generations <= 0)
+      throw new Error(
+        `Refusing to continue: PixelLab returned an unexpected pricing shape: ${JSON.stringify(usage)}`,
+      );
+    if (usage.generations > maximumGenerations)
+      throw new Error(
+        `Refusing to continue: PixelLab returned a generations amount over the per-request cap (${usage.generations} > ${maximumGenerations}): ${JSON.stringify(usage)}`,
+      );
+    return { meter: "generations", amount: usage.generations };
+  }
+
+  if (usage?.type !== undefined)
+    throw new Error(
+      `Refusing to continue: PixelLab returned an unexpected pricing shape: ${JSON.stringify(usage)}`,
+    );
+
   const usd =
     typeof usage?.usd === "number" || typeof usage?.usd === "string"
       ? Number(usage.usd)
       : Number.NaN;
-  if (Number.isFinite(usd) && usd >= 0 && usd <= maximumUsd)
-    return { meter: "usd", amount: usd };
+  if (!Number.isFinite(usd) || usd < 0)
+    throw new Error(
+      `Refusing to continue: PixelLab returned an unexpected pricing shape: ${JSON.stringify(usage)}`,
+    );
+  if (usd > maximumUsd)
+    throw new Error(
+      `Refusing to continue: PixelLab returned a USD amount over the per-request cap (${usd} > ${maximumUsd}): ${JSON.stringify(usage)}`,
+    );
+  return { meter: "usd", amount: usd };
+}
 
-  if (
-    usage?.type === "generations" &&
-    Number.isSafeInteger(usage.generations) &&
-    usage.generations > 0 &&
-    usage.generations <= maximumGenerations
-  )
-    return { meter: "generations", amount: usage.generations };
-
-  throw new Error(
-    `Refusing to continue: PixelLab returned unexpected pricing: ${JSON.stringify(usage)}`,
-  );
+function perFrameProvenance(cost, frameCount) {
+  const share = { meter: cost.meter, amount: cost.amount / frameCount };
+  return {
+    ...(cost.meter === "usd" ? { cost: share } : { amortizedCost: share }),
+    requestCost: cost,
+  };
 }
 
 function addUsage(totals, cost) {
@@ -430,6 +451,7 @@ async function writeAsset(
     actualImageSize,
     generatedAt: new Date().toISOString(),
     cost: provenance.cost,
+    amortizedCost: provenance.amortizedCost,
     requestCost: provenance.requestCost,
     sha256: sha256(result.png),
     reference: provenance.reference,
@@ -447,7 +469,7 @@ async function main(cardDefinitions = cards) {
   const seedOffset = seedOffsetFromEnvironment();
   await mkdir(OUTPUT_DIRECTORY, { recursive: true });
   const manifest = {
-    schemaVersion: 3,
+    schemaVersion: MANIFEST_SCHEMA_VERSION,
     generatedAt: new Date().toISOString(),
     provider: "PixelLab",
     spendCapUsd: MAX_SPEND_USD,
@@ -494,11 +516,7 @@ async function main(cardDefinitions = cards) {
       requestedModel: ANIMATION_MODEL,
       confirmedModel: cycle.confirmedModel,
       endpoint: ANIMATION_ENDPOINT,
-      cost: {
-        meter: cycle.cost.meter,
-        amount: cycle.cost.amount / walkCards.length,
-      },
-      requestCost: cycle.cost,
+      ...perFrameProvenance(cycle.cost, walkCards.length),
       requestedImageSize: ANIMATION_IMAGE_SIZE,
       reference: { file: "kethra-citizen.png", sha256: masterHash },
     });
@@ -527,6 +545,7 @@ export {
   addUsage,
   animationRequestBody,
   assertKethraCitizenCard,
+  MANIFEST_SCHEMA_VERSION,
   MAX_GENERATIONS_PER_ANIMATION_CALL,
   MAX_GENERATIONS_PER_STILL_ASSET,
   MAX_TOTAL_GENERATIONS,
@@ -534,6 +553,7 @@ export {
   PIXFLUX_ENDPOINT,
   PIXFLUX_MODEL,
   parseUsageMeter,
+  perFrameProvenance,
   pixfluxRequestBody,
   pngDimensions,
   pngFromBase64,
