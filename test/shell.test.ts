@@ -1,5 +1,12 @@
-import { execFile } from "node:child_process";
-import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { execFile, execFileSync } from "node:child_process";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +21,22 @@ const emitCopies = [
   ["template", join(repoRoot, "templates/fort/scripts/emit.sh")],
 ] as const;
 const roots: string[] = [];
+const foundingSmokeSkipReason =
+  "founding smoke requires bd+jq; CI install step tracked separately";
+const foundingSmokeToolsAvailable = (() => {
+  try {
+    execFileSync(
+      "sh",
+      ["-c", "command -v bd >/dev/null && command -v jq >/dev/null"],
+      {
+        stdio: "ignore",
+      },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+})();
 
 async function createFort() {
   const root = await mkdtemp(join(tmpdir(), "fortkit-shell-"));
@@ -126,4 +149,43 @@ describe.each(emitCopies)("%s emit.sh", (_copyName, emitPath) => {
       })}\n`,
     );
   });
+});
+
+describe("fort-init", () => {
+  test.skipIf(!foundingSmokeToolsAvailable)(
+    `founds a fort whose shipped verifier passes (${foundingSmokeSkipReason})`,
+    async () => {
+      const root = await createFort();
+      const registryDirectory = join(root, "registry");
+      await mkdir(registryDirectory);
+      await writeFile(
+        join(root, "package.json"),
+        JSON.stringify({
+          private: true,
+          scripts: {
+            typecheck: "node -e 'process.exit(0)'",
+            lint: "node -e 'process.exit(0)'",
+            test: "node -e 'process.exit(0)'",
+          },
+        }),
+      );
+
+      await execFileAsync(
+        "bash",
+        [join(repoRoot, "bin/fort-init"), root, "smoke", "Smoke test fort."],
+        {
+          env: {
+            ...process.env,
+            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
+          },
+        },
+      );
+
+      await expect(
+        execFileAsync("bash", ["fort/scripts/verify.sh", "--no-emit"], {
+          cwd: root,
+        }),
+      ).resolves.toMatchObject({ stdout: expect.any(String) });
+    },
+  );
 });
