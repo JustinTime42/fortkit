@@ -122,6 +122,68 @@ describe("world view", () => {
     expect(new Set(rendered).size).toBe(rendered.length);
   });
 
+  test("places every roster citizen once, with live sessions overriding ambient life", () => {
+    const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+    expect(script).toBeDefined();
+    if (script === undefined) throw new Error("colony page script is missing");
+    const context = createContext({
+      fetch: () => new Promise(() => undefined),
+      setInterval: () => undefined,
+      location: { search: "?fort=Manyhalls" },
+      document: { querySelector: () => null },
+      URLSearchParams,
+    });
+    new Script(script).runInContext(context);
+    const placements = (
+      context.citizenPlacements as (
+        projection: unknown,
+        timestamp: number,
+        seed: number,
+      ) => Array<{
+        citizen: { name: string };
+        x: number;
+        y: number;
+        activity: string;
+        idle: boolean;
+      }>
+    )(
+      {
+        citizens: [
+          {
+            name: "Emrith",
+            pronouns: "she/her",
+            seat: "mayor",
+            currentBead: "fortkit-live",
+            session: { beadId: "fortkit-live" },
+          },
+          {
+            name: "Kethra",
+            pronouns: "she/her",
+            seat: "forge",
+            currentBead: null,
+            session: null,
+          },
+        ],
+      },
+      Date.parse("2026-08-07T12:30:00Z"),
+      123,
+    );
+    expect(placements).toHaveLength(2);
+    expect(new Set(placements.map(({ citizen }) => citizen.name)).size).toBe(2);
+    expect(placements[0]).toMatchObject({
+      activity: "working on fortkit-live",
+      idle: false,
+      x: 52,
+      y: 130,
+    });
+    expect(placements[1]).toMatchObject({
+      activity: "lunching",
+      idle: true,
+      x: 86,
+      y: 470,
+    });
+  });
+
   test("names the colony tab and header after its selected fort", () => {
     const script = colonyPage.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     expect(script).toBeDefined();
@@ -159,7 +221,7 @@ describe("world view", () => {
         left: 0,
         top: 0,
         width: 1100,
-        height: 620,
+        height: canvas.height,
       }),
       getContext: () => ({
         fillStyle: "",
@@ -309,14 +371,15 @@ describe("world view", () => {
         seat: "forge",
         personality: null,
         currentBead: null,
+        session: null,
         lastHandoff: null,
       })),
       unassigned: [],
       announcements: [],
       gaps: [],
     });
-    expect(canvas.height).toBe(530 + Math.ceil(7 / 6) * 48 + 20);
-    expect(fillText).toHaveBeenCalledWith("Citizen 7 (they/them)", 48, 598);
+    expect(canvas.height).toBe(545 + Math.ceil(7 / 4) * 145 + 20);
+    expect(fillText).toHaveBeenCalledWith("Citizen 7'S HOME", 530, 714);
   });
 
   test("renders colony projection fixtures as named fort buildings and a ticker", () => {
@@ -371,6 +434,7 @@ describe("world view", () => {
           seat: "forge",
           personality: null,
           currentBead: null,
+          session: null,
           lastHandoff: null,
         },
       ],
@@ -388,7 +452,9 @@ describe("world view", () => {
         "TRADE DEPOT",
         "THE ARCHIVE",
         "THE DUNGEON",
-        "Kethra (she/her)",
+        "THE TAVERN",
+        "Kethra'S HOME",
+        "Kethra",
       ]),
     );
     expect(ticker.textContent).toBe("The gate is watched");
@@ -631,6 +697,7 @@ describe("world view", () => {
       seat: `Seat ${index}`,
       personality: null,
       currentBead: null,
+      session: {},
       lastHandoff: null,
     }));
     (context.render as (projection: unknown) => void)({
@@ -666,7 +733,7 @@ describe("world view", () => {
 
     canvas.onclick({ clientX: 775, clientY: 81 + 4 * 13 });
     expect(detailPanel.innerHTML).toContain("THE GATE");
-    canvas.onclick({ clientX: 48, clientY: 578 });
+    canvas.onclick({ clientX: 576, clientY: 770 });
     expect(detailPanel.innerHTML).toContain("Seat: Seat 6");
     canvas.onclick({ clientX: 241, clientY: 276 });
     expect(detailPanel.innerHTML).toBe("");
@@ -686,7 +753,7 @@ describe("world view", () => {
         left: 0,
         top: 0,
         width: 1100,
-        height: 620,
+        height: canvas.height,
       }),
       getContext: () => ({
         fillStyle: "",

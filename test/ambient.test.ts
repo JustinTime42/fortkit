@@ -102,6 +102,17 @@ describe("ambient life", () => {
     expect(new Set(states).size).toBeGreaterThan(1);
   });
 
+  test("maps idle pursuits to their dedicated layout destinations", () => {
+    const states = Array.from({ length: 256 }, (_, index) =>
+      activity(`citizen-${index}`, "2026-08-07T09:30:00Z", seed),
+    );
+    expect(states).toContainEqual({ activity: "fishing", place: "river" });
+    expect(states).toContainEqual({
+      activity: "tinkering",
+      place: "tinker-bench",
+    });
+  });
+
   test("rejects malformed timestamps instead of inventing a 1970 schedule", () => {
     expect(() => activity("kethra", "not-a-time", seed)).toThrow(RangeError);
     expect(() => formatAmbientDay("kethra", Number.NaN, seed)).toThrow(

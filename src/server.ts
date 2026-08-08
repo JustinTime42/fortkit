@@ -25,6 +25,14 @@ const colonyPageScript = readFileSync(
   new URL("./colony-page.ts", import.meta.url),
   "utf8",
 );
+const colonyLayoutScript = readFileSync(
+  new URL("./colony-layout.ts", import.meta.url),
+  "utf8",
+);
+const ambientScript = readFileSync(
+  new URL("./ambient.ts", import.meta.url),
+  "utf8",
+);
 
 const worldPageScriptMarker = "<!-- world-page-script -->";
 const colonyPageScriptMarker = "<!-- colony-page-script -->";
@@ -43,12 +51,28 @@ function composePage(
   return template.replace(marker, () => scriptTag);
 }
 
+function stripModuleSyntax(source: string): string {
+  return stripTypeScriptTypes(source, { mode: "strip" })
+    .replace(/import[\s\S]*?from\s+["'][^"']+["'];\n?/g, "")
+    .replace(/^export\s+/gm, "");
+}
+
 export function composeWorldPage(template: string, script: string): string {
   return composePage(template, script, worldPageScriptMarker, "World");
 }
 
 export function composeColonyPage(template: string, script: string): string {
-  return composePage(template, script, colonyPageScriptMarker, "Colony");
+  // The page is served as one classic script. Inline its browser-clean shared
+  // modules before the entry point, removing only their ESM syntax.
+  const shared = [colonyLayoutScript, ambientScript]
+    .map(stripModuleSyntax)
+    .join("\n");
+  return composePage(
+    template,
+    `${shared}\n${stripModuleSyntax(script)}`,
+    colonyPageScriptMarker,
+    "Colony",
+  );
 }
 
 export const worldPage = composeWorldPage(worldPageTemplate, worldPageScript);

@@ -1,3 +1,12 @@
+import { activity, fortSeedFor } from "./ambient.ts";
+import type { BuildingLayout } from "./colony-layout.ts";
+import {
+  buildingHeight,
+  buildingLayouts,
+  buildingWidth,
+  homeLayout,
+  homeStartY,
+} from "./colony-layout.ts";
 import type { ColonyProjection } from "./page-types.ts";
 
 // This checked ES module is composed into a classic browser script. Keep its
@@ -8,13 +17,6 @@ type DetailTarget =
   | { kind: "bead"; id: string }
   | { kind: "citizen"; seat: string }
   | { kind: "queue"; name: string; beads: string[] };
-type BuildingLayout = {
-  x: number;
-  y: number;
-  name: string;
-  color: string;
-  rendered?: boolean;
-};
 type Building = BuildingLayout & {
   details: string[];
   targetAt: (index: number) => DetailTarget | undefined;
@@ -22,88 +24,12 @@ type Building = BuildingLayout & {
 };
 type VisibleDetail = { text: string; index: number | undefined };
 
-const buildingWidth = 210;
-const buildingHeight = 112;
 const detailBaselineOffset = 46;
 const detailRowHeight = 13;
 const detailRows = 5;
 const detailHitStartOffset = detailBaselineOffset - 10;
 const detailTextLength = 27;
-const citizenColumns = 6;
-const citizenStartX = 48;
-const citizenColumnWidth = 170;
-const citizenStartY = 530;
-const citizenRowHeight = 48;
 const citizenGlyphAscent = 15;
-const buildingStartX = 30;
-const buildingStride = 245;
-
-// The living fort's stable geometry. Places reserved for later districts stay
-// in this one table so ambient destinations cannot drift from the map.
-const buildingLayouts = {
-  mayor: {
-    x: buildingStartX,
-    y: 35,
-    name: "MAYOR'S OFFICE",
-    color: "#6b4e2d",
-  },
-  forge: {
-    x: buildingStartX + buildingStride,
-    y: 35,
-    name: "THE FORGE",
-    color: "#48643d",
-  },
-  warden: {
-    x: buildingStartX + buildingStride * 2,
-    y: 35,
-    name: "WARDEN'S TOWER",
-    color: "#3b5a63",
-  },
-  gate: {
-    x: buildingStartX + buildingStride * 3,
-    y: 35,
-    name: "THE GATE",
-    color: "#6b4e2d",
-  },
-  jobBoard: {
-    x: buildingStartX,
-    y: 205,
-    name: "THE JOB BOARD",
-    color: "#785a2d",
-  },
-  depot: {
-    x: buildingStartX + buildingStride,
-    y: 205,
-    name: "TRADE DEPOT",
-    color: "#785a2d",
-  },
-  dungeon: {
-    x: buildingStartX + buildingStride * 2,
-    y: 205,
-    name: "THE DUNGEON",
-    color: "#70404b",
-  },
-  archive: {
-    x: buildingStartX + buildingStride * 3,
-    y: 205,
-    name: "THE ARCHIVE",
-    color: "#3b5a63",
-  },
-  tavern: {
-    x: buildingStartX,
-    y: 375,
-    name: "THE TAVERN",
-    color: "#6c4c2a",
-    rendered: false,
-  },
-  walls: {
-    x: buildingStartX + buildingStride,
-    y: 375,
-    name: "WALLS",
-    color: "#5c554a",
-    rendered: false,
-  },
-} as const satisfies Record<string, BuildingLayout>;
 
 let selectedTarget: DetailTarget | undefined;
 let previousPanelMarkup: string | undefined;
@@ -297,6 +223,22 @@ function seatBuilding(
   };
 }
 
+function homeBuilding(
+  citizen: ColonyProjection["citizens"][number],
+  index: number,
+): Building {
+  const layout = homeLayout(index);
+  return {
+    ...layout,
+    name: `${citizen.name}'S HOME`,
+    details: [
+      "bed",
+      citizen.session == null ? "at rest when off duty" : "away at seat",
+    ],
+    targetAt: () => ({ kind: "citizen", seat: citizen.seat }),
+  };
+}
+
 function buildings(projection: ColonyProjection): Building[] {
   const beads = projection.beads ?? [
     ...projection.unassigned,
@@ -335,6 +277,27 @@ function buildings(projection: ColonyProjection): Building[] {
         .map((citizen) => `${citizen.seat}: ${citizen.lastHandoff}`),
       targetAt: () => undefined,
     },
+    {
+      ...buildingLayouts.tavern,
+      details: ["meals · socializing · celebration"],
+      targetAt: () => undefined,
+    },
+    {
+      ...buildingLayouts.river,
+      details: ["fishing"],
+      targetAt: () => undefined,
+    },
+    {
+      ...buildingLayouts["tinker-bench"],
+      details: ["idle pursuit: tinkering"],
+      targetAt: () => undefined,
+    },
+    {
+      ...buildingLayouts.walls,
+      details: ["idle pursuit: walking"],
+      targetAt: () => undefined,
+    },
+    ...projection.citizens.map(homeBuilding),
   ].map((building) => {
     if (building.name !== buildingLayouts.archive.name) return building;
     const archiveCitizens = projection.citizens.filter(
@@ -354,6 +317,83 @@ function buildings(projection: ColonyProjection): Building[] {
       },
     };
   });
+}
+
+type CitizenPlacement = {
+  citizen: ColonyProjection["citizens"][number];
+  x: number;
+  y: number;
+  activity: string;
+  idle: boolean;
+};
+
+function occupantPosition(layout: BuildingLayout, index: number) {
+  return {
+    x: layout.x + 22 + (index % 5) * 34,
+    y: layout.y + buildingHeight - 17 - (Math.floor(index / 5) % 2) * 24,
+  };
+}
+
+function placementFor(
+  citizen: ColonyProjection["citizens"][number],
+  index: number,
+  timestamp: number,
+  fortSeed: number,
+): CitizenPlacement {
+  if (citizen.session != null) {
+    const seat = citizen.seat.toLocaleLowerCase();
+    const layout = buildingLayouts[seat as keyof typeof buildingLayouts];
+    // An unknown roster seat still has an honest, stable home fallback rather
+    // than vanishing; known seats are always rendered at their fixed building.
+    return {
+      citizen,
+      ...occupantPosition(layout ?? homeLayout(index), index),
+      activity:
+        citizen.currentBead === null
+          ? "in live session"
+          : `working on ${citizen.currentBead}`,
+      idle: false,
+    };
+  }
+  const state = activity(citizen.name.toLocaleLowerCase(), timestamp, fortSeed);
+  const layout = state.place.startsWith("home:")
+    ? homeLayout(index)
+    : buildingLayouts[
+        state.place as Exclude<typeof state.place, `home:${string}`>
+      ];
+  return {
+    citizen,
+    ...occupantPosition(layout, index),
+    activity: state.activity,
+    idle: true,
+  };
+}
+
+function citizenPlacements(
+  projection: ColonyProjection,
+  timestamp: number = Date.now(),
+  fortSeed: number = fortSeedFor(
+    new URLSearchParams(location.search).get("fort") ?? "unknown fort",
+  ),
+): CitizenPlacement[] {
+  return projection.citizens.map((citizen, index) =>
+    placementFor(citizen, index, timestamp, fortSeed),
+  );
+}
+
+function drawCitizen(
+  context: CanvasRenderingContext2D,
+  placement: CitizenPlacement,
+  style: ActorStyle,
+) {
+  context.save?.();
+  context.globalAlpha = placement.idle ? 0.58 : 1;
+  context.fillStyle = style.color;
+  context.font = "bold 24px monospace";
+  context.fillText(style.glyph, placement.x, placement.y);
+  context.font = "11px system-ui";
+  context.fillText(placement.citizen.name, placement.x - 8, placement.y + 15);
+  context.restore?.();
 }
 
 function detailIndex(
@@ -451,11 +491,8 @@ function render(projection: ColonyProjection) {
   )
     return;
   canvas.height = Math.max(
-    620,
-    citizenStartY +
-      Math.ceil(projection.citizens.length / citizenColumns) *
-        citizenRowHeight +
-      20,
+    720,
+    homeStartY + Math.ceil(projection.citizens.length / 4) * 145 + 20,
   );
   context.fillStyle = "#17140f";
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -464,18 +501,11 @@ function render(projection: ColonyProjection) {
     building(context, layout);
   });
   const styles = actorStyles(projection);
-  projection.citizens.forEach((citizen, index) => {
-    const style = styles.get(citizen.name);
+  const placements = citizenPlacements(projection);
+  placements.forEach((placement) => {
+    const style = styles.get(placement.citizen.name);
     if (style === undefined) return;
-    const column = index % citizenColumns;
-    const row = Math.floor(index / citizenColumns);
-    const x = citizenStartX + column * citizenColumnWidth;
-    const y = citizenStartY + row * citizenRowHeight;
-    context.fillStyle = style.color;
-    context.font = "bold 24px monospace";
-    context.fillText(style.glyph, x, y);
-    context.font = "12px system-ui";
-    context.fillText(`${citizen.name} (${citizen.pronouns})`, x, y + 20);
+    drawCitizen(context, placement, style);
   });
   // The ticker is visual-only: polling must not repeatedly announce it.
   ticker.textContent =
@@ -493,22 +523,13 @@ function render(projection: ColonyProjection) {
     const x = ((event.clientX - bounds.left) * canvas.width) / bounds.width;
     const y = ((event.clientY - bounds.top) * canvas.height) / bounds.height;
     const buildingTarget = detailTargetAt(x, y, buildingList);
-    const citizenRow = Math.floor(
-      (y - (citizenStartY - citizenGlyphAscent)) / citizenRowHeight,
-    );
-    const citizenColumn = Math.floor((x - citizenStartX) / citizenColumnWidth);
-    const citizen =
-      citizenRow >= 0 &&
-      citizenColumn >= 0 &&
-      citizenColumn < citizenColumns &&
-      y >= citizenStartY - citizenGlyphAscent &&
-      y <
-        citizenStartY -
-          citizenGlyphAscent +
-          Math.ceil(projection.citizens.length / citizenColumns) *
-            citizenRowHeight
-        ? projection.citizens[citizenRow * citizenColumns + citizenColumn]
-        : undefined;
+    const citizen = placements.find(
+      (placement) =>
+        x >= placement.x - citizenGlyphAscent &&
+        x <= placement.x + 46 &&
+        y >= placement.y - citizenGlyphAscent &&
+        y <= placement.y + 18,
+    )?.citizen;
     selectedTarget =
       citizen === undefined
         ? buildingTarget

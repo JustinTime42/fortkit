@@ -113,7 +113,11 @@ function citizensWithActivity(
         candidate.seat?.toLocaleLowerCase() ===
         citizen.seat.toLocaleLowerCase(),
     );
-    return { ...citizen, currentBead: session?.beadId ?? null };
+    return {
+      ...citizen,
+      currentBead: session?.beadId ?? null,
+      session: session ?? null,
+    };
   });
 }
 
