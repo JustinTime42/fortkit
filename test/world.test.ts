@@ -497,6 +497,26 @@ describe("world view", () => {
       benches: [],
       dungeon: [{ id: "bug", title: "Repair" }],
       petitions: [],
+      civicSeats: [
+        {
+          name: "Halric",
+          pronouns: "he/him",
+          seat: "Herald",
+          personality: null,
+          currentBead: null,
+          session: { actor: "Halric" },
+          lastHandoff: null,
+        },
+        {
+          name: "Calder",
+          pronouns: "they/them",
+          seat: "Regent",
+          personality: null,
+          currentBead: null,
+          session: null,
+          lastHandoff: null,
+        },
+      ],
       citizens: [
         {
           name: "Kethra",
@@ -523,6 +543,7 @@ describe("world view", () => {
         "THE ARCHIVE",
         "THE DUNGEON",
         "THE KEEP",
+        "THE PALACE",
         "THE TAVERN",
         "Kethra'S HOME",
         "Kethra",
@@ -551,6 +572,40 @@ describe("world view", () => {
     );
     expect(keepPanel).toContain("Approve the charter");
     expect(keepPanel).toMatch(/\d+ days/);
+    const palacePanel = selectedPanel(
+      {
+        civicSeats: [
+          {
+            name: "Halric",
+            pronouns: "he/him",
+            seat: "Herald",
+            session: { actor: "Halric" },
+          },
+        ],
+      },
+      { kind: "palace", name: "THE PALACE", seats: ["Herald"] },
+    );
+    expect(palacePanel).toContain("Halric");
+    expect(palacePanel).toContain("he/him");
+    expect(palacePanel).toContain("lit: Halric");
+    const nonCapitalBuildings = (
+      context.buildings as (projection: unknown) => Array<{ name: string }>
+    )({
+      beads: [],
+      intake: [],
+      jobBoard: [],
+      depot: [],
+      benches: [],
+      petitions: [],
+      dungeon: [],
+      citizens: [],
+      civicSeats: null,
+      unassigned: [],
+      workshops: [],
+    });
+    expect(nonCapitalBuildings.map(({ name }) => name)).not.toContain(
+      "THE PALACE",
+    );
   });
 
   test("composes literal dollar sequences without replacement expansion", () => {

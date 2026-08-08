@@ -99,6 +99,7 @@ describe("colony reader", () => {
         gaps: ["bd human flags unavailable from issues.jsonl"],
       });
       expect(await readColony(registry, fort)).toBeNull();
+      expect(projection?.civicSeats).toBeNull();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -181,6 +182,58 @@ describe("colony reader", () => {
           session: null,
           lastHandoff: null,
         },
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reads the capital civic roster with file-derived pronouns and this fort's sessions", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-colony-reader-"));
+    try {
+      const fort = await createFort(root, "capital");
+      await mkdir(join(fort, "civ", "seats"), { recursive: true });
+      await Promise.all([
+        writeFile(
+          join(fort, "fort", "events", "events-2026-08-07.jsonl"),
+          JSON.stringify({
+            ts: "2026-08-07T12:00:00Z",
+            actor: "Halric Neverpulled",
+            seat: "herald",
+            category: "session.start",
+            target: null,
+            detail: "Civic session in the capital",
+            payload: null,
+          }),
+        ),
+      ]);
+      await Promise.all([
+        writeFile(
+          join(fort, "civ", "seats", "herald.md"),
+          "# Seat: Herald\n\n**Held by: Halric Neverpulled** (he/him)\n",
+        ),
+        writeFile(
+          join(fort, "civ", "seats", "regent.md"),
+          "# Seat: Regent\n\n**Held by: Calder Sealbroken** (they/them)\n",
+        ),
+      ]);
+      const registry = await writeRegistry(root, [
+        { fort_name: "Capital", repo: fort },
+      ]);
+
+      expect((await readColony(registry, "Capital"))?.civicSeats).toEqual([
+        expect.objectContaining({
+          seat: "Herald",
+          name: "Halric Neverpulled",
+          pronouns: "he/him",
+          session: expect.objectContaining({ actor: "Halric Neverpulled" }),
+        }),
+        expect.objectContaining({
+          seat: "Regent",
+          name: "Calder Sealbroken",
+          pronouns: "they/them",
+          session: null,
+        }),
       ]);
     } finally {
       await rm(root, { recursive: true, force: true });
