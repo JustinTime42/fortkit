@@ -9,10 +9,14 @@ import { describe, expect, test, vi } from "vitest";
 import {
   ANIMATION_ENDPOINT,
   ANIMATION_IMAGE_SIZE,
+  addUsage,
   animationRequestBody,
+  MAX_GENERATIONS_PER_ANIMATION_CALL,
+  MAX_GENERATIONS_PER_STILL_ASSET,
+  MAX_TOTAL_GENERATIONS,
   main,
   PIXFLUX_ENDPOINT,
-  parseUsage,
+  parseUsageMeter,
   pixfluxRequestBody,
   pngDimensions,
   pngFromBase64,
@@ -119,16 +123,51 @@ describe("PixelLab bounded trial", () => {
     expect(ANIMATION_IMAGE_SIZE).toEqual({ width: 64, height: 64 });
   });
 
-  test("accepts numeric and numeric-string usage.usd under the cost ceiling", () => {
-    expect(parseUsage({ usd: 0.0084 }, 0.02)).toBe(0.0084);
-    expect(parseUsage({ usd: "0.0084" }, 0.02)).toBe(0.0084);
+  test("accepts USD and generation usage meters under their per-request caps", () => {
+    expect(parseUsageMeter({ usd: 0.0084 }, 0.02, 2)).toEqual({
+      meter: "usd",
+      amount: 0.0084,
+    });
+    expect(parseUsageMeter({ usd: "0.0084" }, 0.02, 2)).toEqual({
+      meter: "usd",
+      amount: 0.0084,
+    });
+    expect(
+      parseUsageMeter({ type: "generations", generations: 2 }, 0.02, 2),
+    ).toEqual({ meter: "generations", amount: 2 });
   });
 
-  test("rejects unexpected usage with the received object in the error", () => {
+  test("rejects unknown and over-cap per-meter usage with the received object", () => {
     const usage = { type: "usd" };
-    expect(() => parseUsage(usage, 0.02)).toThrow(
+    expect(() => parseUsageMeter(usage, 0.02, 2)).toThrow(
       `PixelLab returned unexpected pricing: ${JSON.stringify(usage)}`,
     );
+    const overStillCap = { type: "generations", generations: 3 };
+    expect(() => parseUsageMeter(overStillCap, 0.02, 2)).toThrow(
+      JSON.stringify(overStillCap),
+    );
+    const overAnimationCap = { type: "generations", generations: 9 };
+    expect(() => parseUsageMeter(overAnimationCap, 0.08, 8)).toThrow(
+      JSON.stringify(overAnimationCap),
+    );
+    expect(MAX_GENERATIONS_PER_STILL_ASSET).toBe(2);
+    expect(MAX_GENERATIONS_PER_ANIMATION_CALL).toBe(8);
+    expect(MAX_TOTAL_GENERATIONS).toBe(30);
+  });
+
+  test("caps the total generation-credit meter separately from USD", () => {
+    expect(
+      addUsage(
+        { usd: 14.99, generations: 29 },
+        { meter: "generations", amount: 1 },
+      ),
+    ).toEqual({ usd: 14.99, generations: 30 });
+    expect(() =>
+      addUsage(
+        { usd: 0, generations: 29 },
+        { meter: "generations", amount: 2 },
+      ),
+    ).toThrow("actual trial generation credits exceed the 30 cap");
   });
 
   test("reads actual dimensions from generated PNG data", () => {
@@ -159,12 +198,17 @@ describe("PixelLab bounded trial", () => {
           params: {},
         },
         { png },
-        { requestedImageSize: { width: 64, height: 64 } },
+        {
+          requestedImageSize: { width: 64, height: 64 },
+          cost: { meter: "generations", amount: 1 },
+          requestCost: { meter: "generations", amount: 4 },
+        },
         directory,
       );
       expect(manifest.assets[0]).toMatchObject({
         requestedImageSize: { width: 64, height: 64 },
         actualImageSize: { width: 64, height: 64 },
+        cost: { meter: "generations", amount: 1 },
       });
     } finally {
       await rm(directory, { recursive: true, force: true });

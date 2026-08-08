@@ -31,7 +31,22 @@ export function pixfluxRequestBody(cardDefinition: {
 
 export function pngFromBase64(encoded: string): Buffer;
 export function pngDimensions(png: Buffer): { width: number; height: number };
-export function parseUsage(usage: unknown, maximumUsd: number): number;
+
+export type UsageMeter = {
+  meter: "usd" | "generations";
+  amount: number;
+};
+
+export function parseUsageMeter(
+  usage: unknown,
+  maximumUsd: number,
+  maximumGenerations: number,
+): UsageMeter;
+
+export function addUsage(
+  totals: { usd: number; generations: number },
+  cost: UsageMeter,
+): { usd: number; generations: number };
 
 export function assertKethraCitizenCard<T extends { id: string }>(
   cardDefinitions: T[],
@@ -76,3 +91,6 @@ export const PIXFLUX_ENDPOINT: string;
 export const PIXFLUX_MODEL: string;
 export const ANIMATION_ENDPOINT: string;
 export const ANIMATION_IMAGE_SIZE: { width: number; height: number };
+export const MAX_GENERATIONS_PER_STILL_ASSET: number;
+export const MAX_GENERATIONS_PER_ANIMATION_CALL: number;
+export const MAX_TOTAL_GENERATIONS: number;
