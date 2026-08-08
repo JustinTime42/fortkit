@@ -1,6 +1,6 @@
-import { execFile } from "node:child_process";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
 import { describe, expect, test } from "vitest";
 
@@ -12,8 +12,6 @@ import {
 } from "../src/ambient.ts";
 
 const seed = fortSeedFor("Manyhalls");
-const execFileAsync = promisify(execFile);
-
 describe("ambient life", () => {
   test("is pure and follows a contiguous sleep window across midnight", () => {
     expect(activity("kethra", "2026-08-07T22:00:00Z", seed)).toEqual(
@@ -33,16 +31,25 @@ describe("ambient life", () => {
     const ambientPath = fileURLToPath(
       new URL("../src/ambient.ts", import.meta.url),
     );
-    const { stdout } = await execFileAsync(
+    const child = spawn(
       process.execPath,
       [
         "--input-type=module",
         "--eval",
-        `import { activity } from ${JSON.stringify(ambientPath)}; const result = activity("ilva", "2026-03-08T12:30:00Z", ${seed}); if (result.activity !== "lunching" || result.place !== "tavern") process.exit(1);`,
+        `import { activity } from ${JSON.stringify(ambientPath)}; const result = activity("ilva", "2026-03-08T12:30:00Z", ${seed}); console.log(JSON.stringify(result)); process.send?.(JSON.stringify(result));`,
       ],
-      { env: { ...process.env, TZ: "Pacific/Kiritimati" } },
+      {
+        env: { ...process.env, TZ: "Pacific/Kiritimati" },
+        stdio: ["ignore", "pipe", "pipe", "ipc"],
+      },
     );
-    expect(stdout).toBe("");
+    const [message] = await once(child, "message");
+    const [code] = await once(child, "close");
+    expect(code).toBe(0);
+    expect(JSON.parse(String(message))).toEqual({
+      activity: "lunching",
+      place: "tavern",
+    });
   });
 
   test("jitters Tavern arrivals and departures around a shared core", () => {
@@ -61,6 +68,21 @@ describe("ambient life", () => {
       (citizen) => activity(citizen, "2026-08-07T11:45:00Z", seed).activity,
     );
     expect(new Set(arrivals).size).toBeGreaterThan(1);
+  });
+
+  test("samples independent hash bits for all Tavern jitter combinations", () => {
+    const combinations = new Set(
+      Array.from({ length: 256 }, (_, index) => `citizen-${index}`).map(
+        (citizen) =>
+          [
+            activity(citizen, "2026-08-07T11:45:00Z", seed).place === "tavern",
+            activity(citizen, "2026-08-07T13:00:00Z", seed).place === "tavern",
+          ].join(","),
+      ),
+    );
+    expect(combinations).toEqual(
+      new Set(["false,false", "false,true", "true,false", "true,true"]),
+    );
   });
 
   test("gives Kethra a deterministic fishing habit with retained variety", () => {
@@ -113,5 +135,23 @@ describe("ambient life", () => {
         "2026-08-07T12:20:00Z",
       ),
     ).toThrow(RangeError);
+  });
+
+  test("caps long --since windows and dates multi-day schedule lines", () => {
+    const summary = formatAmbientSince(
+      "kethra",
+      "2026-08-07T23:45:00Z",
+      seed,
+      "2026-08-08T00:15:00Z",
+    );
+    expect(summary).toContain("2026-08-07 23:45–2026-08-08 00:15");
+    expect(() =>
+      formatAmbientSince(
+        "kethra",
+        "0001-01-01T00:00:00Z",
+        seed,
+        "2026-08-07T00:00:00Z",
+      ),
+    ).toThrow("Ambient interval exceeds 31 days");
   });
 });

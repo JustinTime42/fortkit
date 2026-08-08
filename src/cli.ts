@@ -49,13 +49,19 @@ if (command === "ambient") {
     );
     process.exitCode = 2;
   } else {
-    const fortName = await currentFortName();
-    const seed = fortSeedFor(fortName);
-    console.log(
-      sinceIndex === -1
-        ? formatAmbientDay(citizen, timestamp, seed)
-        : formatAmbientSince(citizen, timestamp, seed),
-    );
+    try {
+      const fortName = await currentFortName();
+      const seed = fortSeedFor(fortName);
+      const output =
+        sinceIndex === -1
+          ? formatAmbientDay(citizen, timestamp, seed)
+          : formatAmbientSince(citizen, timestamp, seed);
+      console.log(output);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(message);
+      process.exitCode = 1;
+    }
   }
 } else if (command === "digest") {
   const sinceIndex = args.indexOf("--since");
