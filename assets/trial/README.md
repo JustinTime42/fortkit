@@ -58,3 +58,11 @@ of this asset-contract deviation in the art document.
 
 `assets/trial/` is deliberately committed: its sprites are the product of this
 bounded trial, and its manifest is their provenance record.
+
+**Manifest fields (schemaVersion 4):** each asset entry records the request
+identity, prompt, seed, params, timestamp, `requestedImageSize` and
+`actualImageSize`, PNG `sha256`, and its billing: `cost` (the returned
+`{meter, amount}`) for still assets; walk frames instead carry the full
+call's `requestCost` plus `amortizedCost` (the per-frame share) — and on a
+generation-credit-billed account a walk frame has **no `cost` key at all**,
+by design, because a quarter of a credit is not a thing the vendor charges.
