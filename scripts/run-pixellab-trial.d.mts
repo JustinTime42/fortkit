@@ -23,3 +23,28 @@ export function animationRequestBody(
 ): Record<string, unknown>;
 
 export function pngFromBase64(encoded: string): Buffer;
+
+export function assertKethraCitizenCard<T extends { id: string }>(
+  cardDefinitions: T[],
+): T;
+
+export function main(cardDefinitions?: Array<{ id: string }>): Promise<void>;
+
+export function requestTimeoutMilliseconds(
+  endpoint: string,
+  value?: string,
+): number;
+
+export function request(
+  endpoint: string,
+  body: Record<string, unknown>,
+  apiKey: string,
+): Promise<unknown>;
+
+export const walkCards: Array<{
+  id: string;
+  prompt: string;
+  frameIndex: number;
+}>;
+export const PIXEN_ENDPOINT: string;
+export const ANIMATION_ENDPOINT: string;
