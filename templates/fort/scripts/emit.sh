@@ -14,8 +14,8 @@ if [ "$#" -lt 2 ]; then
 fi
 
 category="$1"; detail="$2"; shift 2
-if [[ "$category" == -* ]]; then
-  echo "emit.sh: category must not begin with '-'" >&2
+if [[ -z "$category" || "$category" == -* ]]; then
+  echo "emit.sh: category must not be empty or begin with '-'" >&2
   usage
   exit 2
 fi
