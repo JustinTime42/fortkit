@@ -1,5 +1,12 @@
 import { execFile } from "node:child_process";
-import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -125,5 +132,41 @@ describe.each(emitCopies)("%s emit.sh", (_copyName, emitPath) => {
         payload: null,
       })}\n`,
     );
+  });
+});
+
+describe("fort-init", () => {
+  test("founds a fort whose shipped verifier passes", async () => {
+    const root = await createFort();
+    const registryDirectory = join(root, "registry");
+    await mkdir(registryDirectory);
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        private: true,
+        scripts: {
+          typecheck: "node -e 'process.exit(0)'",
+          lint: "node -e 'process.exit(0)'",
+          test: "node -e 'process.exit(0)'",
+        },
+      }),
+    );
+
+    await execFileAsync(
+      "bash",
+      [join(repoRoot, "bin/fort-init"), root, "smoke", "Smoke test fort."],
+      {
+        env: {
+          ...process.env,
+          FORT_REGISTRY: join(registryDirectory, "civilization.json"),
+        },
+      },
+    );
+
+    await expect(
+      execFileAsync("bash", ["fort/scripts/verify.sh", "--no-emit"], {
+        cwd: root,
+      }),
+    ).resolves.toMatchObject({ stdout: expect.any(String) });
   });
 });

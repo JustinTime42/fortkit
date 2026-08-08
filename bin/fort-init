@@ -61,7 +61,7 @@ done
 grep -q "fort/events/" .gitignore 2>/dev/null || printf "fort/events/*.jsonl\n.env*\n" >> .gitignore
 
 # Register in the civilization
-REG="$HOME/.claude/civilization.json"
+REG="${FORT_REGISTRY:-$HOME/.claude/civilization.json}"
 [ -f "$REG" ] || echo '{"civilization":"Justin","forts":[]}' > "$REG"
 jq --arg p "$PROJECT" --arg r "$REPO" --arg d "$DATE" \
   '.forts += [{"project":$p,"repo":$r,"founded":$d,"fort_name":null}]' "$REG" > "$REG.new" && mv "$REG.new" "$REG"
