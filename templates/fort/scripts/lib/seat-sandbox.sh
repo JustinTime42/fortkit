@@ -14,7 +14,7 @@
 # the /dev/null bind may instead yield EACCES. Probes must assert byte counts and
 # accept either outcome — never trust an "access denied" narration from a model.
 #
-# Usage:  build_mask <seat-type> <repo-root> [extra-ro-path ...]
+# Usage:  build_mask <seat-type> <repo-root> [--env-root <path>] [--mask-ssh-auth-sock] [extra-ro-path ...]
 #   seat-type: "codex" (Forge) or "claude" (Mayor, Warden)
 # Each seat type keeps its OWN runtime's credentials readable — masking them
 # breaks the launch outright — and masks the other runtime's entirely.
@@ -24,7 +24,25 @@
 build_mask() {
   local seat="$1" root="$2"; shift 2
   local CODEX_AUTH_RO=0
-  local extra_ro=("$@")
+  local mask_ssh_auth_sock=0
+  local extra_ro=() env_roots=("$root")
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --env-root)
+        [ "$#" -ge 2 ] || { echo "build_mask: --env-root requires a path" >&2; return 2; }
+        env_roots+=("$2")
+        shift 2
+        ;;
+      --mask-ssh-auth-sock)
+        mask_ssh_auth_sock=1
+        shift
+        ;;
+      *)
+        extra_ro+=("$1")
+        shift
+        ;;
+    esac
+  done
   local uid; uid="$(id -u)"
 
   local MASK_FILES=(
@@ -36,11 +54,14 @@ build_mask() {
   # belongs here too. Globbed so a fort acquiring a new .env* is covered on
   # arrival rather than after the incident.
   local f x
-  for x in "$root" "${extra_ro[@]}"; do
+  for x in "${env_roots[@]}" "${extra_ro[@]}"; do
     for f in "$x"/.env* "$x"/*/.env*; do
       [ -e "$f" ] && MASK_FILES+=("$f")
     done
   done
+  if [ "$mask_ssh_auth_sock" = "1" ]; then
+    MASK_FILES+=("${SSH_AUTH_SOCK:-/nonexistent}")
+  fi
 
   local MASK_DIRS=("$HOME/.ssh" "$HOME/.aws" "$HOME/.config/gh" "$HOME/.docker" "$HOME/.config/git")
   local RO_PATHS=("$root/.claude" "$root/fort/charter.md" "$root/fort/seats" "$root/fort/profiles")
