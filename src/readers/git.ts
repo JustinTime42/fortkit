@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { basename } from "node:path";
 import { promisify } from "node:util";
 
 import type { GitState } from "../types.ts";
@@ -43,6 +44,75 @@ export async function readGitLog(
       const instant = Date.parse(line.split("\t", 1)[0] ?? "");
       return !Number.isNaN(instant) && instant >= since && instant < until;
     });
+}
+
+export type ConstitutionDiff = {
+  ts: string;
+  hash: string;
+  subject: string;
+  files: string[];
+  beadRef: string | null;
+};
+
+// Paths whose history the digest surfaces as constitution changes
+// (fortkit-9sa, the cycle-7 prose-gate safeguard). The civ paths exist only in
+// the capital; a pathspec that matches nothing yields an empty log, not an
+// error, so every fort gets the same query.
+const CONSTITUTION_PATHS = [
+  "fort/charter.md",
+  "fort/seats",
+  "civ/covenant.md",
+  "civ/seats",
+];
+
+export async function readConstitutionDiffs(
+  path: string,
+  since: number,
+  until: number,
+): Promise<ConstitutionDiff[] | null> {
+  // Same one-second early query + half-open re-filter as readGitLog above.
+  const querySince = new Date(since - 1000).toISOString();
+  const queryUntil = new Date(until).toISOString();
+  const output = await git(path, [
+    "log",
+    "--name-only",
+    "--format=%x1e%cI%x09%h%x09%s",
+    `--since=${querySince}`,
+    `--before=${queryUntil}`,
+    "--",
+    ...CONSTITUTION_PATHS,
+  ]);
+  if (output === null) {
+    return null;
+  }
+  // Bead ids are prefixed with the repo directory name (bd's convention), so a
+  // subject with no `<repo>-<id>` token is an amendment with no bead on record.
+  const beadRefPattern = new RegExp(
+    `\\b${basename(path).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-[a-z0-9]+(?:\\.[a-z0-9]+)*\\b`,
+    "i",
+  );
+  return output.split("\x1e").flatMap((record) => {
+    const lines = record.split("\n").filter((line) => line !== "");
+    const [header, ...files] = lines;
+    if (header === undefined) {
+      return [];
+    }
+    const [ts = "", hash = "", ...subjectParts] = header.split("\t");
+    const instant = Date.parse(ts);
+    if (Number.isNaN(instant) || instant < since || instant >= until) {
+      return [];
+    }
+    const subject = subjectParts.join("\t");
+    return [
+      {
+        ts,
+        hash,
+        subject,
+        files,
+        beadRef: beadRefPattern.exec(subject)?.[0] ?? null,
+      },
+    ];
+  });
 }
 
 export async function readGitState(path: string): Promise<GitState> {

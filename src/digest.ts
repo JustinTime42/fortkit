@@ -3,7 +3,8 @@ import { join } from "node:path";
 import type { ClosedBead } from "./readers/beads.ts";
 import { readClosedBeads } from "./readers/beads.ts";
 import { readEventFeed } from "./readers/events.ts";
-import { readGitLog } from "./readers/git.ts";
+import type { ConstitutionDiff } from "./readers/git.ts";
+import { readConstitutionDiffs, readGitLog } from "./readers/git.ts";
 import type { HandoffSection } from "./readers/handoffs.ts";
 import { readHandoffSections } from "./readers/handoffs.ts";
 import { readRegistryEntries } from "./readers/registry.ts";
@@ -20,6 +21,7 @@ type DigestFort = {
   closedBeads: ClosedBead[] | null;
   handoffSections: HandoffSection[] | null;
   gitLog: string[] | null;
+  constitutionDiffs: ConstitutionDiff[] | null;
   telemetry: TelemetryCounts | null;
 };
 
@@ -59,21 +61,29 @@ async function readDigestFort(
       closedBeads: null,
       handoffSections: null,
       gitLog: null,
+      constitutionDiffs: null,
       telemetry: null,
     };
   }
-  const [eventFeed, closedBeads, handoffSections, gitLog, telemetry] =
-    await Promise.all([
-      readEventFeed(join(path, "fort", "events")),
-      readClosedBeads(path, sinceInstant, untilInstant),
-      readHandoffSections(join(path, "fort", "handoffs")),
-      readGitLog(path, sinceInstant, untilInstant),
-      readTelemetryCounts(
-        join(path, "fort", "telemetry"),
-        sinceInstant,
-        untilInstant,
-      ),
-    ]);
+  const [
+    eventFeed,
+    closedBeads,
+    handoffSections,
+    gitLog,
+    constitutionDiffs,
+    telemetry,
+  ] = await Promise.all([
+    readEventFeed(join(path, "fort", "events")),
+    readClosedBeads(path, sinceInstant, untilInstant),
+    readHandoffSections(join(path, "fort", "handoffs")),
+    readGitLog(path, sinceInstant, untilInstant),
+    readConstitutionDiffs(path, sinceInstant, untilInstant),
+    readTelemetryCounts(
+      join(path, "fort", "telemetry"),
+      sinceInstant,
+      untilInstant,
+    ),
+  ]);
   return {
     name,
     path,
@@ -102,6 +112,7 @@ async function readDigestFort(
             return dayStart < untilInstant && dayEnd > sinceInstant;
           }),
     gitLog,
+    constitutionDiffs,
     telemetry,
   };
 }
@@ -141,6 +152,11 @@ export function formatDigest(digest: CivilizationDigest): string {
       `closed beads: ${fort.closedBeads === null ? "ABSENT" : fort.closedBeads.length}`,
       `handoff sections: ${fort.handoffSections === null ? "ABSENT" : fort.handoffSections.length}`,
       `git log: ${fort.gitLog === null ? "ABSENT" : fort.gitLog.length}`,
+      `constitution diffs: ${fort.constitutionDiffs === null ? "ABSENT" : fort.constitutionDiffs.length}`,
+      ...(fort.constitutionDiffs ?? []).map(
+        (diff) =>
+          `  ! ${diff.ts} ${diff.hash} ${diff.subject} [${diff.beadRef ?? "NO BEAD REF"}] (${diff.files.join(", ")})`,
+      ),
       `telemetry: ${fort.telemetry === null ? "ABSENT" : `${fort.telemetry.records} records, ${fort.telemetry.files} files, ${fort.telemetry.malformed} malformed`}`,
     ]),
   ].join("\n");

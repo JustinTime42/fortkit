@@ -22,7 +22,17 @@ any future amendment may move it.
 
 1. **The digest** (`fortkit digest --since <last-run> --json`), the only
    window onto the forts. It carries, per fort: events, closed beads, handoff
-   sections, git log, and telemetry counts. It never carries prompt bodies.
+   sections, git log, constitution diffs, and telemetry counts. It never
+   carries prompt bodies.
+   **Constitution-diff watch (2026-08-08, fortkit-9sa, the cycle-7 prose-gate
+   safeguard):** the `constitutionDiffs` field lists every commit in the
+   window touching a charter or seat file. A diff whose `beadRef` is null, or
+   that has no matching `charter.amended` event among that fort's events in
+   the window, goes in "Gaps and anomalies" BY NAME and is repeated under
+   "For the Overseer" — an amendment with no bead and no announcing event is
+   the signature of a quiet edit, and surfacing it within a day is the whole
+   reason this field exists. This is a watch duty, not a story bar: it applies
+   even on a zero-draft morning.
    Recorded decision (2026-08-05, resolving the drift the Warden flagged in
    the r6x.1 review): the digest's closed-beads source is `bd` invoked
    read-only, superseding the jmq-era "do not shell out to bd" for this path;
