@@ -62,16 +62,30 @@ MASK_DIRS=("$HOME/.ssh" "$HOME/.aws" "$HOME/.config/gh" "$HOME/.claude" "$HOME/.
 # kernel enforcement is here or nowhere. A poisoned settings.json in the
 # worktree would otherwise govern any later Claude session launched there.
 RO_PATHS=("$HOME/.codex/config.toml" "$wt/.claude" "$root/.claude")
+# Mechanical locks for the unattended seat (cycle 7 r2, fortkit-i4y Warden
+# finding 3 — the factory had shipped a charter claiming these binds without
+# the binds): the constitution and host-executed scripts are tracked, so every
+# worktree holds a writable copy inside the workspace-write root. The cycle-7
+# prose gate on charter/seats applies to ATTENDED seats only. .git/config and
+# .git/hooks execute on the host — hooks fire unmasked on the next host-side
+# commit, and core.hooksPath repoints them (fortkit-cqc).
+for c in fort/charter.md fort/seats fort/profiles fort/scripts; do
+  RO_PATHS+=("$wt/$c" "$root/$c")
+done
+RO_PATHS+=("$root/.git/config" "$root/.git/hooks")
 
 mask=(--bind / / --dev /dev --die-with-parent)
+# ORDERING INVARIANT (ForgeOs-01l, honoured here per fortkit-i4y Warden
+# finding 6): RO subtree binds go BEFORE the per-file dev-null masks and
+# per-dir tmpfs masks, so a later mask always wins over a subtree it sits in.
+for pth in "${RO_PATHS[@]}"; do
+  [ -e "$pth" ] && mask+=(--ro-bind "$pth" "$pth")
+done
 for f in "${MASK_FILES[@]}"; do
   [ -e "$f" ] && mask+=(--ro-bind /dev/null "$f")
 done
 for d in "${MASK_DIRS[@]}"; do
   [ -d "$d" ] && mask+=(--tmpfs "$d")
-done
-for pth in "${RO_PATHS[@]}"; do
-  [ -e "$pth" ] && mask+=(--ro-bind "$pth" "$pth")
 done
 # Git hooks under .beads run on the HOST, unsandboxed, on the next commit or
 # push in the main checkout — writable .beads is a host RCE escape. Re-bound

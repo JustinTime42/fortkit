@@ -24,3 +24,18 @@
   mechanical, until fortkit-6jf brings forge.sh onto seat-sandbox.sh (gate 1,
   Overseer's hand). This line is the interim correction so the record does not
   overstate the boundary; remove it when 6jf lands verified.
+
+- 2026-08-08 (cycle 7 r2 correction — Warden i4y findings 2 and 9, appended per
+  standing order 7): the kernel-mask bullet above is superseded in two places.
+  (a) `fort/charter.md` and `fort/seats/` are NO LONGER read-only to attended
+  seats — they are prose-gated: edits only with the Overseer's prior approval
+  on the amendment's bead, each emitting `charter.amended`. What IS kernel-RO
+  since cycle 7: `fort/profiles/`, `.claude/`, all host-executed scripts
+  (`fort/scripts/` except `verify.sh` which is Mayor-writable, plus `bin/`,
+  `civ/scripts/`, `civ/profiles/`), and `.git/config` + `.git/hooks`.
+  (b) The earlier caveat that forge.sh's read-only set omits charter/seats/
+  profiles was made false by cycle 7 — forge.sh now binds them (and
+  fort/scripts) in both the worktree and the root. Operational consequence of
+  `.git/config` RO: `git push -u`, `git remote add`, and `git config` fail
+  inside the mask; plain `git push origin main` works. Config-writing git
+  operations are the Overseer's.
