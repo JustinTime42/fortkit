@@ -560,7 +560,7 @@ async function request(endpoint, body, apiKey) {
     if (response.ok) return response.json();
     if (
       retryAnimation &&
-      attempt === 1 &&
+      attempt < attempts &&
       response.status >= 500 &&
       response.status < 600
     ) {
@@ -703,11 +703,18 @@ async function reusableStillAsset(
   existingAssets,
   outputDirectory,
 ) {
+  const requestedParams = {
+    imageSize: cardDefinition.imageSize,
+    ...cardDefinition.params,
+  };
   const existing = existingAssets.find(
     (asset) =>
       asset?.id === cardDefinition.id &&
       asset?.file === cardDefinition.filename &&
       asset?.seed === cardDefinition.seed &&
+      asset?.prompt === cardDefinition.prompt &&
+      asset?.negativeConstraints === cardDefinition.negativeConstraints &&
+      JSON.stringify(asset?.params) === JSON.stringify(requestedParams) &&
       typeof asset?.sha256 === "string",
   );
   if (!existing) return null;

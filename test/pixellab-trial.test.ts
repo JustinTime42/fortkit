@@ -348,15 +348,53 @@ describe("PixelLab bounded trial", () => {
     }
   });
 
-  test("reuses a still only when its on-disk hash matches its manifest", async () => {
+  test("never retries Pixflux 5xx responses and sanitizes their detail", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          detail: "upstream token=secret-key; Bearer other-secret",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    try {
+      const error = await request(PIXFLUX_ENDPOINT, {}, "secret-key").catch(
+        (failure) => failure,
+      );
+      expect(error).toBeInstanceOf(Error);
+      if (!(error instanceof Error)) throw error;
+      expect(error.message).toContain(
+        "PixelLab request failed with HTTP 500: upstream",
+      );
+      expect(error.message).not.toContain("secret-key");
+      expect(error.message).not.toContain("other-secret");
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("reuses a still only when its on-disk file and request identity match", async () => {
     const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
     const png = encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4));
-    const card = { id: "still", filename: "still.png", seed: 41001 };
+    const card = {
+      id: "still",
+      filename: "still.png",
+      prompt: "a forge",
+      negativeConstraints: "no words",
+      seed: 41001,
+      imageSize: { width: 32, height: 64 },
+      params: { no_background: true },
+    };
     const manifestAsset = {
       id: card.id,
       file: card.filename,
       sha256: createHash("sha256").update(png).digest("hex"),
       seed: 41001,
+      prompt: card.prompt,
+      negativeConstraints: card.negativeConstraints,
+      params: { imageSize: card.imageSize, ...card.params },
     };
     try {
       await writeFile(join(directory, card.filename), png);
@@ -367,6 +405,44 @@ describe("PixelLab bounded trial", () => {
         reusableStillAsset(
           card,
           [{ ...manifestAsset, seed: 41002 }],
+          directory,
+        ),
+      ).resolves.toBeNull();
+      await expect(
+        reusableStillAsset(
+          card,
+          [{ ...manifestAsset, prompt: "a tavern" }],
+          directory,
+        ),
+      ).resolves.toBeNull();
+      await expect(
+        reusableStillAsset(
+          card,
+          [{ ...manifestAsset, negativeConstraints: "with words" }],
+          directory,
+        ),
+      ).resolves.toBeNull();
+      await expect(
+        reusableStillAsset(
+          card,
+          [
+            {
+              ...manifestAsset,
+              params: { imageSize: { width: 64, height: 64 }, ...card.params },
+            },
+          ],
+          directory,
+        ),
+      ).resolves.toBeNull();
+      await expect(
+        reusableStillAsset(
+          card,
+          [
+            {
+              ...manifestAsset,
+              params: { imageSize: card.imageSize, no_background: false },
+            },
+          ],
           directory,
         ),
       ).resolves.toBeNull();
@@ -496,7 +572,9 @@ describe("PixelLab bounded trial", () => {
       file: card.filename,
       seed: card.seed,
       sha256: createHash("sha256").update(stillPng).digest("hex"),
-      prompt: "original prompt",
+      prompt: card.prompt,
+      negativeConstraints: card.negativeConstraints,
+      params: { imageSize: card.imageSize, ...card.params },
     };
     try {
       await writeFile(join(directory, card.filename), stillPng);

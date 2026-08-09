@@ -23,12 +23,12 @@ animation prompt; the frame identity lives in the id and `frameIndex`, not in
 the prompt text.
 
 Set `PIXELLAB_REUSE_STILLS=1` to reuse a still only when its PNG is present
-and its SHA-256 matches the preceding manifest. Reused entries retain their
-original provenance and add a `reusedAt` timestamp; a missing or mismatched
-file is regenerated. A reroll offset also disables reuse for an entry whose
-recorded seed differs from the offset-adjusted seed. The animation call is never reused. It sends raw PNG
-base64 (not a data-URL prefix) and retries exactly once after a 5xx response;
-4xx responses are never retried.
+and its SHA-256 and full request identity match the preceding manifest. Reused
+entries retain their original provenance and add a `reusedAt` timestamp; a
+missing or mismatched file or request is regenerated. Any seed change disables
+reuse. The animation call is never reused. It sends raw PNG base64 (not a
+data-URL prefix) and retries exactly once after a 5xx response; 4xx responses
+are never retried.
 
 The script creates twelve PNGs and `provenance-manifest.json` here: Forge and
 Tavern buildings, two citizen masters, four Kethra east-walk frames, and four
