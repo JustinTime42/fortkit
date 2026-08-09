@@ -59,7 +59,7 @@ of this asset-contract deviation in the art document.
 `assets/trial/` is deliberately committed: its sprites are the product of this
 bounded trial, and its manifest is their provenance record.
 
-**Manifest fields (schemaVersion 4):** each asset entry records the request
+**Manifest fields (schemaVersion 5):** each asset entry records the request
 identity, prompt, seed, params, timestamp, `requestedImageSize` and
 `actualImageSize`, PNG `sha256`, and its billing: `cost` (the returned
 `{meter, amount}`) for still assets; walk frames instead carry the full
