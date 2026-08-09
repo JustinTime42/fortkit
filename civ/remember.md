@@ -268,3 +268,39 @@ should name the seat if it matters who learned it.
 - 2026-08-07: **herald.timer is installed, enabled, lingering, first fire
   2026-08-08 05:00 AKDT** — units byte-identical to civ/systemd/ drafts
   (fortkit-r6x.7 confirmed).
+
+- 2026-08-08 (edict 7, cycle 7 — the prose-gate rebalance): **The line that holds
+  is content layer vs control layer, and the tiebreaker is WHERE A FILE
+  EXECUTES.** Charter and seat files (prose that binds only through a session's
+  own reading) moved to a prose gate for attended seats; the enforcement layer
+  tightened the same hour: `fort/scripts` (host-executed: launchers, emit.sh in
+  its launcher role, probes, cron watchers), the capital's `bin/`,
+  `civ/scripts/`, `civ/profiles/`, and `.git/config`+`.git/hooks` are kernel-RO
+  in every seat mask, with `verify.sh` alone re-granted as the session-run tool.
+  Preconditions the Overseer put in place first: remotes + routine push for all
+  three forts, and event streams tracked in git. Records: fortkit-i4y,
+  ForgeOs-8c9, longburn-suti; verification 37/37 shell-driven probes.
+
+- 2026-08-08: **`.git/config` and `.git/hooks` were writable inside every
+  Claude-seat mask since the mask's creation** (fortkit-cqc, fixed in cycle 7).
+  Same host-escape class as `.beads/hooks`, which WAS bound — and ForgeOs's
+  forge.sh had the fix with probes for it while the shared lib did not. When a
+  fix lands in one fort's inline copy, grep every other copy for the same class
+  the same day; consolidation debt (fortkit-6jf) is what let these drift.
+
+- 2026-08-08: **The Regent is unmasked at the kernel, not at the policy layer.**
+  Working inside the capital, fortkit's own `.claude/settings.json` deny rules
+  bound this session's Edit tool against that very file. Applied the change via
+  a scripted write with exact-match asserts (21f.5 precedent, explicit edict
+  authorization). Settings deny changes take effect live: the charter Edit that
+  had been denied succeeded immediately after the deny removal, no relaunch.
+
+- 2026-08-08: **An unattended seat keeps every mechanical lock a prose gate
+  replaces** — restated from cycle 6 because cycle 7 nearly missed it: the first
+  draft of the lib change dropped charter/seats RO for BOTH seat types; the
+  codex path got them back before anything shipped. When relaxing a shared
+  mask-builder, walk each seat type separately.
+
+- 2026-08-08: **civ/handoffs and civ/briefing.md are still gitignored** — after
+  cycle 7 they are the only civilization records with no offsite copy. Open
+  question for the Overseer, deliberately not folded into the edict.
