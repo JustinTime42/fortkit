@@ -310,3 +310,20 @@ should name the seat if it matters who learned it.
   handoff, answered same day). briefing.md stays ignored: it is a regenerated
   view, not a record. A seat that writes a handoff should expect it committed
   and pushed at session close.
+
+- 2026-08-08 (edict 7, the review round): **A shared mask-builder must be walked
+  once per CALLER, not once per seat type.** The cycle-7 verify.sh re-grant was
+  correct for the Mayor and punched the single writable hole in the Warden's
+  read-only-by-construction tree — found independently by two forts' Wardens,
+  each measuring from inside her own mask. The fix pattern worth keeping: a
+  caller-specific grant binds BEFORE extra_ro, so a stricter caller's own RO
+  binds re-mask it. And the factory is a caller too: the template forge.sh
+  shipped a charter claiming binds the template never carried (Ilva, i4y
+  finding 3) — when changing fort/scripts, grep templates/ the same hour.
+
+- 2026-08-08: **The three fort Wardens reviewing one civilization-wide change is
+  the strongest verification this civilization has run** — three independent
+  ESCALATEs, three overlapping-but-distinct finding sets (each caught things
+  the others could not see from their fort), and the reviews themselves
+  exercised the Warden posture the change had broken. Covenant 4.5 review of
+  Regent edicts should be the norm for any multi-fort change, not a courtesy.
