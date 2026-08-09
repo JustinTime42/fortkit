@@ -10,7 +10,10 @@ node scripts/run-pixellab-trial.mjs
 To request a fresh candidate set without changing source, set an integer seed
 offset before running it (for example, `PIXELLAB_SEED_OFFSET=1 node
 scripts/run-pixellab-trial.mjs`). The offset is added to every fixed card seed
-and recorded in the manifest's resulting seed values.
+and recorded in the manifest's resulting seed values. To reroll only the walk
+cycle while retaining `PIXELLAB_REUSE_STILLS=1`, use
+`PIXELLAB_ANIMATION_SEED_OFFSET=1`; it offsets only the walk-card seeds, so the
+run makes one animation request when the stills remain reusable.
 
 `PIXELLAB_TIMEOUT_MS` is a per-endpoint timeout floor: both the single-image
 Pixflux request and the four-frame animation call default to 120s, and an
@@ -25,8 +28,9 @@ the prompt text.
 Set `PIXELLAB_REUSE_STILLS=1` to reuse a still only when its PNG is present
 and its SHA-256 and full request identity match the preceding manifest. Reused
 entries retain their original provenance and add a `reusedAt` timestamp; a
-missing or mismatched file or request is regenerated. Any seed change disables
-reuse. The animation call is never reused. It sends raw PNG base64 (not a
+missing, mismatched, or transparently contaminated character file is
+regenerated. `PIXELLAB_SEED_OFFSET` changes still seeds and disables reuse;
+`PIXELLAB_ANIMATION_SEED_OFFSET` does not. The animation call is never reused. It sends raw PNG base64 (not a
 data-URL prefix) and retries exactly once after a 5xx response; 4xx responses
 are never retried.
 
@@ -67,7 +71,7 @@ of this asset-contract deviation in the art document.
 `assets/trial/` is deliberately committed: its sprites are the product of this
 bounded trial, and its manifest is their provenance record.
 
-**Manifest fields (schemaVersion 6):** each asset entry records the request
+**Manifest fields (schemaVersion 7):** each asset entry records the request
 identity, prompt, seed, params, timestamp, `requestedImageSize` and
 `actualImageSize`, PNG `sha256`, and its billing: `cost` (the returned
 `{meter, amount}`) for still assets; walk frames instead carry the full
@@ -82,3 +86,8 @@ PixelLab requires the animation
 reference to match the 64×64 output size, and per the asset contract's
 no-resample rule the master's pixels are **padded onto a transparent 64×64
 canvas unchanged** — never scaled or resampled — before being sent.
+
+Citizen masters and walk frames are mechanically checked before they are
+written or reused: their outer two-pixel border must be fully transparent and
+opaque pixels may cover at most 60% of the frame. Passing character entries
+record `transparencyCheck: "passed"` in the manifest.

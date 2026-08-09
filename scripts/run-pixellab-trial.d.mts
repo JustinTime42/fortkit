@@ -1,4 +1,5 @@
 export function seedOffsetFromEnvironment(value?: string): number;
+export function animationSeedOffsetFromEnvironment(value?: string): number;
 
 export function withSeedOffset<T extends { seed: number }>(
   cardDefinition: T,
@@ -101,10 +102,22 @@ export function writeAsset(
   outputDirectory?: string,
 ): Promise<void>;
 
+export function characterTransparencyCheck(
+  cardDefinition: { id: string; kind: string },
+  png: Buffer,
+): "passed" | null;
+
+export const cards: Array<{
+  id: string;
+  kind: string;
+  prompt: string;
+  negativeConstraints: string;
+}>;
 export const walkCards: Array<{
   id: string;
   prompt: string;
   frameIndex: number;
+  negativeConstraints: string;
 }>;
 export const PIXFLUX_ENDPOINT: string;
 export const PIXFLUX_MODEL: string;
@@ -114,3 +127,5 @@ export const MAX_GENERATIONS_PER_STILL_ASSET: number;
 export const MAX_GENERATIONS_PER_ANIMATION_CALL: number;
 export const MAX_TOTAL_GENERATIONS: number;
 export const MANIFEST_SCHEMA_VERSION: number;
+export const NEGATIVE_CONSTRAINTS: string;
+export const CHARACTER_NEGATIVE_CONSTRAINTS: string;

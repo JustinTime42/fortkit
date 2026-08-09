@@ -31,7 +31,7 @@ const MAX_TOTAL_GENERATIONS = 30;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
 const MAX_GENERATIONS_PER_STILL_ASSET = 2;
 const MAX_GENERATIONS_PER_ANIMATION_CALL = 8;
-const MANIFEST_SCHEMA_VERSION = 6;
+const MANIFEST_SCHEMA_VERSION = 7;
 const PIXFLUX_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_RETRY_DELAY_MS = 250;
@@ -48,6 +48,12 @@ const REFERENCE_PADDING = {
 };
 const NEGATIVE_CONSTRAINTS =
   "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people";
+const CHARACTER_NEGATIVE_CONSTRAINTS = `${NEGATIVE_CONSTRAINTS}, no background elements, no pillars, no walls, no floor, no scenery`;
+const CHARACTER_ISOLATION =
+  "isolated character only, fully transparent background, no scenery, no props, no environment, no floor, no shadow on ground";
+const CHARACTER_KINDS = new Set(["citizen-master", "walk-frame"]);
+const TRANSPARENCY_BORDER_BAND_PX = 2;
+const MAX_CHARACTER_OPAQUE_COVERAGE = 0.6;
 
 const cards = [
   card(
@@ -72,7 +78,7 @@ const cards = [
     32,
     64,
     42001,
-    "dwarven forge master Kethra, leather apron, hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
+    `dwarven forge master Kethra, leather apron, hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame, ${CHARACTER_ISOLATION}`,
   ),
   card(
     "tavern-master",
@@ -80,7 +86,7 @@ const cards = [
     32,
     64,
     42002,
-    "dwarven tavern master, apron and tankard, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
+    `dwarven tavern master, apron and tankard, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame, ${CHARACTER_ISOLATION}`,
   ),
   card(
     "implementation-crate",
@@ -116,8 +122,7 @@ const cards = [
   ),
 ];
 
-const WALK_DESCRIPTION =
-  "dwarven forge master Kethra walking east, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame";
+const WALK_DESCRIPTION = `dwarven forge master Kethra walking east, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame, ${CHARACTER_ISOLATION}`;
 
 const walkCards = [
   walkCard("kethra-walk-east-01", 43001, 1),
@@ -127,12 +132,17 @@ const walkCards = [
 ];
 
 function card(id, kind, width, height, seed, subject) {
+  const character = CHARACTER_KINDS.has(kind);
   return {
     id,
     kind,
     filename: `${id}.png`,
-    prompt: `32-bit pixel art, single object or character, orthographic 3/4 exterior, ${subject}, no text, no logo`,
-    negativeConstraints: NEGATIVE_CONSTRAINTS,
+    prompt: character
+      ? `32-bit pixel art, single character, orthographic 3/4 view, ${subject}, no text, no logo`
+      : `32-bit pixel art, single object or character, orthographic 3/4 exterior, ${subject}, no text, no logo`,
+    negativeConstraints: character
+      ? CHARACTER_NEGATIVE_CONSTRAINTS
+      : NEGATIVE_CONSTRAINTS,
     seed,
     imageSize: { width, height },
     params: { no_background: true, outline: "selective outline" },
@@ -146,7 +156,7 @@ function walkCard(id, seed, frameIndex) {
     filename: `${id}.png`,
     prompt: WALK_DESCRIPTION,
     frameIndex,
-    negativeConstraints: NEGATIVE_CONSTRAINTS,
+    negativeConstraints: CHARACTER_NEGATIVE_CONSTRAINTS,
     seed,
     imageSize: { width: 32, height: 64 },
     params: {
@@ -173,6 +183,18 @@ function seedOffsetFromEnvironment(value = process.env.PIXELLAB_SEED_OFFSET) {
   const offset = Number(value);
   if (!Number.isSafeInteger(offset))
     throw new Error("PIXELLAB_SEED_OFFSET must be a safe integer.");
+  return offset;
+}
+
+function animationSeedOffsetFromEnvironment(
+  value = process.env.PIXELLAB_ANIMATION_SEED_OFFSET,
+) {
+  if (value === undefined || value === "") return 0;
+  if (!/^-?\d+$/.test(value))
+    throw new Error("PIXELLAB_ANIMATION_SEED_OFFSET must be an integer.");
+  const offset = Number(value);
+  if (!Number.isSafeInteger(offset))
+    throw new Error("PIXELLAB_ANIMATION_SEED_OFFSET must be a safe integer.");
   return offset;
 }
 
@@ -354,7 +376,10 @@ function pngChunk(type, data) {
   return chunk;
 }
 
-function constrainedRgbaPixels(png) {
+function constrainedRgbaPixels(
+  png,
+  { width: expectedWidth = 32, height: expectedHeight = 64 } = {},
+) {
   if (!png.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE))
     throw new Error(
       "Cannot pad animation reference: expected a PNG signature.",
@@ -414,8 +439,8 @@ function constrainedRgbaPixels(png) {
   const width = header.readUInt32BE(0);
   const height = header.readUInt32BE(4);
   if (
-    width !== REFERENCE_PADDING.from.width ||
-    height !== REFERENCE_PADDING.from.height ||
+    width !== expectedWidth ||
+    height !== expectedHeight ||
     header[8] !== 8 ||
     header[9] !== 6 ||
     header[10] !== 0 ||
@@ -474,6 +499,41 @@ function constrainedRgbaPixels(png) {
     }
   }
   return pixels;
+}
+
+function characterTransparencyCheck(cardDefinition, png) {
+  if (!CHARACTER_KINDS.has(cardDefinition.kind)) return null;
+  const { width, height } = pngDimensions(png);
+  const pixels = constrainedRgbaPixels(png, { width, height });
+  let opaquePixels = 0;
+  let contaminatedBorderPixels = 0;
+  let borderPixels = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const opaque =
+        pixels[(y * width + x) * PNG_RGBA_BYTES_PER_PIXEL + 3] !== 0;
+      if (opaque) opaquePixels += 1;
+      if (
+        x < TRANSPARENCY_BORDER_BAND_PX ||
+        x >= width - TRANSPARENCY_BORDER_BAND_PX ||
+        y < TRANSPARENCY_BORDER_BAND_PX ||
+        y >= height - TRANSPARENCY_BORDER_BAND_PX
+      ) {
+        borderPixels += 1;
+        if (opaque) contaminatedBorderPixels += 1;
+      }
+    }
+  }
+  const opaqueCoverage = opaquePixels / (width * height);
+  const contaminatedBorderCoverage = contaminatedBorderPixels / borderPixels;
+  if (
+    contaminatedBorderPixels !== 0 ||
+    opaqueCoverage > MAX_CHARACTER_OPAQUE_COVERAGE
+  )
+    throw new Error(
+      `Refusing character asset ${cardDefinition.id}: transparency check failed (${(contaminatedBorderCoverage * 100).toFixed(2)}% contaminated border, ${(opaqueCoverage * 100).toFixed(2)}% opaque coverage).`,
+    );
+  return "passed";
 }
 
 function paeth(left, above, upperLeft) {
@@ -658,6 +718,10 @@ async function writeAsset(
   outputDirectory = OUTPUT_DIRECTORY,
 ) {
   const actualImageSize = pngDimensions(result.png);
+  const transparencyCheck = characterTransparencyCheck(
+    cardDefinition,
+    result.png,
+  );
   await writeFile(join(outputDirectory, cardDefinition.filename), result.png);
   manifest.assets.push({
     id: cardDefinition.id,
@@ -680,6 +744,7 @@ async function writeAsset(
     sha256: sha256(result.png),
     reference: provenance.reference ?? null,
     referencePadding: provenance.referencePadding ?? null,
+    ...(transparencyCheck ? { transparencyCheck } : {}),
   });
   await writeFile(
     join(outputDirectory, "provenance-manifest.json"),
@@ -722,7 +787,15 @@ async function reusableStillAsset(
     const png = await readFile(join(outputDirectory, cardDefinition.filename));
     if (sha256(png) !== existing.sha256) return null;
     pngDimensions(png);
-    return { png, asset: { ...existing, reusedAt: new Date().toISOString() } };
+    const transparencyCheck = characterTransparencyCheck(cardDefinition, png);
+    return {
+      png,
+      asset: {
+        ...existing,
+        ...(transparencyCheck ? { transparencyCheck } : {}),
+        reusedAt: new Date().toISOString(),
+      },
+    };
   } catch {
     return null;
   }
@@ -736,6 +809,7 @@ async function main(
   const kethraCitizenCard = assertKethraCitizenCard(cardDefinitions);
   const apiKey = readApiKey();
   const seedOffset = seedOffsetFromEnvironment();
+  const animationSeedOffset = animationSeedOffsetFromEnvironment();
   await mkdir(outputDirectory, { recursive: true });
   const reuseStills = process.env.PIXELLAB_REUSE_STILLS === "1";
   const existingManifest = reuseStills
@@ -795,7 +869,10 @@ async function main(
       "Kethra citizen master was not generated; refusing walk cycle.",
     );
   const offsetWalkCards = walkCards.map((cardDefinition) =>
-    withSeedOffset(cardDefinition, seedOffset),
+    withSeedOffset(
+      withSeedOffset(cardDefinition, seedOffset),
+      animationSeedOffset,
+    ),
   );
   const cycle = await generateWalkCycle(
     kethraMaster,
@@ -845,12 +922,17 @@ export {
   ANIMATION_IMAGE_SIZE,
   addUsage,
   animationRequestBody,
+  animationSeedOffsetFromEnvironment,
   assertKethraCitizenCard,
+  CHARACTER_NEGATIVE_CONSTRAINTS,
+  cards,
+  characterTransparencyCheck,
   MANIFEST_SCHEMA_VERSION,
   MAX_GENERATIONS_PER_ANIMATION_CALL,
   MAX_GENERATIONS_PER_STILL_ASSET,
   MAX_TOTAL_GENERATIONS,
   main,
+  NEGATIVE_CONSTRAINTS,
   PIXFLUX_ENDPOINT,
   PIXFLUX_MODEL,
   padAnimationReference,
