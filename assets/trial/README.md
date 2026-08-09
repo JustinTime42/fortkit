@@ -66,3 +66,9 @@ identity, prompt, seed, params, timestamp, `requestedImageSize` and
 call's `requestCost` plus `amortizedCost` (the per-frame share) — and on a
 generation-credit-billed account a walk frame has **no `cost` key at all**,
 by design, because a quarter of a credit is not a thing the vendor charges.
+
+Walk entries additionally record `referencePadding` (`{from: 32×64, to:
+64×64, placement: "bottom-center"}`): PixelLab requires the animation
+reference to match the 64×64 output size, and per the asset contract's
+no-resample rule the master's pixels are **padded onto a transparent 64×64
+canvas unchanged** — never scaled or resampled — before being sent.
