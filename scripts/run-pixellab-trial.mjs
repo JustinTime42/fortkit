@@ -34,6 +34,8 @@ const MAX_GENERATIONS_PER_ANIMATION_CALL = 8;
 const MANIFEST_SCHEMA_VERSION = 6;
 const PIXFLUX_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
+const ANIMATION_RETRY_DELAY_MS = 250;
+const ANIMATION_REQUEST_ATTEMPTS = 2;
 const PNG_SIGNATURE = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 ]);
@@ -235,7 +237,8 @@ function animationRequestBody(masterPng, walkCardDefinition) {
     reference_image: {
       type: "base64",
       // The response parser accepts both data URLs and raw base64, but the
-      // animation API's strict decoder expects raw base64 in requests.
+      // fortkit-fav hypothesizes the animation API's strict decoder expects
+      // raw base64 in requests; run seven will record the live outcome.
       base64: paddedReference.toString("base64"),
     },
     reference_image_size: ANIMATION_IMAGE_SIZE,
@@ -529,8 +532,8 @@ function confirmedModel(response) {
 async function request(endpoint, body, apiKey) {
   const timeoutMilliseconds = requestTimeoutMilliseconds(endpoint);
   const retryAnimation = endpoint === ANIMATION_ENDPOINT;
-  const attempts = retryAnimation ? 2 : 1;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+  const attempts = retryAnimation ? ANIMATION_REQUEST_ATTEMPTS : 1;
+  for (let attempt = 1; ; attempt += 1) {
     if (retryAnimation)
       process.stdout.write(
         `Animation request attempt ${attempt}/${attempts}.\n`,
@@ -561,21 +564,23 @@ async function request(endpoint, body, apiKey) {
       response.status >= 500 &&
       response.status < 600
     ) {
+      await response.body?.cancel().catch(() => {});
       process.stdout.write(
-        `Animation request attempt ${attempt} received HTTP ${response.status}; retrying after 250ms.\n`,
+        `Animation request attempt ${attempt} received HTTP ${response.status}; retrying after ${ANIMATION_RETRY_DELAY_MS}ms.\n`,
       );
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      await new Promise((resolve) =>
+        setTimeout(resolve, ANIMATION_RETRY_DELAY_MS),
+      );
       continue;
     }
     const detail =
-      response.status >= 400 && response.status < 500
+      response.status >= 400 && response.status < 600
         ? await responseDetail(response, apiKey)
         : "";
     throw new Error(
       `PixelLab request failed with HTTP ${response.status}${detail ? `: ${detail}` : "."}`,
     );
   }
-  throw new Error("Animation request exhausted its retry attempts.");
 }
 
 async function responseDetail(response, apiKey) {
@@ -702,6 +707,7 @@ async function reusableStillAsset(
     (asset) =>
       asset?.id === cardDefinition.id &&
       asset?.file === cardDefinition.filename &&
+      asset?.seed === cardDefinition.seed &&
       typeof asset?.sha256 === "string",
   );
   if (!existing) return null;

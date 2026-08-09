@@ -25,7 +25,8 @@ the prompt text.
 Set `PIXELLAB_REUSE_STILLS=1` to reuse a still only when its PNG is present
 and its SHA-256 matches the preceding manifest. Reused entries retain their
 original provenance and add a `reusedAt` timestamp; a missing or mismatched
-file is regenerated. The animation call is never reused. It sends raw PNG
+file is regenerated. A reroll offset also disables reuse for an entry whose
+recorded seed differs from the offset-adjusted seed. The animation call is never reused. It sends raw PNG
 base64 (not a data-URL prefix) and retries exactly once after a 5xx response;
 4xx responses are never retried.
 

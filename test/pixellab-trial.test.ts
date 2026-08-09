@@ -142,9 +142,14 @@ function decodeFilterZeroRgbaPng(png: Buffer) {
   const scanlines = inflateSync(Buffer.concat(idat));
   const pixels = Buffer.alloc(width * height * 4);
   for (let row = 0; row < height; row += 1) {
-    const offset = row * (width * 4 + 1);
-    expect(scanlines[offset]).toBe(0);
-    scanlines.copy(pixels, row * width * 4, offset + 1, offset + 1 + width * 4);
+    const scanlineOffset = row * (width * 4 + 1);
+    expect(scanlines[scanlineOffset]).toBe(0);
+    scanlines.copy(
+      pixels,
+      row * width * 4,
+      scanlineOffset + 1,
+      scanlineOffset + 1 + width * 4,
+    );
   }
   return { width, height, pixels };
 }
@@ -285,20 +290,39 @@ describe("PixelLab bounded trial", () => {
     }
   });
 
-  test("fails after a second animation 5xx", async () => {
+  test("reports sanitized detail after a recurring animation 5xx", async () => {
     const originalFetch = globalThis.fetch;
     const write = vi
       .spyOn(process.stdout, "write")
       .mockImplementation(() => true);
+    const firstFailure = new Response(JSON.stringify({ detail: "temporary" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValueOnce(new Response(null, { status: 500 }))
-      .mockResolvedValueOnce(new Response(null, { status: 500 }));
+      .mockResolvedValueOnce(firstFailure)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            detail: "upstream token=secret-key; Bearer other-secret",
+          }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        ),
+      );
     try {
-      await expect(
-        request(ANIMATION_ENDPOINT, {}, "not-a-key"),
-      ).rejects.toThrow("PixelLab request failed with HTTP 500.");
+      const error = await request(ANIMATION_ENDPOINT, {}, "secret-key").catch(
+        (failure) => failure,
+      );
+      expect(error).toBeInstanceOf(Error);
+      if (!(error instanceof Error)) throw error;
+      expect(error.message).toContain(
+        "PixelLab request failed with HTTP 500: upstream",
+      );
+      expect(error.message).not.toContain("secret-key");
+      expect(error.message).not.toContain("other-secret");
       expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+      expect(firstFailure.bodyUsed).toBe(true);
     } finally {
       write.mockRestore();
       globalThis.fetch = originalFetch;
@@ -327,7 +351,7 @@ describe("PixelLab bounded trial", () => {
   test("reuses a still only when its on-disk hash matches its manifest", async () => {
     const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
     const png = encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4));
-    const card = { id: "still", filename: "still.png" };
+    const card = { id: "still", filename: "still.png", seed: 41001 };
     const manifestAsset = {
       id: card.id,
       file: card.filename,
@@ -342,11 +366,180 @@ describe("PixelLab bounded trial", () => {
       await expect(
         reusableStillAsset(
           card,
+          [{ ...manifestAsset, seed: 41002 }],
+          directory,
+        ),
+      ).resolves.toBeNull();
+      await expect(
+        reusableStillAsset(
+          card,
           [{ ...manifestAsset, sha256: "not-the-file-hash" }],
           directory,
         ),
       ).resolves.toBeNull();
     } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("main skips reuse when a seed offset changes the recorded still seed", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
+    const originalFetch = globalThis.fetch;
+    const originalArguments = process.argv;
+    const originalApiKey = process.env.PIXELLAB_API_KEY;
+    const originalReuseStills = process.env.PIXELLAB_REUSE_STILLS;
+    const originalSeedOffset = process.env.PIXELLAB_SEED_OFFSET;
+    const write = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    const stillPng = encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4));
+    const walkPng = encodeRgbaPng(64, 64, Buffer.alloc(64 * 64 * 4));
+    const card = {
+      id: "kethra-citizen",
+      kind: "citizen",
+      filename: "kethra-citizen.png",
+      prompt: "Kethra",
+      negativeConstraints: "no words",
+      seed: 43000,
+      imageSize: { width: 32, height: 64 },
+      params: { no_background: true },
+    };
+    try {
+      await writeFile(join(directory, card.filename), stillPng);
+      await writeFile(
+        join(directory, "provenance-manifest.json"),
+        JSON.stringify({
+          assets: [
+            {
+              id: card.id,
+              file: card.filename,
+              seed: card.seed,
+              sha256: createHash("sha256").update(stillPng).digest("hex"),
+            },
+          ],
+        }),
+      );
+      process.argv = process.argv.slice(0, 2);
+      process.env.PIXELLAB_API_KEY = "not-a-key";
+      process.env.PIXELLAB_REUSE_STILLS = "1";
+      process.env.PIXELLAB_SEED_OFFSET = "1";
+      const responseBody = JSON.stringify({
+        image: { base64: stillPng.toString("base64") },
+        images: Array.from({ length: 4 }, () => ({
+          base64: walkPng.toString("base64"),
+        })),
+        usage: { usd: 0.0084 },
+      });
+      globalThis.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(responseBody, {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(responseBody, {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+
+      await main([card], directory);
+
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+      const manifest = JSON.parse(
+        await readFile(join(directory, "provenance-manifest.json"), "utf8"),
+      );
+      expect(manifest.assets[0]).toMatchObject({ seed: 43001 });
+      expect(manifest.assets[0].reusedAt).toBeUndefined();
+    } finally {
+      write.mockRestore();
+      globalThis.fetch = originalFetch;
+      process.argv = originalArguments;
+      if (originalApiKey === undefined) delete process.env.PIXELLAB_API_KEY;
+      else process.env.PIXELLAB_API_KEY = originalApiKey;
+      if (originalReuseStills === undefined)
+        delete process.env.PIXELLAB_REUSE_STILLS;
+      else process.env.PIXELLAB_REUSE_STILLS = originalReuseStills;
+      if (originalSeedOffset === undefined)
+        delete process.env.PIXELLAB_SEED_OFFSET;
+      else process.env.PIXELLAB_SEED_OFFSET = originalSeedOffset;
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("main retains provenance and records reusedAt in its output directory", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
+    const originalFetch = globalThis.fetch;
+    const originalArguments = process.argv;
+    const originalApiKey = process.env.PIXELLAB_API_KEY;
+    const originalReuseStills = process.env.PIXELLAB_REUSE_STILLS;
+    const originalSeedOffset = process.env.PIXELLAB_SEED_OFFSET;
+    const write = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    const stillPng = encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4));
+    const walkPng = encodeRgbaPng(64, 64, Buffer.alloc(64 * 64 * 4));
+    const card = {
+      id: "kethra-citizen",
+      kind: "citizen",
+      filename: "kethra-citizen.png",
+      prompt: "Kethra",
+      negativeConstraints: "no words",
+      seed: 43000,
+      imageSize: { width: 32, height: 64 },
+      params: { no_background: true },
+    };
+    const originalAsset = {
+      id: card.id,
+      file: card.filename,
+      seed: card.seed,
+      sha256: createHash("sha256").update(stillPng).digest("hex"),
+      prompt: "original prompt",
+    };
+    try {
+      await writeFile(join(directory, card.filename), stillPng);
+      await writeFile(
+        join(directory, "provenance-manifest.json"),
+        JSON.stringify({ assets: [originalAsset] }),
+      );
+      process.argv = process.argv.slice(0, 2);
+      process.env.PIXELLAB_API_KEY = "not-a-key";
+      process.env.PIXELLAB_REUSE_STILLS = "1";
+      delete process.env.PIXELLAB_SEED_OFFSET;
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            images: Array.from({ length: 4 }, () => ({
+              base64: walkPng.toString("base64"),
+            })),
+            usage: { usd: 0.0084 },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+
+      await main([card], directory);
+
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      const manifest = JSON.parse(
+        await readFile(join(directory, "provenance-manifest.json"), "utf8"),
+      );
+      expect(manifest.assets[0]).toMatchObject(originalAsset);
+      expect(manifest.assets[0].reusedAt).toEqual(expect.any(String));
+    } finally {
+      write.mockRestore();
+      globalThis.fetch = originalFetch;
+      process.argv = originalArguments;
+      if (originalApiKey === undefined) delete process.env.PIXELLAB_API_KEY;
+      else process.env.PIXELLAB_API_KEY = originalApiKey;
+      if (originalReuseStills === undefined)
+        delete process.env.PIXELLAB_REUSE_STILLS;
+      else process.env.PIXELLAB_REUSE_STILLS = originalReuseStills;
+      if (originalSeedOffset === undefined)
+        delete process.env.PIXELLAB_SEED_OFFSET;
+      else process.env.PIXELLAB_SEED_OFFSET = originalSeedOffset;
       await rm(directory, { recursive: true, force: true });
     }
   });
@@ -625,6 +818,9 @@ describe("PixelLab bounded trial", () => {
 
   test("prints sanitized 4xx response detail", async () => {
     const originalFetch = globalThis.fetch;
+    const write = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
     globalThis.fetch = () =>
       Promise.resolve(
         new Response(
@@ -646,12 +842,16 @@ describe("PixelLab bounded trial", () => {
         request(ANIMATION_ENDPOINT, {}, "secret-key"),
       ).rejects.not.toThrow("other-secret");
     } finally {
+      write.mockRestore();
       globalThis.fetch = originalFetch;
     }
   });
 
   test("projects 422 detail arrays without echoed request input", async () => {
     const originalFetch = globalThis.fetch;
+    const write = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
     globalThis.fetch = () =>
       Promise.resolve(
         new Response(
@@ -678,6 +878,7 @@ describe("PixelLab bounded trial", () => {
         request(ANIMATION_ENDPOINT, {}, "secret-key"),
       ).rejects.not.toThrow("should-not-appear");
     } finally {
+      write.mockRestore();
       globalThis.fetch = originalFetch;
     }
   });

@@ -79,7 +79,7 @@ export function request(
 ): Promise<unknown>;
 
 export function reusableStillAsset(
-  cardDefinition: { id: string; filename: string },
+  cardDefinition: { id: string; filename: string; seed: number },
   existingAssets: Array<Record<string, unknown>>,
   outputDirectory: string,
 ): Promise<{ png: Buffer; asset: Record<string, unknown> } | null>;
