@@ -46,19 +46,31 @@ else
   echo "FAIL git status broken inside mask"; fail=$((fail+1))
 fi
 
-# Warden posture (r2, Warden findings suti-1 / 8c9-4): warden.sh passes the
-# whole checkout as extra_ro, which must re-mask the verify.sh re-grant — the
-# Warden is read-only by construction and gets no writable hole.
+# Warden postures (r2/r3, Warden findings suti-1 / 8c9-4 / suti-r2-1 and -4):
+# a mask whose behaviour depends on the launcher's arguments must enumerate
+# the LAUNCHES, not the seats. warden.sh now passes $root as extra_ro
+# unconditionally plus the candidate dir, so both its postures are probed:
+# main-checkout review (src == root) and worktree-candidate review (src is a
+# separate tree). In both, the Warden gets no writable hole in $root.
 mask=()
-build_mask claude "$root" "$root"
+build_mask claude "$root" "$root" "$root"
 mask_env claude
-probe deny "verify.sh re-masked under Warden extra_ro" "$root/fort/scripts/verify.sh"
-probe deny "charter RO under Warden extra_ro"          "$root/fort/charter.md"
+probe deny "verify.sh re-masked, Warden main-checkout posture" "$root/fort/scripts/verify.sh"
+probe deny "charter RO, Warden main-checkout posture"          "$root/fort/charter.md"
 if bwrap "${mask[@]}" -- head -c 1 "$root/fort/scripts/verify.sh" >/dev/null 2>&1; then
   echo "PASS warden posture can still read (positive control)"; pass=$((pass+1))
 else
   echo "FAIL warden posture cannot read verify.sh"; fail=$((fail+1))
 fi
+candidate="${TMPDIR:-/tmp}/probe-cycle7-candidate-$$"
+mkdir -p "$candidate"
+mask=()
+build_mask claude "$root" "$root" "$candidate"
+mask_env claude
+probe deny "verify.sh re-masked, Warden worktree-candidate posture" "$root/fort/scripts/verify.sh"
+probe deny "charter RO, Warden worktree-candidate posture"          "$root/fort/charter.md"
+probe deny "seats RO, Warden worktree-candidate posture"            "$root/fort/seats/mayor.md"
+rmdir "$candidate" 2>/dev/null || true
 
 echo "== $root: $pass pass, $fail fail =="
 [ $fail -eq 0 ]
