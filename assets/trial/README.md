@@ -22,6 +22,13 @@ entries in the manifest carry a `frameIndex` field (1–4) and share one truthfu
 animation prompt; the frame identity lives in the id and `frameIndex`, not in
 the prompt text.
 
+Set `PIXELLAB_REUSE_STILLS=1` to reuse a still only when its PNG is present
+and its SHA-256 matches the preceding manifest. Reused entries retain their
+original provenance and add a `reusedAt` timestamp; a missing or mismatched
+file is regenerated. The animation call is never reused. It sends raw PNG
+base64 (not a data-URL prefix) and retries exactly once after a 5xx response;
+4xx responses are never retried.
+
 The script creates twelve PNGs and `provenance-manifest.json` here: Forge and
 Tavern buildings, two citizen masters, four Kethra east-walk frames, and four
 work-type glyphs. It refuses command-line arguments, reads the key only from
@@ -59,7 +66,7 @@ of this asset-contract deviation in the art document.
 `assets/trial/` is deliberately committed: its sprites are the product of this
 bounded trial, and its manifest is their provenance record.
 
-**Manifest fields (schemaVersion 5):** each asset entry records the request
+**Manifest fields (schemaVersion 6):** each asset entry records the request
 identity, prompt, seed, params, timestamp, `requestedImageSize` and
 `actualImageSize`, PNG `sha256`, and its billing: `cost` (the returned
 `{meter, amount}`) for still assets; walk frames instead carry the full
