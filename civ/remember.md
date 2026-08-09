@@ -327,3 +327,33 @@ should name the seat if it matters who learned it.
   the others could not see from their fort), and the reviews themselves
   exercised the Warden posture the change had broken. Covenant 4.5 review of
   Regent edicts should be the norm for any multi-fort change, not a courtesy.
+
+- 2026-08-08 (edict 8, the Farlantern launcher batch): **`bd --readonly` does
+  not avoid the embedded-Dolt LOCK write** — measured under bwrap against an
+  RO-bound `.beads`: identical "openat LOCK: read-only file system" failure
+  with and without the flag. No bd invocation works against a read-only
+  `.beads`; the working pattern is a launcher-side `bd export` seeded into the
+  seat's scratch (`.beads-export.jsonl`, rg/jq-readable). Never design a
+  masked-seat fix on `--readonly`.
+
+- 2026-08-08: **`claude -p --output-format json` + jq extraction is the fix for
+  verdict head-truncation** (five observed truncations on the streamed-tee
+  path in Farlantern, blocking findings lost from log AND bead comment). The
+  result field is one atomic string; gate recording on BOTH the verdict head
+  marker and VERDICT-LINE, and record NOTHING on a miss. Reference:
+  longburn `fort/scripts/warden.sh` (3d13242). The warden scratch leak
+  (no cleanup trap, tmpfs scratch) and this capture defect are CROSS-FORT
+  classes — two fortkit warden scratch dirs sat in longburn's /tmp pile —
+  and Proofdelve's and the capital's warden.sh still carry both patterns.
+  Backport-cycle material; longburn is the reference implementation
+  (off-tmpfs `~/.cache/fort-scratch`, trap-remove-on-success /
+  retain-on-verdict-less-death, RO node_modules bind + tmpfs `.vite`).
+
+- 2026-08-08: **A refusal guard on launchers must name the seat, not just the
+  mask.** longburn-5v4 asked for "refuse when FORT_MASKED is set"; taken
+  literally that severs the Mayor's 1p9 dispatch lane (she launches forge.sh
+  and warden.sh from inside her mask by design). The shipped pattern:
+  FORT_MASKED carries the seat name (mayor/forge/warden); launchers refuse
+  under forge/warden (exit 77) and pass mayor. When a bead's letter would
+  break a documented lane, implement the intent, record the deviation on the
+  bead, and let the post-hoc review judge it.
