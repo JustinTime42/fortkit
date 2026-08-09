@@ -1,4 +1,5 @@
 transcripts/
 handoffs/*.md
 briefing.md
-events/*.jsonl
+# events/*.jsonl was ignored here until cycle 7 (fortkit-i4y, 2026-08-08): the
+# civilization's audit record is now tracked, same rationale as the fort streams.

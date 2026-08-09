@@ -62,6 +62,16 @@ MASK_DIRS=("$HOME/.ssh" "$HOME/.aws" "$HOME/.config/gh" "$HOME/.claude" "$HOME/.
 # kernel enforcement is here or nowhere. A poisoned settings.json in the
 # worktree would otherwise govern any later Claude session launched there.
 RO_PATHS=("$HOME/.codex/config.toml" "$wt/.claude" "$root/.claude")
+# Mechanical locks for the unattended seat (cycle 7, fortkit-i4y; pattern from
+# longburn's gate-4 fix): the constitution and host-executed scripts are
+# tracked, so every worktree holds a writable copy inside the workspace-write
+# root. The cycle-7 prose gate on charter/seats applies to ATTENDED seats only.
+# .git/config and .git/hooks execute on the host — hooks fire unmasked on the
+# next host-side commit, core.hooksPath repoints them (fortkit-cqc).
+for c in fort/charter.md fort/seats fort/profiles fort/scripts; do
+  RO_PATHS+=("$wt/$c" "$root/$c")
+done
+RO_PATHS+=("$root/.git/config" "$root/.git/hooks")
 
 mask=(--bind / / --dev /dev --die-with-parent)
 for f in "${MASK_FILES[@]}"; do

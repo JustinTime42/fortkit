@@ -57,8 +57,10 @@ This repo is operated by an agent fort of Justin's civilization (registry: ~/.cl
 EOF
 done
 
-# Gitignore
-grep -q "fort/events/" .gitignore 2>/dev/null || printf "fort/events/*.jsonl\n.env*\n" >> .gitignore
+# Gitignore. fort/events/*.jsonl is deliberately NOT ignored since cycle 7
+# (fortkit-i4y): the event stream is the fort's audit record — tracked, it is
+# tamper-evident and rides the offsite backup.
+grep -q "^\.env\*" .gitignore 2>/dev/null || printf ".env*\n" >> .gitignore
 
 # Register in the civilization
 REG="${FORT_REGISTRY:-$HOME/.claude/civilization.json}"

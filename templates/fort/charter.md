@@ -10,7 +10,7 @@ One human (Justin, the Overseer) provides intent, approves designs, reviews gate
 
 ## Human gates (capability boundaries, not requests)
 
-1. The fort's own constitution — `fort/` files, seat definitions, launchers, permission profiles → Warden + Overseer review. The fort proposes amendments to itself through beads; it never applies them unreviewed.
+1. The fort's own constitution — `fort/` files, seat definitions, launchers, permission profiles → Warden + Overseer review. The fort proposes amendments to itself through beads; it never applies them unreviewed. `fort/charter.md` and `fort/seats/` are prose-gated for attended seats (cycle 7, fortkit-i4y): edits only with the Overseer's prior approval recorded in the amendment's bead, each emitting `charter.amended`. The enforcement layer stays mechanical — `fort/profiles/`, `.claude/`, host-executed scripts in `fort/scripts/`, and `.git/config` + `.git/hooks` are kernel read-only, with `verify.sh` alone re-granted writable. The Forge keeps the full lock on charter and seats: an unattended seat cannot ask first.
 2. `.env*` / secrets → deny-listed from all agent access from day zero.
 3. Anything public-facing (publishing, domains, releases, external accounts) → Overseer.
 {{EXTRA_GATES}}

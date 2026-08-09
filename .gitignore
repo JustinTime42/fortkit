@@ -7,7 +7,9 @@ node_modules/
 *.db
 .beads-credential-key
 .beads/proxieddb/
-fort/events/*.jsonl
+# fort/events/*.jsonl was ignored here until cycle 7 (fortkit-i4y, 2026-08-08):
+# the append-only audit record is now tracked, so tampering shows as a diff and
+# the stream rides the offsite backup.
 .env*
 fort/telemetry/
 .forge.lock*

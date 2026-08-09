@@ -1,0 +1,9 @@
+{"ts":"2026-08-07T00:13:54-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins the morning run (opus)","payload":{"model":"opus"}}
+{"ts":"2026-08-07T00:19:49-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Herald first run: 3 drafts filed from a 24h window; digest closed-beads and handoff sections empty for two forts","payload":{"drafts":3}}
+{"ts":"2026-08-07T00:20:05-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's morning run ended (exit 0); report filed","payload":{"exit":0,"report":"/home/justin/Documents/Obsidian Vault/herald/reports/2026-08-07.md","report_filed":true}}
+{"ts":"2026-08-07T11:21:10-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins a boundary smoke-test (opus)","payload":{"model":"opus"}}
+{"ts":"2026-08-07T11:21:36-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Herald smoke probe event","payload":null}
+{"ts":"2026-08-07T11:22:40-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's smoke-test ended (exit 0)","payload":{"exit":0,"log":"/tmp/herald-2026-08-07-112110.log"}}
+{"ts":"2026-08-07T11:26:37-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins a boundary smoke-test (opus)","payload":{"model":"opus"}}
+{"ts":"2026-08-07T11:27:16-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Herald smoke probe event","payload":null}
+{"ts":"2026-08-07T11:27:39-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's smoke-test ended (exit 0)","payload":{"exit":0,"log":"/tmp/herald-2026-08-07-112637.log"}}

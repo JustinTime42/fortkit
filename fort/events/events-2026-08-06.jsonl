@@ -1,0 +1,12 @@
+{"ts":"2026-08-06T00:01:40-08:00","actor":"oswin","seat":"chronicler","category":"session.start","target":"smoke","detail":"Oswin Oncefired (Chronicler, civilization layer) begins reading this fort's record","payload":null}
+{"ts":"2026-08-06T00:02:39-08:00","actor":"oswin","seat":"chronicler","category":"session.end","target":"smoke","detail":"Oswin Oncefired (Chronicler, civilization layer) has finished reading this fort's record","payload":null}
+{"ts":"2026-08-06T00:04:13-08:00","actor":"oswin","seat":"chronicler","category":"session.start","target":"crash-path acceptance test (fortkit-zud.3) — not a real candidate","detail":"Oswin Oncefired (Chronicler, civilization layer) begins reading this fort's record","payload":null}
+{"ts":"2026-08-06T00:04:15-08:00","actor":"oswin","seat":"chronicler","category":"session.end","target":"crash-path acceptance test (fortkit-zud.3) — not a real candidate","detail":"Oswin Oncefired (Chronicler, civilization layer) has finished reading this fort's record","payload":null}
+{"ts":"2026-08-06T12:12:29-08:00","actor":"regent","seat":null,"category":"edict.ended","target":null,"detail":"The Regent sleeps; the edict is ended","payload":null}
+{"ts":"2026-08-06T12:12:46-08:00","actor":"emrith","seat":"mayor","category":"session.start","target":null,"detail":"The Overseer summons Emrith","payload":null}
+{"ts":"2026-08-06T22:36:36-08:00","actor":"regent","seat":null,"category":"edict.begun","target":null,"detail":"The Regent wakes: an edict is spoken in the Overseer's name (unmasked, full access)","payload":null}
+{"ts":"2026-08-06T22:36:53-08:00","actor":"regent","seat":null,"category":"edict.ended","target":null,"detail":"The Regent sleeps; the edict is ended","payload":null}
+{"ts":"2026-08-06T22:37:03-08:00","actor":"emrith","seat":"mayor","category":"session.start","target":null,"detail":"The Overseer summons Emrith","payload":null}
+{"ts":"2026-08-06T22:38:06-08:00","actor":"emrith","seat":"mayor","category":"session.start","target":null,"detail":"The Overseer summons Emrith","payload":null}
+{"ts":"2026-08-06T22:43:31-08:00","actor":"regent","seat":null,"category":"edict.begun","target":null,"detail":"The Regent wakes: an edict is spoken in the Overseer's name (unmasked, full access)","payload":null}
+{"ts":"2026-08-06T22:55:36-08:00","actor":"regent","seat":null,"category":"edict.ended","target":null,"detail":"The Regent sleeps; the edict is ended","payload":null}
