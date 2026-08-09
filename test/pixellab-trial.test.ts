@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, open, readFile, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +27,7 @@ import {
   pngFromBase64,
   request,
   requestTimeoutMilliseconds,
+  reusableStillAsset,
   seedOffsetFromEnvironment,
   walkCards,
   withSeedOffset,
@@ -187,8 +189,8 @@ describe("PixelLab bounded trial", () => {
     );
   });
 
-  test("uses schema version 5 for reference-padding provenance", () => {
-    expect(MANIFEST_SCHEMA_VERSION).toBe(5);
+  test("uses schema version 6 for reuse provenance", () => {
+    expect(MANIFEST_SCHEMA_VERSION).toBe(6);
   });
 
   test("sends the verified Pixflux body to PixelLab", () => {
@@ -243,6 +245,9 @@ describe("PixelLab bounded trial", () => {
       reference_image_size: { width: 64, height: 64 },
     });
     const referenceImage = body.reference_image as { base64: string };
+    expect(referenceImage.base64.startsWith("data:image/png;base64,")).toBe(
+      false,
+    );
     expect(
       pngDimensions(
         Buffer.from(
@@ -252,6 +257,98 @@ describe("PixelLab bounded trial", () => {
       ),
     ).toEqual({ width: 64, height: 64 });
     expect(ANIMATION_IMAGE_SIZE).toEqual({ width: 64, height: 64 });
+  });
+
+  test("retries one animation 5xx and logs both attempts", async () => {
+    const originalFetch = globalThis.fetch;
+    const write = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ images: [] }), { status: 200 }),
+      );
+    try {
+      await expect(
+        request(ANIMATION_ENDPOINT, {}, "not-a-key"),
+      ).resolves.toEqual({
+        images: [],
+      });
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+      expect(write).toHaveBeenCalledWith("Animation request attempt 1/2.\n");
+      expect(write).toHaveBeenCalledWith("Animation request attempt 2/2.\n");
+    } finally {
+      write.mockRestore();
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("fails after a second animation 5xx", async () => {
+    const originalFetch = globalThis.fetch;
+    const write = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }));
+    try {
+      await expect(
+        request(ANIMATION_ENDPOINT, {}, "not-a-key"),
+      ).rejects.toThrow("PixelLab request failed with HTTP 500.");
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      write.mockRestore();
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("never retries animation 4xx responses", async () => {
+    const originalFetch = globalThis.fetch;
+    const write = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 422 }));
+    try {
+      await expect(
+        request(ANIMATION_ENDPOINT, {}, "not-a-key"),
+      ).rejects.toThrow("PixelLab request failed with HTTP 422.");
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      write.mockRestore();
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("reuses a still only when its on-disk hash matches its manifest", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
+    const png = encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4));
+    const card = { id: "still", filename: "still.png" };
+    const manifestAsset = {
+      id: card.id,
+      file: card.filename,
+      sha256: createHash("sha256").update(png).digest("hex"),
+      seed: 41001,
+    };
+    try {
+      await writeFile(join(directory, card.filename), png);
+      await expect(
+        reusableStillAsset(card, [manifestAsset], directory),
+      ).resolves.toMatchObject({ png, asset: { ...manifestAsset } });
+      await expect(
+        reusableStillAsset(
+          card,
+          [{ ...manifestAsset, sha256: "not-the-file-hash" }],
+          directory,
+        ),
+      ).resolves.toBeNull();
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   test("pads every PNG filter type without resampling its pixels", () => {

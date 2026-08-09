@@ -13,7 +13,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deflateSync, inflateSync } from "node:zlib";
@@ -31,7 +31,7 @@ const MAX_TOTAL_GENERATIONS = 30;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
 const MAX_GENERATIONS_PER_STILL_ASSET = 2;
 const MAX_GENERATIONS_PER_ANIMATION_CALL = 8;
-const MANIFEST_SCHEMA_VERSION = 5;
+const MANIFEST_SCHEMA_VERSION = 6;
 const PIXFLUX_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
 const PNG_SIGNATURE = Buffer.from([
@@ -234,7 +234,9 @@ function animationRequestBody(masterPng, walkCardDefinition) {
   return {
     reference_image: {
       type: "base64",
-      base64: `data:image/png;base64,${paddedReference.toString("base64")}`,
+      // The response parser accepts both data URLs and raw base64, but the
+      // animation API's strict decoder expects raw base64 in requests.
+      base64: paddedReference.toString("base64"),
     },
     reference_image_size: ANIMATION_IMAGE_SIZE,
     description: walkCardDefinition.prompt,
@@ -526,26 +528,45 @@ function confirmedModel(response) {
 
 async function request(endpoint, body, apiKey) {
   const timeoutMilliseconds = requestTimeoutMilliseconds(endpoint);
-  const signal = AbortSignal.timeout(timeoutMilliseconds);
-  let response;
-  try {
-    response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-      signal,
-    });
-  } catch (error) {
-    if (signal.aborted)
-      throw new Error(
-        `PixelLab request to ${endpoint} timed out after ${timeoutMilliseconds}ms.`,
+  const retryAnimation = endpoint === ANIMATION_ENDPOINT;
+  const attempts = retryAnimation ? 2 : 1;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    if (retryAnimation)
+      process.stdout.write(
+        `Animation request attempt ${attempt}/${attempts}.\n`,
       );
-    throw error;
-  }
-  if (!response.ok) {
+    const signal = AbortSignal.timeout(timeoutMilliseconds);
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal,
+      });
+    } catch (error) {
+      if (signal.aborted)
+        throw new Error(
+          `PixelLab request to ${endpoint} timed out after ${timeoutMilliseconds}ms.`,
+        );
+      throw error;
+    }
+    if (response.ok) return response.json();
+    if (
+      retryAnimation &&
+      attempt === 1 &&
+      response.status >= 500 &&
+      response.status < 600
+    ) {
+      process.stdout.write(
+        `Animation request attempt ${attempt} received HTTP ${response.status}; retrying after 250ms.\n`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      continue;
+    }
     const detail =
       response.status >= 400 && response.status < 500
         ? await responseDetail(response, apiKey)
@@ -554,7 +575,7 @@ async function request(endpoint, body, apiKey) {
       `PixelLab request failed with HTTP ${response.status}${detail ? `: ${detail}` : "."}`,
     );
   }
-  return response.json();
+  throw new Error("Animation request exhausted its retry attempts.");
 }
 
 async function responseDetail(response, apiKey) {
@@ -661,12 +682,52 @@ async function writeAsset(
   );
 }
 
-async function main(cardDefinitions = cards) {
+async function priorManifest(outputDirectory) {
+  try {
+    const parsed = JSON.parse(
+      await readFile(join(outputDirectory, "provenance-manifest.json"), "utf8"),
+    );
+    return Array.isArray(parsed.assets) ? parsed : { assets: [] };
+  } catch {
+    return { assets: [] };
+  }
+}
+
+async function reusableStillAsset(
+  cardDefinition,
+  existingAssets,
+  outputDirectory,
+) {
+  const existing = existingAssets.find(
+    (asset) =>
+      asset?.id === cardDefinition.id &&
+      asset?.file === cardDefinition.filename &&
+      typeof asset?.sha256 === "string",
+  );
+  if (!existing) return null;
+  try {
+    const png = await readFile(join(outputDirectory, cardDefinition.filename));
+    if (sha256(png) !== existing.sha256) return null;
+    pngDimensions(png);
+    return { png, asset: { ...existing, reusedAt: new Date().toISOString() } };
+  } catch {
+    return null;
+  }
+}
+
+async function main(
+  cardDefinitions = cards,
+  outputDirectory = OUTPUT_DIRECTORY,
+) {
   rejectArguments();
   const kethraCitizenCard = assertKethraCitizenCard(cardDefinitions);
   const apiKey = readApiKey();
   const seedOffset = seedOffsetFromEnvironment();
-  await mkdir(OUTPUT_DIRECTORY, { recursive: true });
+  await mkdir(outputDirectory, { recursive: true });
+  const reuseStills = process.env.PIXELLAB_REUSE_STILLS === "1";
+  const existingManifest = reuseStills
+    ? await priorManifest(outputDirectory)
+    : { assets: [] };
   const manifest = {
     schemaVersion: MANIFEST_SCHEMA_VERSION,
     generatedAt: new Date().toISOString(),
@@ -679,20 +740,41 @@ async function main(cardDefinitions = cards) {
   let kethraMaster;
   for (const originalCardDefinition of cardDefinitions) {
     const cardDefinition = withSeedOffset(originalCardDefinition, seedOffset);
-    const result = await generatePixflux(cardDefinition, apiKey);
-    totals = addUsage(totals, result.cost);
-    await writeAsset(manifest, cardDefinition, result, {
-      requestedModel: PIXFLUX_MODEL,
-      confirmedModel: result.confirmedModel,
-      endpoint: PIXFLUX_ENDPOINT,
-      cost: result.cost,
-      requestCost: result.cost,
-      requestedImageSize: cardDefinition.imageSize,
-      reference: null,
-    });
+    const reused = reuseStills
+      ? await reusableStillAsset(
+          cardDefinition,
+          existingManifest.assets,
+          outputDirectory,
+        )
+      : null;
+    const result = reused ?? (await generatePixflux(cardDefinition, apiKey));
+    if (reused) {
+      manifest.assets.push(reused.asset);
+      await writeFile(
+        join(outputDirectory, "provenance-manifest.json"),
+        `${JSON.stringify(manifest, null, 2)}\n`,
+      );
+    } else {
+      totals = addUsage(totals, result.cost);
+      await writeAsset(
+        manifest,
+        cardDefinition,
+        result,
+        {
+          requestedModel: PIXFLUX_MODEL,
+          confirmedModel: result.confirmedModel,
+          endpoint: PIXFLUX_ENDPOINT,
+          cost: result.cost,
+          requestCost: result.cost,
+          requestedImageSize: cardDefinition.imageSize,
+          reference: null,
+        },
+        outputDirectory,
+      );
+    }
     if (cardDefinition.id === kethraCitizenCard.id) kethraMaster = result.png;
     process.stdout.write(
-      `Generated ${cardDefinition.id} (${manifest.assets.length}/12).\n`,
+      `${reused ? "Reused" : "Generated"} ${cardDefinition.id} (${manifest.assets.length}/12).\n`,
     );
   }
   if (!kethraMaster)
@@ -711,15 +793,21 @@ async function main(cardDefinitions = cards) {
   const masterHash = sha256(kethraMaster);
   for (let index = 0; index < offsetWalkCards.length; index += 1) {
     const result = { png: cycle.pngs[index] };
-    await writeAsset(manifest, offsetWalkCards[index], result, {
-      requestedModel: ANIMATION_MODEL,
-      confirmedModel: cycle.confirmedModel,
-      endpoint: ANIMATION_ENDPOINT,
-      ...perFrameProvenance(cycle.cost, walkCards.length),
-      requestedImageSize: ANIMATION_IMAGE_SIZE,
-      reference: { file: "kethra-citizen.png", sha256: masterHash },
-      referencePadding: REFERENCE_PADDING,
-    });
+    await writeAsset(
+      manifest,
+      offsetWalkCards[index],
+      result,
+      {
+        requestedModel: ANIMATION_MODEL,
+        confirmedModel: cycle.confirmedModel,
+        endpoint: ANIMATION_ENDPOINT,
+        ...perFrameProvenance(cycle.cost, walkCards.length),
+        requestedImageSize: ANIMATION_IMAGE_SIZE,
+        reference: { file: "kethra-citizen.png", sha256: masterHash },
+        referencePadding: REFERENCE_PADDING,
+      },
+      outputDirectory,
+    );
     process.stdout.write(
       `Generated ${offsetWalkCards[index].id} (${manifest.assets.length}/12).\n`,
     );
@@ -760,6 +848,7 @@ export {
   pngFromBase64,
   request,
   requestTimeoutMilliseconds,
+  reusableStillAsset,
   seedOffsetFromEnvironment,
   walkCards,
   withSeedOffset,

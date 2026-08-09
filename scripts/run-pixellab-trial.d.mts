@@ -62,7 +62,10 @@ export function assertKethraCitizenCard<T extends { id: string }>(
   cardDefinitions: T[],
 ): T;
 
-export function main(cardDefinitions?: Array<{ id: string }>): Promise<void>;
+export function main(
+  cardDefinitions?: Array<{ id: string }>,
+  outputDirectory?: string,
+): Promise<void>;
 
 export function requestTimeoutMilliseconds(
   endpoint: string,
@@ -74,6 +77,12 @@ export function request(
   body: Record<string, unknown>,
   apiKey: string,
 ): Promise<unknown>;
+
+export function reusableStillAsset(
+  cardDefinition: { id: string; filename: string },
+  existingAssets: Array<Record<string, unknown>>,
+  outputDirectory: string,
+): Promise<{ png: Buffer; asset: Record<string, unknown> } | null>;
 
 export function writeAsset(
   manifest: { assets: Array<Record<string, unknown>> },
