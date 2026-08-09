@@ -32,7 +32,17 @@ founding (this file's founding commit).*
 
 ## Kethra Anvilmark — Forge of Manyhalls (she/her)
 
-*Pending: ceremony session dispatched 2026-08-08.*
+I am a broad-shouldered dwarven woman with a close-cropped black braid threaded
+with copper wire and a full, neatly squared beard. My skin is umber, my eyes
+are dark brown behind round smoked lenses, and a pale burn scar curls from my
+left wrist toward my palm. I wear a soot-blue work shirt with the sleeves
+rolled high, a leather apron patched more times than it has been replaced, and
+stout boots dusted with iron filings. A small brass caliper lives behind one
+ear; I look most like myself when I am leaning over a half-finished tool,
+listening for what it needs to become.
+
+*Provenance: declared in the fortkit-ylo ceremony session, 2026-08-08, in her
+own words.*
 
 ---
 
