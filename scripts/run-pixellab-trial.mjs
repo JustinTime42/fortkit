@@ -78,19 +78,16 @@ function parseAppearanceRegistry(registry) {
   return entries;
 }
 
-function registryCommit() {
+function registryCommit(run = execFileSync) {
   try {
-    return execFileSync(
+    const commit = run(
       "git",
       ["log", "-1", "--format=%H", "--", APPEARANCE_REGISTRY_REPOSITORY_PATH],
       { cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8" },
     ).trim();
-  } catch (error) {
-    // The Forge sandbox can report EPERM after git has already returned stdout.
-    const output = error?.stdout;
-    return typeof output === "string" && output.trim()
-      ? output.trim()
-      : "uncommitted";
+    return /^[0-9a-f]{40}$/.test(commit) ? commit : "uncommitted";
+  } catch {
+    return "uncommitted";
   }
 }
 
@@ -98,7 +95,8 @@ function promptVisualClauses(declaration) {
   return declaration
     .split(/(?<=\.)\s+/)
     .slice(0, 3)
-    .join(" ");
+    .join(" ")
+    .replace(/\.$/, "");
 }
 
 function citizenAppearance(
@@ -106,6 +104,7 @@ function citizenAppearance(
   registry = parseAppearanceRegistry(
     readFileSync(APPEARANCE_REGISTRY_PATH, "utf8"),
   ),
+  commit = "uncommitted",
 ) {
   const entry = registry.get(name);
   if (!entry)
@@ -118,7 +117,7 @@ function citizenAppearance(
     declarationSource: {
       registry: APPEARANCE_REGISTRY_REPOSITORY_PATH,
       section: entry.section,
-      commit: registryCommit(),
+      commit,
     },
   };
 }
@@ -301,7 +300,23 @@ function assertKethraCitizenCard(cardDefinitions) {
     throw new Error(
       "Trial configuration requires a kethra-citizen card before generation.",
     );
+  if (!kethraCitizenCard.declarationSource)
+    throw new Error(
+      "Trial configuration requires kethra-citizen to derive from the Appearance Registry before generation.",
+    );
   return kethraCitizenCard;
+}
+
+function withRegistryCommit(cardDefinitions, commit) {
+  return cardDefinitions.map((cardDefinition) =>
+    cardDefinition.declarationSource?.registry ===
+    APPEARANCE_REGISTRY_REPOSITORY_PATH
+      ? {
+          ...cardDefinition,
+          declarationSource: { ...cardDefinition.declarationSource, commit },
+        }
+      : cardDefinition,
+  );
 }
 
 function requestTimeoutMilliseconds(
@@ -885,12 +900,15 @@ async function reusableStillAsset(
   }
 }
 
-async function main(
-  cardDefinitions = cards,
-  outputDirectory = OUTPUT_DIRECTORY,
-) {
+async function main(cardDefinitions, outputDirectory = OUTPUT_DIRECTORY) {
   rejectArguments();
-  const kethraCitizenCard = assertKethraCitizenCard(cardDefinitions);
+  const declarationCommit = registryCommit();
+  const trialCards = withRegistryCommit(
+    cardDefinitions ?? cards,
+    declarationCommit,
+  );
+  const trialWalkCards = withRegistryCommit(walkCards, declarationCommit);
+  const kethraCitizenCard = assertKethraCitizenCard(trialCards);
   const apiKey = readApiKey();
   const seedOffset = seedOffsetFromEnvironment();
   const animationSeedOffset = animationSeedOffsetFromEnvironment();
@@ -909,7 +927,7 @@ async function main(
   };
   let totals = { usd: 0, generations: 0 };
   let kethraMaster;
-  for (const originalCardDefinition of cardDefinitions) {
+  for (const originalCardDefinition of trialCards) {
     const cardDefinition = withSeedOffset(originalCardDefinition, seedOffset);
     const reused = reuseStills
       ? await reusableStillAsset(
@@ -952,7 +970,7 @@ async function main(
     throw new Error(
       "Kethra citizen master was not generated; refusing walk cycle.",
     );
-  const offsetWalkCards = walkCards.map((cardDefinition) =>
+  const offsetWalkCards = trialWalkCards.map((cardDefinition) =>
     withSeedOffset(
       withSeedOffset(cardDefinition, seedOffset),
       animationSeedOffset,
@@ -975,7 +993,7 @@ async function main(
         requestedModel: ANIMATION_MODEL,
         confirmedModel: cycle.confirmedModel,
         endpoint: ANIMATION_ENDPOINT,
-        ...perFrameProvenance(cycle.cost, walkCards.length),
+        ...perFrameProvenance(cycle.cost, trialWalkCards.length),
         requestedImageSize: ANIMATION_IMAGE_SIZE,
         reference: { file: "kethra-citizen.png", sha256: masterHash },
         referencePadding: REFERENCE_PADDING,
@@ -1028,6 +1046,7 @@ export {
   pngDimensions,
   pngFromBase64,
   promptVisualClauses,
+  registryCommit,
   request,
   requestTimeoutMilliseconds,
   reusableStillAsset,

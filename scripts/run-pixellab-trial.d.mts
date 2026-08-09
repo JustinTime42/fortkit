@@ -120,8 +120,16 @@ export function parseAppearanceRegistry(
 export function citizenAppearance(
   name: string,
   registry?: Map<string, { section: string; declaration: string }>,
+  commit?: string,
 ): { prompt: string; declarationSource: DeclarationSource | null };
 export function promptVisualClauses(declaration: string): string;
+export function registryCommit(
+  run?: (
+    file: string,
+    arguments_: string[],
+    options: { cwd: string; encoding: string },
+  ) => string,
+): string;
 
 export const cards: Array<{
   id: string;

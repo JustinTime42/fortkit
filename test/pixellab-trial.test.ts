@@ -14,6 +14,7 @@ import {
   addUsage,
   animationRequestBody,
   animationSeedOffsetFromEnvironment,
+  assertKethraCitizenCard,
   CHARACTER_NEGATIVE_CONSTRAINTS,
   cards,
   characterTransparencyCheck,
@@ -32,6 +33,7 @@ import {
   pixfluxRequestBody,
   pngDimensions,
   pngFromBase64,
+  registryCommit,
   request,
   requestTimeoutMilliseconds,
   reusableStillAsset,
@@ -270,9 +272,20 @@ describe("PixelLab bounded trial", () => {
     expect(kethra?.declarationSource).toMatchObject({
       registry: "fort/roster-appearance.md",
       section: "Kethra Anvilmark — Forge of Manyhalls (she/her)",
-      commit: expect.stringMatching(/^[0-9a-f]{40}$/),
+      commit: expect.stringMatching(/^(?:[0-9a-f]{40}|uncommitted)$/),
     });
     expect(walkCards[0]?.declarationSource).toEqual(kethra?.declarationSource);
+    expect(kethra?.prompt).not.toContain("filings.,");
+  });
+
+  test("looks up registry commits through an injected runner", () => {
+    expect(registryCommit(() => "a".repeat(40))).toBe("a".repeat(40));
+    expect(registryCommit(() => "not a commit")).toBe("uncommitted");
+    expect(
+      registryCommit(() => {
+        throw new Error("no git");
+      }),
+    ).toBe("uncommitted");
   });
 
   test("uses the registry's generic silhouette for an undeclared citizen", () => {
@@ -571,6 +584,11 @@ describe("PixelLab bounded trial", () => {
       seed: 43000,
       imageSize: { width: 32, height: 64 },
       params: { no_background: true },
+      declarationSource: {
+        registry: "fort/roster-appearance.md",
+        section: "Kethra Anvilmark — Forge of Manyhalls (she/her)",
+        commit: "uncommitted",
+      },
     };
     try {
       await writeFile(join(directory, card.filename), stillPng);
@@ -660,6 +678,11 @@ describe("PixelLab bounded trial", () => {
       seed: 43000,
       imageSize: { width: 32, height: 64 },
       params: { no_background: true },
+      declarationSource: {
+        registry: "fort/roster-appearance.md",
+        section: "Kethra Anvilmark — Forge of Manyhalls (she/her)",
+        commit: "uncommitted",
+      },
     };
     const originalAsset = {
       id: card.id,
@@ -669,6 +692,7 @@ describe("PixelLab bounded trial", () => {
       prompt: card.prompt,
       negativeConstraints: card.negativeConstraints,
       params: { imageSize: card.imageSize, ...card.params },
+      declarationSource: card.declarationSource,
     };
     try {
       await writeFile(join(directory, card.filename), stillPng);
@@ -1106,6 +1130,12 @@ describe("PixelLab bounded trial", () => {
   test("fails Kethra-card renames at startup before a request can start", async () => {
     await expect(main([{ id: "renamed-kethra-citizen" }])).rejects.toThrow(
       "Trial configuration requires a kethra-citizen card before generation.",
+    );
+  });
+
+  test("fails an undeclared Kethra card before generation", () => {
+    expect(() => assertKethraCitizenCard([{ id: "kethra-citizen" }])).toThrow(
+      "requires kethra-citizen to derive from the Appearance Registry",
     );
   });
 
