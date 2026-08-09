@@ -117,6 +117,7 @@ function citizenAppearance(
     declarationSource: {
       registry: APPEARANCE_REGISTRY_REPOSITORY_PATH,
       section: entry.section,
+      declarationSha256: sha256(entry.declaration),
       commit,
     },
   };
@@ -877,8 +878,10 @@ async function reusableStillAsset(
       asset?.prompt === cardDefinition.prompt &&
       asset?.negativeConstraints === cardDefinition.negativeConstraints &&
       JSON.stringify(asset?.params) === JSON.stringify(requestedParams) &&
-      JSON.stringify(asset?.declarationSource ?? null) ===
-        JSON.stringify(cardDefinition.declarationSource ?? null) &&
+      sameDeclarationIdentity(
+        asset?.declarationSource,
+        cardDefinition.declarationSource,
+      ) &&
       typeof asset?.sha256 === "string",
   );
   if (!existing) return null;
@@ -898,6 +901,17 @@ async function reusableStillAsset(
   } catch {
     return null;
   }
+}
+
+function sameDeclarationIdentity(existingSource, requestedSource) {
+  if (existingSource === null || existingSource === undefined)
+    return requestedSource === null || requestedSource === undefined;
+  if (requestedSource === null || requestedSource === undefined) return false;
+  return (
+    existingSource.registry === requestedSource.registry &&
+    existingSource.section === requestedSource.section &&
+    existingSource.declarationSha256 === requestedSource.declarationSha256
+  );
 }
 
 async function main(cardDefinitions, outputDirectory = OUTPUT_DIRECTORY) {
