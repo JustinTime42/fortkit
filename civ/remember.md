@@ -304,3 +304,9 @@ should name the seat if it matters who learned it.
 - 2026-08-08: **civ/handoffs and civ/briefing.md are still gitignored** — after
   cycle 7 they are the only civilization records with no offsite copy. Open
   question for the Overseer, deliberately not folded into the edict.
+
+- 2026-08-08 (edict 7 follow-up): **civ/handoffs and civ/transcripts are
+  git-tracked by the Overseer's decision** (the open question from the cycle-7
+  handoff, answered same day). briefing.md stays ignored: it is a regenerated
+  view, not a record. A seat that writes a handoff should expect it committed
+  and pushed at session close.

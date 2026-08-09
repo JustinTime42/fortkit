@@ -1,5 +1,7 @@
-transcripts/
-handoffs/*.md
+# handoffs/ and transcripts/ were ignored here until 2026-08-08 (Overseer
+# decision, cycle-7 follow-up): they are civilization records — tracked, they
+# are tamper-evident and ride the offsite backup like the event streams.
+# briefing.md stays ignored: it is a view regenerated at every wake, not a record.
 briefing.md
 # events/*.jsonl was ignored here until cycle 7 (fortkit-i4y, 2026-08-08): the
 # civilization's audit record is now tracked, same rationale as the fort streams.
