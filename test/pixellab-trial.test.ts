@@ -65,7 +65,13 @@ function encodeRgbaPng(
   width: number,
   height: number,
   pixels: Buffer,
-  { bitDepth = 8, colorType = 6, interlace = 0 } = {},
+  {
+    bitDepth = 8,
+    colorType = 6,
+    extraScanlineBytes = 0,
+    filterType = 0,
+    interlace = 0,
+  } = {},
 ) {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(width, 0);
@@ -73,20 +79,50 @@ function encodeRgbaPng(
   header[8] = bitDepth;
   header[9] = colorType;
   header[12] = interlace;
-  const scanlines = Buffer.alloc((width * 4 + 1) * height);
-  for (let row = 0; row < height; row += 1)
-    pixels.copy(
-      scanlines,
-      row * (width * 4 + 1) + 1,
-      row * width * 4,
-      (row + 1) * width * 4,
-    );
+  const scanlines = Buffer.alloc((width * 4 + 1) * height + extraScanlineBytes);
+  for (let row = 0; row < height; row += 1) {
+    const scanlineOffset = row * (width * 4 + 1);
+    scanlines[scanlineOffset] = filterType;
+    for (let column = 0; column < width * 4; column += 1) {
+      const value = pixels[row * width * 4 + column] ?? 0;
+      const left =
+        column >= 4 ? (pixels[row * width * 4 + column - 4] ?? 0) : 0;
+      const above = row > 0 ? (pixels[(row - 1) * width * 4 + column] ?? 0) : 0;
+      const upperLeft =
+        row > 0 && column >= 4
+          ? (pixels[(row - 1) * width * 4 + column - 4] ?? 0)
+          : 0;
+      const predictor =
+        filterType === 1
+          ? left
+          : filterType === 2
+            ? above
+            : filterType === 3
+              ? Math.floor((left + above) / 2)
+              : filterType === 4
+                ? paeth(left, above, upperLeft)
+                : 0;
+      scanlines[scanlineOffset + 1 + column] = (value - predictor) & 0xff;
+    }
+  }
   return Buffer.concat([
     pngSignature,
     chunk("IHDR", header),
     chunk("IDAT", deflateSync(scanlines)),
     chunk("IEND", Buffer.alloc(0)),
   ]);
+}
+
+function paeth(left: number, above: number, upperLeft: number) {
+  const estimate = left + above - upperLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const aboveDistance = Math.abs(estimate - above);
+  const upperLeftDistance = Math.abs(estimate - upperLeft);
+  return leftDistance <= aboveDistance && leftDistance <= upperLeftDistance
+    ? left
+    : aboveDistance <= upperLeftDistance
+      ? above
+      : upperLeft;
 }
 
 function decodeFilterZeroRgbaPng(png: Buffer) {
@@ -218,27 +254,33 @@ describe("PixelLab bounded trial", () => {
     expect(ANIMATION_IMAGE_SIZE).toEqual({ width: 64, height: 64 });
   });
 
-  test("pads the 32x64 RGBA master without resampling its pixels", () => {
+  test("pads every PNG filter type without resampling its pixels", () => {
     const source = Buffer.alloc(32 * 64 * 4);
-    source.set([12, 34, 56, 255], 0);
-    source.set([78, 90, 123, 200], (63 * 32 + 31) * 4);
-    const padded = decodeFilterZeroRgbaPng(
-      padAnimationReference(encodeRgbaPng(32, 64, source)),
-    );
-    expect(padded.width).toBe(64);
-    expect(padded.height).toBe(64);
-    for (let row = 0; row < 64; row += 1) {
-      const sourceRow = source.subarray(row * 32 * 4, (row + 1) * 32 * 4);
-      expect(
-        padded.pixels.subarray((row * 64 + 16) * 4, (row * 64 + 48) * 4),
-      ).toEqual(sourceRow);
-      expect(padded.pixels.subarray(row * 64 * 4, (row * 64 + 16) * 4)).toEqual(
-        Buffer.alloc(16 * 4),
+    for (let index = 0; index < source.length; index += 1)
+      source[index] = (index * 37 + Math.floor(index / 17) * 19) & 0xff;
+    const paddedPixels = [];
+    for (let filterType = 0; filterType <= 4; filterType += 1) {
+      const padded = decodeFilterZeroRgbaPng(
+        padAnimationReference(encodeRgbaPng(32, 64, source, { filterType })),
       );
-      expect(
-        padded.pixels.subarray((row * 64 + 48) * 4, (row + 1) * 64 * 4),
-      ).toEqual(Buffer.alloc(16 * 4));
+      expect(padded.width).toBe(64);
+      expect(padded.height).toBe(64);
+      paddedPixels.push(padded.pixels);
+      for (let row = 0; row < 64; row += 1) {
+        const sourceRow = source.subarray(row * 32 * 4, (row + 1) * 32 * 4);
+        expect(
+          padded.pixels.subarray((row * 64 + 16) * 4, (row * 64 + 48) * 4),
+        ).toEqual(sourceRow);
+        expect(
+          padded.pixels.subarray(row * 64 * 4, (row * 64 + 16) * 4),
+        ).toEqual(Buffer.alloc(16 * 4));
+        expect(
+          padded.pixels.subarray((row * 64 + 48) * 4, (row + 1) * 64 * 4),
+        ).toEqual(Buffer.alloc(16 * 4));
+      }
     }
+    for (const pixels of paddedPixels.slice(1))
+      expect(pixels).toEqual(paddedPixels[0]);
   });
 
   test("fails closed when a reference PNG is not 8-bit RGBA", () => {
@@ -247,6 +289,16 @@ describe("PixelLab bounded trial", () => {
         encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4), { colorType: 2 }),
       ),
     ).toThrow("expected a 32x64 8-bit RGBA non-interlaced PNG");
+  });
+
+  test("bounds decompression to the exact PNG scanline length", () => {
+    expect(() =>
+      padAnimationReference(
+        encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4), {
+          extraScanlineBytes: 1024 * 1024,
+        }),
+      ),
+    ).toThrow("invalid PNG image data");
   });
 
   test("accepts USD and generation usage meters under their per-request caps", () => {
@@ -382,6 +434,37 @@ describe("PixelLab bounded trial", () => {
           placement: "bottom-center",
         },
       });
+      expect(manifest.assets[0]?.reference).toBeNull();
+      expect(manifest.assets[0]?.referencePadding).toEqual({
+        from: { width: 32, height: 64 },
+        to: { width: 64, height: 64 },
+        placement: "bottom-center",
+      });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("records null reference fields for still assets", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
+    const png = encodeRgbaPng(1, 1, Buffer.alloc(4));
+    const manifest: { assets: Array<Record<string, unknown>> } = { assets: [] };
+    try {
+      await writeAsset(
+        manifest,
+        {
+          id: "still",
+          kind: "item-glyph",
+          filename: "still.png",
+          imageSize: { width: 1, height: 1 },
+          params: {},
+        },
+        { png },
+        { requestedImageSize: { width: 1, height: 1 } },
+        directory,
+      );
+      expect(manifest.assets[0]?.reference).toBeNull();
+      expect(manifest.assets[0]?.referencePadding).toBeNull();
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

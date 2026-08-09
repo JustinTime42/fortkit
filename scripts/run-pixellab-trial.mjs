@@ -421,14 +421,17 @@ function constrainedRgbaPixels(png) {
       "Cannot pad animation reference: expected a 32x64 8-bit RGBA non-interlaced PNG.",
     );
 
+  const rowBytes = width * PNG_RGBA_BYTES_PER_PIXEL;
+  const scanlineLength = (rowBytes + 1) * height;
   let scanlines;
   try {
-    scanlines = inflateSync(Buffer.concat(idat));
+    scanlines = inflateSync(Buffer.concat(idat), {
+      maxOutputLength: scanlineLength,
+    });
   } catch {
     throw new Error("Cannot pad animation reference: invalid PNG image data.");
   }
-  const rowBytes = width * PNG_RGBA_BYTES_PER_PIXEL;
-  if (scanlines.length !== (rowBytes + 1) * height)
+  if (scanlines.length !== scanlineLength)
     throw new Error(
       "Cannot pad animation reference: unexpected PNG scanline length.",
     );
@@ -487,9 +490,11 @@ function padAnimationReference(masterPng) {
     (width * PNG_RGBA_BYTES_PER_PIXEL + 1) * height,
   );
   const sourceWidth = REFERENCE_PADDING.from.width;
+  const sourceHeight = REFERENCE_PADDING.from.height;
   const xOffset = (width - sourceWidth) / 2;
-  for (let row = 0; row < height; row += 1) {
-    const targetRow = row * (width * PNG_RGBA_BYTES_PER_PIXEL + 1);
+  const yOffset = height - sourceHeight;
+  for (let row = 0; row < sourceHeight; row += 1) {
+    const targetRow = (row + yOffset) * (width * PNG_RGBA_BYTES_PER_PIXEL + 1);
     scanlines[targetRow] = 0;
     sourcePixels.copy(
       scanlines,
@@ -647,8 +652,8 @@ async function writeAsset(
     amortizedCost: provenance.amortizedCost,
     requestCost: provenance.requestCost,
     sha256: sha256(result.png),
-    reference: provenance.reference,
-    referencePadding: provenance.referencePadding,
+    reference: provenance.reference ?? null,
+    referencePadding: provenance.referencePadding ?? null,
   });
   await writeFile(
     join(outputDirectory, "provenance-manifest.json"),
