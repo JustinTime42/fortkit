@@ -31,6 +31,7 @@ export function pixfluxRequestBody(cardDefinition: {
 
 export function pngFromBase64(encoded: string): Buffer;
 export function pngDimensions(png: Buffer): { width: number; height: number };
+export function padAnimationReference(masterPng: Buffer): Buffer;
 
 export type UsageMeter = {
   meter: "usd" | "generations";
