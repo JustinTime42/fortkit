@@ -17,6 +17,7 @@ import {
   CHARACTER_NEGATIVE_CONSTRAINTS,
   cards,
   characterTransparencyCheck,
+  citizenAppearance,
   MANIFEST_SCHEMA_VERSION,
   MAX_GENERATIONS_PER_ANIMATION_CALL,
   MAX_GENERATIONS_PER_STILL_ASSET,
@@ -25,6 +26,7 @@ import {
   NEGATIVE_CONSTRAINTS,
   PIXFLUX_ENDPOINT,
   padAnimationReference,
+  parseAppearanceRegistry,
   parseUsageMeter,
   perFrameProvenance,
   pixfluxRequestBody,
@@ -199,8 +201,8 @@ describe("PixelLab bounded trial", () => {
     );
   });
 
-  test("uses schema version 7 for transparency-check provenance", () => {
-    expect(MANIFEST_SCHEMA_VERSION).toBe(7);
+  test("uses schema version 8 for appearance-declaration provenance", () => {
+    expect(MANIFEST_SCHEMA_VERSION).toBe(8);
   });
 
   test("sends the verified Pixflux body to PixelLab", () => {
@@ -255,6 +257,64 @@ describe("PixelLab bounded trial", () => {
     expect(
       cards.find((card) => card.id === "forge-building")?.negativeConstraints,
     ).toBe(NEGATIVE_CONSTRAINTS);
+  });
+
+  test("derives Kethra's prompt from her registry declaration", () => {
+    const kethra = cards.find((card) => card.id === "kethra-citizen");
+    expect(kethra?.prompt).toContain("close-cropped black braid threaded");
+    expect(kethra?.prompt).toContain("neatly squared beard");
+    expect(kethra?.prompt).toContain("skin is umber");
+    expect(kethra?.prompt).toContain("round smoked lenses");
+    expect(kethra?.prompt).toContain("pale burn scar");
+    expect(kethra?.prompt).toContain("leather apron patched");
+    expect(kethra?.declarationSource).toMatchObject({
+      registry: "fort/roster-appearance.md",
+      section: "Kethra Anvilmark — Forge of Manyhalls (she/her)",
+      commit: expect.stringMatching(/^[0-9a-f]{40}$/),
+    });
+    expect(walkCards[0]?.declarationSource).toEqual(kethra?.declarationSource);
+  });
+
+  test("uses the registry's generic silhouette for an undeclared citizen", () => {
+    const registry = parseAppearanceRegistry(
+      "## Declared Citizen — Seat (they/them)\n\n> A declared appearance.\n",
+    );
+    expect(citizenAppearance("Undeclared Citizen", registry)).toEqual({
+      prompt: "deliberately generic silhouette, no declared appearance",
+      declarationSource: null,
+    });
+  });
+
+  test("writes the declaration source into generated asset provenance", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
+    const manifest: { assets: Array<Record<string, unknown>> } = { assets: [] };
+    try {
+      await writeAsset(
+        manifest,
+        {
+          id: "citizen",
+          kind: "citizen-master",
+          filename: "citizen.png",
+          imageSize: { width: 1, height: 1 },
+          params: {},
+          declarationSource: {
+            registry: "fort/roster-appearance.md",
+            section: "Citizen — Seat (they/them)",
+            commit: "a".repeat(40),
+          },
+        },
+        { png: encodeRgbaPng(1, 1, Buffer.alloc(4)) },
+        { requestedImageSize: { width: 1, height: 1 } },
+        directory,
+      );
+      expect(manifest.assets[0]?.declarationSource).toEqual({
+        registry: "fort/roster-appearance.md",
+        section: "Citizen — Seat (they/them)",
+        commit: "a".repeat(40),
+      });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   test("sends the verified 64x64 animation body to PixelLab", () => {

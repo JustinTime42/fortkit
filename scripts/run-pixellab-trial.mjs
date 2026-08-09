@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * Run the bounded PixelLab visual trial.
  *
@@ -12,7 +13,9 @@
  * manifest entries, or request bodies.
  */
 
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,6 +24,10 @@ import { deflateSync, inflateSync } from "node:zlib";
 const OUTPUT_DIRECTORY = fileURLToPath(
   new URL("../assets/trial", import.meta.url),
 );
+const APPEARANCE_REGISTRY_PATH = fileURLToPath(
+  new URL("../fort/roster-appearance.md", import.meta.url),
+);
+const APPEARANCE_REGISTRY_REPOSITORY_PATH = "fort/roster-appearance.md";
 const PIXFLUX_ENDPOINT = "https://api.pixellab.ai/v1/generate-image-pixflux";
 const ANIMATION_ENDPOINT = "https://api.pixellab.ai/v1/animate-with-text";
 const PIXFLUX_MODEL = "pixflux";
@@ -31,7 +38,7 @@ const MAX_TOTAL_GENERATIONS = 30;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
 const MAX_GENERATIONS_PER_STILL_ASSET = 2;
 const MAX_GENERATIONS_PER_ANIMATION_CALL = 8;
-const MANIFEST_SCHEMA_VERSION = 7;
+const MANIFEST_SCHEMA_VERSION = 8;
 const PIXFLUX_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_RETRY_DELAY_MS = 250;
@@ -54,6 +61,69 @@ const CHARACTER_ISOLATION =
 const CHARACTER_KINDS = new Set(["citizen-master", "walk-frame"]);
 const TRANSPARENCY_BORDER_BAND_PX = 2;
 const MAX_CHARACTER_OPAQUE_COVERAGE = 0.6;
+
+function parseAppearanceRegistry(registry) {
+  const entries = new Map();
+  const sections = registry.split(/^## /m).slice(1);
+  for (const section of sections) {
+    const [heading, ...body] = section.split("\n");
+    const declarationLines = body.filter((line) => line.startsWith("> "));
+    if (declarationLines.length === 0) continue;
+    const name = heading.split(" — ")[0];
+    entries.set(name, {
+      section: heading,
+      declaration: declarationLines.map((line) => line.slice(2)).join(" "),
+    });
+  }
+  return entries;
+}
+
+function registryCommit() {
+  try {
+    return execFileSync(
+      "git",
+      ["log", "-1", "--format=%H", "--", APPEARANCE_REGISTRY_REPOSITORY_PATH],
+      { cwd: fileURLToPath(new URL("..", import.meta.url)), encoding: "utf8" },
+    ).trim();
+  } catch (error) {
+    // The Forge sandbox can report EPERM after git has already returned stdout.
+    const output = error?.stdout;
+    return typeof output === "string" && output.trim()
+      ? output.trim()
+      : "uncommitted";
+  }
+}
+
+function promptVisualClauses(declaration) {
+  return declaration
+    .split(/(?<=\.)\s+/)
+    .slice(0, 3)
+    .join(" ");
+}
+
+function citizenAppearance(
+  name,
+  registry = parseAppearanceRegistry(
+    readFileSync(APPEARANCE_REGISTRY_PATH, "utf8"),
+  ),
+) {
+  const entry = registry.get(name);
+  if (!entry)
+    return {
+      prompt: "deliberately generic silhouette, no declared appearance",
+      declarationSource: null,
+    };
+  return {
+    prompt: promptVisualClauses(entry.declaration),
+    declarationSource: {
+      registry: APPEARANCE_REGISTRY_REPOSITORY_PATH,
+      section: entry.section,
+      commit: registryCommit(),
+    },
+  };
+}
+
+const kethraAppearance = citizenAppearance("Kethra Anvilmark");
 
 const cards = [
   card(
@@ -78,7 +148,8 @@ const cards = [
     32,
     64,
     42001,
-    `dwarven forge master Kethra, leather apron, hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame, ${CHARACTER_ISOLATION}`,
+    `${kethraAppearance.prompt}, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame, ${CHARACTER_ISOLATION}`,
+    kethraAppearance.declarationSource,
   ),
   card(
     "tavern-master",
@@ -122,7 +193,7 @@ const cards = [
   ),
 ];
 
-const WALK_DESCRIPTION = `dwarven forge master Kethra walking east, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame, ${CHARACTER_ISOLATION}`;
+const WALK_DESCRIPTION = `${kethraAppearance.prompt}, walking east, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame, ${CHARACTER_ISOLATION}`;
 
 const walkCards = [
   walkCard("kethra-walk-east-01", 43001, 1),
@@ -131,7 +202,15 @@ const walkCards = [
   walkCard("kethra-walk-east-04", 43001, 4),
 ];
 
-function card(id, kind, width, height, seed, subject) {
+function card(
+  id,
+  kind,
+  width,
+  height,
+  seed,
+  subject,
+  declarationSource = null,
+) {
   const character = CHARACTER_KINDS.has(kind);
   return {
     id,
@@ -146,6 +225,7 @@ function card(id, kind, width, height, seed, subject) {
     seed,
     imageSize: { width, height },
     params: { no_background: true, outline: "selective outline" },
+    declarationSource,
   };
 }
 
@@ -166,6 +246,7 @@ function walkCard(id, seed, frameIndex) {
       action: "walk",
       n_frames: 4,
     },
+    declarationSource: kethraAppearance.declarationSource,
   };
 }
 
@@ -742,6 +823,7 @@ async function writeAsset(
     amortizedCost: provenance.amortizedCost,
     requestCost: provenance.requestCost,
     sha256: sha256(result.png),
+    declarationSource: cardDefinition.declarationSource ?? null,
     reference: provenance.reference ?? null,
     referencePadding: provenance.referencePadding ?? null,
     ...(transparencyCheck ? { transparencyCheck } : {}),
@@ -780,6 +862,8 @@ async function reusableStillAsset(
       asset?.prompt === cardDefinition.prompt &&
       asset?.negativeConstraints === cardDefinition.negativeConstraints &&
       JSON.stringify(asset?.params) === JSON.stringify(requestedParams) &&
+      JSON.stringify(asset?.declarationSource ?? null) ===
+        JSON.stringify(cardDefinition.declarationSource ?? null) &&
       typeof asset?.sha256 === "string",
   );
   if (!existing) return null;
@@ -927,6 +1011,7 @@ export {
   CHARACTER_NEGATIVE_CONSTRAINTS,
   cards,
   characterTransparencyCheck,
+  citizenAppearance,
   MANIFEST_SCHEMA_VERSION,
   MAX_GENERATIONS_PER_ANIMATION_CALL,
   MAX_GENERATIONS_PER_STILL_ASSET,
@@ -936,11 +1021,13 @@ export {
   PIXFLUX_ENDPOINT,
   PIXFLUX_MODEL,
   padAnimationReference,
+  parseAppearanceRegistry,
   parseUsageMeter,
   perFrameProvenance,
   pixfluxRequestBody,
   pngDimensions,
   pngFromBase64,
+  promptVisualClauses,
   request,
   requestTimeoutMilliseconds,
   reusableStillAsset,
