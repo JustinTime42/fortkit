@@ -3,6 +3,7 @@ import { mkdtemp, open, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { deflateSync, inflateSync } from "node:zlib";
 
 import { describe, expect, test, vi } from "vitest";
 
@@ -17,6 +18,7 @@ import {
   MAX_TOTAL_GENERATIONS,
   main,
   PIXFLUX_ENDPOINT,
+  padAnimationReference,
   parseUsageMeter,
   perFrameProvenance,
   pixfluxRequestBody,
@@ -33,6 +35,81 @@ import {
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const script = "scripts/run-pixellab-trial.mjs";
 const childEnvironment = { PATH: process.env.PATH ?? "" };
+const pngSignature = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
+
+function crc32(bytes: Buffer) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1)
+      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type: string, data: Buffer) {
+  const result = Buffer.alloc(12 + data.length);
+  result.writeUInt32BE(data.length, 0);
+  result.write(type, 4, 4, "ascii");
+  data.copy(result, 8);
+  result.writeUInt32BE(
+    crc32(result.subarray(4, 8 + data.length)),
+    8 + data.length,
+  );
+  return result;
+}
+
+function encodeRgbaPng(
+  width: number,
+  height: number,
+  pixels: Buffer,
+  { bitDepth = 8, colorType = 6, interlace = 0 } = {},
+) {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = bitDepth;
+  header[9] = colorType;
+  header[12] = interlace;
+  const scanlines = Buffer.alloc((width * 4 + 1) * height);
+  for (let row = 0; row < height; row += 1)
+    pixels.copy(
+      scanlines,
+      row * (width * 4 + 1) + 1,
+      row * width * 4,
+      (row + 1) * width * 4,
+    );
+  return Buffer.concat([
+    pngSignature,
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(scanlines)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+function decodeFilterZeroRgbaPng(png: Buffer) {
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  let offset = 8;
+  const idat: Buffer[] = [];
+  while (offset < png.length) {
+    const length = png.readUInt32BE(offset);
+    const type = png.toString("ascii", offset + 4, offset + 8);
+    if (type === "IDAT")
+      idat.push(png.subarray(offset + 8, offset + 8 + length));
+    offset += length + 12;
+  }
+  const scanlines = inflateSync(Buffer.concat(idat));
+  const pixels = Buffer.alloc(width * height * 4);
+  for (let row = 0; row < height; row += 1) {
+    const offset = row * (width * 4 + 1);
+    expect(scanlines[offset]).toBe(0);
+    scanlines.copy(pixels, row * width * 4, offset + 1, offset + 1 + width * 4);
+  }
+  return { width, height, pixels };
+}
 
 async function runRefusal(arguments_: string[]) {
   const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
@@ -74,8 +151,8 @@ describe("PixelLab bounded trial", () => {
     );
   });
 
-  test("uses schema version 4 for the current provenance shape", () => {
-    expect(MANIFEST_SCHEMA_VERSION).toBe(4);
+  test("uses schema version 5 for reference-padding provenance", () => {
+    expect(MANIFEST_SCHEMA_VERSION).toBe(5);
   });
 
   test("sends the verified Pixflux body to PixelLab", () => {
@@ -106,27 +183,70 @@ describe("PixelLab bounded trial", () => {
   });
 
   test("sends the verified 64x64 animation body to PixelLab", () => {
-    const body = animationRequestBody(Buffer.from("master"), {
-      prompt: "Kethra walks east",
-      negativeConstraints: "no words",
-      seed: 43001,
-      imageSize: { width: 32, height: 64 },
-      params: {
-        no_background: true,
-        view: "side",
-        direction: "east",
-        action: "walk",
-        n_frames: 4,
+    const body = animationRequestBody(
+      encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4)),
+      {
+        prompt: "Kethra walks east",
+        negativeConstraints: "no words",
+        seed: 43001,
+        imageSize: { width: 32, height: 64 },
+        params: {
+          no_background: true,
+          view: "side",
+          direction: "east",
+          action: "walk",
+          n_frames: 4,
+        },
       },
-    });
+    );
     expect(body).toMatchObject({
       description: "Kethra walks east",
       negative_description: "no words",
       n_frames: 4,
       image_size: { width: 64, height: 64 },
-      reference_image_size: { width: 32, height: 64 },
+      reference_image_size: { width: 64, height: 64 },
     });
+    const referenceImage = body.reference_image as { base64: string };
+    expect(
+      pngDimensions(
+        Buffer.from(
+          referenceImage.base64.replace("data:image/png;base64,", ""),
+          "base64",
+        ),
+      ),
+    ).toEqual({ width: 64, height: 64 });
     expect(ANIMATION_IMAGE_SIZE).toEqual({ width: 64, height: 64 });
+  });
+
+  test("pads the 32x64 RGBA master without resampling its pixels", () => {
+    const source = Buffer.alloc(32 * 64 * 4);
+    source.set([12, 34, 56, 255], 0);
+    source.set([78, 90, 123, 200], (63 * 32 + 31) * 4);
+    const padded = decodeFilterZeroRgbaPng(
+      padAnimationReference(encodeRgbaPng(32, 64, source)),
+    );
+    expect(padded.width).toBe(64);
+    expect(padded.height).toBe(64);
+    for (let row = 0; row < 64; row += 1) {
+      const sourceRow = source.subarray(row * 32 * 4, (row + 1) * 32 * 4);
+      expect(
+        padded.pixels.subarray((row * 64 + 16) * 4, (row * 64 + 48) * 4),
+      ).toEqual(sourceRow);
+      expect(padded.pixels.subarray(row * 64 * 4, (row * 64 + 16) * 4)).toEqual(
+        Buffer.alloc(16 * 4),
+      );
+      expect(
+        padded.pixels.subarray((row * 64 + 48) * 4, (row + 1) * 64 * 4),
+      ).toEqual(Buffer.alloc(16 * 4));
+    }
+  });
+
+  test("fails closed when a reference PNG is not 8-bit RGBA", () => {
+    expect(() =>
+      padAnimationReference(
+        encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4), { colorType: 2 }),
+      ),
+    ).toThrow("expected a 32x64 8-bit RGBA non-interlaced PNG");
   });
 
   test("accepts USD and generation usage meters under their per-request caps", () => {
@@ -243,6 +363,11 @@ describe("PixelLab bounded trial", () => {
           requestedImageSize: { width: 64, height: 64 },
           amortizedCost: { meter: "generations", amount: 0.25 },
           requestCost: { meter: "generations", amount: 4 },
+          referencePadding: {
+            from: { width: 32, height: 64 },
+            to: { width: 64, height: 64 },
+            placement: "bottom-center",
+          },
         },
         directory,
       );
@@ -251,6 +376,11 @@ describe("PixelLab bounded trial", () => {
         actualImageSize: { width: 64, height: 64 },
         amortizedCost: { meter: "generations", amount: 0.25 },
         requestCost: { meter: "generations", amount: 4 },
+        referencePadding: {
+          from: { width: 32, height: 64 },
+          to: { width: 64, height: 64 },
+          placement: "bottom-center",
+        },
       });
     } finally {
       await rm(directory, { recursive: true, force: true });

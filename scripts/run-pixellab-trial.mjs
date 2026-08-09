@@ -16,6 +16,7 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { deflateSync, inflateSync } from "node:zlib";
 
 const OUTPUT_DIRECTORY = fileURLToPath(
   new URL("../assets/trial", import.meta.url),
@@ -30,12 +31,19 @@ const MAX_TOTAL_GENERATIONS = 30;
 const MAX_ESTIMATED_COST_PER_ASSET_USD = 0.02;
 const MAX_GENERATIONS_PER_STILL_ASSET = 2;
 const MAX_GENERATIONS_PER_ANIMATION_CALL = 8;
-const MANIFEST_SCHEMA_VERSION = 4;
+const MANIFEST_SCHEMA_VERSION = 5;
 const PIXFLUX_REQUEST_TIMEOUT_MS = 120_000;
 const ANIMATION_REQUEST_TIMEOUT_MS = 120_000;
 const PNG_SIGNATURE = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 ]);
+const PNG_IHDR_LENGTH = 13;
+const PNG_RGBA_BYTES_PER_PIXEL = 4;
+const REFERENCE_PADDING = {
+  from: { width: 32, height: 64 },
+  to: { width: 64, height: 64 },
+  placement: "bottom-center",
+};
 const NEGATIVE_CONSTRAINTS =
   "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people";
 
@@ -222,12 +230,13 @@ function pixfluxRequestBody(cardDefinition) {
 }
 
 function animationRequestBody(masterPng, walkCardDefinition) {
+  const paddedReference = padAnimationReference(masterPng);
   return {
     reference_image: {
       type: "base64",
-      base64: `data:image/png;base64,${masterPng.toString("base64")}`,
+      base64: `data:image/png;base64,${paddedReference.toString("base64")}`,
     },
-    reference_image_size: { width: 32, height: 64 },
+    reference_image_size: ANIMATION_IMAGE_SIZE,
     description: walkCardDefinition.prompt,
     negative_description: walkCardDefinition.negativeConstraints,
     action: walkCardDefinition.params.action,
@@ -316,6 +325,190 @@ function pngDimensions(png) {
     width: png.readUInt32BE(16),
     height: png.readUInt32BE(20),
   };
+}
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1)
+      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type, data) {
+  const chunk = Buffer.alloc(12 + data.length);
+  chunk.writeUInt32BE(data.length, 0);
+  chunk.write(type, 4, 4, "ascii");
+  data.copy(chunk, 8);
+  chunk.writeUInt32BE(
+    crc32(chunk.subarray(4, 8 + data.length)),
+    8 + data.length,
+  );
+  return chunk;
+}
+
+function constrainedRgbaPixels(png) {
+  if (!png.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE))
+    throw new Error(
+      "Cannot pad animation reference: expected a PNG signature.",
+    );
+
+  let offset = PNG_SIGNATURE.length;
+  let header;
+  const idat = [];
+  let seenIdat = false;
+  let seenIend = false;
+  while (offset < png.length) {
+    if (offset + 12 > png.length)
+      throw new Error("Cannot pad animation reference: malformed PNG chunk.");
+    const length = png.readUInt32BE(offset);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    const crcEnd = dataEnd + 4;
+    if (crcEnd > png.length)
+      throw new Error("Cannot pad animation reference: malformed PNG chunk.");
+    const type = png.toString("ascii", offset + 4, dataStart);
+    const data = png.subarray(dataStart, dataEnd);
+    if (png.readUInt32BE(dataEnd) !== crc32(png.subarray(offset + 4, dataEnd)))
+      throw new Error(
+        "Cannot pad animation reference: PNG chunk CRC mismatch.",
+      );
+    if (type === "IHDR") {
+      if (header || length !== PNG_IHDR_LENGTH || seenIdat)
+        throw new Error(
+          "Cannot pad animation reference: unexpected IHDR chunk.",
+        );
+      header = data;
+    } else if (type === "IDAT") {
+      if (!header || seenIend)
+        throw new Error(
+          "Cannot pad animation reference: unexpected IDAT chunk.",
+        );
+      seenIdat = true;
+      idat.push(data);
+    } else if (type === "IEND") {
+      if (!seenIdat || length !== 0 || seenIend || crcEnd !== png.length)
+        throw new Error(
+          "Cannot pad animation reference: unexpected IEND chunk.",
+        );
+      seenIend = true;
+    } else if (type[0] !== type[0]?.toLowerCase()) {
+      throw new Error(
+        `Cannot pad animation reference: unsupported PNG chunk ${type}.`,
+      );
+    }
+    offset = crcEnd;
+  }
+  if (!header || !seenIend)
+    throw new Error(
+      "Cannot pad animation reference: PNG is missing required chunks.",
+    );
+
+  const width = header.readUInt32BE(0);
+  const height = header.readUInt32BE(4);
+  if (
+    width !== REFERENCE_PADDING.from.width ||
+    height !== REFERENCE_PADDING.from.height ||
+    header[8] !== 8 ||
+    header[9] !== 6 ||
+    header[10] !== 0 ||
+    header[11] !== 0 ||
+    header[12] !== 0
+  )
+    throw new Error(
+      "Cannot pad animation reference: expected a 32x64 8-bit RGBA non-interlaced PNG.",
+    );
+
+  let scanlines;
+  try {
+    scanlines = inflateSync(Buffer.concat(idat));
+  } catch {
+    throw new Error("Cannot pad animation reference: invalid PNG image data.");
+  }
+  const rowBytes = width * PNG_RGBA_BYTES_PER_PIXEL;
+  if (scanlines.length !== (rowBytes + 1) * height)
+    throw new Error(
+      "Cannot pad animation reference: unexpected PNG scanline length.",
+    );
+
+  const pixels = Buffer.alloc(rowBytes * height);
+  for (let row = 0; row < height; row += 1) {
+    const scanlineOffset = row * (rowBytes + 1);
+    const filter = scanlines[scanlineOffset];
+    if (filter > 4)
+      throw new Error(
+        "Cannot pad animation reference: unsupported PNG filter.",
+      );
+    for (let column = 0; column < rowBytes; column += 1) {
+      const value = scanlines[scanlineOffset + 1 + column];
+      const left =
+        column >= PNG_RGBA_BYTES_PER_PIXEL
+          ? pixels[row * rowBytes + column - PNG_RGBA_BYTES_PER_PIXEL]
+          : 0;
+      const above = row > 0 ? pixels[(row - 1) * rowBytes + column] : 0;
+      const upperLeft =
+        row > 0 && column >= PNG_RGBA_BYTES_PER_PIXEL
+          ? pixels[(row - 1) * rowBytes + column - PNG_RGBA_BYTES_PER_PIXEL]
+          : 0;
+      const predictor =
+        filter === 1
+          ? left
+          : filter === 2
+            ? above
+            : filter === 3
+              ? Math.floor((left + above) / 2)
+              : filter === 4
+                ? paeth(left, above, upperLeft)
+                : 0;
+      pixels[row * rowBytes + column] = (value + predictor) & 0xff;
+    }
+  }
+  return pixels;
+}
+
+function paeth(left, above, upperLeft) {
+  const estimate = left + above - upperLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const aboveDistance = Math.abs(estimate - above);
+  const upperLeftDistance = Math.abs(estimate - upperLeft);
+  return leftDistance <= aboveDistance && leftDistance <= upperLeftDistance
+    ? left
+    : aboveDistance <= upperLeftDistance
+      ? above
+      : upperLeft;
+}
+
+function padAnimationReference(masterPng) {
+  const sourcePixels = constrainedRgbaPixels(masterPng);
+  const { width, height } = REFERENCE_PADDING.to;
+  const scanlines = Buffer.alloc(
+    (width * PNG_RGBA_BYTES_PER_PIXEL + 1) * height,
+  );
+  const sourceWidth = REFERENCE_PADDING.from.width;
+  const xOffset = (width - sourceWidth) / 2;
+  for (let row = 0; row < height; row += 1) {
+    const targetRow = row * (width * PNG_RGBA_BYTES_PER_PIXEL + 1);
+    scanlines[targetRow] = 0;
+    sourcePixels.copy(
+      scanlines,
+      targetRow + 1 + xOffset * PNG_RGBA_BYTES_PER_PIXEL,
+      row * sourceWidth * PNG_RGBA_BYTES_PER_PIXEL,
+      (row + 1) * sourceWidth * PNG_RGBA_BYTES_PER_PIXEL,
+    );
+  }
+  const header = Buffer.alloc(PNG_IHDR_LENGTH);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 6;
+  return Buffer.concat([
+    PNG_SIGNATURE,
+    pngChunk("IHDR", header),
+    pngChunk("IDAT", deflateSync(scanlines)),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
 }
 
 function confirmedModel(response) {
@@ -455,6 +648,7 @@ async function writeAsset(
     requestCost: provenance.requestCost,
     sha256: sha256(result.png),
     reference: provenance.reference,
+    referencePadding: provenance.referencePadding,
   });
   await writeFile(
     join(outputDirectory, "provenance-manifest.json"),
@@ -519,6 +713,7 @@ async function main(cardDefinitions = cards) {
       ...perFrameProvenance(cycle.cost, walkCards.length),
       requestedImageSize: ANIMATION_IMAGE_SIZE,
       reference: { file: "kethra-citizen.png", sha256: masterHash },
+      referencePadding: REFERENCE_PADDING,
     });
     process.stdout.write(
       `Generated ${offsetWalkCards[index].id} (${manifest.assets.length}/12).\n`,
@@ -552,6 +747,7 @@ export {
   main,
   PIXFLUX_ENDPOINT,
   PIXFLUX_MODEL,
+  padAnimationReference,
   parseUsageMeter,
   perFrameProvenance,
   pixfluxRequestBody,
