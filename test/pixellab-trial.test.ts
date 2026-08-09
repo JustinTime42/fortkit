@@ -13,11 +13,16 @@ import {
   ANIMATION_IMAGE_SIZE,
   addUsage,
   animationRequestBody,
+  animationSeedOffsetFromEnvironment,
+  CHARACTER_NEGATIVE_CONSTRAINTS,
+  cards,
+  characterTransparencyCheck,
   MANIFEST_SCHEMA_VERSION,
   MAX_GENERATIONS_PER_ANIMATION_CALL,
   MAX_GENERATIONS_PER_STILL_ASSET,
   MAX_TOTAL_GENERATIONS,
   main,
+  NEGATIVE_CONSTRAINTS,
   PIXFLUX_ENDPOINT,
   padAnimationReference,
   parseUsageMeter,
@@ -194,8 +199,8 @@ describe("PixelLab bounded trial", () => {
     );
   });
 
-  test("uses schema version 6 for reuse provenance", () => {
-    expect(MANIFEST_SCHEMA_VERSION).toBe(6);
+  test("uses schema version 7 for transparency-check provenance", () => {
+    expect(MANIFEST_SCHEMA_VERSION).toBe(7);
   });
 
   test("sends the verified Pixflux body to PixelLab", () => {
@@ -223,6 +228,33 @@ describe("PixelLab bounded trial", () => {
     expect(() => seedOffsetFromEnvironment("1.5")).toThrow(
       "PIXELLAB_SEED_OFFSET must be an integer.",
     );
+  });
+
+  test("allows an animation-only seed offset without changing still seeds", () => {
+    expect(animationSeedOffsetFromEnvironment("17")).toBe(17);
+    expect(() => animationSeedOffsetFromEnvironment("1.5")).toThrow(
+      "PIXELLAB_ANIMATION_SEED_OFFSET must be an integer.",
+    );
+  });
+
+  test("forbids scenery in character prompts but leaves other card constraints alone", () => {
+    const kethra = cards.find((card) => card.id === "kethra-citizen");
+    expect(kethra?.prompt).toContain("isolated character only");
+    expect(kethra?.prompt).toContain("fully transparent background");
+    expect(kethra?.prompt).toContain(
+      "no scenery, no props, no environment, no floor, no shadow on ground",
+    );
+    expect(kethra?.negativeConstraints).toBe(CHARACTER_NEGATIVE_CONSTRAINTS);
+    expect(walkCards[0]?.prompt).toContain("isolated character only");
+    expect(walkCards[0]?.negativeConstraints).toBe(
+      CHARACTER_NEGATIVE_CONSTRAINTS,
+    );
+    expect(CHARACTER_NEGATIVE_CONSTRAINTS).toContain(
+      "no background elements, no pillars, no walls, no floor, no scenery",
+    );
+    expect(
+      cards.find((card) => card.id === "forge-building")?.negativeConstraints,
+    ).toBe(NEGATIVE_CONSTRAINTS);
   });
 
   test("sends the verified 64x64 animation body to PixelLab", () => {
@@ -545,13 +577,15 @@ describe("PixelLab bounded trial", () => {
     }
   });
 
-  test("main retains provenance and records reusedAt in its output directory", async () => {
+  test("walk-only seed offsets retain still reuse and make one animation call", async () => {
     const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
     const originalFetch = globalThis.fetch;
     const originalArguments = process.argv;
     const originalApiKey = process.env.PIXELLAB_API_KEY;
     const originalReuseStills = process.env.PIXELLAB_REUSE_STILLS;
     const originalSeedOffset = process.env.PIXELLAB_SEED_OFFSET;
+    const originalAnimationSeedOffset =
+      process.env.PIXELLAB_ANIMATION_SEED_OFFSET;
     const write = vi
       .spyOn(process.stdout, "write")
       .mockImplementation(() => true);
@@ -586,6 +620,7 @@ describe("PixelLab bounded trial", () => {
       process.env.PIXELLAB_API_KEY = "not-a-key";
       process.env.PIXELLAB_REUSE_STILLS = "1";
       delete process.env.PIXELLAB_SEED_OFFSET;
+      process.env.PIXELLAB_ANIMATION_SEED_OFFSET = "1";
       globalThis.fetch = vi.fn().mockResolvedValue(
         new Response(
           JSON.stringify({
@@ -606,6 +641,9 @@ describe("PixelLab bounded trial", () => {
       );
       expect(manifest.assets[0]).toMatchObject(originalAsset);
       expect(manifest.assets[0].reusedAt).toEqual(expect.any(String));
+      expect(
+        manifest.assets.slice(1).map((asset: { seed: number }) => asset.seed),
+      ).toEqual([43002, 43002, 43002, 43002]);
     } finally {
       write.mockRestore();
       globalThis.fetch = originalFetch;
@@ -618,6 +656,11 @@ describe("PixelLab bounded trial", () => {
       if (originalSeedOffset === undefined)
         delete process.env.PIXELLAB_SEED_OFFSET;
       else process.env.PIXELLAB_SEED_OFFSET = originalSeedOffset;
+      if (originalAnimationSeedOffset === undefined)
+        delete process.env.PIXELLAB_ANIMATION_SEED_OFFSET;
+      else
+        process.env.PIXELLAB_ANIMATION_SEED_OFFSET =
+          originalAnimationSeedOffset;
       await rm(directory, { recursive: true, force: true });
     }
   });
@@ -760,13 +803,52 @@ describe("PixelLab bounded trial", () => {
     expect(pngDimensions(png)).toEqual({ width: 64, height: 64 });
   });
 
+  test("refuses contaminated character frames and accepts clean transparency", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
+    const card = {
+      id: "walk-03",
+      kind: "walk-frame",
+      filename: "walk-03.png",
+      imageSize: { width: 32, height: 64 },
+      params: {},
+    };
+    const clean = encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4));
+    const contaminatedPixels = Buffer.alloc(32 * 64 * 4);
+    contaminatedPixels[3] = 255;
+    const contaminated = encodeRgbaPng(32, 64, contaminatedPixels);
+    const manifest: { assets: Array<Record<string, unknown>> } = { assets: [] };
+    try {
+      expect(characterTransparencyCheck(card, clean)).toBe("passed");
+      expect(() => characterTransparencyCheck(card, contaminated)).toThrow(
+        "Refusing character asset walk-03: transparency check failed (0.27% contaminated border, 0.05% opaque coverage).",
+      );
+      await expect(
+        writeAsset(
+          manifest,
+          card,
+          { png: contaminated },
+          { requestedImageSize: card.imageSize },
+          directory,
+        ),
+      ).rejects.toThrow("Refusing character asset walk-03");
+      await expect(readFile(join(directory, card.filename))).rejects.toThrow();
+      expect(manifest.assets).toEqual([]);
+      await writeAsset(
+        manifest,
+        card,
+        { png: clean },
+        { requestedImageSize: card.imageSize },
+        directory,
+      );
+      expect(manifest.assets[0]?.transparencyCheck).toBe("passed");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   test("records API-requested and decoded image sizes separately", async () => {
     const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
-    const png = Buffer.alloc(24);
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png);
-    png.write("IHDR", 12, "ascii");
-    png.writeUInt32BE(64, 16);
-    png.writeUInt32BE(64, 20);
+    const png = encodeRgbaPng(64, 64, Buffer.alloc(64 * 64 * 4));
     const manifest: { assets: Array<Record<string, unknown>> } = { assets: [] };
     try {
       await writeAsset(
