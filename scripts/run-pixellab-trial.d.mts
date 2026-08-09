@@ -93,6 +93,7 @@ export function writeAsset(
     filename: string;
     imageSize: { width: number; height: number };
     params: Record<string, unknown>;
+    declarationSource?: DeclarationSource | null;
   },
   result: { png: Buffer },
   provenance: {
@@ -107,17 +108,42 @@ export function characterTransparencyCheck(
   png: Buffer,
 ): "passed" | null;
 
+export type DeclarationSource = {
+  registry: string;
+  section: string;
+  commit: string;
+};
+
+export function parseAppearanceRegistry(
+  registry: string,
+): Map<string, { section: string; declaration: string }>;
+export function citizenAppearance(
+  name: string,
+  registry?: Map<string, { section: string; declaration: string }>,
+  commit?: string,
+): { prompt: string; declarationSource: DeclarationSource | null };
+export function promptVisualClauses(declaration: string): string;
+export function registryCommit(
+  run?: (
+    file: string,
+    arguments_: string[],
+    options: { cwd: string; encoding: string },
+  ) => string,
+): string;
+
 export const cards: Array<{
   id: string;
   kind: string;
   prompt: string;
   negativeConstraints: string;
+  declarationSource: DeclarationSource | null;
 }>;
 export const walkCards: Array<{
   id: string;
   prompt: string;
   frameIndex: number;
   negativeConstraints: string;
+  declarationSource: DeclarationSource | null;
 }>;
 export const PIXFLUX_ENDPOINT: string;
 export const PIXFLUX_MODEL: string;
