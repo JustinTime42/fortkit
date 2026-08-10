@@ -1,10 +1,7 @@
-import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { promisify } from "node:util";
+import { readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
 
 import type { Bead, BeadCounts, BeadDependency, BeadStatus } from "../types.ts";
-
-const execFileAsync = promisify(execFile);
 
 type CountedStatus = keyof Omit<
   BeadCounts,
@@ -16,6 +13,20 @@ export type ClosedBead = {
   title: string | null;
   closedAt: string | null;
 };
+
+/** The passive export is deliberately used here: cross-fort `bd --readonly`
+ * needs to create Dolt's LOCK file and cannot run under the Herald's RO mount. */
+export type ClosedBeadSource =
+  | {
+      status: "ok";
+      beads: ClosedBead[];
+      exportUpdatedAt: string;
+      exportAgeSeconds: number;
+      exportStale: boolean;
+    }
+  | { status: "error"; error: string };
+
+const exportStaleAfterMs = 2 * 60 * 1000;
 
 const statuses: Record<BeadStatus, CountedStatus> = {
   open: "open",
@@ -234,54 +245,67 @@ export async function readClosedBeads(
   path: string,
   since: number,
   until: number,
-): Promise<ClosedBead[] | null> {
-  let stdout: string;
+): Promise<ClosedBeadSource> {
+  const exportPath = join(path, ".beads", "issues.jsonl");
+  let contents: string;
+  let modified: Date;
   try {
-    ({ stdout } = await execFileAsync(
-      "bd",
-      [
-        "--readonly",
-        "-C",
-        path,
-        "list",
-        "--all",
-        "--status=closed",
-        "--limit=0",
-        `--closed-after=${new Date(since).toISOString()}`,
-        `--closed-before=${new Date(until).toISOString()}`,
-        "--json",
-      ],
-      { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
-    ));
-  } catch {
-    return null;
+    [contents, { mtime: modified }] = await Promise.all([
+      readFile(exportPath, "utf8"),
+      stat(exportPath),
+    ]);
+  } catch (error) {
+    const reason =
+      error instanceof Error
+        ? ((error as NodeJS.ErrnoException).code ?? error.name)
+        : "unknown error";
+    return {
+      status: "error",
+      error: `cannot read .beads/issues.jsonl (${reason})`,
+    };
   }
+
+  const beads: ClosedBead[] = [];
   try {
-    const records = JSON.parse(stdout) as unknown;
-    if (!Array.isArray(records)) {
-      return null;
-    }
     // The digest intentionally includes every bead type: gate, infrastructure,
     // and template work are all part of a fort's complete activity record.
-    return records
-      .flatMap((record) => {
-        if (typeof record !== "object" || record === null) {
-          return [];
-        }
+    for (const line of contents.split(/\r?\n/)) {
+      if (line.trim() === "") continue;
+      const record = JSON.parse(line) as unknown;
+      if (typeof record === "object" && record !== null) {
         const value = record as Record<string, unknown>;
-        return typeof value.id === "string"
-          ? [
-              {
-                id: value.id,
-                title: typeof value.title === "string" ? value.title : null,
-                closedAt:
-                  typeof value.closed_at === "string" ? value.closed_at : null,
-              },
-            ]
-          : [];
-      })
-      .sort((left, right) => left.id.localeCompare(right.id));
+        if (value.status === "closed" && typeof value.id === "string") {
+          beads.push({
+            id: value.id,
+            title: typeof value.title === "string" ? value.title : null,
+            closedAt:
+              typeof value.closed_at === "string" ? value.closed_at : null,
+          });
+        }
+      }
+    }
   } catch {
-    return null;
+    return {
+      status: "error",
+      error: "cannot parse .beads/issues.jsonl",
+    };
   }
+  const ageMs = Math.max(0, Date.now() - modified.getTime());
+  return {
+    status: "ok",
+    beads: beads
+      .filter((bead) => bead.closedAt !== null)
+      .filter((bead) => {
+        const closedAt = bead.closedAt;
+        return (
+          closedAt !== null &&
+          Date.parse(closedAt) >= since &&
+          Date.parse(closedAt) < until
+        );
+      })
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    exportUpdatedAt: modified.toISOString(),
+    exportAgeSeconds: Math.floor(ageMs / 1000),
+    exportStale: ageMs > exportStaleAfterMs,
+  };
 }

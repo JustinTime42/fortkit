@@ -1,6 +1,6 @@
 import { access } from "node:fs/promises";
 import { join } from "node:path";
-import type { ClosedBead } from "./readers/beads.ts";
+import type { ClosedBeadSource } from "./readers/beads.ts";
 import { readClosedBeads } from "./readers/beads.ts";
 import { readEventFeed } from "./readers/events.ts";
 import type { ConstitutionDiff } from "./readers/git.ts";
@@ -12,17 +12,22 @@ import type { TelemetryCounts } from "./readers/telemetry.ts";
 import { readTelemetryCounts } from "./readers/telemetry.ts";
 import type { EventDetail } from "./types.ts";
 
+const maxEventsPerFort = 50;
+const maxHandoffSectionsPerFort = 50;
+
 type DigestFort = {
   name: string;
   path: string | null;
   present: boolean;
   events: EventDetail[] | null;
   eventsMalformed: number | null;
-  closedBeads: ClosedBead[] | null;
+  closedBeads: ClosedBeadSource | null;
   handoffSections: HandoffSection[] | null;
+  handoffSectionsTruncated: number | null;
   gitLog: string[] | null;
   constitutionDiffs: ConstitutionDiff[] | null;
   telemetry: TelemetryCounts | null;
+  eventsTruncated: number | null;
 };
 
 export type CivilizationDigest = {
@@ -60,9 +65,11 @@ async function readDigestFort(
       eventsMalformed: null,
       closedBeads: null,
       handoffSections: null,
+      handoffSectionsTruncated: null,
       gitLog: null,
       constitutionDiffs: null,
       telemetry: null,
+      eventsTruncated: null,
     };
   }
   const [
@@ -84,33 +91,39 @@ async function readDigestFort(
       untilInstant,
     ),
   ]);
+  const events = eventFeed?.events.filter((event) =>
+    inWindow(event.ts, sinceInstant, untilInstant),
+  );
+  const filteredHandoffSections =
+    handoffSections === null
+      ? null
+      : handoffSections.filter((section) => {
+          const dayStart = Date.parse(`${section.date}T00:00:00.000Z`);
+          const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+          return dayStart < untilInstant && dayEnd > sinceInstant;
+        });
   return {
     name,
     path,
     present: true,
-    events:
-      eventFeed === null
-        ? null
-        : eventFeed.events.filter((event) =>
-            inWindow(event.ts, sinceInstant, untilInstant),
-          ),
+    events: events === undefined ? null : events.slice(0, maxEventsPerFort),
     eventsMalformed: eventFeed?.malformed ?? null,
-    closedBeads:
-      closedBeads === null
+    eventsTruncated:
+      events === undefined
         ? null
-        : closedBeads.filter(
-            (bead) =>
-              bead.closedAt !== null &&
-              inWindow(bead.closedAt, sinceInstant, untilInstant),
-          ),
+        : Math.max(0, events.length - maxEventsPerFort),
+    closedBeads,
     handoffSections:
-      handoffSections === null
+      filteredHandoffSections === null
         ? null
-        : handoffSections.filter((section) => {
-            const dayStart = Date.parse(`${section.date}T00:00:00.000Z`);
-            const dayEnd = dayStart + 24 * 60 * 60 * 1000;
-            return dayStart < untilInstant && dayEnd > sinceInstant;
-          }),
+        : filteredHandoffSections.slice(0, maxHandoffSectionsPerFort),
+    handoffSectionsTruncated:
+      filteredHandoffSections === null
+        ? null
+        : Math.max(
+            0,
+            filteredHandoffSections.length - maxHandoffSectionsPerFort,
+          ),
     gitLog,
     constitutionDiffs,
     telemetry,
@@ -148,9 +161,9 @@ export function formatDigest(digest: CivilizationDigest): string {
     ...digest.forts.flatMap((fort) => [
       "",
       `# ${fort.name} — ${fort.present ? "present" : "ABSENT"}`,
-      `events: ${fort.events === null ? "ABSENT" : `${fort.events.length} (malformed ${fort.eventsMalformed})`}`,
-      `closed beads: ${fort.closedBeads === null ? "ABSENT" : fort.closedBeads.length}`,
-      `handoff sections: ${fort.handoffSections === null ? "ABSENT" : fort.handoffSections.length}`,
+      `events: ${fort.events === null ? "ABSENT" : `${fort.events.length} (malformed ${fort.eventsMalformed}; truncated ${fort.eventsTruncated})`}`,
+      `closed beads: ${formatClosedBeads(fort.closedBeads)}`,
+      `handoff sections: ${fort.handoffSections === null ? "ABSENT" : `${fort.handoffSections.length} (truncated ${fort.handoffSectionsTruncated})`}`,
       `git log: ${fort.gitLog === null ? "ABSENT" : fort.gitLog.length}`,
       `constitution diffs: ${fort.constitutionDiffs === null ? "ABSENT" : fort.constitutionDiffs.length}`,
       ...(fort.constitutionDiffs ?? []).map(
@@ -160,4 +173,10 @@ export function formatDigest(digest: CivilizationDigest): string {
       `telemetry: ${fort.telemetry === null ? "ABSENT" : `${fort.telemetry.records} records, ${fort.telemetry.files} files, ${fort.telemetry.malformed} malformed`}`,
     ]),
   ].join("\n");
+}
+
+function formatClosedBeads(source: ClosedBeadSource | null): string {
+  if (source === null) return "ABSENT";
+  if (source.status === "error") return `ERROR — ${source.error}`;
+  return `${source.beads.length} (export ${source.exportStale ? "STALE" : "fresh"}; updated ${source.exportUpdatedAt}; age ${source.exportAgeSeconds}s)`;
 }
