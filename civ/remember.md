@@ -367,3 +367,32 @@ should name the seat if it matters who learned it.
   value with a dated retirement note (`""|mayor|1`), and mayor.sh refuses ANY
   marker. Test matrices for launcher guards must include the legacy
   environment of currently-running sessions, not only the new contract.
+
+- 2026-08-10 (edict 9, the forge.sh integrity batch): **A work order's letter
+  can contradict host state — check the premise before creating or overwriting
+  anything.** The edict ordered an empty `~/.codex/config.toml` created (Warden
+  6jf r2 finding 1: "absent on this host"); the file EXISTS — 3323 bytes, mode
+  600, since 2026-08-04 — and is the real guarded-profile deny config. The
+  finding's premise came from a Forge handoff already on record (fortkit-x12)
+  for false self-reports. Executing the letter would have destroyed the deny
+  profile; the intent (the RO overlay has something to bind) already held.
+  Measured correction on fortkit-x12.
+
+- 2026-08-10: **Merging a consolidation branch (inline block → shared lib)
+  demands a coverage inventory, not a theirs-side resolution.** bead/6jf forked
+  before cycle 7; main's inline mask had since gained protections. The lib
+  covered all but ONE ($wt/fort/scripts RO) — a verbatim resolution would have
+  silently dropped it. Rule: diff what landed on main INSIDE the replaced block
+  since the fork, and check each item against the lib before resolving.
+
+- 2026-08-10: **herald.sh and chronicler.sh carry fixed prompts — there is no
+  ceremony/prompt hook.** The fwq route "launch them with the ceremony prompt"
+  was unexecutable as written. Ceremonies for those seats are fresh convened
+  read-only sessions (the founding instrument, used again here for Oswin's and
+  Halric's appearance declarations) or a gate-1 launcher amendment.
+
+- 2026-08-10: **In awk, `exit N` in a main-block still runs END, and END's own
+  `exit` overrides the code.** The ported stamp contract's distinct refusal
+  codes (2 bad-header / 3 no-model) collapse to 3 — harmless where only
+  success/failure is branched on, present in BOTH forts' forge.sh since the
+  ForgeOs agk merge. Know it before ever consuming those codes.
