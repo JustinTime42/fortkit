@@ -162,10 +162,21 @@ gaps in the build output, never skipped silently (the wtm lesson as design).
 
 `fort/memory/current.md` — tracked, regenerated deterministically (same inputs
 → byte-identical output). Contents, each line carrying a provenance pointer:
-core-tier facts; open/in-progress bead snapshot; the newest handoff's "State of
+core-tier facts; a capped bead snapshot; the newest handoff's "State of
 work" + "Next actions" per seat (suffix-aware, timestamp-ordered); unresolved
 incidents from recent events; extracted rulings-of-record. Cadence per ruling
 4: ephemeral regeneration at session start, nightly cron commit.
+
+*Amended 2026-08-10 (fortkit-88u.14, Overseer ruling on Warden 88u.5 r2 f7):
+the bead snapshot is capped, replacing the original full open/in-progress
+dump. It carries all in-progress beads, all gate-labeled beads, and the top
+15 ready beads by priority, and closes with an explicit "N of M open beads
+shown; full list via bd ready" line. Grounds: the full dump was ~110 of the
+view's 162 lines, duplicated a query every seat can run live, and staled
+hourly against a nightly regeneration cadence — a stale authoritative-looking
+list misleads where a short one with a live pointer does not. Handoff
+sections remain verbatim per the same bead's ruling on r2 f6; the control is
+write-side (§9).*
 
 ### 6.2 fortkit recall (fortkit-88u.7)
 
@@ -183,8 +194,11 @@ bead anchors, topic overlap with the dispatch prompt), then recency, then
 recall's application-side match score (amended 2026-08-10, fortkit-88u.11:
 formerly "FTS score" — the index carries no scoring, see §5); `origin:
 untrusted` demoted at equal rank. Beyond the core tier, a hard
-budget of ~4,000 tokens of selected memory per session; the selector discloses
-what was dropped ("N facts matched, M injected") — no silent caps.
+budget of ~8,000 tokens of selected memory per session (amended 2026-08-10,
+fortkit-88u.14: the initial ~4,000 was an unmeasured starting value; the
+Overseer raised it to fit the distilled view plus scope-selected facts — the
+bound stays hard and its value stays tunable on evidence); the selector
+discloses what was dropped ("N facts matched, M injected") — no silent caps.
 
 Testable assertions (tests target prompt assembly, not model behavior):
 
@@ -231,6 +245,21 @@ amendment batch (currently ~11% emission; the event stream undercounts memory
 Out of scope, per the charter's threat model: cryptographic signing/HMAC of
 memory writes defends against a local-shell adversary the fort explicitly does
 not defend against. Documented, not built.
+
+**Accepted risk — verbatim handoff sections in the distilled view** (amended
+2026-08-10, fortkit-88u.14, Overseer ruling on Warden 88u.5 r2 f6): §6.1
+copies handoff sections verbatim, so a secret that ever reaches a handoff
+would be amplified from one tracked file into every injected session's
+context (threat 4). Ruled acceptable with the control at the write side: the
+secrets-scan watcher's corpus includes `fort/handoffs/` and
+`fort/memory/current.md` (fortkit-1zw), failing on credential-shaped content
+before it propagates. Grounds: a handoff is already tracked and pushed, so
+the handoff itself is the breach and the view only the amplifier; scanning
+at the source treats the class once. Read-time redaction (blocklist false
+confidence) and pointer-only sections (second-hop fragility for masked
+seats) were considered and declined. No observed incident motivates heavier
+machinery (standing order 11); this paragraph is the record that the risk
+was traded knowingly.
 
 ## 10. Acceptance benchmark
 
