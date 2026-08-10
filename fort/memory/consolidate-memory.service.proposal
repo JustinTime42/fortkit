@@ -1,0 +1,4 @@
+[Service]
+Type=oneshot
+WorkingDirectory=/home/justin/dev/fortkit
+ExecStart=/usr/bin/env node scripts/consolidate-memory.mjs
