@@ -196,6 +196,15 @@ Recall rebuilds the disposable index before querying, so a missing, stale, or
 poisoned `index.db` cannot silently narrow the corpus; readers expose build
 gaps alongside matching results.
 
+Filter semantics (documented 2026-08-10 per Warden 88u.7 r2 f3): a fact scoped
+`seats: [all]` matches every `--seat` filter (the spec's seats wildcard, §4.1).
+Rows with no parsed timestamp (annals, interactions) are excluded by any
+`--since`/`--until` window and the exclusion is disclosed as a synthetic gap
+entry, never silent. `--seat` also excludes the surfaces that carry no seat
+tags at all (annals, beads, interactions) — deliberate exact-filter semantics,
+disclosed here; whether it additionally warrants a runtime disclosure is
+fortkit-88u.12's call.
+
 ## 7. Delivery: per-seat injection requirements (fortkit-88u.6)
 
 Selection is deterministic in v1. Ranking: tier, then scope-tag match (seat,
