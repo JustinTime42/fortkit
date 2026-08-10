@@ -37,6 +37,10 @@ function parseFact(text, path) {
   )) {
     frontmatter[key] = value.replace(/^"|"$/gu, "");
   }
+  const scope = /^scope:\s*\r?\n((?:\s+.+\r?\n?)+)/mu.exec(match[1])?.[1] ?? "";
+  for (const [, key, value] of scope.matchAll(/^\s+([a-z-]+):\s*(.*)$/gmu)) {
+    frontmatter[key] = value;
+  }
   return { ...frontmatter, body: match[2].trim(), path };
 }
 
@@ -54,6 +58,23 @@ function handoffStamp(text, fallback) {
   const heading = /^# Handoff: .+? (\S+)/mu.exec(text)?.[1];
   const instant = heading === undefined ? Number.NaN : Date.parse(heading);
   return Number.isNaN(instant) ? fallback : instant;
+}
+
+function markdownSections(text, fallback = "document") {
+  const matches = [...text.matchAll(/^#{1,6}\s+(.+?)\s*$/gmu)];
+  if (matches.length === 0) return [{ heading: fallback, body: text.trim() }];
+  return matches.map((match, index) => ({
+    heading: match[1].trim(),
+    body: text
+      .slice(match.index + match[0].length, matches[index + 1]?.index)
+      .trim(),
+  }));
+}
+
+function addMarkdownRows(rows, metadata, text, fallback) {
+  for (const { heading, body } of markdownSections(text, fallback)) {
+    if (body) rows.push({ ...metadata, section: heading, snippet: body });
+  }
 }
 
 async function files(directory, extension, gaps, required = false) {
@@ -112,13 +133,21 @@ async function build() {
       continue;
     }
     facts.push(parsed);
-    rows.push({
-      source: parsed.path,
-      ts: parsed.date ?? "",
-      actor: parsed["declared-by"] ?? "",
-      seat: "",
-      snippet: parsed.body,
-    });
+    addMarkdownRows(
+      rows,
+      {
+        source: parsed.path,
+        ts: parsed.date ?? "",
+        actor: parsed["declared-by"] ?? "",
+        seat: "",
+        provenance: parsed.source ?? parsed.path,
+        scopeSeats: /^\[?(.*?)\]?$/u.exec(parsed.seats ?? "")?.[1] ?? "",
+        scopeTopics: /^\[?(.*?)\]?$/u.exec(parsed.topics ?? "")?.[1] ?? "",
+        scopeBeads: /^\[?(.*?)\]?$/u.exec(parsed.beads ?? "")?.[1] ?? "",
+      },
+      parsed.body,
+      "fact",
+    );
   }
 
   const beadsPath = join(root, ".beads", "issues.jsonl");
@@ -140,6 +169,11 @@ async function build() {
             ts: bead.updated_at ?? "",
             actor: bead.assignee ?? "",
             seat: "",
+            section: bead.id,
+            provenance: `.beads/issues.jsonl:${lineNumber + 1}`,
+            scopeSeats: "",
+            scopeTopics: "",
+            scopeBeads: bead.id,
             snippet: `${bead.id}: ${bead.title ?? ""}`,
           });
       } catch (error) {
@@ -175,6 +209,11 @@ async function build() {
           ts: new Date(stamp).toISOString(),
           actor: "",
           seat,
+          section: heading,
+          provenance: relative(root, path),
+          scopeSeats: seat,
+          scopeTopics: "",
+          scopeBeads: "",
           snippet: body,
         });
     }
@@ -206,6 +245,11 @@ async function build() {
           ts: event.ts ?? "",
           actor: event.actor ?? "",
           seat: event.seat ?? "",
+          section: event.category ?? "event",
+          provenance: `${relative(root, path)}:${lineNumber + 1}`,
+          scopeSeats: event.seat ?? "",
+          scopeTopics: event.category ?? "",
+          scopeBeads: event.target ?? "",
           snippet: event.detail ?? "",
         });
       } catch (error) {
@@ -221,13 +265,21 @@ async function build() {
   for (const path of await files(annalsDirectory, ".md", gaps, true)) {
     const text = await read(path, gaps);
     if (text !== null)
-      rows.push({
-        source: relative(root, path),
-        ts: "",
-        actor: "",
-        seat: "",
-        snippet: text,
-      });
+      addMarkdownRows(
+        rows,
+        {
+          source: relative(root, path),
+          ts: "",
+          actor: "",
+          seat: "",
+          provenance: relative(root, path),
+          scopeSeats: "",
+          scopeTopics: "",
+          scopeBeads: "",
+        },
+        text,
+        "annal",
+      );
   }
   const interactionsPath = join(root, "interactions.jsonl");
   if (await exists(interactionsPath)) {
@@ -238,6 +290,11 @@ async function build() {
         ts: "",
         actor: "",
         seat: "",
+        section: "interactions",
+        provenance: "interactions.jsonl",
+        scopeSeats: "",
+        scopeTopics: "",
+        scopeBeads: "",
         snippet: text,
       });
   } else {
@@ -253,11 +310,24 @@ async function build() {
   const db = new DatabaseSync(indexTemp);
   try {
     db.exec(
-      "CREATE TABLE source (source TEXT NOT NULL, ts TEXT NOT NULL, actor TEXT NOT NULL, seat TEXT NOT NULL, snippet TEXT NOT NULL); CREATE TABLE gaps (source TEXT NOT NULL, reason TEXT NOT NULL);",
+      "CREATE TABLE source (source TEXT NOT NULL, ts TEXT NOT NULL, actor TEXT NOT NULL, seat TEXT NOT NULL, section TEXT NOT NULL, provenance TEXT NOT NULL, scope_seats TEXT NOT NULL, scope_topics TEXT NOT NULL, scope_beads TEXT NOT NULL, snippet TEXT NOT NULL); CREATE TABLE gaps (source TEXT NOT NULL, reason TEXT NOT NULL);",
     );
-    const insert = db.prepare("INSERT INTO source VALUES (?, ?, ?, ?, ?)");
+    const insert = db.prepare(
+      "INSERT INTO source VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    );
     for (const row of rows)
-      insert.run(row.source, row.ts, row.actor, row.seat, row.snippet);
+      insert.run(
+        row.source,
+        row.ts,
+        row.actor,
+        row.seat,
+        row.section,
+        row.provenance,
+        row.scopeSeats,
+        row.scopeTopics,
+        row.scopeBeads,
+        row.snippet,
+      );
     const insertGap = db.prepare("INSERT INTO gaps VALUES (?, ?)");
     for (const gap of gaps.sort(
       (left, right) =>
