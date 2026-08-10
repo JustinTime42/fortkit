@@ -176,6 +176,27 @@ describe("drift watcher", () => {
     }
   });
 
+  test("accepts amended standing orders and rewritten gates by their structural fingerprints", async () => {
+    const subject = await fixture();
+    try {
+      const charterPath = join(subject.fort, "fort", "charter.md");
+      const amended = (await readFile(charterPath, "utf8"))
+        .replace(
+          /^1\. The fort's own constitution[^\n]*$/mu,
+          "1. The fort's own constitution — `fort/` files, seat definitions, launchers, permission profiles → Warden + Overseer review. This fort's own amendment defines the remaining gate terms.",
+        )
+        .replace(
+          'Best practices, never "hacky nonsense"; research current best practice before deciding when unsure.',
+          'Best practices, never "hacky nonsense"; research current best practice before deciding when unsure. This fort records its local engineering standard here.',
+        );
+      await writeFile(charterPath, amended);
+
+      expect((await scan(subject)).findings).toEqual([]);
+    } finally {
+      await rm(subject.directory, { recursive: true, force: true });
+    }
+  });
+
   test("suppresses stable fingerprints across runs and only allows an exact content state", async () => {
     const subject = await fixture();
     try {
@@ -263,6 +284,34 @@ describe("drift watcher", () => {
       });
       expect(result.filed).toBe(0);
       expect(writes).toBe(0);
+    } finally {
+      await rm(subject.directory, { recursive: true, force: true });
+    }
+  });
+
+  test("continues scanning valid registry entries while disclosing malformed ones", async () => {
+    const subject = await fixture();
+    try {
+      const relativeFort = "./alpha";
+      await writeFile(
+        subject.registryPath,
+        JSON.stringify({
+          forts: [
+            { project: "Alpha", repo: relativeFort },
+            { fort_name: null, repo: subject.sibling },
+          ],
+        }),
+      );
+
+      const report = await scan(subject);
+      expect(report.fortsScanned).toBe(1);
+      expect(report.findings).toEqual([]);
+      expect(report.gaps).toEqual([
+        expect.objectContaining({
+          source: `${subject.registryPath} entry 2`,
+          reason: expect.stringContaining("fort_name/project or repo"),
+        }),
+      ]);
     } finally {
       await rm(subject.directory, { recursive: true, force: true });
     }

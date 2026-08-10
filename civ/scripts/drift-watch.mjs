@@ -7,7 +7,7 @@ import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { access, readdir, readFile, stat } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -82,11 +82,19 @@ function charterRequirements(template) {
     if (headings(template).has(heading))
       requirements.push({ kind: "heading", value: heading });
   }
-  for (const match of template.matchAll(/^\d+\.\s+(.+?)(?:\n|$)/gmu))
-    requirements.push({
-      kind: "standing-order",
-      value: match[1].replace(/\*\*/gu, "").trim(),
-    });
+  const standingOrderHeading = template.search(/^## Standing orders[^\n]*$/mu);
+  const standingOrders =
+    standingOrderHeading === -1
+      ? undefined
+      : template
+          .slice(template.indexOf("\n", standingOrderHeading) + 1)
+          .split(/^## /mu, 1)[0];
+  if (standingOrders)
+    for (const match of standingOrders.matchAll(/^\d+\.\s+(.+?)(?:\n|$)/gmu)) {
+      const order = match[1].replace(/\*\*/gu, "").trim();
+      const fingerprint = order.match(/^(.+?[.!?])(?:\s|$)/u)?.[1] ?? order;
+      requirements.push({ kind: "standing-order", value: fingerprint });
+    }
   return requirements;
 }
 
@@ -149,11 +157,39 @@ async function loadRegistry(path) {
   const parsed = JSON.parse(await text(path));
   if (!Array.isArray(parsed.forts))
     throw new Error("registry has no forts array");
-  return parsed.forts.map((entry, index) => {
-    if (typeof entry?.fort_name !== "string" || typeof entry.repo !== "string")
-      throw new Error(`registry entry ${index + 1} lacks fort_name or repo`);
-    return { name: entry.fort_name, path: entry.repo };
-  });
+  const forts = [];
+  const gaps = [];
+  for (const [index, entry] of parsed.forts.entries()) {
+    const number = index + 1;
+    if (typeof entry !== "object" || entry === null) {
+      gaps.push({
+        source: `${path} entry ${number}`,
+        reason: "registry entry is not an object",
+      });
+      continue;
+    }
+    const candidate = entry;
+    const name =
+      typeof candidate.fort_name === "string"
+        ? candidate.fort_name
+        : typeof candidate.project === "string"
+          ? candidate.project
+          : null;
+    if (name === null || typeof candidate.repo !== "string") {
+      gaps.push({
+        source: `${path} entry ${number}`,
+        reason: "registry entry lacks a fort_name/project or repo",
+      });
+      continue;
+    }
+    forts.push({
+      name,
+      path: isAbsolute(candidate.repo)
+        ? candidate.repo
+        : resolve(dirname(path), candidate.repo),
+    });
+  }
+  return { forts, gaps };
 }
 
 export async function scan({
@@ -167,7 +203,9 @@ export async function scan({
   let compared = 0;
   let forts = [];
   try {
-    forts = await loadRegistry(registryPath);
+    const registry = await loadRegistry(registryPath);
+    forts = registry.forts;
+    gaps.push(...registry.gaps);
   } catch (error) {
     return {
       fortsScanned: 0,
