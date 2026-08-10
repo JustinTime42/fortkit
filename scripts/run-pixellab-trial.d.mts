@@ -111,6 +111,7 @@ export function characterTransparencyCheck(
 export type DeclarationSource = {
   registry: string;
   section: string;
+  declarationSha256: string;
   commit: string;
 };
 

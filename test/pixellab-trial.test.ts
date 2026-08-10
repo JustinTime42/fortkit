@@ -272,6 +272,11 @@ describe("PixelLab bounded trial", () => {
     expect(kethra?.declarationSource).toMatchObject({
       registry: "fort/roster-appearance.md",
       section: "Kethra Anvilmark — Forge of Manyhalls (she/her)",
+      declarationSha256: createHash("sha256")
+        .update(
+          "I am a broad-shouldered dwarven woman with a close-cropped black braid threaded with copper wire and a full, neatly squared beard. My skin is umber, my eyes are dark brown behind round smoked lenses, and a pale burn scar curls from my left wrist toward my palm. I wear a soot-blue work shirt with the sleeves rolled high, a leather apron patched more times than it has been replaced, and stout boots dusted with iron filings. A small brass caliper lives behind one ear; I look most like myself when I am leaning over a half-finished tool, listening for what it needs to become.",
+        )
+        .digest("hex"),
       commit: expect.stringMatching(/^(?:[0-9a-f]{40}|uncommitted)$/),
     });
     expect(walkCards[0]?.declarationSource).toEqual(kethra?.declarationSource);
@@ -313,6 +318,7 @@ describe("PixelLab bounded trial", () => {
           declarationSource: {
             registry: "fort/roster-appearance.md",
             section: "Citizen — Seat (they/them)",
+            declarationSha256: "b".repeat(64),
             commit: "a".repeat(40),
           },
         },
@@ -323,6 +329,7 @@ describe("PixelLab bounded trial", () => {
       expect(manifest.assets[0]?.declarationSource).toEqual({
         registry: "fort/roster-appearance.md",
         section: "Citizen — Seat (they/them)",
+        declarationSha256: "b".repeat(64),
         commit: "a".repeat(40),
       });
     } finally {
@@ -563,6 +570,62 @@ describe("PixelLab bounded trial", () => {
     }
   });
 
+  test("reuses declaration-derived stills across commit provenance changes", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
+    const png = encodeRgbaPng(32, 64, Buffer.alloc(32 * 64 * 4));
+    const card = {
+      id: "still",
+      filename: "still.png",
+      prompt: "a forge",
+      negativeConstraints: "no words",
+      seed: 41001,
+      imageSize: { width: 32, height: 64 },
+      params: { no_background: true },
+      declarationSource: {
+        registry: "fort/roster-appearance.md",
+        section: "Citizen — Seat (they/them)",
+        declarationSha256: "a".repeat(64),
+        commit: "b".repeat(40),
+      },
+    };
+    const manifestAsset = {
+      id: card.id,
+      file: card.filename,
+      sha256: createHash("sha256").update(png).digest("hex"),
+      seed: card.seed,
+      prompt: card.prompt,
+      negativeConstraints: card.negativeConstraints,
+      params: { imageSize: card.imageSize, ...card.params },
+      declarationSource: {
+        ...card.declarationSource,
+        commit: "c".repeat(40),
+      },
+    };
+    try {
+      await writeFile(join(directory, card.filename), png);
+      await expect(
+        reusableStillAsset(card, [manifestAsset], directory),
+      ).resolves.toMatchObject({ asset: manifestAsset });
+      await expect(
+        reusableStillAsset(
+          card,
+          [
+            {
+              ...manifestAsset,
+              declarationSource: {
+                ...manifestAsset.declarationSource,
+                declarationSha256: "d".repeat(64),
+              },
+            },
+          ],
+          directory,
+        ),
+      ).resolves.toBeNull();
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   test("main skips reuse when a seed offset changes the recorded still seed", async () => {
     const directory = await mkdtemp(join(tmpdir(), "pixellab-trial-test-"));
     const originalFetch = globalThis.fetch;
@@ -587,6 +650,7 @@ describe("PixelLab bounded trial", () => {
       declarationSource: {
         registry: "fort/roster-appearance.md",
         section: "Kethra Anvilmark — Forge of Manyhalls (she/her)",
+        declarationSha256: "a".repeat(64),
         commit: "uncommitted",
       },
     };
@@ -681,6 +745,7 @@ describe("PixelLab bounded trial", () => {
       declarationSource: {
         registry: "fort/roster-appearance.md",
         section: "Kethra Anvilmark — Forge of Manyhalls (she/her)",
+        declarationSha256: "a".repeat(64),
         commit: "uncommitted",
       },
     };
@@ -692,7 +757,10 @@ describe("PixelLab bounded trial", () => {
       prompt: card.prompt,
       negativeConstraints: card.negativeConstraints,
       params: { imageSize: card.imageSize, ...card.params },
-      declarationSource: card.declarationSource,
+      declarationSource: {
+        ...card.declarationSource,
+        commit: "a".repeat(40),
+      },
     };
     try {
       await writeFile(join(directory, card.filename), stillPng);
