@@ -67,7 +67,7 @@ Merge flow: Forge commits in worktree → verifiers → Warden review → merge 
 
 ## Memory
 
-Work state: Beads (`bd ready`, `bd remember`/`bd prime`). Operational facts: `fort/remember.md`. Handoffs: `fort/handoffs/` (schema in seat files). Events: `fort/events/` (canonical schema: fortkit `schema/events.md`; categories add-only, never renamed). Annals: `fort/annals/`.
+Work state: Beads (`bd ready`; the fact ledger supersedes `bd remember` for durable facts). Operational facts: `fort/memory/current.md` (distilled view; facts ledger in `fort/memory/facts/`, per docs/specs/memory.md). Handoffs: `fort/handoffs/` (schema in seat files). Events: `fort/events/` (canonical schema: fortkit `schema/events.md`; categories add-only, never renamed). Annals: `fort/annals/`.
 
 ## The civilization layer, the Regent, and edicts
 
