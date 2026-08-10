@@ -18,7 +18,7 @@ Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `for
 - `seat.founded`, `seat.named`, `session.start`, `session.end`, `handoff.written`
 - `bead.filed`, `bead.claimed`, `bead.closed`, `bead.blocked`, `bead.unblocked`
 - `verify.run`, `verify.pass`, `verify.fail`, `review.verdict`, `merge`, `push`, `deploy`
-- `incident`, `incident.corrected`, `laurel`, `overseer.decision`, `watcher.alert`
+- `incident`, `incident.corrected`, `laurel`, `overseer.decision`, `watcher.alert`, `drift.scan`
 
 ## Emission points (who must emit, when)
 
