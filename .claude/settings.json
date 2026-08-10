@@ -6,6 +6,10 @@
           {
             "command": "bd prime --hook-json",
             "type": "command"
+          },
+          {
+            "command": "sh -c 'd=\"${CLAUDE_PROJECT_DIR:-.}/fort/memory/facts\"; [ -d \"$d\" ] || exit 0; echo \"# Core memory (tier: core; spec docs/specs/memory.md)\"; for f in \"$d\"/*.md; do grep -q \"^tier: core$\" \"$f\" && grep -q \"^status: active$\" \"$f\" && cat \"$f\"; done; true'",
+            "type": "command"
           }
         ],
         "matcher": ""
