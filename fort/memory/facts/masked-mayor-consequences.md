@@ -8,7 +8,7 @@ scope:
   topics: [mayor, sandbox, push]
   beads: [fortkit-88u.5]
 provenance:
-  source: "fort/remember.md:18"
+  source: "4dc2038:fort/remember.md:18"
   declared-by: kethra
   date: 2026-08-10
   origin: trusted

@@ -8,7 +8,7 @@ scope:
   topics: [verification, verify.sh]
   beads: [fortkit-88u.5]
 provenance:
-  source: "fort/remember.md:7-10; fortkit-88u.5"
+  source: "4dc2038:fort/remember.md:7-10; fortkit-88u.5"
   declared-by: kethra
   date: 2026-08-10
   origin: trusted
