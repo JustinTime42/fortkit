@@ -9,6 +9,7 @@ import {
 } from "./ambient.ts";
 import { formatDigest, readCivilizationDigest } from "./digest.ts";
 import { readRegistry } from "./readers/registry.ts";
+import { recall } from "./recall.ts";
 import { createWorldServer } from "./server.ts";
 import { formatStatusTable, readCivilizationStatus } from "./status.ts";
 
@@ -122,12 +123,64 @@ if (command === "ambient") {
       console.log(`fortkit world listening at http://127.0.0.1:${port}`);
     });
   }
+} else if (command === "recall") {
+  const flags = new Set(["--seat", "--topic", "--bead", "--since", "--until"]);
+  const filters: Record<string, string> = {};
+  const query: string[] = [];
+  let valid = true;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === undefined) continue;
+    if (flags.has(argument)) {
+      const value = args[index + 1];
+      if (
+        value === undefined ||
+        value.startsWith("--") ||
+        filters[argument] !== undefined
+      ) {
+        valid = false;
+        break;
+      }
+      filters[argument] = value;
+      index += 1;
+    } else if (argument.startsWith("--")) {
+      valid = false;
+      break;
+    } else query.push(argument);
+  }
+  if (query.length === 0) valid = false;
+  if (!valid) {
+    console.error(
+      "Usage: fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>]",
+    );
+    process.exitCode = 2;
+  } else {
+    try {
+      const result = await recall(process.cwd(), query.join(" "), {
+        ...(filters["--seat"] === undefined ? {} : { seat: filters["--seat"] }),
+        ...(filters["--topic"] === undefined
+          ? {}
+          : { topic: filters["--topic"] }),
+        ...(filters["--bead"] === undefined ? {} : { bead: filters["--bead"] }),
+        ...(filters["--since"] === undefined
+          ? {}
+          : { since: filters["--since"] }),
+        ...(filters["--until"] === undefined
+          ? {}
+          : { until: filters["--until"] }),
+      });
+      console.log(JSON.stringify(result, null, 2));
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    }
+  }
 } else if (
   command !== "status" ||
   args.some((argument) => argument !== "--json")
 ) {
   console.error(
-    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--json]\n       fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]",
+    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--json]\n       fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]\n       fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>]",
   );
   process.exitCode = 2;
 } else {

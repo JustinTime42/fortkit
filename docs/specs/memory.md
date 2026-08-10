@@ -176,6 +176,15 @@ scope tags, and disclosed gaps. Deterministic, dependency-light, no embeddings
 in v1 (a v2 semantic layer requires an observed retrieval failure per standing
 order 11).
 
+Invoke it from a fort root as `fortkit recall <query> [--seat <seat>] [--topic
+<topic>] [--bead <bead>] [--since <ISO timestamp>] [--until <ISO timestamp>]`.
+It emits a JSON object with `hits` and `gaps`: every hit names its source,
+parsed UTC date where available, actor/seat, matching section, provenance, and
+the indexed section text. `--since` is inclusive and `--until` exclusive.
+Recall rebuilds the disposable index before querying, so a missing, stale, or
+poisoned `index.db` cannot silently narrow the corpus; readers expose build
+gaps alongside matching results.
+
 ## 7. Delivery: per-seat injection requirements (fortkit-88u.6)
 
 Selection is deterministic in v1. Ranking: tier, then scope-tag match (seat,
