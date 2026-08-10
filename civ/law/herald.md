@@ -39,6 +39,11 @@ any future amendment may move it.
    read-only cross-fort mounts. The digest reports the export timestamp and
    staleness, and reports an unreadable or malformed export as a source error;
    an empty export remains distinct from either condition.
+   Re-recorded (2026-08-10, Mayor, Warden 88u.3 finding 6): the 88u.3 edit
+   above replaced a paragraph that also carried a still-open Overseer
+   decision, which is restored here rather than lost: **the viewer's beads
+   source (JSONL export vs bd) remains a separate open decision with the
+   Overseer** — that code path was not touched by 88u.3.
    If the Herald wants a fact that is not in the digest, the answer is to
    file a bead against the digest, never to go reading fort internals.
 2. **The brand-voice document** supplied by the launcher. It, plus section 6,
