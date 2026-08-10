@@ -1,4 +1,11 @@
+[Unit]
+Description=Nightly Manyhalls memory consolidation and commit
+
 [Service]
 Type=oneshot
 WorkingDirectory=/home/justin/dev/fortkit
-ExecStart=/usr/bin/env node scripts/consolidate-memory.mjs
+# User units do not inherit the login shell PATH where nvm exposes Node.
+Environment=PATH=/home/justin/.nvm/versions/node/v24.14.0/bin:/usr/local/bin:/usr/bin:/bin
+# The tracked snapshot must be committed after regeneration, or nightly runs
+# leave current.md dirty and never make the new truth available to other clones.
+ExecStart=/bin/bash -c 'set -euo pipefail; node scripts/consolidate-memory.mjs; git add fort/memory/current.md; if ! git diff --cached --quiet; then git commit -m "chore(memory): nightly consolidation"; fi'

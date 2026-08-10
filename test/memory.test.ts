@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -61,7 +62,7 @@ describe("memory consolidation", () => {
       ),
       writeFile(
         join(root, "fort", "events", "events-2026-08-10.jsonl"),
-        '{"ts":"2026-08-10T02:00:00Z","category":"incident","detail":"Needs attention"}\n',
+        '{"ts":"2026-08-10T02:00:00Z","category":"incident","detail":"Needs attention"}\n{"ts":"2026-08-10T02:00:00Z","category":"incident","detail":"Needs attention"}\n',
       ),
     ]);
     const episodic = await Promise.all([
@@ -90,6 +91,22 @@ describe("memory consolidation", () => {
       "Incident log — resolution linkage not yet implemented",
     );
     expect(first).toContain("events-2026-08-10.jsonl");
+    expect(first.match(/Needs attention/g)?.length).toBe(1);
+    const index = new DatabaseSync(join(root, "fort", "memory", "index.db"));
+    try {
+      const sourceCount = index
+        .prepare("SELECT COUNT(*) AS count FROM source")
+        .get() as { count: number } | undefined;
+      const gapCount = index
+        .prepare("SELECT COUNT(*) AS count FROM gaps WHERE source = ?")
+        .get("interactions.jsonl") as { count: number } | undefined;
+      if (sourceCount === undefined || gapCount === undefined)
+        throw new Error("memory index count query returned no row");
+      expect(sourceCount.count).toBeGreaterThan(0);
+      expect(gapCount.count).toBe(1);
+    } finally {
+      index.close();
+    }
     await expect(run(process.execPath, [lint, root])).resolves.toBeDefined();
     await expect(
       Promise.all([
@@ -108,7 +125,83 @@ describe("memory consolidation", () => {
       join(repositoryRoot, "fort", "memory", "current.md"),
       "utf8",
     );
-    expect(current).toContain("Forge runs with a kernel mask");
-    expect(current).not.toContain("read-only set omits fort/charter.md");
+    expect(current).toContain("attended seats (Mayor, Warden) have");
+    expect(current).toContain("PROSE- gated");
+    expect(current).not.toContain("Forge runs with a kernel mask");
+  });
+
+  test("caps ready beads without dropping in-progress or gate-labeled work", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-memory-cap-"));
+    await Promise.all([
+      mkdir(join(root, "fort", "memory", "facts"), { recursive: true }),
+      mkdir(join(root, ".beads"), { recursive: true }),
+    ]);
+    const ready = Array.from({ length: 17 }, (_, index) => ({
+      id: `ready-${String(index + 1).padStart(2, "0")}`,
+      status: "open",
+      title: "Ready work",
+      priority: 4,
+    }));
+    await Promise.all([
+      writeFile(
+        join(root, "fort", "memory", "facts", "current-truth.md"),
+        fact,
+      ),
+      writeFile(
+        join(root, ".beads", "issues.jsonl"),
+        [
+          ...ready,
+          { id: "active", status: "in_progress", title: "Active", priority: 4 },
+          {
+            id: "human-gate",
+            status: "blocked",
+            title: "Awaiting approval",
+            priority: 4,
+            labels: ["gate-1"],
+          },
+        ]
+          .map((bead) => JSON.stringify(bead))
+          .join("\n"),
+      ),
+    ]);
+    await run(process.execPath, [assembler, root]);
+    const current = await readFile(
+      join(root, "fort", "memory", "current.md"),
+      "utf8",
+    );
+    expect(current).toContain("active [in_progress]");
+    expect(current).toContain("human-gate [blocked]");
+    expect(current).toContain("ready-15 [open]");
+    expect(current).not.toContain("ready-16 [open]");
+    expect(current).toContain(
+      "17 of 19 open beads shown; full list via bd ready",
+    );
+  });
+
+  test("fails lint for schema violations and retired instruction references", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-memory-lint-"));
+    await mkdir(join(root, "fort", "memory", "facts"), { recursive: true });
+    await writeFile(
+      join(root, "fort", "memory", "facts", "invalid.md"),
+      fact.replace("key: current-truth", "key: incorrect"),
+    );
+    await expect(run(process.execPath, [lint, root])).rejects.toMatchObject({
+      code: 1,
+    });
+    await writeFile(
+      join(root, "fort", "memory", "facts", "invalid.md"),
+      fact.replace("current-truth", "replacement"),
+    );
+    await writeFile(
+      join(root, "fort", "memory", "facts", "retired.md"),
+      fact
+        .replace("current-truth", "retired")
+        .replace("status: active", "status: superseded")
+        .replace("superseded-by: null", "superseded-by: replacement"),
+    );
+    await writeFile(join(root, "AGENTS.md"), "Read retired before work.\n");
+    await expect(run(process.execPath, [lint, root])).rejects.toMatchObject({
+      code: 1,
+    });
   });
 });
