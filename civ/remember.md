@@ -396,3 +396,13 @@ should name the seat if it matters who learned it.
   codes (2 bad-header / 3 no-model) collapse to 3 — harmless where only
   success/failure is branched on, present in BOTH forts' forge.sh since the
   ForgeOs agk merge. Know it before ever consuming those codes.
+
+- 2026-08-10 (edict 10, fortkit-88u.8): **A filtered view of an append-only
+  record hides exactly the thing append-only exists to preserve: the
+  supersession.** bin/regent's `grep '^- **' | head -10` briefing filter
+  dropped every plain bullet, including the cycle-7 r2 correction that
+  superseded bolded mask facts the Regent WAS shown — stale law, served
+  preferentially, to the unmasked seat. Brief from whole files; if a cap is
+  prudent, it must disclose itself in the output. `bin/regent --brief-only`
+  regenerates the briefing without launching and is the self-check for any
+  briefing change.
