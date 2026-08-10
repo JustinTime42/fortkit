@@ -136,10 +136,18 @@ fort's standing conversion.
 
 ## 5. The derived index (zero trust)
 
-`fort/memory/index.db` — SQLite FTS5, **gitignored**, rebuilt deterministically
-from its sources by the consolidation job (fortkit-88u.5). Corruption or
-poisoning of the index is repaired by rebuild; it is never a store of record,
-and nothing may be written to it that is not derived from a tracked source.
+`fort/memory/index.db` — plain SQLite tables (`source` rows plus a `gaps`
+table), **gitignored**, rebuilt deterministically from its sources by the
+consolidation job (fortkit-88u.5). Corruption or poisoning of the index is
+repaired by rebuild; it is never a store of record, and nothing may be written
+to it that is not derived from a tracked source.
+
+*Amended 2026-08-10 (fortkit-88u.11, from Warden 88u.5 r2 finding 1): this
+section originally mandated FTS5. `node:sqlite` on the supported runtime
+(Node 24, no native dependencies permitted) rejects FTS5 virtual tables, so
+the index is plain tables with no in-database matching or scoring; matching
+and scoring are application-side, owned by `fortkit recall` (§6.2,
+fortkit-88u.7).*
 
 Indexed corpus (per Overseer ruling 3): the fact ledger; handoff sections;
 events; annals (including rulings-of-record); the beads `issues.jsonl` export;
@@ -171,8 +179,10 @@ order 11).
 ## 7. Delivery: per-seat injection requirements (fortkit-88u.6)
 
 Selection is deterministic in v1. Ranking: tier, then scope-tag match (seat,
-bead anchors, topic overlap with the dispatch prompt), then recency, then FTS
-score; `origin: untrusted` demoted at equal rank. Beyond the core tier, a hard
+bead anchors, topic overlap with the dispatch prompt), then recency, then
+recall's application-side match score (amended 2026-08-10, fortkit-88u.11:
+formerly "FTS score" — the index carries no scoring, see §5); `origin:
+untrusted` demoted at equal rank. Beyond the core tier, a hard
 budget of ~4,000 tokens of selected memory per session; the selector discloses
 what was dropped ("N facts matched, M injected") — no silent caps.
 
