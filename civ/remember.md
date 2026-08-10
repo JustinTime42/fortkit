@@ -357,3 +357,13 @@ should name the seat if it matters who learned it.
   under forge/warden (exit 77) and pass mayor. When a bead's letter would
   break a documented lane, implement the intent, record the deviation on the
   bead, and let the post-hoc review judge it.
+
+- 2026-08-09 (edict 8 amendment): **a guard that changes an env contract must
+  accept the value LIVE sessions already carry.** The seat-named FORT_MASKED
+  guard shipped correct for new launches and refused the fort's own masked
+  Mayor mid-mill — her session predated the edict and carried the legacy
+  boolean `1` (launcher edits bind at dispatch; the fortkit remember already
+  said so for prompts, and it holds for env exports). Fix: accept the legacy
+  value with a dated retirement note (`""|mayor|1`), and mayor.sh refuses ANY
+  marker. Test matrices for launcher guards must include the legacy
+  environment of currently-running sessions, not only the new contract.
