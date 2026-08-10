@@ -8,7 +8,7 @@ scope:
   topics: [forge.sh, sandbox, constitution]
   beads: [fortkit-6jf]
 provenance:
-  source: "fort/remember.md:17-30; fortkit-6jf"
+  source: "fort/remember.md:17-41; fortkit-6jf"
   declared-by: kethra
   date: 2026-08-10
   origin: trusted
