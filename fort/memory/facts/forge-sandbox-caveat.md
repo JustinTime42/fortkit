@@ -1,7 +1,7 @@
 ---
 key: forge-sandbox-caveat
-status: active
-superseded-by: null
+status: superseded
+superseded-by: cycle7-write-boundaries
 tier: core
 scope:
   seats: [forge]

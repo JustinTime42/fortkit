@@ -21,6 +21,23 @@ function compare(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+function compareBeads(left, right) {
+  const leftPriority = Number(left.priority);
+  const rightPriority = Number(right.priority);
+  return (
+    (Number.isFinite(leftPriority) ? leftPriority : 4) -
+      (Number.isFinite(rightPriority) ? rightPriority : 4) ||
+    compare(left.id, right.id)
+  );
+}
+
+function hasGateLabel(bead) {
+  return (
+    Array.isArray(bead.labels) &&
+    bead.labels.some((label) => /^gate-[1-3]$/u.test(label))
+  );
+}
+
 function parseFact(text, path) {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/u.exec(text);
   if (match === null) return null;
@@ -184,6 +201,20 @@ async function build() {
       }
     }
   }
+  const snapshot = [
+    ...new Map(
+      [
+        ...open
+          .filter((bead) => bead.status === "in_progress")
+          .sort(compareBeads),
+        ...open.filter(hasGateLabel).sort(compareBeads),
+        ...open
+          .filter((bead) => bead.status === "open")
+          .sort(compareBeads)
+          .slice(0, 15),
+      ].map((bead) => [bead.id, bead]),
+    ).values(),
+  ];
 
   const handoffDirectory = join(root, "fort", "handoffs");
   const newest = new Map();
@@ -239,7 +270,11 @@ async function build() {
       try {
         const event = JSON.parse(line);
         if (event.category === "incident")
-          incidents.push({ event, file: relative(root, path) });
+          incidents.push({
+            event,
+            file: relative(root, path),
+            duplicateKey: `${event.category}\u0000${event.target ?? ""}\u0000${event.detail ?? ""}`,
+          });
         rows.push({
           source: relative(root, path),
           ts: event.ts ?? "",
@@ -357,12 +392,11 @@ async function build() {
     "",
     "## Open work",
     "",
-    ...open
-      .sort((left, right) => compare(left.id, right.id))
-      .map(
-        (bead) =>
-          `- ${bead.id} [${bead.status}]: ${bead.title ?? "(untitled)"} — [${bead.id}](bead:${bead.id})`,
-      ),
+    ...snapshot.map(
+      (bead) =>
+        `- ${bead.id} [${bead.status}]: ${bead.title ?? "(untitled)"} — [${bead.id}](bead:${bead.id})`,
+    ),
+    `${snapshot.length} of ${open.length} open beads shown; full list via bd ready`,
   );
   lines.push("", "## Latest handoffs", "");
   for (const [seat, handoff] of [...newest].sort(([left], [right]) =>
@@ -381,8 +415,15 @@ async function build() {
     "## Incident log — resolution linkage not yet implemented",
     "",
     ...incidents
-      .sort((left, right) =>
-        compare(String(left.event.ts), String(right.event.ts)),
+      .sort(
+        (left, right) =>
+          compare(String(left.event.ts), String(right.event.ts)) ||
+          compare(left.file, right.file),
+      )
+      .filter(
+        ({ duplicateKey }, index, sorted) =>
+          index ===
+          sorted.findIndex((item) => item.duplicateKey === duplicateKey),
       )
       .map(
         ({ event, file }) =>

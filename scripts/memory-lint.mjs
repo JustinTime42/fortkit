@@ -5,6 +5,7 @@ import { basename, join } from "node:path";
 const root = process.argv[2] ?? process.cwd();
 const factsDirectory = join(root, "fort", "memory", "facts");
 const required = ["source", "declared-by", "date", "origin"];
+const coreFactOverheadLines = 12;
 const failures = [];
 
 function parseFact(text) {
@@ -33,6 +34,7 @@ try {
   failures.push("fort/memory/facts is unreadable");
 }
 let coreLines = 0;
+const supersededFactKeys = [];
 for (const file of files) {
   const path = join(factsDirectory, file);
   const parsed = parseFact(await readFile(path, "utf8"));
@@ -50,22 +52,36 @@ for (const file of files) {
     failures.push(`${path}: invalid tier`);
   if (scope.trim() === "") failures.push(`${path}: scope is required`);
   if (body === "") failures.push(`${path}: body is required`);
-  for (const key of required)
-    if (!frontmatter[key])
-      failures.push(`${path}: provenance.${key} is required`);
+  for (const field of required)
+    if (!frontmatter[field])
+      failures.push(`${path}: provenance.${field} is required`);
   if (!["trusted", "untrusted"].includes(frontmatter.origin))
     failures.push(`${path}: invalid provenance.origin`);
   if (frontmatter.origin === "untrusted" && frontmatter.tier === "core")
     failures.push(`${path}: untrusted facts cannot be core`);
   if (frontmatter.status === "superseded" && !frontmatter["superseded-by"])
     failures.push(`${path}: superseded facts need superseded-by`);
+  if (frontmatter.status === "superseded") supersededFactKeys.push(key);
   if (
     frontmatter["superseded-by"] &&
     !files.includes(`${frontmatter["superseded-by"]}.md`)
   )
     failures.push(`${path}: superseded-by does not resolve`);
   if (frontmatter.tier === "core")
-    coreLines += body.split(/\r?\n/u).length + 12;
+    coreLines += body.split(/\r?\n/u).length + coreFactOverheadLines;
+}
+const retiredReferences = ["fort/remember.md", ...supersededFactKeys];
+for (const instructionFile of ["AGENTS.md", "CLAUDE.md"]) {
+  const path = join(root, instructionFile);
+  let text;
+  try {
+    text = await readFile(path, "utf8");
+  } catch {
+    continue;
+  }
+  for (const reference of retiredReferences)
+    if (text.includes(reference))
+      failures.push(`${path}: references retired memory item ${reference}`);
 }
 if (coreLines > 300)
   failures.push(`core tier exceeds 300 lines (${coreLines})`);
