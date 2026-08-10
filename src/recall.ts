@@ -59,8 +59,17 @@ function tags(value: string): string[] {
     .filter(Boolean);
 }
 
-function scopeMatches(value: string, expected: string | undefined): boolean {
-  return expected === undefined || tags(value).includes(expected.toLowerCase());
+function scopeMatches(
+  value: string,
+  expected: string | undefined,
+  wildcard = false,
+): boolean {
+  const actual = tags(value);
+  return (
+    expected === undefined ||
+    actual.includes(expected.toLowerCase()) ||
+    (wildcard && actual.includes("all"))
+  );
 }
 
 function score(row: IndexRow, query: string): number {
@@ -100,39 +109,50 @@ export async function recall(
         : instant(filters.until, "--until");
     if (since !== undefined && until !== undefined && since >= until)
       throw new Error("--since must be before --until");
-    return {
-      hits: rows
-        .map((row) => ({ row, score: score(row, query) }))
-        .filter(({ row, score: match }) => {
-          const timestamp = row.ts === "" ? Number.NaN : Date.parse(row.ts);
-          return (
-            match > 0 &&
-            scopeMatches(row.scope_seats, filters.seat) &&
-            scopeMatches(row.scope_topics, filters.topic) &&
-            scopeMatches(row.scope_beads, filters.bead) &&
-            (since === undefined ||
-              (!Number.isNaN(timestamp) && timestamp >= since)) &&
-            (until === undefined ||
-              (!Number.isNaN(timestamp) && timestamp < until))
-          );
-        })
-        .sort(
-          (left, right) =>
-            right.score - left.score ||
-            left.row.source.localeCompare(right.row.source) ||
-            left.row.section.localeCompare(right.row.section),
-        )
-        .map(({ row }) => ({
-          source: row.source,
-          date: row.ts === "" ? null : new Date(row.ts).toISOString(),
-          actor: row.actor || null,
-          seat: row.seat || null,
-          section: row.section,
-          provenance: row.provenance,
-          snippet: row.snippet,
-        })),
-      gaps,
-    };
+    const candidates = rows
+      .map((row) => ({ row, score: score(row, query) }))
+      .filter(
+        ({ row, score: match }) =>
+          match > 0 &&
+          scopeMatches(row.scope_seats, filters.seat, true) &&
+          scopeMatches(row.scope_topics, filters.topic) &&
+          scopeMatches(row.scope_beads, filters.bead),
+      );
+    const undated = candidates.filter(({ row }) =>
+      Number.isNaN(row.ts === "" ? Number.NaN : Date.parse(row.ts)),
+    );
+    const hits = candidates
+      .filter(({ row }) => {
+        const timestamp = row.ts === "" ? Number.NaN : Date.parse(row.ts);
+        return (
+          (since === undefined ||
+            (!Number.isNaN(timestamp) && timestamp >= since)) &&
+          (until === undefined ||
+            (!Number.isNaN(timestamp) && timestamp < until))
+        );
+      })
+      .sort(
+        (left, right) =>
+          right.score - left.score ||
+          left.row.source.localeCompare(right.row.source) ||
+          left.row.section.localeCompare(right.row.section),
+      )
+      .map(({ row }) => ({
+        source: row.source,
+        date: row.ts === "" ? null : new Date(row.ts).toISOString(),
+        actor: row.actor || null,
+        seat: row.seat || null,
+        section: row.section,
+        provenance: row.provenance,
+        snippet: row.snippet,
+      }));
+    if ((since !== undefined || until !== undefined) && undated.length > 0) {
+      gaps.push({
+        source: "",
+        reason: `${undated.length} indexed rows have no parsed timestamp and were excluded by --since/--until`,
+      });
+    }
+    return { hits, gaps };
   } finally {
     db.close();
   }

@@ -130,6 +130,60 @@ describe("fortkit recall", () => {
     }
   });
 
+  test("treats all-scoped facts as matching every seat", async () => {
+    const root = await fixtureRoot();
+    try {
+      await writeFile(
+        join(root, "fort", "memory", "facts", "authoritative-verifier.md"),
+        `---
+key: authoritative-verifier
+status: active
+superseded-by: null
+tier: core
+scope:
+  seats: [all]
+  topics: [verification]
+provenance:
+  source: "fortkit-88u.7"
+  declared-by: kethra
+  date: 2026-08-10
+  origin: trusted
+---
+The verifier-canary is authoritative for every seat.
+`,
+      );
+      await expect(
+        recall(root, "verifier-canary", { seat: "forge" }),
+      ).resolves.toMatchObject({
+        hits: [
+          {
+            source: "fort/memory/facts/authoritative-verifier.md",
+            section: "fact",
+          },
+        ],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("discloses matching undated rows excluded by a date window", async () => {
+    const root = await fixtureRoot();
+    try {
+      const result = await recall(root, "annal-canary", {
+        since: "2026-08-01T00:00:00Z",
+      });
+      expect(result.hits).toEqual([]);
+      expect(result.gaps).toContainEqual({
+        source: "",
+        reason:
+          "1 indexed rows have no parsed timestamp and were excluded by --since/--until",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test("discloses unreadable corpus files as gaps", async () => {
     const root = await fixtureRoot();
     const unreadable = join(root, "fort", "annals", "unreadable.md");
