@@ -1,4 +1,4 @@
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -75,39 +75,135 @@ describe("civilization digest", () => {
     expect(JSON.stringify(digest)).not.toContain("outside the selected window");
   });
 
-  test("asks bd for every closed bead in the canonical window", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "fortkit-bd-"));
-    const bdPath = join(directory, "bd");
-    const originalPath = process.env.PATH;
+  test("reads closed beads from each fort's passive export and discloses staleness", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "fortkit-digest-"));
     try {
-      await writeFile(
-        bdPath,
-        `#!/bin/sh
-case "$*" in
-  *"--readonly"*"--all"*"--status=closed"*"--limit=0"*"--closed-after=2026-08-04T00:00:00.000Z"*"--closed-before=2026-08-05T00:00:00.000Z"*"--json"*)
-    printf '%s\\n' '[{"id":"fortkit-test","title":"Closed fixture","closed_at":"2026-08-04T12:00:00Z"}]'
-    ;;
-  *) exit 1 ;;
-esac
-`,
+      const fortPaths = await Promise.all(
+        ["alpha", "beta", "gamma"].map(async (name) => {
+          const fort = join(directory, name);
+          const beads = join(fort, ".beads");
+          await mkdir(beads, { recursive: true });
+          await writeFile(
+            join(beads, "issues.jsonl"),
+            `${JSON.stringify({
+              id: `${name}-closed`,
+              title: `${name} fixture`,
+              status: "closed",
+              closed_at: "2026-08-04T12:00:00Z",
+            })}\n`,
+          );
+          return fort;
+        }),
       );
-      await chmod(bdPath, 0o755);
-      process.env.PATH = `${directory}:${originalPath ?? ""}`;
+      const source = await readClosedBeads(
+        fortPaths[0] as string,
+        Date.parse("2026-08-04T00:00:00Z"),
+        Date.parse("2026-08-05T00:00:00Z"),
+      );
+      expect(source).toMatchObject({
+        status: "ok",
+        beads: [{ id: "alpha-closed" }],
+        exportStale: false,
+      });
+      await utimes(
+        join(fortPaths[0] as string, ".beads", "issues.jsonl"),
+        0,
+        0,
+      );
       await expect(
         readClosedBeads(
-          directory,
+          fortPaths[0] as string,
           Date.parse("2026-08-04T00:00:00Z"),
           Date.parse("2026-08-05T00:00:00Z"),
         ),
-      ).resolves.toEqual([
-        {
-          id: "fortkit-test",
-          title: "Closed fixture",
-          closedAt: "2026-08-04T12:00:00Z",
-        },
-      ]);
+      ).resolves.toMatchObject({ status: "ok", exportStale: true });
+
+      const registry = join(directory, "civilization.json");
+      await writeFile(
+        registry,
+        JSON.stringify({
+          forts: fortPaths.map((path, index) => ({
+            fort_name: ["Alpha", "Beta", "Gamma"][index],
+            repo: path,
+          })),
+        }),
+      );
+      const digest = await readCivilizationDigest(
+        registry,
+        "2026-08-04T00:00:00Z",
+        "2026-08-05T00:00:00Z",
+      );
+      expect(
+        digest.forts.map((fort) =>
+          fort.closedBeads?.status === "ok"
+            ? fort.closedBeads.beads.length
+            : -1,
+        ),
+      ).toEqual([1, 1, 1]);
     } finally {
-      process.env.PATH = originalPath;
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("reports a broken export as an error, preserves an empty export, and discloses caps", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "fortkit-digest-gaps-"));
+    try {
+      const empty = join(directory, "empty");
+      const broken = join(directory, "broken");
+      const crowded = join(directory, "crowded");
+      await Promise.all(
+        [empty, broken, crowded].map((fort) =>
+          mkdir(join(fort, ".beads"), { recursive: true }),
+        ),
+      );
+      await writeFile(join(empty, ".beads", "issues.jsonl"), "");
+      await writeFile(join(broken, ".beads", "issues.jsonl"), "not json\n");
+      await writeFile(join(crowded, ".beads", "issues.jsonl"), "");
+      await mkdir(join(crowded, "fort", "events"), { recursive: true });
+      await mkdir(join(crowded, "fort", "handoffs"), { recursive: true });
+      await writeFile(
+        join(crowded, "fort", "events", "events-2026-08-04.jsonl"),
+        Array.from({ length: 51 }, (_, index) =>
+          JSON.stringify({
+            ts: `2026-08-04T00:${String(index).padStart(2, "0")}:00Z`,
+            actor: "kethra",
+          }),
+        ).join("\n"),
+      );
+      await writeFile(
+        join(crowded, "fort", "handoffs", "forge-2026-08-04.md"),
+        Array.from({ length: 51 }, (_, index) => `## Section ${index}`).join(
+          "\n\n",
+        ),
+      );
+      const registry = join(directory, "civilization.json");
+      await writeFile(
+        registry,
+        JSON.stringify({
+          forts: [
+            { fort_name: "Empty", repo: empty },
+            { fort_name: "Broken", repo: broken },
+            { fort_name: "Crowded", repo: crowded },
+          ],
+        }),
+      );
+      const digest = await readCivilizationDigest(
+        registry,
+        "2026-08-04T00:00:00Z",
+        "2026-08-05T00:00:00Z",
+      );
+      expect(digest.forts[0]?.closedBeads).toMatchObject({
+        status: "ok",
+        beads: [],
+      });
+      expect(digest.forts[1]?.closedBeads).toMatchObject({ status: "error" });
+      expect(digest.forts[2]).toMatchObject({
+        eventsTruncated: 1,
+        handoffSectionsTruncated: 1,
+      });
+      expect(formatDigest(digest)).toContain("closed beads: ERROR");
+      expect(formatDigest(digest)).toContain("truncated 1");
+    } finally {
       await rm(directory, { recursive: true, force: true });
     }
   });

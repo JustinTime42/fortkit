@@ -33,11 +33,12 @@ any future amendment may move it.
    the signature of a quiet edit, and surfacing it within a day is the whole
    reason this field exists. This is a watch duty, not a story bar: it applies
    even on a zero-draft morning.
-   Recorded decision (2026-08-05, resolving the drift the Warden flagged in
-   the r6x.1 review): the digest's closed-beads source is `bd` invoked
-   read-only, superseding the jmq-era "do not shell out to bd" for this path;
-   the viewer's beads source (JSONL export vs bd) remains a separate open
-   decision with the Overseer.
+   Recorded correction (2026-08-10, fortkit-88u.3): the digest reads each
+   fort's passive `.beads/issues.jsonl` export directly. It does not invoke
+   `bd`: even `bd --readonly` needs Dolt's LOCK file and fails on the Herald's
+   read-only cross-fort mounts. The digest reports the export timestamp and
+   staleness, and reports an unreadable or malformed export as a source error;
+   an empty export remains distinct from either condition.
    If the Herald wants a fact that is not in the digest, the answer is to
    file a bead against the digest, never to go reading fort internals.
 2. **The brand-voice document** supplied by the launcher. It, plus section 6,
