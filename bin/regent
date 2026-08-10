@@ -75,7 +75,21 @@ stamp="$(date +%Y-%m-%dT%H%M%S)"
   done
   echo "## Hard-won operational facts (across the civilization)"
   for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
-    [ -f "$repo/fort/remember.md" ] && { echo "### $(basename "$repo")"; grep -E '^- \*\*' "$repo/fort/remember.md" | head -10; echo; }
+    # Whole file, never a filtered view: grep '^- **' dropped every plain
+    # bullet, including the newest supersession blocks — the Regent read stale
+    # law (fortkit-88u.8). The files are small; a generous cap guards the
+    # pathological case and always DISCLOSES itself, never truncates silently.
+    if [ -f "$repo/fort/remember.md" ]; then
+      echo "### $(basename "$repo")"
+      remember_lines=$(wc -l < "$repo/fort/remember.md")
+      if [ "$remember_lines" -gt 400 ]; then
+        head -400 "$repo/fort/remember.md"
+        echo "[truncated at 400 of $remember_lines lines — read $repo/fort/remember.md in full]"
+      else
+        cat "$repo/fort/remember.md"
+      fi
+      echo
+    fi
   done
   echo "## Rulings of record (civilization case law)"
   for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
