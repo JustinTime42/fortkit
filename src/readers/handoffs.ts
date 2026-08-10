@@ -11,22 +11,28 @@ export type HandoffSection = {
   body: string;
 };
 
-type HandoffCandidate = Pick<HandoffSection, "file" | "seat" | "date">;
+export type HandoffCandidate = Pick<HandoffSection, "file" | "seat" | "date">;
 
 type ReadHandoffCandidate = HandoffCandidate & {
   heading: string | null;
   timestamp: number | null;
 };
 
+/** Parses fort handoff filenames, including the Regent's compact T-stamp form. */
+export function parseHandoffFilename(file: string): HandoffCandidate | null {
+  const match =
+    /^([a-z0-9_-]+)-(\d{4}-\d{2}-\d{2})(?:T\d{6}(?:-[a-z0-9._-]+)?|(?:-[a-z0-9._-]+)?)\.md$/i.exec(
+      file,
+    );
+  const seat = match?.[1];
+  const date = match?.[2];
+  return seat === undefined || date === undefined ? null : { file, seat, date };
+}
+
 function handoffCandidates(files: string[]): HandoffCandidate[] {
   return files.flatMap((file) => {
-    const match =
-      /^([a-z0-9_-]+)-(\d{4}-\d{2}-\d{2})(?:-[a-z0-9._-]+)?\.md$/i.exec(file);
-    const seat = match?.[1];
-    const date = match?.[2];
-    return seat === undefined || date === undefined
-      ? []
-      : [{ file, seat, date }];
+    const candidate = parseHandoffFilename(file);
+    return candidate === null ? [] : [candidate];
   });
 }
 

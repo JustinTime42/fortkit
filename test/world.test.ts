@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,7 +6,10 @@ import { createContext, Script } from "node:vm";
 
 import { describe, expect, test, vi } from "vitest";
 import { homeExtent } from "../src/colony-layout.js";
-import { readLatestHandoffs } from "../src/readers/handoffs.js";
+import {
+  parseHandoffFilename,
+  readLatestHandoffs,
+} from "../src/readers/handoffs.js";
 import {
   colonyPage,
   composeColonyPage,
@@ -1239,6 +1242,35 @@ describe("world view", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  test("parses the civilization handoff T-stamp filename form", () => {
+    expect(parseHandoffFilename("regent-2026-08-08T231857.md")).toEqual({
+      file: "regent-2026-08-08T231857.md",
+      seat: "regent",
+      date: "2026-08-08",
+    });
+  });
+
+  test("accepts every checked-in handoff filename", async () => {
+    const projectRoot = fileURLToPath(new URL("..", import.meta.url));
+    const handoffDirectories = [
+      "fort/handoffs",
+      "civ/handoffs",
+      "test/fixtures/fort-alpha/fort/handoffs",
+    ];
+    const unmatched = await Promise.all(
+      handoffDirectories.map(async (directory) => {
+        const filenames = (await readdir(join(projectRoot, directory))).filter(
+          (filename) => filename.endsWith(".md"),
+        );
+        return filenames
+          .filter((filename) => parseHandoffFilename(filename) === null)
+          .map((filename) => join(directory, filename));
+      }),
+    );
+
+    expect(unmatched.flat()).toEqual([]);
   });
 
   test("caps watcher alerts and timestamps each entry", async () => {
