@@ -46,11 +46,6 @@
     "deny": [
       "Read(.env*)",
       "Read(**/.env*)",
-      "Read(//home/justin/dev/fortkit/.env*)",
-      "Read(//home/justin/dev/fortkit/**/.env*)",
-      "Read(//home/justin/dev/fortkit-worktrees/**/.env*)",
-      "Read(//home/justin/.ssh/**)",
-      "Read(//home/justin/.aws/**)",
       "Edit(**)",
       "Bash(*.env*)",
       "Bash(cat *.env*)",
