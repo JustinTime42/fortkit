@@ -96,6 +96,31 @@ describe("Researcher boundary probe parsing helpers", () => {
     }
   });
 
+  test("accepts the real launcher's required positive controls", async () => {
+    for (const check of [
+      `exact_tools ${JSON.stringify(launcher)}`,
+      `no_forbidden_tool ${JSON.stringify(launcher)}`,
+      `empty_setting_sources ${JSON.stringify(launcher)}`,
+    ]) {
+      await expect(
+        shell(`source ${JSON.stringify(probe)}; ${check}`),
+      ).resolves.toBeDefined();
+    }
+  });
+
+  test("allows skipped assertions normally but rejects them in strict mode", async () => {
+    await expect(
+      shell(
+        `source ${JSON.stringify(probe)}; fail=0; skip=2; strict=0; probe_exit_status`,
+      ),
+    ).resolves.toBeDefined();
+    await expect(
+      shell(
+        `source ${JSON.stringify(probe)}; fail=0; skip=2; strict=1; probe_exit_status`,
+      ),
+    ).rejects.toThrow();
+  });
+
   test("rejects unsafe launcher variants", async () => {
     const fixture = await mkdtemp(join(tmpdir(), "researcher-launcher-"));
     try {
