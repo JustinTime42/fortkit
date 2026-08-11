@@ -1,5 +1,5 @@
 #!/bin/bash
-# TEMPLATE — rendered by fort-init. Actor id follows the seated Researcher.
+# TEMPLATE — rendered by fort-init. Actor id is the Researcher seat office.
 # shellcheck disable=SC1083
 # Launch the Researcher on a bead, separately and read-only by construction.
 # The launcher grants EXACTLY WebSearch,WebFetch,Read,Grep,Glob. It deliberately
@@ -43,13 +43,13 @@ mask=()
 # shellcheck disable=SC1091  # resolved at runtime; build_mask fills mask[]
 source "$root/fort/scripts/lib/seat-sandbox.sh"
 if ! require_bwrap; then
-  "$emit" incident "Researcher launch refused: bwrap missing, kernel mask layer unavailable" -a saelin -s researcher -t "$bead"
+  "$emit" incident "Researcher launch refused: bwrap missing, kernel mask layer unavailable" -a researcher -s researcher -t "$bead"
   exit 78
 fi
 build_mask claude "$root" --env-root "$root-worktrees" "$root" "$root-worktrees"
 mask_env claude
 
-"$emit" session.start "The Researcher begins research on $bead ($model)" -a saelin -s researcher -t "$bead" -p "{\"model\":\"$model\"}"
+"$emit" session.start "The Researcher begins research on $bead ($model)" -a researcher -s researcher -t "$bead" -p "{\"model\":\"$model\"}"
 set +e
 (cd "$scratch" && printf '%s' "$prompt" | bwrap "${mask[@]}" -- claude -p \
   --model "$model" \
@@ -68,13 +68,13 @@ set -e
 # launcher/profile and cap depth at one, never inherit a parent.
 handoff_recorded=false
 if [ "$rc" -eq 0 ] && grep -qE '^[[:space:]]*RESEARCH-COMPLETE[[:space:]]*$' "$log"; then
-  bd -C "$root" comment "$bead" --file "$log" --actor saelin
-  "$emit" handoff.written "Researcher handoff recorded on $bead" -a saelin -s researcher -t "$bead" -p "{\"model\":\"$model\",\"log\":\"$log\"}"
+  bd -C "$root" comment "$bead" --file "$log" --actor researcher
+  "$emit" handoff.written "Researcher handoff recorded on $bead" -a researcher -s researcher -t "$bead" -p "{\"model\":\"$model\",\"log\":\"$log\"}"
   handoff_recorded=true
 else
-  "$emit" incident "Researcher session on $bead recorded no handoff: exit $rc or RESEARCH-COMPLETE missing" -a saelin -s researcher -t "$bead" -p "{\"exit\":$rc,\"log\":\"$log\"}"
+  "$emit" incident "Researcher session on $bead recorded no handoff: exit $rc or RESEARCH-COMPLETE missing" -a researcher -s researcher -t "$bead" -p "{\"exit\":$rc,\"log\":\"$log\"}"
 fi
-"$emit" session.end "The Researcher's session on $bead ended (exit $rc)" -a saelin -s researcher -t "$bead" -p "{\"exit\":$rc,\"log\":\"$log\",\"handoff_recorded\":$handoff_recorded}"
+"$emit" session.end "The Researcher's session on $bead ended (exit $rc)" -a researcher -s researcher -t "$bead" -p "{\"exit\":$rc,\"log\":\"$log\",\"handoff_recorded\":$handoff_recorded}"
 echo "--- researcher.sh: session ended (exit $rc). Log: $log  Errors: $log.err"
 if [ "$handoff_recorded" = false ] && [ "$rc" -eq 0 ]; then
   exit 65
