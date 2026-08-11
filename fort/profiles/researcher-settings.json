@@ -1,11 +1,10 @@
 {
-  "$comment": "Researcher seat permission profile (Manyhalls). Loaded only by fort/scripts/researcher.sh with --setting-sources '' so ambient user and project settings cannot widen it. The LAUNCHER'S exact tool set is the security boundary: it withholds Bash and the Task/Agent tools entirely, along with every write tool. These denies are defense in depth only; command denies bind spellings rather than capabilities. In particular, the Bash .env* denies remain as a belt-and-suspenders control should a future launcher change mistakenly add Bash. Task and Agent are deliberately absent here: the launcher's tool set, not a deny spelling, enforces their absence.",
+  "$comment": "Researcher seat permission profile (Manyhalls). Loaded only by fort/scripts/researcher.sh with --setting-sources '' so ambient user and project settings cannot widen it. WebSearch and WebFetch are explicitly allow-listed because non-interactive -p mode cannot answer an approval prompt. The LAUNCHER'S exact tool set is the security boundary: it withholds Bash and the Task/Agent tools entirely, along with every write tool. These denies are defense in depth only; command denies bind spellings rather than capabilities. Edit(**) is the file-write deny that binds all file-editing tools. The Bash .env* denies remain as a belt-and-suspenders control should a future launcher change mistakenly add Bash. Task and Agent are deliberately absent here: the launcher's tool set, not a deny spelling, enforces their absence.",
   "permissions": {
     "defaultMode": "default",
+    "allow": ["WebSearch", "WebFetch"],
     "deny": [
       "Edit(**)",
-      "Write(**)",
-      "NotebookEdit(**)",
       "Read(.env*)",
       "Read(**/.env*)",
       "Read(/home/*/.ssh/**)",
