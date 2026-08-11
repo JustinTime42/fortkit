@@ -204,4 +204,39 @@ describe("memory consolidation", () => {
       code: 1,
     });
   });
+
+  test("enforces each seat's core budget and reports the shared floor", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-memory-seat-budget-"));
+    await Promise.all([
+      mkdir(join(root, "fort", "memory", "facts"), { recursive: true }),
+      mkdir(join(root, "fort", "seats"), { recursive: true }),
+    ]);
+    await Promise.all([
+      writeFile(join(root, "fort", "seats", "forge.md"), "# Seat: Forge\n"),
+      writeFile(join(root, "fort", "seats", "mayor.md"), "# Seat: Mayor\n"),
+      writeFile(
+        join(root, "fort", "memory", "facts", "shared.md"),
+        fact.replace("key: current-truth", "key: shared"),
+      ),
+      ...Array.from({ length: 22 }, (_, index) =>
+        writeFile(
+          join(root, "fort", "memory", "facts", `forge-${index}.md`),
+          fact
+            .replace("key: current-truth", `key: forge-${index}`)
+            .replace("seats: [all]", "seats: [forge]"),
+        ),
+      ),
+    ]);
+
+    await expect(run(process.execPath, [lint, root])).resolves.toBeDefined();
+    await writeFile(
+      join(root, "fort", "memory", "facts", "forge-22.md"),
+      fact
+        .replace("key: current-truth", "key: forge-22")
+        .replace("seats: [all]", "seats: [forge]"),
+    );
+    await expect(run(process.execPath, [lint, root])).rejects.toMatchObject({
+      code: 1,
+    });
+  });
 });
