@@ -16,17 +16,92 @@
 #
 # An edict is spoken in the Overseer's name and only while he is present.
 #
-# Usage: regent [--brief-only] ["opening instruction"]
+# Usage: regent [--brief-only] [--model <name>] [--edict <bead-id>] ["opening instruction"]
+#
+# THE MODEL IS PINNED HERE AND NEVER DEGRADES BELOW FRONTIER (fortkit-w1ew,
+# Overseer decision 2026-08-11). Until this was written, this launcher invoked
+# bare `claude` with no --model flag: the most privileged seat in the
+# civilization ran on whatever the global default happened to be that morning,
+# and fortkit-x47 moved that default (Fable -> Opus 5) as a side effect of an
+# unrelated config edit. A privileged seat's capability must not be a side
+# effect of someone else's setting. Every other launcher in this civilization
+# pins one; this one now does too.
+#   Ladder: Opus 5 -> (no lower rung exists for this seat) -> BLOCK and page
+#   the Overseer. A future reader must not quietly default this downward: the
+#   Regent reviews and repairs the machinery every other seat depends on, and
+#   a cheaper model here is a cheaper civilization everywhere.
+#
+# AND THE LAUNCHER STAMPS IT, because the session cannot be trusted to
+# (fortkit-vn8, ported from fort/scripts/forge.sh:104-127): "Model self-report
+# is retired — five mislabel sightings in one day, four spellings for two
+# models, on the field the Warden weights scrutiny by." A model's belief about
+# its own identity is the least reliable field in the record. This launcher
+# knows what it launched; that value goes into the event payloads and is
+# stamped into the handoff, and the session is told to quote it rather than
+# introspect.
 set -euo pipefail
 
 # Resolve through the symlink at ~/.local/bin/regent, or KIT lands in ~/.local
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 KIT="$(cd "$(dirname "$SELF")/.." && pwd)"
 CIV="$KIT/civ"
-REG="$HOME/.claude/civilization.json"
+# Registry override follows bin/fort-init:164's existing convention. It exists
+# so the announcement path can be exercised end-to-end against throwaway forts
+# instead of being asserted: a launcher whose only test is the next real edict
+# is a launcher that ships its defects into three settlements at once, which is
+# precisely this file's recorded history (fortkit-nvk).
+REG="${FORT_REGISTRY:-$HOME/.claude/civilization.json}"
 mkdir -p "$CIV/handoffs" "$CIV/transcripts"
 BRIEF="$CIV/briefing.md"
 stamp="$(date +%Y-%m-%dT%H%M%S)"
+
+# --------------------------------------------------------------- arguments ---
+# Flags are parsed BEFORE the briefing is generated, so --brief-only still
+# short-circuits at the same point it always did.
+brief_only=0
+model="opus"          # frontier default; see the ladder note in the header
+edict_target=""       # bead id, when the Overseer names it at wake
+instruction=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --brief-only) brief_only=1; shift ;;
+    --model) [ "$#" -ge 2 ] || { echo "regent: --model needs a value" >&2; exit 2; }
+             model="$2"; shift 2 ;;
+    --edict) [ "$#" -ge 2 ] || { echo "regent: --edict needs a bead id" >&2; exit 2; }
+             edict_target="$2"; shift 2 ;;
+    --) shift; instruction="${1:-}"; break ;;
+    -*) echo "regent: unknown flag '$1'" >&2
+        echo "Usage: regent [--brief-only] [--model <name>] [--edict <bead-id>] [\"opening instruction\"]" >&2
+        exit 2 ;;
+    *) instruction="$1"; shift ;;
+  esac
+done
+
+# The occupant, read from the roster and never inferred (civ/seats/regent.md is
+# the roster for this seat; the actor id is the given name, lowercased, which is
+# the convention every other actor id in the streams follows). This is the
+# fortkit-ebm class: a launcher that emits as the OFFICE rather than the CITIZEN
+# is the same defect as one emitting as another fort's citizen, and until
+# fortkit-w1ew this launcher emitted as bare 'regent' with a null seat.
+#
+# The `|| true` and the -f guard are NOT decoration. Under `set -euo pipefail`
+# a command substitution whose pipeline fails takes the whole launcher down:
+# the first draft of this block exited 2 before printing anything whenever the
+# roster file was unreadable, and it was caught only because the throwaway-fort
+# harness ran it outside a real kit. Same family as the recorded `grep -q`
+# scar (civ/remember.md, 2026-08-05) — and a launcher that dies silently at
+# wake is strictly worse than one that misattributes an actor.
+occupant=""
+if [ -f "$CIV/seats/regent.md" ]; then
+  occupant="$( { sed -n 's/^\*\*Held by: \([A-Za-z]*\).*/\1/p' "$CIV/seats/regent.md" 2>/dev/null || true; } | head -1 | tr '[:upper:]' '[:lower:]' || true)"
+fi
+if [ -z "$occupant" ]; then
+  # Never silently fall back to the office name: that is the defect this block
+  # exists to remove, and a silent fallback would look exactly like it working.
+  echo "  WARNING: could not read the Regent's occupant from $CIV/seats/regent.md;" >&2
+  echo "  announcing as the office 'regent'. The roster line must read '**Held by: <Name> ...'." >&2
+  occupant="regent"
+fi
 
 # ---------------------------------------------------------------- briefing ---
 # Generated fresh every wake. A stale briefing is worse than none: it would
@@ -112,7 +187,7 @@ stamp="$(date +%Y-%m-%dT%H%M%S)"
   done
 } > "$BRIEF"
 
-if [ "${1:-}" = "--brief-only" ]; then echo "$BRIEF"; exit 0; fi
+if [ "$brief_only" = "1" ]; then echo "$BRIEF"; exit 0; fi
 
 # ------------------------------------------------------------ proclamation ---
 # emit.sh resolves its target stream from the CURRENT WORKING DIRECTORY (it walks
@@ -121,9 +196,28 @@ if [ "${1:-}" = "--brief-only" ]; then echo "$BRIEF"; exit 0; fi
 # from somewhere else writes into the CALLER's fort, not $repo's. That defect ran
 # from the seat's creation until 2026-08-04 and put every edict.begun into fortkit
 # (fortkit-nvk) — Proofdelve and Farlantern were never told an edict had begun.
+#
+# ONE ANNOUNCEMENT, CORRECTLY ATTRIBUTED (fortkit-w1ew, second defect). This
+# launcher used to emit `edict.begun` as actor 'regent' with a null seat, no
+# target and no payload, while the SESSION hand-emitted a second announcement
+# as category 'edict' with detail 'begun'. Two mechanisms, two spellings, two
+# actors, for one event. The schema (schema/events.md) says `category` is the
+# dotted event type and `detail` is one human-readable line, so `edict.begun`
+# as the category is the canonical form and the session's spelling was the
+# wrong one; both now exist in the streams forever, because the schema is
+# add-only and nothing is ever renamed, and any consumer counting edicts must
+# dedupe across them. From here there is exactly ONE pair per fort per cycle,
+# emitted here, carrying the occupant's actor id, the seat, a target when the
+# Overseer named one at wake, and a payload with the LAUNCHER-KNOWN model.
+# The session is told, in the protocol below, not to emit its own.
+begun_payload="$(jq -nc --arg model "$model" --arg stamp "$stamp" \
+  '{model:$model, model_source:"launcher --model flag (never self-reported; fortkit-w1ew)", session:$stamp, unmasked:true}' 2>/dev/null || echo 'null')"
+begun_tflag=()
+[ -n "$edict_target" ] && begun_tflag=(-t "$edict_target")
 for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
   [ -x "$repo/fort/scripts/emit.sh" ] && ( cd "$repo" && ./fort/scripts/emit.sh edict.begun \
-    "The Regent wakes: an edict is spoken in the Overseer's name (unmasked, full access)" -a regent ) 2>/dev/null || true
+    "The Regent wakes: an edict is spoken in the Overseer's name (unmasked, full access)" \
+    -a "$occupant" -s regent ${begun_tflag[@]+"${begun_tflag[@]}"} -p "$begun_payload" ) 2>/dev/null || true
 done
 echo
 # Covenant 8.2/8.3 are enforced mechanically, not by prose, because prose is what
@@ -140,17 +234,91 @@ echo "  ║  Speak the edict, then let the Regent sleep.                      �
 echo "  ╚══════════════════════════════════════════════════════════════════╝"
 echo
 
+# The session writes the edict's bead id here when the Overseer names it after
+# wake, so the closing announcement can carry a target even though the launcher
+# could not know one at wake. The MODEL never comes from this file — only the
+# bead id and a one-line result, which are facts the session legitimately holds.
+EDICT_FILE="$CIV/handoffs/.edict-$stamp"
+
 # shellcheck disable=SC2329  # invoked via the EXIT trap below, not by name
 cleanup() {
+  # ---- 1. stamp the handoff from the launcher's own record (fortkit-w1ew) ----
+  # Ported in shape from fort/scripts/forge.sh:104-127. NON-FATAL BY DESIGN, as
+  # forge.sh records: "a stamping failure must not lose the session's work."
+  # Deliberate deviation from forge.sh: that launcher rewrites line 1 entirely,
+  # because a Forge handoff header is launcher-derivable. A Regent handoff
+  # header names the edict, which the launcher cannot reconstruct — so line 1 is
+  # VALIDATED and never rewritten, and only the model VALUE is replaced. Any
+  # suffix after the first comma (the occupant and the Overseer-presence clause)
+  # is preserved.
+  local handoff="$CIV/handoffs/regent-$stamp.md" handoff_tmp="" rc_stamp=0
+  if [ -f "$handoff" ]; then
+    handoff_tmp="$(mktemp "${handoff}.XXXXXX")"
+    # The bad_header FLAG is load-bearing, not belt-and-braces. In awk, `exit N`
+    # from a main block STILL RUNS END, and END's own `exit` overrides the code
+    # — so the distinct refusal codes collapse to 3 and a malformed header is
+    # reported as a missing Model: line. That is a recorded fact in
+    # civ/remember.md (2026-08-10), where it is harmless because forge.sh only
+    # branches on success-vs-failure; this launcher CONSUMES the codes to say
+    # which thing was wrong, so it has to survive END. Measured both ways.
+    if awk -v launched_model="$model" '
+      NR == 1 {
+        if ($0 !~ /^# Regent handoff/) { bad_header = 1; exit 2 }
+        print
+        next
+      }
+      !model_written && /^Model:/ {
+        suffix = ""
+        i = index($0, ",")
+        if (i > 0) suffix = substr($0, i)
+        print "Model: " launched_model suffix
+        model_written = 1
+        next
+      }
+      { print }
+      END {
+        if (bad_header) exit 2
+        if (!model_written) exit 3
+      }
+    ' "$handoff" > "$handoff_tmp" && chmod --reference="$handoff" "$handoff_tmp"; then
+      mv -f "$handoff_tmp" "$handoff"
+      echo "  Handoff Model: line stamped '$model' from the launcher's own record."
+    else
+      rc_stamp=$?
+      rm -f "$handoff_tmp"
+      case "$rc_stamp" in
+        2) echo "  WARNING: $handoff line 1 is not '# Regent handoff ...' — NOT stamped." >&2 ;;
+        3) echo "  WARNING: $handoff has no 'Model:' line — NOT stamped. The model that ran was: $model" >&2 ;;
+        *) echo "  WARNING: could not stamp $handoff (awk exit $rc_stamp). The model that ran was: $model" >&2 ;;
+      esac
+    fi
+  else
+    echo "  WARNING: no handoff at $handoff to stamp. The model that ran was: $model" >&2
+  fi
+
+  # ---- 2. the closing announcement: one per fort, canonical, attributed ----
+  local ended_target="$edict_target" ended_result=""
+  if [ -f "$EDICT_FILE" ]; then
+    [ -n "$ended_target" ] || ended_target="$(sed -n '1p' "$EDICT_FILE" | tr -d '[:space:]')"
+    ended_result="$(sed -n '2p' "$EDICT_FILE")"
+  fi
+  local ended_payload
+  ended_payload="$(jq -nc --arg model "$model" --arg stamp "$stamp" --arg result "$ended_result" \
+    '{model:$model, model_source:"launcher --model flag (never self-reported; fortkit-w1ew)", session:$stamp}
+     + (if $result == "" then {} else {result:$result} end)' 2>/dev/null || echo 'null')"
+  local ended_tflag=()
+  [ -n "$ended_target" ] && ended_tflag=(-t "$ended_target")
   for repo in $(jq -r '.forts[].repo' "$REG" 2>/dev/null); do
     [ -x "$repo/fort/scripts/emit.sh" ] && ( cd "$repo" && ./fort/scripts/emit.sh edict.ended \
-      "The Regent sleeps; the edict is ended" -a regent ) 2>/dev/null || true
+      "The Regent sleeps; the edict is ended" \
+      -a "$occupant" -s regent ${ended_tflag[@]+"${ended_tflag[@]}"} -p "$ended_payload" ) 2>/dev/null || true
   done
+
   echo
   echo "  The Regent sleeps."
   [ -s "$CIV/transcripts/$stamp.log" ] && echo "  Transcript: $CIV/transcripts/$stamp.log"
   echo "  If this edict should be remembered, write it to $CIV/handoffs/regent-$stamp.md"
-  rm -f "${SYSPROMPT:-}" "${RUNNER:-}" 2>/dev/null || true
+  rm -f "${SYSPROMPT:-}" "${RUNNER:-}" "$EDICT_FILE" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -173,13 +341,17 @@ Your session protocol, in the tradition of the fort seats:
 3. RECORD: anything you change in a fort leaves a record there — a bead, an event via that fort's emit.sh, a commit message that explains itself to a stranger. Never falsify or prune a record; corrections are appended.
 4. HANDOFF: before the session ends, write ${CIV}/handoffs/regent-${stamp}.md — what the edict was, what you changed, what you verified (with paths and commands, not adjectives), what you failed at, and what the next Regent should know. Append durable facts to ${CIV}/remember.md.
 
+THE MODEL THAT IS RUNNING YOU IS '${model}'. This launcher pinned it with --model and therefore knows it; you do not. Do not introspect, do not guess, and do not write your own belief about your identity into any record — that field has been wrong before (fortkit-vn8: five mislabel sightings in one day, four spellings for two models) and it is the field the Wardens weight scrutiny by. When a bead comment, commit message, event payload or handoff needs to name the model, use exactly the string above. Your handoff must contain a line beginning 'Model:' — write it with that value; this launcher will overwrite that line from its own record at close, and will warn loudly if the line is missing.
+
+DO NOT EMIT YOUR OWN edict.begun OR edict.ended. This launcher already announced you in every fort's stream and will announce your sleep the same way, as actor '${occupant}', seat 'regent', with the model in the payload. A second announcement from inside the session is what produced two spellings of one event in every stream (fortkit-w1ew). If the Overseer names the edict's bead after you wake, write it to ${EDICT_FILE} — bead id on line 1, a one-line result on line 2 — and the closing announcement will carry it. Everything else you record still belongs where you changed it: beads, commit messages, and that fort's own events.
+
 You are unmasked. There is no technical guard on you, only the Overseer's presence and the record. Behave accordingly.
 PROTOCOL
 } > "$SYSPROMPT"
 
 {
   echo '#!/bin/bash'
-  echo "exec claude --dangerously-skip-permissions --append-system-prompt \"\$(cat '$SYSPROMPT')\" ${1:+\"$1\"}"
+  echo "exec claude --model '$model' --dangerously-skip-permissions --append-system-prompt \"\$(cat '$SYSPROMPT')\" ${instruction:+\"$instruction\"}"
 } > "$RUNNER"
 chmod +x "$RUNNER"
 
