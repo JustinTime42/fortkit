@@ -108,6 +108,47 @@ essays; an essay belongs in a handoff or annal with a fact pointing at it.)
   reports that shared floor separately, so widening a fact's scope is visible
   rather than a default. Total core facts across the fort may therefore exceed
   30 while no session does.
+
+  **PRECONDITION, and it is not met yet** (recorded 2026-08-11 per Warden
+  finding 2 on fortkit-88u.16; the Mayor's bead asserted per-seat delivery as
+  already true and it is not). The sentence "no session does" holds only if
+  delivery is scope-filtered. Today it is not: `fort/memory/current.md` is
+  built from *every* active core fact with no scope filter
+  (`scripts/consolidate-memory.mjs`), and CLAUDE.md instructs every seat to
+  read it. So a fort can pass memory-lint with 25 mayor-scoped and 25
+  forge-scoped core facts — each seat green — while every real session receives
+  all 50 and the degradation threshold is blown in all of them. That is a green
+  gate over a violated condition, which is the exact failure this budget exists
+  to prevent.
+
+  **Until `fortkit-88u.6` lands or `consolidate-memory` filters `current.md`
+  per seat, the per-seat cap is an upper bound on what a seat SHOULD receive,
+  not on what it DOES receive.** The gap is currently hypothetical (four core
+  facts against a cap of thirty) and it must not be allowed to stop being
+  hypothetical silently.
+
+- **What belongs in `core` at all.** The test is consequence, not relevance: *a
+  session that never read this fact would take a harmful, hard-to-reverse
+  action within its first few steps.* Tripwires qualify — "never read `.env*`",
+  "the deploy script is human-only", "build before you test or the HintPaths
+  lie". Background architecture and historical measurement do not; they are
+  `on-demand`, and recall exists to reach them.
+
+  Per-seat scoping makes tripwires precise instead of universal: "never push
+  without asking" is a Mayor tripwire, "commit path-scoped, never `git add .`"
+  is a Forge tripwire, and neither needs to burn the other's budget.
+
+  *A relevance-ranked core was considered and rejected* (fortkit-88u.16). The
+  facts that most need to be core are the ones least related to current work —
+  they are dangerous precisely because nobody was thinking about them — so a
+  relevance ranker would demote exactly the facts whose value is arriving
+  unbidden. A job that silently rewrites the always-injected surface is also
+  the charter's own escalation signal: an operating-assumption change with no
+  bead and no announcement. Charter rule: *crons watch, models act.* A router
+  becomes a v2 candidate when there is an **observed** failure of the form "a
+  session went wrong because the right fact was not core" (standing order 11);
+  that failure will also say which band the fact belonged in.
+
 - `on-demand`: reachable by selection (§7) and recall (§6). Unlimited count.
 
 ### 4.3 Write rules (admission control)
@@ -282,7 +323,10 @@ annal with a fact pointing at it. The implementer records which bullets took
 that route and why.
 
 **2. Tier.** Default is `on-demand`, and the default is load-bearing rather
-than lazy. §4.2 caps `core` at ~30 facts per fort; each elder fort has roughly
+than lazy. §4.2 caps `core` at ~30 facts **per seat** (amended 2026-08-11,
+fortkit-88u.16 — this paragraph said "per fort" until then, and the correction
+matters here because this is the section that travels to other settlements);
+each elder fort has roughly
 20–25 bullets, so migrating them as `core` would consume or exceed the entire
 budget with legacy content and leave no room for anything learned afterwards.
 Promote to `core` only when this test passes: **a session that never read this
