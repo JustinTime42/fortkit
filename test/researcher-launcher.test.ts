@@ -15,6 +15,9 @@ describe("Researcher template boundary", () => {
     expect(source).toContain('--setting-sources ""');
     expect(source).toContain("researcher-settings.json");
     expect(source).toContain('build_mask claude "$root" "$root"');
+    expect(source).toContain("RESEARCH-COMPLETE");
+    expect(source).toContain('[ "$rc" -eq 0 ]');
+    expect(source).toContain("grep -qx 'RESEARCH-COMPLETE' \"$log\"");
     expect(source).not.toContain("--dangerously-skip-permissions");
     expect(source).not.toMatch(
       /--tools\s+"[^"\n]*(?:Bash|Edit|Write|Task|Agent)/,
@@ -28,12 +31,14 @@ describe("Researcher template boundary", () => {
 
     expect(settings.permissions.defaultMode).not.toBe("bypassPermissions");
     expect(settings.permissions.deny).toEqual(
+      expect.arrayContaining(["Edit(**)", "Write(**)", "Read(**/.env*)"]),
+    );
+    expect(settings.permissions.deny).not.toEqual(
       expect.arrayContaining([
-        "Edit(**)",
-        "Write(**)",
-        "Read(**/.env*)",
         "Task(**)",
         "Agent(**)",
+        "Read(/{{REPO_PATH}}/.env*)",
+        "Read(/{{REPO_PATH}}/**/.env*)",
       ]),
     );
   });

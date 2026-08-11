@@ -1,17 +1,13 @@
 {
-  "$comment": "Researcher seat permission profile ({{FORT_NAME}}). Loaded only by fort/scripts/researcher.sh with --setting-sources '' so ambient user and project settings cannot widen it. The LAUNCHER'S exact tool set is the security boundary: it withholds Bash and Task/Agent entirely, along with every write tool. These denies are defense in depth only; command denies bind spellings rather than capabilities. In particular, the Bash .env* denies remain as a belt-and-suspenders control should a future launcher change mistakenly add Bash.",
+  "$comment": "Researcher seat permission profile ({{FORT_NAME}}). Loaded only by fort/scripts/researcher.sh with --setting-sources '' so ambient user and project settings cannot widen it. The LAUNCHER'S exact tool set is the security boundary: it withholds Bash and the Task/Agent tools entirely, along with every write tool. These denies are defense in depth only; command denies bind spellings rather than capabilities. In particular, the Bash .env* denies remain as a belt-and-suspenders control should a future launcher change mistakenly add Bash. Task and Agent are deliberately absent here: the launcher's tool set, not a deny spelling, enforces their absence.",
   "permissions": {
     "defaultMode": "default",
     "deny": [
       "Edit(**)",
       "Write(**)",
       "NotebookEdit(**)",
-      "Task(**)",
-      "Agent(**)",
       "Read(.env*)",
       "Read(**/.env*)",
-      "Read(/{{REPO_PATH}}/.env*)",
-      "Read(/{{REPO_PATH}}/**/.env*)",
       "Read(/{{REPO_PATH}}-worktrees/**/.env*)",
       "Read(/home/*/.ssh/**)",
       "Read(/home/*/.aws/**)",
