@@ -98,10 +98,16 @@ essays; an essay belongs in a handoff or annal with a fact pointing at it.)
 
 ### 4.2 Tiers and the size doctrine
 
-- `core`: injected into EVERY session, including bare ones. Hard doctrine cap:
-  the core tier totals ≤ 300 lines / ~30 facts across the fort (the measured
-  degradation threshold for wholesale injection). The lint enforces the cap;
-  exceeding it forces a demotion decision, on purpose.
+- `core`: injected into EVERY session, including bare ones. The hard doctrine
+  cap belongs to a session, not the fort: for each seat, the core facts visible
+  to it — its own scoped facts plus every `seats: [all]` fact — total ≤ 300
+  lines / ~30 facts. This is the measured degradation threshold for wholesale
+  injection into one context. The lint enforces each seat's cap; exceeding it
+  forces a demotion decision, on purpose.
+- A `seats: [all]` core fact spends budget in every seat at once. memory-lint
+  reports that shared floor separately, so widening a fact's scope is visible
+  rather than a default. Total core facts across the fort may therefore exceed
+  30 while no session does.
 - `on-demand`: reachable by selection (§7) and recall (§6). Unlimited count.
 
 ### 4.3 Write rules (admission control)
@@ -129,7 +135,8 @@ essays; an essay belongs in a handoff or annal with a fact pointing at it.)
 
 A `memory-lint` step joins `fort/scripts/verify.sh`: schema-valid frontmatter;
 `key` equals filename; required provenance fields present; `scope` non-empty;
-core-tier budget respected; `origin: untrusted` never `tier: core`;
+per-seat core-tier budgets respected (with the `seats: [all]` shared floor
+reported separately); `origin: untrusted` never `tier: core`;
 `superseded-by` references resolve; body non-empty. A red lint is a red build.
 When a constraint keeps being violated in prose, it becomes a lint rule — the
 fort's standing conversion.
