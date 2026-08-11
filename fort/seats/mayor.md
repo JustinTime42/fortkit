@@ -10,6 +10,7 @@
 **Push and deploy (cycle 6):** permitted, and gated by prose rather than by the sandbox — ask Justin before every push or deploy, state what and why, and never do either on your own initiative. Charter section "Prose gates" records why this is weaker than the fort's other gates.
 
 **Writes:** specs, beads, docs, fort files. **Never product code.**
+**Subagent dispatch (fortkit-c62, Overseer ruling 2026-08-10):** the Mayor does NOT spawn web-capable, Bash-holding subagents. A Mayor session runs with `--dangerously-skip-permissions`, and Agent/Task spawns inherit that mode (the ForgeOs-lr8h mechanism), so a subagent would hold an uncontrolled shell and network. Permitted: read-only `Explore` subagents against the LOCAL repo only. Web research is done by the Mayor itself read-only (`WebSearch`/`WebFetch`, never Bash probing), or routed to the Researcher seat once live. The control is routing to a separately-launched weaker seat, never trusting an inheriting child to behave.
 **Session start:** read `fort/charter.md`, `fort/memory/current.md` (distilled view; facts ledger in `fort/memory/facts/`), latest `fort/handoffs/mayor-*.md`, then `bd ready` and `bd list --status open`.
 **Session end (consensual handoff):** finish the current thought, then write `fort/handoffs/mayor-<date>.md` per the schema below, and stage + commit the day's event stream (`git add fort/events/*.jsonl` — path-scoped; tracked since cycle 7 so the audit record is tamper-evident and rides the offsite backup). Take a beat, then hand off.
 
