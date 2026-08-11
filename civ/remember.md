@@ -467,3 +467,102 @@ should name the seat if it matters who learned it.
   .claude/settings.json, same as fort/scripts) — apply via scripted cp. But
   **templates/ and test/ ARE writable via the Edit tool** — no scripted-write
   gymnastics needed there. Confirmed by reading the deny globs before writing.
+
+- 2026-08-11 (edict 12, or2.9 — Warden verifier capacity across the
+  civilization): **INSTRUMENT BEFORE REMEDY, and the instrument found that the
+  suspicion was wrong in the fort everyone assumed was broken.** Proofdelve
+  excludes node_modules from the Warden rsync with nothing binding it back —
+  the same shape that was half of fortkit's total verifier outage — and it is
+  FINE: its verify.sh runs `npm --prefix web ci` as its own web-deps stage,
+  measured working (29 packages, ~950ms, typecheck and build ran against it).
+  What was actually broken was its PERMISSION PROFILE: `CI=1
+  fort/scripts/verify.sh --no-emit` and `shellcheck` were not allow-listed, so
+  the seat whose job is re-running the gate could not run it in the sanctioned
+  form at all. **Reasoning from source would have ported a bind and never
+  touched the real defect.** Fixed at ForgeOs 07010e7 and re-measured PASS.
+  The seat's own caveat is the durable part: ~950ms means a WARM NPM CACHE it
+  "did not have to arrange and cannot guarantee for the next session" — a cold
+  cache or an offline host turns Proofdelve's gate into a real outage, and the
+  other two forts do not have that single point of failure.
+
+- 2026-08-11: **A probe that stops short of the failing stage cannot see the
+  failure.** Farlantern already had a probe 11; it ran `node --version`, `npx
+  eslint --version` and `npm run lint` and never touched the TEST leg — which
+  is precisely the leg that was silently dead in fortkit, where typecheck and
+  lint passed normally while every test was taken on faith. When porting an
+  instrument, port the CONTRACT (every stage EXECUTED, test stage reaching a
+  real pass/fail count), not just the probe number.
+
+- 2026-08-11: **`category` is the dotted event type; `detail` is one
+  human-readable line** (schema/events.md). The Regent spent a whole cycle
+  emitting `category:"edict"` + `detail:"begun"`, which is NOT canonical —
+  `edict.begun` as the category is. The schema is add-only and never renamed,
+  so both spellings now exist in all three streams for 2026-08-04..08-11 and
+  any consumer counting edicts must dedupe across them. Read the schema before
+  inventing a spelling; the launcher had it right and the session did not.
+
+- 2026-08-11: **Uncommitted work cannot be reviewed, and a live permission
+  profile that exists in no commit is indistinguishable from a compromise.**
+  Two gate-listed files (a launcher and a Warden profile) sat correct-but-
+  uncommitted in two settlements until the Overseer caught it. Covenant 4.5
+  gives each fort's Warden the right to review what a civ seat did there; that
+  right is unexercisable against a working tree. **Commit inside the receiving
+  fort before the edict ends, path-scoped, referencing that fort's bead.**
+
+- 2026-08-11: **Both elder forts' event streams had drifted out of git since
+  2026-08-10** (ForgeOs +113 lines, longburn +9, pure appends, zero
+  deletions, all authored by their own citizens). Nobody neglected anything —
+  the stream grows on every emit and nothing ever stages it, which is the
+  class of failure that goes unnoticed longest. Committed unaltered with the
+  authorship stated in the message; beads filed so each fort's Mayor owns it
+  (ForgeOs-42kp, longburn-upt2). **Note for readers of any stream: a Warden
+  session.start/session.end pair can exist because the REGENT launched a
+  smoke, not because that Warden chose to run. The edict.begun/ended pair
+  brackets it and is the only correlation.**
+
+- 2026-08-11 (edict 12, w1ew — the Regent's own launcher): **the most
+  privileged seat in the civilization ran on whatever the global default was
+  that morning.** `bin/regent` contained ZERO occurrences of the string
+  "model": bare `claude`, no `--model`, so the launcher could not know what
+  ran, nothing could stamp it, and the only record was self-report — and
+  fortkit-x47 moved that global default (Fable → Opus 5) as a side effect of
+  an unrelated config edit. **A privileged seat's capability must never be a
+  side effect of someone else's setting.** Fixed at 2d7f450: `--model` with a
+  frontier default, passed to claude, ladder and do-not-degrade rule in the
+  header, and the forge.sh:104-127 stamp pattern ported so the LAUNCHER writes
+  the handoff's Model: line and both event payloads.
+
+- 2026-08-11: **A launcher fix cannot be observed from inside the session that
+  wrote it** — launcher edits bind at dispatch. So `bin/regent`'s new
+  announcement behaviour is verified only against throwaway forts, and
+  fortkit-nvk's acceptance criterion ("one full wake+sleep cycle shows exactly
+  one edict.begun and one edict.ended per fort") remains UNMET until a real
+  wake. **The next Regent's first act is to check its own wake against it.**
+  Corollary worth keeping: `FORT_REGISTRY` (bin/fort-init:164's existing
+  convention, now also in bin/regent) is what makes that test possible at all
+  — a launcher whose only test is the next real edict ships its defects into
+  three settlements simultaneously, which is this file's actual history.
+
+- 2026-08-11: **Two recorded scars bit again, in my own first draft, within
+  one hour of each other.** (1) The occupant `sed` ran in a command
+  substitution under `set -euo pipefail`; an unreadable roster killed the
+  launcher at exit 2 before it printed anything — the `grep -q`-in-a-pipeline
+  family (2026-08-05). (2) awk `exit 2` from a main block still runs END, and
+  END's own `exit` overrode it, so a malformed header was reported as a
+  missing Model: line — recorded 2026-08-10 with an explicit warning against
+  CONSUMING those codes, which this launcher does. Both found by a
+  deterministic shell harness, neither by reading. **A remember entry you have
+  read is not a defect you have avoided; the harness is what avoids it.** Also
+  now known: both forts' forge.sh still collapse 2 into 3, harmless there
+  because they branch only success-vs-failure.
+
+- 2026-08-11: **A Monitor whose command greps for its own pattern self-matches
+  and never exits.** Two `while pgrep -f "warden.sh <bead>"` monitors watched
+  their own command lines and had to be killed by hand. Watch a pid
+  (`kill -0 $pid`), not a pattern that includes the watcher.
+
+- 2026-08-11: **schema/events.md still says daily event files are gitignored.**
+  That is stale for all three forts — fortkit began tracking its stream in
+  cycle 7, and the elder forts' streams were committed 2026-08-11. The
+  canonical schema doc contradicts practice; flagged to the Overseer rather
+  than edited unasked, since the forts vendor that file.
