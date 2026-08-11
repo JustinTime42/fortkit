@@ -88,8 +88,25 @@ not the general Agent tool).
   `researcher-settings.json`, so that file is the ONLY permission source and
   ambient user/project settings cannot re-add a tool.
 - **Does NOT run `--dangerously-skip-permissions`** and does not inherit
-  `bypassPermissions`. An unexpected or outbound action gates; it does not
-  execute silently. This is the single line that would have prevented lr8h.
+  `bypassPermissions`. This is the single line that would have prevented lr8h.
+- What that actually produces was **measured** in the fortkit-vhk.5.2 boundary
+  proof (`fortkit-p4rc`, 2026-08-10), not assumed, and it is three different
+  behaviours rather than one:
+  1. An unlisted **tool fails shut.** The seat runs non-interactively (`-p`),
+     where nothing can gate at all — there is no human at a prompt — so an
+     unlisted tool is absent rather than refused. Observed: no `Bash`, no
+     `Edit`/`Write`, no `Agent`; each attempt had nothing to invoke.
+  2. An out-of-scope local **read gates**, returning zero bytes. Observed
+     against `$HOME/.ssh/known_hosts` and `Glob .env*` in `$HOME`.
+  3. The two **outbound tools never gate.** `WebSearch` and `WebFetch` are
+     pre-authorized in the profile's allow list (fortkit-vhk.10), so they
+     execute without a checkpoint — including against loopback and RFC1918
+     targets (fortkit-z9xl).
+- The boundary is therefore the **absence of the tool**, not a prompt an
+  operator answers. Do not read a human checkpoint into this seat: earlier
+  wording here claimed "an unexpected or outbound action gates", which was true
+  of local reads and false of the outbound surface — the direction that matters,
+  since outbound action is the lr8h failure class (corrected per fortkit-vhk.13).
 
 ### 3.3 Kernel mask
 

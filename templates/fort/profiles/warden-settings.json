@@ -46,9 +46,6 @@
     "deny": [
       "Read(.env*)",
       "Read(**/.env*)",
-      "Read(/{{REPO_PATH}}/.env*)",
-      "Read(/{{REPO_PATH}}/**/.env*)",
-      "Read(/{{REPO_PATH}}-worktrees/**/.env*)",
       "Read(//home/justin/.ssh/**)",
       "Read(//home/justin/.aws/**)",
       "Edit(**)",
