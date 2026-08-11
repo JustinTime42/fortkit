@@ -31,6 +31,13 @@ describe("Researcher template boundary", () => {
       'build_mask claude "$root" --env-root "$root-worktrees" "$root"',
     );
     expect(source).toContain("RESEARCH-COMPLETE");
+    expect(source).toContain("fort/memory/current.md");
+    expect(source).toContain("facts ledger in fort/memory/facts/");
+    expect(source).not.toContain("fort/remember.md");
+    expect(source).toContain("-a saelin -s researcher");
+    expect(source).toContain("--actor saelin");
+    expect(source).not.toContain("-a researcher -s researcher");
+    expect(source).not.toContain("--actor researcher");
     expect(source).toContain('[ "$rc" -eq 0 ]');
     expect(source).toContain(
       "grep -qE '^[[:space:]]*RESEARCH-COMPLETE[[:space:]]*$' \"$log\"",
