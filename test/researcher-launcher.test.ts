@@ -32,13 +32,18 @@ describe("Researcher template boundary", () => {
 
   test("keeps a non-bypass defense-in-depth profile", async () => {
     const settings = JSON.parse(await readFile(profile, "utf8")) as {
-      permissions: { defaultMode: string; deny: string[] };
+      permissions: { defaultMode: string; allow: string[]; deny: string[] };
     };
 
     expect(settings.permissions.defaultMode).not.toBe("bypassPermissions");
-    expect(settings.permissions.deny).toEqual(
-      expect.arrayContaining(["Edit(**)", "Write(**)", "Read(**/.env*)"]),
+    expect(settings.permissions.allow).toEqual(
+      expect.arrayContaining(["WebSearch", "WebFetch"]),
     );
+    expect(settings.permissions.deny).toEqual(
+      expect.arrayContaining(["Edit(**)", "Read(**/.env*)"]),
+    );
+    expect(settings.permissions.deny).not.toContain("Write(**)");
+    expect(settings.permissions.deny).not.toContain("NotebookEdit(**)");
     expect(settings.permissions.deny).not.toContain("Task(**)");
     expect(settings.permissions.deny).not.toContain("Agent(**)");
     expect(settings.permissions.deny).not.toContain(
