@@ -9,6 +9,10 @@
 # Usage: fort/scripts/researcher.sh <bead-id> [model]
 # The host close path records the session's cited findings on the bead, then emits
 # handoff.written. The launched seat itself holds no file or bead-write tool.
+# Exit codes: 65 = clean session without RESEARCH-COMPLETE; records nothing and
+# engages the caller's failover ladder. 78 = bwrap missing; the kernel mask was
+# unavailable. Any other code is Claude's own. A non-zero exit means no research
+# was recorded: an absent completion marker is never a usable research handoff.
 set -euo pipefail
 bead="$1"; model="${2:-opus}"
 root="{{REPO_PATH}}"
@@ -42,7 +46,7 @@ if ! require_bwrap; then
   "$emit" incident "Researcher launch refused: bwrap missing, kernel mask layer unavailable" -a researcher -s researcher -t "$bead"
   exit 78
 fi
-build_mask claude "$root" --env-root "$root-worktrees" "$root"
+build_mask claude "$root" --env-root "$root-worktrees" "$root" "$root-worktrees"
 mask_env claude
 
 "$emit" session.start "The Researcher begins research on $bead ($model)" -a researcher -s researcher -t "$bead" -p "{\"model\":\"$model\"}"
