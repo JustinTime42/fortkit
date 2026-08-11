@@ -27,6 +27,14 @@ describe("Researcher template boundary", () => {
     expect(source).toContain('--tools "WebSearch,WebFetch,Read,Grep,Glob"');
     expect(source).toContain('--setting-sources ""');
     expect(source).toContain("researcher-settings.json");
+    // Memory-surface coupling guard (fortkit-xgul.3, restoring fortkit-vhk.14
+    // finding 1 in its end-state form). The template prompt must name the
+    // facts-ledger surface, never the retired flat pointer. This couples the
+    // template repoint (A3) to bin/fort-init's ledger founding (A2): if either
+    // is reverted to fort/remember.md this goes red, which is the mechanism
+    // that stops vhk.9's silent-revert class from recurring.
+    expect(source).toContain("fort/memory/current.md");
+    expect(source).not.toContain("fort/remember.md");
     expect(source).toContain(
       'build_mask claude "$root" --env-root "$root-worktrees" "$root"',
     );
