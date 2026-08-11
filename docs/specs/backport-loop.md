@@ -81,7 +81,7 @@ each registered fort, diff against `templates/` in the fortkit repo:
 |---|---|---|
 | `fort/scripts/*.sh`, `fort/scripts/lib/*.sh` | `templates/fort/scripts/` | byte diff after normalization |
 | `.claude/settings.json` permission core | `templates/config/settings-permissions.json` | structural: template's deny/allow entries present |
-| `fort/charter.md` | `templates/fort/charter.md` | structural: template-shipped standing orders + threat-model + gate headings present (fingerprint = each order's first sentence) |
+| `fort/charter.md` | `templates/fort/charter.md` | structural: template-shipped standing orders + numbered human-gate lines + threat-model + gate headings present (fingerprint = each order's/gate's first sentence; amended 2026-08-10, fortkit-or2.7 — gate headings alone left a deleted gate invisible, and Warden or2.3 r1/r2 verified gate first-sentences match even amended charters) |
 | `fort/seats/*.md` | `templates/fort/seats/` | structural: required protocol headings present |
 | `fort/profiles/*` | `templates/fort/profiles/` | byte diff after normalization |
 
