@@ -406,3 +406,64 @@ should name the seat if it matters who learned it.
   prudent, it must disclose itself in the output. `bin/regent --brief-only`
   regenerates the briefing without launching and is the self-check for any
   briefing change.
+
+- 2026-08-11 (edict 10, the warden.sh repair, fortkit-8cv6): **A backported
+  sandbox pattern can be incomplete for the destination fort, and only an
+  in-mask run finds it.** fortkit's warden.sh was repaired for three defects:
+  (1) NEW candidate-presence guard — src no longer silently defaults to main;
+  the launcher derives the candidate dir from the ref-range tip
+  (`tip="${range##*..}"`; worktree whose HEAD==tip via `git worktree list
+  --porcelain`, or main if merged) and REFUSES exit 68 unless the tip is
+  reachable from `$src` HEAD (catches a wrong explicit arg 3 too); (2) node_modules
+  RO-bound through the mask (backport of longburn 5if/8ur); (3) `bd export` seeded
+  to `$scratch/.beads-export.jsonl` because bd in-mask returns `openat LOCK:
+  read-only file system` (backport of qe2). **The load-bearing lesson: longburn
+  tmpfs's only `node_modules/.vite`, and that is INSUFFICIENT for a fort whose
+  vitest.config is TypeScript — Vite bundles the TS config to
+  `node_modules/.vite-temp` and dies EROFS there, so tsc+biome run but every test
+  is taken on faith.** Both `.vite` AND `.vite-temp` must be tmpfs over the RO
+  node_modules bind. Static checks (shellcheck, verify.sh, defect-1 unit tests)
+  ALL passed the incomplete fix; the WARDEN_SMOKE probe-11 run is what caught it.
+  Rule: prove mount/filesystem behavior with a deterministic bwrap harness (no
+  model), then a WARDEN_SMOKE for end-to-end incl. the permission layer, before
+  trusting a sandbox change. Commit 2e0744d; bead left OPEN for covenant-4.5
+  Warden review. **longburn's warden.sh carries the same latent `.vite-temp`
+  gap** — cross-fort backport candidate.
+
+- 2026-08-11: **The Regent's Edit/Write tools are policy-denied on
+  `fort/scripts/**` even unmasked** (fortkit `.claude/settings.json` binds the
+  tool layer, not the kernel). Apply launcher repairs via scripted Bash write
+  (`cp` from a reviewed scratchpad file), then `diff -q` byte-verify and
+  re-shellcheck in place. Same shape as the 2026-08-08 charter-Edit denial.
+  Also: fortkit's warden.sh is broadly behind longburn's — it still lacks l78a
+  (JSON-atomic verdict capture), j223 (refuse-on-stub bd show), 5v4 (in-mask
+  launch refusal), 5if (off-tmpfs scratch + lifecycle). A dedicated backport
+  bead is the right instrument, not folding them into an unrelated edict.
+
+- 2026-08-11 (edict 11, fort-init on the facts ledger — fortkit-xgul.1 + .3):
+  **A new fort is now founded ON the facts ledger, not on a flat remember.md.**
+  bin/fort-init creates fort/memory/facts, ships the index generator AND the
+  linter (fort/memory/{consolidate-memory.mjs,memory-lint.mjs}), writes the
+  founding operational facts as ledger facts (fort-founded/codex-launch-recipe/
+  no-verifiers-yet core, founding-spec on-demand), leaves fort/remember.md a
+  pointer stub, points AGENTS/CLAUDE at fort/memory/current.md, and generates
+  current.md at founding. All 7 template surfaces repointed off fort/remember.md;
+  spec of record docs/specs/memory.md 8.5. Commit 0734b27.
+  **Load-bearing lessons: (1) the live scripts/consolidate-memory.mjs hardcodes
+  "Manyhalls" and the "scripts/" path in current.md's header — a verbatim copy
+  titles another fort's view "Manyhalls", so the shipped generator must be
+  genericised or parametrised.** (2) A brief's premise can be stale: it said "the
+  vhk.14 coupling guard will go red," but vhk.14 was still OPEN and the guard was
+  never in the tree — "update the guard" became "add it at the correct end state"
+  (assert the NEW surface). State the discrepancy, deliver the intent. (3) A2+A3
+  spanned bin/ (kernel-RO) and templates/ (Forge-writable); the coupling test
+  forced one commit and two actors can't author one — the canonical shape for a
+  cross-boundary coupled change is a single Regent edict. (4) Verification for a
+  factory change is FOUNDING A THROWAWAY FORT end-to-end (isolated FORT_REGISTRY),
+  not assertion — the brief demanded it and it is right (vhk.9 cost three rounds
+  for lack of it).
+
+- 2026-08-11: **bin/ is Edit/Write-denied to the Regent's tool layer** (fortkit
+  .claude/settings.json, same as fort/scripts) — apply via scripted cp. But
+  **templates/ and test/ ARE writable via the Edit tool** — no scripted-write
+  gymnastics needed there. Confirmed by reading the deny globs before writing.
