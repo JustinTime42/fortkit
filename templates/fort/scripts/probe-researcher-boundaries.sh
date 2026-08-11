@@ -2,9 +2,15 @@
 # Static Researcher boundary probe (fortkit-vhk.5.1).  A HAND installation
 # must chmod 755 this file; fort-init applies that mode to shipped scripts.
 #
-# Usage: fort/scripts/probe-researcher-boundaries.sh <repo-root>
+# This probe writes a temporary $root/.env.probe-canary and removes it on a
+# normal exit. SIGKILL prevents that cleanup. If a write-denial assertion
+# fails, its .researcher-boundary-canary target can likewise remain in src/,
+# fort/seats/, fort/profiles/, fort/scripts/, or .git/hooks/.
+#
+# Usage: fort/scripts/probe-researcher-boundaries.sh <repo-root> [--strict]
 # In the fortkit factory checkout this examines templates/fort; in a founded
-# fort it examines fort/.  Every assertion prints a named PASS/FAIL line.
+# fort it examines fort/. Every assertion prints a named PASS/FAIL/SKIP line.
+# --strict exits non-zero when any assertion was skipped.
 set -u
 
 launcher_tools() { # launcher_tools <launcher>
@@ -101,14 +107,24 @@ git_status_works() {
 report_write_denial() { # report_write_denial <description> <path>
   local desc="$1" target="$2"
   if [ ! -d "$(dirname "$target")" ]; then
-    echo "SKIP $desc (target parent does not exist in this checkout)"
+    report_skip "$desc" "target parent does not exist in this checkout"
     return 0
   fi
   report "$desc" probe_write_denied "$target"
 }
 
+probe_exit_status() { # respects the global fail, skip, and strict counters
+  [ "$fail" -eq 0 ] && { [ "$strict" -eq 0 ] || [ "$skip" -eq 0 ]; }
+}
+
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   root="${1:?Usage: $0 <repo-root>}"
+  strict=0
+  case "${2:-}" in
+    "") ;;
+    --strict) strict=1 ;;
+    *) echo "Usage: $0 <repo-root> [--strict]" >&2; exit 64 ;;
+  esac
   if [ -f "$root/templates/fort/scripts/researcher.sh" ]; then
     fort_root="$root/templates/fort"
   else
@@ -116,7 +132,7 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   fi
   launcher="$fort_root/scripts/researcher.sh"
   profile="$fort_root/profiles/researcher-settings.json"
-  pass=0; fail=0
+  pass=0; fail=0; skip=0
 
   report() { # report <description> <command...>
     local desc="$1"
@@ -126,6 +142,11 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
     else
       echo "FAIL $desc"; fail=$((fail + 1))
     fi
+  }
+
+  report_skip() { # report_skip <description> <reason>
+    echo "SKIP $1 ($2)"
+    skip=$((skip + 1))
   }
 
   echo "== Researcher static boundary: $root =="
@@ -167,11 +188,11 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   if [ "$canary_created" -eq 1 ]; then
     report "mask inode-masks .env* bytes" secret_inode_masked "$secret_canary"
   else
-    echo "SKIP mask inode-masks .env* bytes (canary path already exists or is unwritable)"
+    report_skip "mask inode-masks .env* bytes" "canary path already exists or is unwritable"
   fi
   report "mask permits ordinary repository reads" ordinary_readable
   report "mask permits git status" git_status_works
 
-  echo "== Researcher static boundary: $pass pass, $fail fail =="
-  [ "$fail" -eq 0 ]
+  echo "== Researcher static boundary: $pass pass, $fail fail, $skip skip =="
+  probe_exit_status
 fi
