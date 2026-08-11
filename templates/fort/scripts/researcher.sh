@@ -1,5 +1,7 @@
 #!/bin/bash
-# TEMPLATE — rendered by fort-init. Actor id is the seat office until the moot.
+# TEMPLATE — rendered by fort-init; {{PLACEHOLDERS}} resolved at founding.
+# Actor ids are seat-office names (mayor/forge/warden/researcher) until the Founding Moot
+# renames them — a fort must never inherit another settlement's citizen (fortkit-ebm/fd2).
 # shellcheck disable=SC1083
 # Launch the Researcher on a bead, separately and read-only by construction.
 # The launcher grants EXACTLY WebSearch,WebFetch,Read,Grep,Glob. It deliberately
