@@ -50,6 +50,63 @@ profile_check() { # profile_check <profile> <default-safe|edit-deny|web-only>
   ' "$1" "$2"
 }
 
+exact_tools() { # exact_tools <launcher>
+  [ "$(launcher_tools "$1")" = "WebSearch,WebFetch,Read,Grep,Glob" ]
+}
+
+no_forbidden_tool() { # no_forbidden_tool <launcher>
+  local tool
+  for tool in Bash Edit Write NotebookEdit Task Agent; do
+    launcher_tools "$1" | tr ',' '\n' | grep -Fx "$tool" >/dev/null && return 1
+  done
+  return 0
+}
+
+settings_profile_selected() { # settings_profile_selected <launcher>
+  [ "$(launcher_flag_value "$1" --settings)" = "\$root/fort/profiles/researcher-settings.json" ]
+}
+
+no_dangerous_skip() { # no_dangerous_skip <launcher>
+  ! grep -Fq -- '--dangerously-skip-permissions' "$1"
+}
+
+empty_setting_sources() { # empty_setting_sources <launcher>
+  launcher_has_flag "$1" --setting-sources && [ "$(launcher_flag_value "$1" --setting-sources)" = "" ]
+}
+
+probe_write_denied() { # probe_write_denied <path>
+  # shellcheck disable=SC2016 # $1 expands in the nested sh, not this shell.
+  [ -d "$(dirname "$1")" ] && ! bwrap "${mask[@]}" -- sh -c ': >> "$1"' sh "$1" >/dev/null 2>&1
+}
+
+ordinary_readable() {
+  local bytes
+  # shellcheck disable=SC2016 # $1 expands in the nested sh, not this shell.
+  bytes="$(bwrap "${mask[@]}" -- sh -c 'wc -c < "$1"' sh "$root/README.md" 2>/dev/null)" || return 1
+  [ "$bytes" -gt 0 ]
+}
+
+secret_inode_masked() { # secret_inode_masked <canary>
+  local bytes
+  # /dev/null bind reads empty successfully; SELinux may make the read fail.
+  # shellcheck disable=SC2016 # $1 expands in the nested sh, not this shell.
+  bytes="$(bwrap "${mask[@]}" -- sh -c 'wc -c < "$1"' sh "$1" 2>/dev/null)" || return 0
+  [ "$bytes" -eq 0 ]
+}
+
+git_status_works() {
+  bwrap "${mask[@]}" -- git -C "$root" status --porcelain >/dev/null 2>&1
+}
+
+report_write_denial() { # report_write_denial <description> <path>
+  local desc="$1" target="$2"
+  if [ ! -d "$(dirname "$target")" ]; then
+    echo "SKIP $desc (target parent does not exist in this checkout)"
+    return 0
+  fi
+  report "$desc" probe_write_denied "$target"
+}
+
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   root="${1:?Usage: $0 <repo-root>}"
   if [ -f "$root/templates/fort/scripts/researcher.sh" ]; then
@@ -71,38 +128,26 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
     fi
   }
 
-  exact_tools() {
-    local tools
-    tools="$(launcher_tools "$launcher")"
-    [ "$tools" = "WebSearch,WebFetch,Read,Grep,Glob" ]
-  }
-  no_forbidden_tool() {
-    local tool
-    for tool in Bash Edit Write NotebookEdit Task Agent; do
-      launcher_tools "$launcher" | tr ',' '\n' | grep -Fx "$tool" >/dev/null && return 1
-    done
-  }
-  settings_profile_selected() {
-    [ "$(launcher_flag_value "$launcher" --settings)" = "\$root/fort/profiles/researcher-settings.json" ]
-  }
-  no_dangerous_skip() {
-    ! grep -Fq -- '--dangerously-skip-permissions' "$launcher"
-  }
-  empty_setting_sources() {
-    [ "$(launcher_flag_value "$launcher" --setting-sources)" = "" ]
-  }
-
   echo "== Researcher static boundary: $root =="
-  report "launcher exact tool set" exact_tools
-  report "launcher omits dangerously-skip-permissions" no_dangerous_skip
-  report "launcher isolates settings sources" empty_setting_sources
+  report "launcher exact tool set" exact_tools "$launcher"
+  report "launcher omits dangerously-skip-permissions" no_dangerous_skip "$launcher"
+  report "launcher isolates settings sources" empty_setting_sources "$launcher"
   report "launcher enables strict MCP config" launcher_has_flag "$launcher" --strict-mcp-config
-  report "launcher selects researcher profile" settings_profile_selected
-  report "launcher has no forbidden allow tool" no_forbidden_tool
+  report "launcher selects researcher profile" settings_profile_selected "$launcher"
+  report "launcher has no forbidden allow tool" no_forbidden_tool "$launcher"
 
   report "profile default mode is non-bypass" profile_check "$profile" default-safe
   report "profile denies Edit(**)" profile_check "$profile" edit-deny
   report "profile allows exactly web tools" profile_check "$profile" web-only
+
+  # Create the fixture before build_mask: it snapshots .env* paths while building.
+  secret_canary="$root/.env.probe-canary"
+  canary_created=0
+  if (set -C; : > "$secret_canary") 2>/dev/null; then
+    printf 'researcher-boundary-canary\n' >> "$secret_canary"
+    canary_created=1
+    trap 'rm -f -- "$secret_canary"' EXIT
+  fi
 
   # shellcheck source=fort/scripts/lib/seat-sandbox.sh
   # shellcheck disable=SC1091  # the chosen factory/founded-fort path is runtime data
@@ -112,37 +157,18 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   build_mask claude "$root" --env-root "$root-worktrees" "$root" "$root-worktrees"
   mask_env claude
 
-  probe_write_denied() { # probe_write_denied <path>
-    ! bwrap "${mask[@]}" -- sh -c ": >> \"\$1\"" sh "$1" >/dev/null 2>&1
-  }
-  ordinary_readable() {
-    local bytes
-    bytes="$(bwrap "${mask[@]}" -- sh -c "wc -c < \"\$1\"" sh "$root/README.md" 2>/dev/null)" || return 1
-    [ "$bytes" -gt 0 ]
-  }
-  secret_inode_masked() {
-    local secret bytes
-    for secret in "$root"/.env*; do
-      [ -f "$secret" ] || continue
-      # /dev/null bind reads empty successfully; SELinux may make the read fail.
-      bytes="$(bwrap "${mask[@]}" -- sh -c "wc -c < \"\$1\"" sh "$secret" 2>/dev/null)" || return 0
-      [ "$bytes" -eq 0 ] && return 0
-      return 1
-    done
-    return 1
-  }
-  git_status_works() {
-    bwrap "${mask[@]}" -- git -C "$root" status --porcelain >/dev/null 2>&1
-  }
-
-  report "mask denies product-code writes (src/)" probe_write_denied "$root/src/.researcher-boundary-canary"
-  report "mask denies constitution charter write" probe_write_denied "$root/fort/charter.md"
-  report "mask denies constitution seats write" probe_write_denied "$root/fort/seats/.researcher-boundary-canary"
-  report "mask denies constitution profiles write" probe_write_denied "$root/fort/profiles/.researcher-boundary-canary"
-  report "mask denies constitution scripts write" probe_write_denied "$root/fort/scripts/.researcher-boundary-canary"
-  report "mask denies .git/config write" probe_write_denied "$root/.git/config"
-  report "mask denies .git/hooks write" probe_write_denied "$root/.git/hooks/researcher-boundary-canary"
-  report "mask inode-masks .env* bytes" secret_inode_masked
+  report_write_denial "mask denies product-code writes (src/)" "$root/src/.researcher-boundary-canary"
+  report_write_denial "mask denies constitution charter write" "$root/fort/charter.md"
+  report_write_denial "mask denies constitution seats write" "$root/fort/seats/.researcher-boundary-canary"
+  report_write_denial "mask denies constitution profiles write" "$root/fort/profiles/.researcher-boundary-canary"
+  report_write_denial "mask denies constitution scripts write" "$root/fort/scripts/.researcher-boundary-canary"
+  report_write_denial "mask denies .git/config write" "$root/.git/config"
+  report_write_denial "mask denies .git/hooks write" "$root/.git/hooks/researcher-boundary-canary"
+  if [ "$canary_created" -eq 1 ]; then
+    report "mask inode-masks .env* bytes" secret_inode_masked "$secret_canary"
+  else
+    echo "SKIP mask inode-masks .env* bytes (canary path already exists or is unwritable)"
+  fi
   report "mask permits ordinary repository reads" ordinary_readable
   report "mask permits git status" git_status_works
 

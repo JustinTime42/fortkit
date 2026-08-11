@@ -1,5 +1,7 @@
 import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, test } from "vitest";
@@ -91,6 +93,75 @@ describe("Researcher boundary probe parsing helpers", () => {
           `source ${JSON.stringify(probe)}; profile_check ${JSON.stringify(profile)} ${check}`,
         ),
       ).resolves.toBeDefined();
+    }
+  });
+
+  test("rejects unsafe launcher variants", async () => {
+    const fixture = await mkdtemp(join(tmpdir(), "researcher-launcher-"));
+    try {
+      const badTools = join(fixture, "bad-tools.sh");
+      const missingSources = join(fixture, "missing-sources.sh");
+      await writeFile(badTools, '--tools "WebSearch,Bash" \\\n');
+      await writeFile(missingSources, "--strict-mcp-config \\\n");
+
+      await expect(
+        shell(
+          `source ${JSON.stringify(probe)}; exact_tools ${JSON.stringify(badTools)}`,
+        ),
+      ).rejects.toThrow();
+      await expect(
+        shell(
+          `source ${JSON.stringify(probe)}; no_forbidden_tool ${JSON.stringify(badTools)}`,
+        ),
+      ).rejects.toThrow();
+      await expect(
+        shell(
+          `source ${JSON.stringify(probe)}; empty_setting_sources ${JSON.stringify(missingSources)}`,
+        ),
+      ).rejects.toThrow();
+    } finally {
+      await rm(fixture, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects unsafe profile variants", async () => {
+    const fixture = await mkdtemp(join(tmpdir(), "researcher-profile-"));
+    try {
+      const bypass = join(fixture, "bypass.json");
+      const extraAllow = join(fixture, "extra-allow.json");
+      await writeFile(
+        bypass,
+        JSON.stringify({
+          permissions: {
+            defaultMode: "bypassPermissions",
+            allow: ["WebSearch", "WebFetch"],
+            deny: ["Edit(**)"],
+          },
+        }),
+      );
+      await writeFile(
+        extraAllow,
+        JSON.stringify({
+          permissions: {
+            defaultMode: "default",
+            allow: ["WebSearch", "WebFetch", "Read"],
+            deny: ["Edit(**)"],
+          },
+        }),
+      );
+
+      await expect(
+        shell(
+          `source ${JSON.stringify(probe)}; profile_check ${JSON.stringify(bypass)} default-safe`,
+        ),
+      ).rejects.toThrow();
+      await expect(
+        shell(
+          `source ${JSON.stringify(probe)}; profile_check ${JSON.stringify(extraAllow)} web-only`,
+        ),
+      ).rejects.toThrow();
+    } finally {
+      await rm(fixture, { recursive: true, force: true });
     }
   });
 });
