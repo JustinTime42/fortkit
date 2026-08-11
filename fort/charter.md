@@ -24,6 +24,10 @@ Controls in this fort are justified against these threats, in priority order. A 
 3. **Supply chain** — a package or plugin silently overwriting harness files. Observed in this civilization: a ruflo upgrade that severed reflexion capture.
 4. **Credential leakage into transcripts** — a secret reaching a model's context or a log, from which it cannot be recalled.
 
+**Accepted residuals (measured, not assumed).** Standing order 11 admits a residual here only with a measurement attached.
+
+- **The Researcher's WebFetch is an outbound channel** (fortkit-vhk.5.3, accepted 2026-08-11). An injected page can try to induce the seat to encode repository content into a subsequent fetch URL. Domain-scoping was considered and rejected as crippling to the seat's purpose. Bounded to content already in git and pushed offsite: `.env*`, `~/.ssh` and `~/.aws` measured at zero bytes returned, no shell, no third-party write, no spawn, no file write. Measurement: fortkit-vhk.5.1 at 19 pass / 0 fail; fortkit-vhk.5.2 at 7 of 8, NEG-4(c) proven by 5.1's canary. Full record: `docs/specs/researcher-seat.md` §8.1.
+
 **Explicitly out of scope: a motivated human adversary who already has shell access on this machine.** Such an actor has no need to defeat a deny glob; they can read the file directly. Controls are not designed against them, findings that require them are documented rather than blocked on, and effort spent hardening against them is effort not spent on 1-4.
 
 ## Prose gates (weaker than capability boundaries, and recorded as such)

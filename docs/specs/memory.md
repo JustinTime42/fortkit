@@ -251,6 +251,94 @@ amendment batch (currently ~11% emission; the event stream undercounts memory
    consistent with the annals ruling. Phased after the fort migration proves
    the pattern.
 
+### 8.5 Cross-fort migration (fortkit-xgul, Project A)
+
+Section 8 describes fortkit's own migration. This section governs carrying the
+ledger to **every other fort**, and it is the spec the A-children implement
+against. Approved by the Overseer 2026-08-11 as Project A, sequenced ahead of
+Researcher propagation (fortkit-vhk.7) because `docs/specs/researcher-seat.md`
+§8 names origin-tagged memory as one of three threat-2 mitigations, and §4.3
+rule 4 is where that mitigation lives.
+
+**Measured starting state (2026-08-11).** Proofdelve `/home/justin/dev/ForgeOs`
+`fort/remember.md`, 52 lines / 21,141 bytes. Farlantern
+`/home/justin/dev/longburn` `fort/remember.md`, 46 lines / 17,765 bytes. Both
+are dense: long single-line bullets, most carrying inline provenance already.
+Neither has `fort/memory/`.
+
+**1. Mapping unit.** One top-level bullet becomes one fact. Sub-bullets and
+continuation lines stay in that fact's body. Section headings (`## Migrated
+patterns`, `## Seat machinery`) become `scope.topics` entries on the facts
+beneath them, never facts themselves. Prose that asserts nothing checkable is
+not a fact: per §4.1 bodies are facts rather than essays, so it moves to an
+annal with a fact pointing at it. The implementer records which bullets took
+that route and why.
+
+**2. Tier.** Default is `on-demand`, and the default is load-bearing rather
+than lazy. §4.2 caps `core` at ~30 facts per fort; each elder fort has roughly
+20–25 bullets, so migrating them as `core` would consume or exceed the entire
+budget with legacy content and leave no room for anything learned afterwards.
+Promote to `core` only when this test passes: **a session that never read this
+fact would take a wrong action within its first few steps.** Build and test
+ordering, never-read-this-file rules, and human-only deploy paths pass it.
+Background architecture, historical measurements, and superseded corrections do
+not. Every `core` promotion is justified on the migration bead by name.
+
+**3. Provenance, without inventing a declarer.** A line lifted from a flat file
+has no author of record, and fabricating one would be a falsification under
+standing order 7.
+
+- `source`: `"migrated from fort/remember.md:<line>, <commit-sha>"`, plus the
+  bullet's own inline attribution where it has one (many do: `ForgeOs-21f.8,
+  measured 2026-08-04`; `Warden, 0lg r1, 2026-08-06`). Both go in `source`.
+- `declared-by`: the actor performing the migration, because that actor is
+  attesting the transcription is faithful, not that the claim is theirs.
+- `date`: the migration date. The fact's own date lives in `source`.
+
+**Never move an inline attribution into `declared-by`.** A Warden who wrote one
+sentence in 2026-08-06 did not declare a ledger fact in 2026-08-11.
+
+**4. Origin.** `trusted`, and the reasoning rather than the assumption: this
+content was written by fort seats and the Overseer inside the fort's own
+records, and predates any web-reading seat in this civilization. The
+implementer must still **check** each bullet for content derived from fetched
+material and tag it `untrusted` per §4.3 rule 4. None was observed in either
+file at survey; that is an observation, not a guarantee.
+
+**5. Supersession — nothing is discarded.** Standing order 7 governs. A stale
+bullet migrates with `status: superseded` and a `superseded-by` pointer where a
+successor exists; where staleness is suspected but unproven it migrates
+`active` and the doubt is recorded on the migration bead. Deletion is not
+available to this migration under any reading.
+
+Per §4.3 rule 2 there are **no in-file supersession chains**: where a flat file
+carries both a claim and its correction, they become **two facts**, the older
+one `superseded` and pointing at the newer.
+
+*Known instance the implementer must not miss:* Proofdelve
+`fort/remember.md:39` asserts that `fort/charter.md`, `fort/seats/` and
+`fort/profiles/` are read-only to every seat, and closes `(Superseded in part —
+see the cycle 7 r2 correction below.)`; lines 43–52 are that correction. These
+are two facts, linked. Farlantern must be read for the same pattern rather than
+assumed clean.
+
+**6. The stub.** `fort/remember.md` is replaced by a pointer stub matching the
+one fortkit left, so the shape is identical in every fort and a seat that
+arrives at the old path learns where truth moved.
+
+**7. Verification — the migration is proven, not asserted.** A4 and A5 do not
+close on an implementer's word. Required, with output recorded on the bead:
+
+- **Cover check.** Extract every top-level bullet line number from the
+  pre-migration file at its recorded commit; assert each appears in some fact's
+  `source`. An uncovered line is an unmigrated fact, which is a dropped record.
+- **memory-lint green** in that fort, including the `core` budget and the
+  `superseded-by` resolution rules of §4.4.
+- **`current.md` generates** from the new ledger and carries an honest
+  index-gaps section.
+- **Count reconciliation**: bullets in, facts out, and the difference explained
+  (splits for supersession raise the count; annal-routed prose lowers it).
+
 ## 9. Security model (mapped to the poisoning literature's four points)
 
 1. **Write-time admission**: review-gated commits + memory-lint (§4.3–4.4).

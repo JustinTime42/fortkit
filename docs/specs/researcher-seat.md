@@ -200,6 +200,48 @@ declared usable or propagated to any other fort.
   this machine. The controls here defend against the seat's own reach, not
   against an operator who can edit the profile directly.
 
+### 8.1 Accepted residual: WebFetch is an outbound channel (fortkit-vhk.5.3)
+
+Recorded 2026-08-11 under standing order 11, so it is not rediscovered later
+as a new finding. Warden finding 4 on fortkit-vhk.10, threat 2 reaching into
+threat 4.
+
+**The residual.** `WebFetch` is broad by design, and an injected page can try
+to induce the seat to encode what it read from the repository into the path or
+query string of a subsequent fetch. Nothing in the capability model closes
+this: the seat is *supposed* to read the repository and it is *supposed* to
+fetch arbitrary URLs, and a GET carries a URL. Domain-scoping was considered
+and rejected as crippling to the seat's purpose (Overseer-approved).
+
+**What the boundary proof actually measured**, which is what makes this an
+accepted residual rather than an assumption:
+
+- The static probe (`fortkit-vhk.5.1`) reports **19 pass, 0 fail, exit 0** on
+  merged main, including the pre-mask `.env` canary that closes NEG-4(c).
+  (Format note, appended 2026-08-11 per Warden finding 7 on `fortkit-vhk.5.5`:
+  the summary line now carries a third field, `19 pass, 0 fail, 0 skip`. The
+  counts above are unchanged; only the format gained a skip counter.)
+- The live unmasked session (`fortkit-vhk.5.2` / `fortkit-p4rc`, Saelin
+  Stillmere) passed **7 of 8** controls; NEG-4(c) was inconclusive on that run
+  for want of a fixture and is proven instead by 5.1's canary.
+- The seat's own sub-probe returned **zero bytes** from both `Glob .env*` over
+  `/home/justin` and `Read /home/justin/.ssh/known_hosts` — the permission
+  layer observed firing, not inferred.
+- NEG-2 measured the *shape* of the channel: `WebFetch` exposes no body, no
+  method and no header parameter, and its only network action reached
+  `ECONNREFUSED` at the transport layer. The channel is GET-and-summarize.
+
+**Therefore the exposure is bounded to** what the seat can read and encode into
+a URL: repository content that is already in git and already pushed offsite.
+Not reachable through it: `.env*`, `~/.ssh`, `~/.aws` (masked at the inode and
+measured at zero bytes), any shell, any third-party write, any spawned child,
+and any file write.
+
+**Status: measured, bounded, and ACCEPTED** — 2026-08-11, Justin (the
+Overseer), on the evidence above. Not defended against, per standing order 11.
+Reopen if the seat ever gains a write tool, a shell, a body-carrying network
+verb, or read access to anything not already published.
+
 ## 9. Out of scope for v1 (each needs its own justification to promote)
 
 - Any Bash in the research profile (★ excluded; a shell defeats the boundary).
