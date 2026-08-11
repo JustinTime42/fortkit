@@ -42,7 +42,7 @@ if ! require_bwrap; then
   "$emit" incident "Researcher launch refused: bwrap missing, kernel mask layer unavailable" -a researcher -s researcher -t "$bead"
   exit 78
 fi
-build_mask claude "$root" "$root"
+build_mask claude "$root" --env-root "$root-worktrees" "$root"
 mask_env claude
 
 "$emit" session.start "The Researcher begins research on $bead ($model)" -a researcher -s researcher -t "$bead" -p "{\"model\":\"$model\"}"
@@ -62,12 +62,17 @@ set -e
 # successful Claude exit and the completion sentinel mandated by the prompt.
 # Do not replace this with Agent fan-out: vhk.6 must re-enter this
 # launcher/profile and cap depth at one, never inherit a parent.
-if [ "$rc" -eq 0 ] && grep -qx 'RESEARCH-COMPLETE' "$log"; then
+handoff_recorded=false
+if [ "$rc" -eq 0 ] && grep -qE '^[[:space:]]*RESEARCH-COMPLETE[[:space:]]*$' "$log"; then
   bd -C "$root" comment "$bead" --file "$log" --actor researcher
   "$emit" handoff.written "Researcher handoff recorded on $bead" -a researcher -s researcher -t "$bead" -p "{\"model\":\"$model\",\"log\":\"$log\"}"
+  handoff_recorded=true
 else
   "$emit" incident "Researcher session on $bead recorded no handoff: exit $rc or RESEARCH-COMPLETE missing" -a researcher -s researcher -t "$bead" -p "{\"exit\":$rc,\"log\":\"$log\"}"
 fi
-"$emit" session.end "The Researcher's session on $bead ended (exit $rc)" -a researcher -s researcher -t "$bead" -p "{\"exit\":$rc,\"log\":\"$log\"}"
+"$emit" session.end "The Researcher's session on $bead ended (exit $rc)" -a researcher -s researcher -t "$bead" -p "{\"exit\":$rc,\"log\":\"$log\",\"handoff_recorded\":$handoff_recorded}"
 echo "--- researcher.sh: session ended (exit $rc). Log: $log  Errors: $log.err"
+if [ "$handoff_recorded" = false ] && [ "$rc" -eq 0 ]; then
+  exit 65
+fi
 exit "$rc"

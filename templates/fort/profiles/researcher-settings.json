@@ -8,7 +8,6 @@
       "NotebookEdit(**)",
       "Read(.env*)",
       "Read(**/.env*)",
-      "Read(/{{REPO_PATH}}-worktrees/**/.env*)",
       "Read(/home/*/.ssh/**)",
       "Read(/home/*/.aws/**)",
       "Bash(*.env*)",
