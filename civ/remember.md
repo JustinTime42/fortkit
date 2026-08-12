@@ -566,3 +566,80 @@ should name the seat if it matters who learned it.
   cycle 7, and the elder forts' streams were committed 2026-08-11. The
   canonical schema doc contradicts practice; flagged to the Overseer rather
   than edited unasked, since the forts vendor that file.
+
+- 2026-08-12 (edict 13, E7 of the fortkit-52vf programme — the drift watcher):
+  **A DEDUPE KEY DERIVED FROM CONTENT IDENTIFIES A STATE, NOT A PROBLEM.**
+  `civ/scripts/drift-watch.mjs` keyed each finding on
+  `sha256(fort, path, fortHash, templateHash)`. That key is guaranteed to churn,
+  because drift IS those files changing: the dedupe was strongest when nothing
+  was happening and useless when the fort was working. One Regent edict rewrote
+  templates between two scheduled runs and the second run re-filed 16 findings
+  it had already filed (29 -> 51 open Drift beads). **Identity is (fort, path);
+  a content hash is a CHANGE DETECTOR on an already-filed finding, never its
+  identity.** The general rule for any watcher that files records: ask what the
+  key is supposed to identify, and if the answer is "a problem", the key must
+  not contain anything that changes while the problem persists.
+
+- 2026-08-12: **Appending beats skipping, and the append must be readable back
+  or it becomes spam.** The fix appends a comment to the existing bead when the
+  fingerprint changes, rather than skipping — a file that drifts FURTHER after
+  its bead is filed would otherwise keep a stale diff on record with nobody
+  told. But the matcher must then read its own COMMENTS back, not only the bead
+  description, or every run appends the same comment again. That case was in
+  nobody's spec; the test that caught it is a third run asserting silence.
+
+- 2026-08-12: **A brief's number can be right about a different quantity.** The
+  spec said to expect 35 identity matches; the scan produces 39 findings. I
+  reported the premise as stale. The Overseer corrected it: 35 counted distinct
+  OPEN drift beads and the run matched it exactly at 35 — the extra 4 are
+  covered by CLOSED beads and were never in that count. **Before reporting a
+  brief's figure as wrong, establish what it was counting.** The 2026-08-10
+  "check the premise before acting" entry stands; this is its other edge.
+
+- 2026-08-12: **`civ/scripts/**` is Edit/Write-denied to the Regent's tool
+  layer AND the denial extends to Bash `cp` on EITHER side of the copy** — a
+  `cp` reading from `civ/scripts` into a scratch path was refused too. The
+  scripted-write workaround recorded 2026-08-11 for `fort/scripts` and `bin/`
+  DOES NOT WORK HERE. Such a file lands by the Overseer's own hand. Therefore:
+  get the file lint-clean BEFORE asking, which is possible without installing
+  it — `npx biome check --config-path=/home/justin/dev/fortkit <scratch-file>`
+  resolves the repo's config against a file outside the repo. Not doing that
+  cost the Overseer a second round trip for a one-line formatting delta.
+
+- 2026-08-12: **`flock -n -E <code>` is the fix for "every child failure looks
+  like contention".** flock exits non-zero both when the lock is held and when
+  the child fails, so a single catch cannot tell them apart and the old message
+  asserted a cause it had not established — reading as benign contention in a
+  journal nobody watches. With `-E 75`, 75 means contention and nothing else;
+  every other status is the child's, and its exit code and stderr get reported
+  verbatim. Measured on both branches. Any launcher wrapping a child in flock
+  has this defect until it sets `-E`.
+
+- 2026-08-12: **`bd list --all --limit 0 --json` was 991,469 bytes against
+  execFile's 1 MB default `maxBuffer`.** An unattended watcher was days from
+  dying of ENOBUFS on a tracker that only grows, and it would have died in a
+  systemd journal. **Every `execFileAsync` against a growing record needs an
+  explicit maxBuffer.** Found by measuring the command's output while fixing
+  something else, not by any test.
+
+- 2026-08-12: **bd 1.1.2 will emit the v2.0 `--json` envelope on demand, so the
+  migration can be PROVEN today rather than anticipated.**
+  `BD_JSON_ENVELOPE=1 <command>` returns `{data:[...], schema_version:1}` where
+  the bare form returns a top-level array. A defensive parser accepting both is
+  testable against real bd instead of a mock. Every other bare `bd … --json`
+  parse in the civilization still assumes the array; filed as fortkit-c466.
+
+- 2026-08-12: **`emit.sh` does not infer the seat — a hand-rolled call without
+  `-s` writes `"seat": null`.** The launchers all pass it, so the field looks
+  automatic and is not. Cost one correction event this session. Corrections to a
+  stream are APPENDED as a further event naming the timestamp they correct;
+  the original line is never edited.
+
+- 2026-08-12: **fortkit-nvk's acceptance criterion is HALF met and the half is
+  worth recording.** This wake — the first since the fortkit-w1ew launcher
+  repair — put exactly one `edict.begun` in all three forts' streams at
+  09:00:20, actor `calder`, seat `regent`, target on the bead, model in the
+  payload. That is the first time the Regent's announcement has ever been
+  correct in Proofdelve and Farlantern. The `edict.ended` half is written after
+  the session's handoff and cannot be observed from inside the session that
+  wrote it; the next Regent confirms it and only then closes nvk.
