@@ -71,10 +71,20 @@ function section(text, heading) {
   return match?.[1].trim() ?? "";
 }
 
-function handoffStamp(text, fallback) {
-  const heading = /^# Handoff: .+? (\S+)/mu.exec(text)?.[1];
-  const instant = heading === undefined ? Number.NaN : Date.parse(heading);
-  return Number.isNaN(instant) ? fallback : instant;
+function handoffStamp(text) {
+  const stamp = /^# Handoff: .+? (\S+)/mu.exec(text)?.[1];
+  if (stamp === undefined) return { stamp: null, reason: "missing timestamp" };
+  const instant = Date.parse(stamp);
+  return Number.isNaN(instant)
+    ? { stamp: null, reason: `unparseable timestamp ${JSON.stringify(stamp)}` }
+    : { stamp: instant, reason: null };
+}
+
+function compareHandoffFiles(left, right) {
+  return (
+    compare(left.replace(/\.md$/u, ""), right.replace(/\.md$/u, "")) ||
+    compare(left, right)
+  );
 }
 
 function markdownSections(text, fallback = "document") {
@@ -224,12 +234,20 @@ async function build() {
     if (seat === undefined) continue;
     const text = await read(path, gaps);
     if (text === null) continue;
-    const stamp = handoffStamp(text, 0);
+    const parsedStamp = handoffStamp(text);
+    if (parsedStamp.stamp === null) {
+      gaps.push({
+        source: relative(root, path),
+        reason: parsedStamp.reason,
+      });
+      continue;
+    }
+    const stamp = parsedStamp.stamp;
     const old = newest.get(seat);
     if (
       old === undefined ||
       stamp > old.stamp ||
-      (stamp === old.stamp && compare(file, old.file) > 0)
+      (stamp === old.stamp && compareHandoffFiles(file, old.file) > 0)
     )
       newest.set(seat, { file, text, stamp });
     for (const heading of ["State of work", "Next actions"]) {

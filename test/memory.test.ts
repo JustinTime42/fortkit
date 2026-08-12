@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -16,6 +16,9 @@ const lint = fileURLToPath(
   new URL("../scripts/memory-lint.mjs", import.meta.url),
 );
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
+const handoffFixtureRoot = fileURLToPath(
+  new URL("./fixtures/memory-handoffs", import.meta.url),
+);
 
 const fact = `---
 key: current-truth
@@ -176,6 +179,26 @@ describe("memory consolidation", () => {
     expect(current).toContain(
       "17 of 19 open beads shown; full list via bd ready",
     );
+  });
+
+  test("reports invalid handoff timestamps and picks the latest suffixed handoff", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-memory-handoffs-"));
+    await cp(handoffFixtureRoot, root, { recursive: true });
+
+    await run(process.execPath, [assembler, root]);
+    const current = await readFile(
+      join(root, "fort", "memory", "current.md"),
+      "utf8",
+    );
+    expect(current).toContain("mayor-2026-08-11-b.md");
+    expect(current).toContain("Mayor suffix.");
+    expect(current).toContain("forge-2026-08-11-r3.md");
+    expect(current).toContain("Forge round three.");
+    expect(current).toContain("warden-2026-08-10.md");
+    expect(current).toContain(
+      'fort/handoffs/warden-2026-08-11.md: unparseable timestamp "2026-08-11T"',
+    );
+    expect(current).not.toContain("Warden invalid.");
   });
 
   test("fails lint for schema violations and retired instruction references", async () => {
