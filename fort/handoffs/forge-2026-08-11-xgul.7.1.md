@@ -1,4 +1,4 @@
-# Handoff: Forge 2026-08-12T06:38:03Z
+# Handoff: Forge 2026-08-11T22:39:06-08:00
 Model: gpt-5.6-terra
 
 ## State of work
@@ -39,3 +39,22 @@ Model: gpt-5.6-terra
 
 - No implementation failure. The initial full verifier run made the unmerged
   E1 dependency concrete; its exact seven offending paths are recorded above.
+
+## Launcher-observed verifier result
+
+fort/scripts/verify.sh --no-emit, run by forge.sh after the session at 2026-08-11T22:39:06-08:00: exit 1
+
+```
+core shared floor [all]: 2 facts / 33 lines
+core budget [forge]: 3 facts / 47 lines
+core budget [mayor]: 3 facts / 52 lines
+core budget [researcher]: 2 facts / 33 lines
+core budget [warden]: 2 facts / 33 lines
+/home/justin/dev/fortkit-worktrees/xgul.7.1/fort/scripts/forge.sh: references retired memory item fort/remember.md
+/home/justin/dev/fortkit-worktrees/xgul.7.1/fort/scripts/mayor.sh: references retired memory item fort/remember.md
+/home/justin/dev/fortkit-worktrees/xgul.7.1/fort/scripts/probe-cycle7.sh: references retired memory item fort/remember.md
+/home/justin/dev/fortkit-worktrees/xgul.7.1/fort/scripts/researcher.sh: references retired memory item fort/remember.md
+/home/justin/dev/fortkit-worktrees/xgul.7.1/fort/scripts/warden.sh: references retired memory item fort/remember.md
+/home/justin/dev/fortkit-worktrees/xgul.7.1/bin/civ-index: references retired memory item fort/remember.md
+/home/justin/dev/fortkit-worktrees/xgul.7.1/bin/regent: references retired memory item fort/remember.md
+```
