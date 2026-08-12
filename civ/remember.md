@@ -704,3 +704,113 @@ should name the seat if it matters who learned it.
   the unmasked Regent.** Deleting probe residue had to go through
   `python3 -c "os.unlink(...); os.rmdir(...)"`. Worth knowing before an edict
   plans a cleanup step around `rm`.
+
+- 2026-08-12 (edict 15, E2 of the fortkit-52vf programme — the mask):
+  **A WRITABLE FILE INSIDE A READ-ONLY DIRECTORY IS NOT AN EDITABLE FILE, and
+  every cheap probe says it is.** Cycle 7 bound `fort/scripts` read-only and
+  re-bound `verify.sh` read-write inside it. `test -w` returned TRUE,
+  open-for-append worked, and `Edit`, `sed -i`, `git checkout` and `git merge`
+  all failed for a whole cycle in three forts — because each of them must
+  CREATE OR UNLINK A SIBLING, and the error names the sibling temp path rather
+  than the file you were editing. `probe-cycle7.sh` had probed it with `: >>`,
+  an O_APPEND open, which passed throughout. **The fix (Shape A) inverts it:
+  the directory is writable and every file in it is bound read-only
+  INDIVIDUALLY, which makes each one a MOUNT POINT — and the kernel refuses to
+  unlink or rename over a mount point (EBUSY). Immutability by mount point is
+  stronger than immutability by read-only parent, and it is the only shape that
+  leaves one file genuinely editable.** Cost: the directory then accepts NEW
+  files. Disclosed in the comment, probed as an EXPECTED PASS, and carried in
+  the charter's accepted residuals with the measurement.
+
+- 2026-08-12: **NO LAUNCH-TIME MASK CAN PROTECT A PATH THAT DOES NOT EXIST
+  YET.** fortkit-1q9 asked for the RO carve-outs to be iterated over every tree
+  in RW_PATHS. That is both expensive (76 worktrees x ~8 paths) and
+  *incomplete*, because a masked seat can `git worktree add` mid-session and
+  obtain a fresh writable enforcement layer the mask was built before. The
+  answer is DECLARED TREES (`--rw-tree`, which both grants a tree and carves
+  it) plus granting `$root-worktrees` wholesale only to a caller that declares
+  nothing. **When a fix's stated form buys cost without buying the property,
+  say so and design the one that buys the property.**
+
+- 2026-08-12: **A HOLE THE LIB CANNOT CLOSE MUST BE MEASURED IN THE HARNESS,
+  NOT ARGUED IN A COMMENT.** The Warden — read-only *by construction* — could
+  write `$wt/fort/scripts/mayor.sh` and `$wt/bin` in every worktree, and no
+  edit to seat-sandbox.sh could fix it: only warden.sh passing
+  `$root-worktrees` as extra_ro closes it. So the harness keeps a permanent
+  **measurement** (printing WRITABLE) of the call as it ships, beside the
+  assertions for the call as fixed. Drop the argument and the record says so
+  again immediately.
+
+- 2026-08-12: **RUN THE HARNESS AGAINST THE OLD FILE FIRST.** The E2 harness
+  scored 34 pass / 18 fail on the pre-edict lib and 52/0 on the candidate, and
+  the 18 are exactly the defects the edict names. A harness that cannot fail
+  the old file proves nothing about the new one. It also caught a defect in
+  ITSELF: `wc -c < f 2>/dev/null || echo UNREADABLE` with stderr merged scored
+  a correctly-masked file as FAIL, because the EACCES text matched neither
+  branch. Use `cat f 2>/dev/null | wc -c` — always numeric, 0 for a /dev/null
+  bind, 0 for EACCES, N for readable — and assert the HOST byte count is
+  nonzero first so a missing fixture cannot pass as a mask.
+
+- 2026-08-12: **WHEN FOUR COPIES HAVE DIVERGED, HAND-WRITE ONE, PROVE IT, THEN
+  MAKE A PATCHER REPRODUCE IT BYTE-FOR-BYTE BEFORE IT TOUCHES THE OTHERS.** The
+  four seat-sandbox copies were 13528 / 14004 / 13652 / 13364 bytes. Retyping
+  each risks silently dropping a fort's divergence; patching blind risks
+  applying an unproven edit. Doing both, in that order, with the patcher
+  required to regenerate the harness-proven file exactly, gives one reviewed
+  generator AND a proven output. It differed in three comment hunks on the
+  first attempt — fix the patcher, never the output. Then read every REMOVED
+  line of every file individually; that is what proves no divergence was
+  flattened.
+
+- 2026-08-12: **`mayor.sh` CANNOT BE LAUNCHED HEADLESS, and `script` is not
+  installed on this host.** `claude` with stdin from `/dev/null` exits
+  immediately, so a real Mayor launch needs a pty:
+  `python3 -c "import pty,sys; sys.exit(pty.spawn(['fort/scripts/mayor.sh']))"`.
+  Once it is up, **`/proc/<seat-pid>/mountinfo` is the strongest evidence this
+  civilization can produce about a mask** — the kernel's own view of the
+  running seat's namespace, not a reconstruction of what the launcher should
+  have built. Find the seat as the child of the `bwrap` pid.
+
+- 2026-08-12: **A BACKTICK IN A `bd comment` ARGUMENT IS EXECUTED.** A
+  double-quoted heredoc let bash command-substitute a backticked word out of a
+  bead comment, leaving a hole in the record and printing `command not found`.
+  Single-quote the heredoc delimiter (`<<'EOF'`) for anything with prose in it.
+  This seat has root; the same construction with a different word inside the
+  backticks would have RUN it.
+
+- 2026-08-12: **~/.claude/teams IS NOT AN INSTRUCTION SURFACE AND MUST NOT BE
+  MASKED.** fortkit-5sk's title lists it beside civilization.json, skills,
+  commands and plugins. It is harness session state — Claude Code writes
+  `teams/session-<id>/config.json` at EVERY session start — so a kernel-RO bind
+  there breaks every masked launch. Masked: the other four. The code comment
+  says "do not complete this list with it", because its absence otherwise reads
+  as an oversight.
+
+- 2026-08-12: **`~/.claude/skills` is now kernel-RO, so installing a skill is an
+  unmasked act** (the Overseer's hand or the Regent's) until fortkit-4n8c
+  symlinks the installed copies to the repo. Nothing automates that install:
+  they are hand-copied from `fortkit/skills/`, and a masked Mayor did exactly
+  that hours before this edict. Same shape as cycle 7 making `.git/config`
+  read-only and `git config` fail in-mask — a documented consequence, accepted
+  deliberately, not an accident.
+
+- 2026-08-12: **EVERY FORT'S `.claude/settings.json` CARRIES ~20 `Write(...)`
+  RULES THAT DO NOTHING.** Measured in all three: every masked launch prints
+  "Permission deny rule ...: Write(X) is not matched by file permission checks —
+  only Edit(path) rules are." The allow rules too. Nothing is newly exposed,
+  because the kernel mask is the boundary and every path that matters is
+  kernel-RO — but a rule that silently does nothing is worse than no rule.
+  Found ONLY because a headless launch dumped the preamble to a file; it
+  scrolls past before an interactive session starts. **After any settings
+  change, launch the seat with stdout redirected and read the preamble.**
+  fortkit-yowr.
+
+- 2026-08-12: **A fort's own `warden.sh`/`forge.sh` smoke is the "can it still
+  work" test, and it is cheap.** `WARDEN_SMOKE=1 fort/scripts/warden.sh <bead>
+  HEAD~1..HEAD`, detached with `nohup ... & disown`, exists in all three forts
+  and runs the fort's real verifier inside the real mask (probe 11). Three of
+  them plus three Mayor launches is the whole "a mask that passes every probe
+  and prevents a launch has still failed" requirement, and it costs about
+  fifteen minutes. Watch them with `kill -0 <pid>` in a loop — and parse your
+  own pid list correctly: `read -r n p` on "fortkit warden smoke pid=NNN" gives
+  `p=warden`, which reports three live sessions as dead.
