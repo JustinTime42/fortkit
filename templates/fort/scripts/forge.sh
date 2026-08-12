@@ -48,9 +48,17 @@ handoff_tmp=""
 trap 'rm -f "$lock.info" "$handoff_marker" "$handoff_tmp"' EXIT
 
 # Kernel mask layer: seat-sandbox.sh owns every shared protection. Forge adds
-# only its measured deltas: worktree .env* coverage, its local .claude config,
-# and its worktree constitution paths. SSH_AUTH_SOCK is passed through when set,
-# but its socket is masked to /dev/null, so no agent identities are available.
+# only its measured deltas: SSH_AUTH_SOCK's socket is masked to /dev/null, so no
+# agent identities are available even though the variable is passed through.
+#
+# fortkit-1q9 (E2, 2026-08-12): --rw-tree declares the worktree, which BOTH
+# grants it write access AND applies every enforcement carve-out to it — a
+# superset of the five paths this call used to name by hand. Those five never
+# covered $wt/bin, $wt/civ/scripts or $wt/civ/profiles, so the capital's Forge
+# could edit its worktree copy of bin/regent or a civ launcher and the change
+# reached main through the Mayor's ordinary merge. Declaring the tree also drops
+# the blanket $root-worktrees grant, so the Forge can no longer write any OTHER
+# bead's worktree. Worktree .env* coverage rides --rw-tree too.
 mask=()
 # shellcheck source=fort/scripts/lib/seat-sandbox.sh
 # shellcheck disable=SC1091  # resolved at runtime; build_mask fills mask[]
@@ -59,8 +67,7 @@ if ! require_bwrap; then
   "$emit" incident "Forge launch refused: bwrap missing, kernel mask layer unavailable" -s forge -t "$bead"
   exit 78
 fi
-build_mask codex "$root" --env-root "$wt" --mask-ssh-auth-sock "$wt/.claude" \
-  "$wt/fort/charter.md" "$wt/fort/seats" "$wt/fort/profiles" "$wt/fort/scripts"
+build_mask codex "$root" --rw-tree "$wt" --mask-ssh-auth-sock
 mask_env codex
 
 "$emit" session.start "The Forge begins work on $bead ($model)" -a forge -s forge -t "$bead" -p "{\"model\":\"$model\",\"worktree\":\"$wt\"}"

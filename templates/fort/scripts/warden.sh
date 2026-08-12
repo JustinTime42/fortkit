@@ -144,7 +144,7 @@ require_bwrap || exit $?
 # so a worktree-candidate review still locks $root — the Warden is read-only
 # by construction in every posture, and the verify.sh Mayor re-grant is
 # re-masked here regardless of which tree is under review.
-build_mask claude "$root" "$root" "$src"
+build_mask claude "$root" "$root" "$root-worktrees" "$src"
 mask_env claude
 # Read-only node_modules bind (fortkit-8cv6, defect 2; longburn-5if). Appended
 # after build_mask so it stacks ON TOP of the scratch (no masked path lies
