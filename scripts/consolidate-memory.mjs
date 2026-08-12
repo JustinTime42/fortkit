@@ -334,17 +334,18 @@ async function build() {
         "annal",
       );
   }
-  const interactionsPath = join(root, "interactions.jsonl");
+  const interactionsPath = join(root, ".beads", "interactions.jsonl");
+  const interactionsSource = relative(root, interactionsPath);
   if (await exists(interactionsPath)) {
     const text = await read(interactionsPath, gaps);
     if (text !== null)
       rows.push({
-        source: "interactions.jsonl",
+        source: interactionsSource,
         ts: "",
         actor: "",
         seat: "",
         section: "interactions",
-        provenance: "interactions.jsonl",
+        provenance: interactionsSource,
         scopeSeats: "",
         scopeTopics: "",
         scopeBeads: "",
@@ -352,8 +353,8 @@ async function build() {
       });
   } else {
     gaps.push({
-      source: "interactions.jsonl",
-      reason: "missing or not configured",
+      source: interactionsSource,
+      reason: `absent at searched path ${interactionsSource}`,
     });
   }
 

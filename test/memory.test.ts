@@ -56,6 +56,10 @@ describe("memory consolidation", () => {
         '{"id":"x","status":"open","title":"Open work","updated_at":"2026-08-10T00:00:00Z"}\n',
       ),
       writeFile(
+        join(root, ".beads", "interactions.jsonl"),
+        '{"interaction":"Fixture interaction corpus"}\n',
+      ),
+      writeFile(
         join(root, "fort", "handoffs", "forge-2026-08-10.md"),
         "# Handoff: Forge 2026-08-10T01:00:00Z\n\n## State of work\n\n- Ready.\n- Preserve this second line.\n\n## Next actions\n\n1. Ship it.\n2. Verify it.\n",
       ),
@@ -100,13 +104,24 @@ describe("memory consolidation", () => {
       const sourceCount = index
         .prepare("SELECT COUNT(*) AS count FROM source")
         .get() as { count: number } | undefined;
+      const interaction = index
+        .prepare("SELECT section, snippet FROM source WHERE source = ?")
+        .get(".beads/interactions.jsonl") as
+        | { section: string; snippet: string }
+        | undefined;
       const gapCount = index
         .prepare("SELECT COUNT(*) AS count FROM gaps WHERE source = ?")
-        .get("interactions.jsonl") as { count: number } | undefined;
-      if (sourceCount === undefined || gapCount === undefined)
+        .get(".beads/interactions.jsonl") as { count: number } | undefined;
+      if (
+        sourceCount === undefined ||
+        interaction === undefined ||
+        gapCount === undefined
+      )
         throw new Error("memory index count query returned no row");
       expect(sourceCount.count).toBeGreaterThan(0);
-      expect(gapCount.count).toBe(1);
+      expect(interaction.section).toBe("interactions");
+      expect(interaction.snippet).toContain("Fixture interaction corpus");
+      expect(gapCount.count).toBe(0);
     } finally {
       index.close();
     }
@@ -121,6 +136,23 @@ describe("memory consolidation", () => {
         ),
       ]),
     ).resolves.toEqual(episodic);
+  });
+
+  test("reports a missing interactions corpus with the searched path", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-memory-interactions-"));
+    await mkdir(join(root, "fort", "memory", "facts"), { recursive: true });
+    await writeFile(
+      join(root, "fort", "memory", "facts", "current-truth.md"),
+      fact,
+    );
+
+    await run(process.execPath, [assembler, root]);
+
+    await expect(
+      readFile(join(root, "fort", "memory", "current.md"), "utf8"),
+    ).resolves.toContain(
+      ".beads/interactions.jsonl: absent at searched path .beads/interactions.jsonl",
+    );
   });
 
   test("pins the migrated cycle-7 correction as the active Forge truth", async () => {
