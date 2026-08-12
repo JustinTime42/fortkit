@@ -17,3 +17,25 @@ fort/telemetry/
 
 # Machine-written harness state (regenerated at session start)
 .claude-flow/
+
+# Retired ruflo / claude-flow residue. Written by @claude-flow/cli through the
+# ruflo plugin hook shim, not through any agent tool, which is why the
+# .claude/** deny rules never bound it (fortkit-agf, threat 3).
+.claude/proven-config.json
+.claude/.proven-config-version
+agentdb.rvf
+agentdb.rvf.lock
+
+# Editor residue: swap, backup and autosave files. Defence in depth for
+# fortkit-2kub, observed 2026-08-11 — a Kate swap file for a masked secret sat
+# untracked in a fort tree as `..env.staging.local.kate-swp`, and the leading
+# extra dot means `.env*` above does not match it. This does NOT close the mask
+# hole; masking and gitignore are different layers, and 2kub owns the mask. What
+# it removes is the `git add .` catastrophe: an editor's second copy of a secret
+# reaching history, which is unrecoverable in practice.
+*.kate-swp
+*.swp
+*.swo
+*~
+\#*\#
+.\#*
