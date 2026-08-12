@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -16,6 +16,9 @@ const lint = fileURLToPath(
   new URL("../scripts/memory-lint.mjs", import.meta.url),
 );
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
+const handoffFixtureRoot = fileURLToPath(
+  new URL("./fixtures/memory-handoffs", import.meta.url),
+);
 
 const fact = `---
 key: current-truth
@@ -51,6 +54,10 @@ describe("memory consolidation", () => {
       writeFile(
         join(root, ".beads", "issues.jsonl"),
         '{"id":"x","status":"open","title":"Open work","updated_at":"2026-08-10T00:00:00Z"}\n',
+      ),
+      writeFile(
+        join(root, ".beads", "interactions.jsonl"),
+        '{"interaction":"Fixture interaction corpus"}\n',
       ),
       writeFile(
         join(root, "fort", "handoffs", "forge-2026-08-10.md"),
@@ -97,13 +104,24 @@ describe("memory consolidation", () => {
       const sourceCount = index
         .prepare("SELECT COUNT(*) AS count FROM source")
         .get() as { count: number } | undefined;
+      const interaction = index
+        .prepare("SELECT section, snippet FROM source WHERE source = ?")
+        .get(".beads/interactions.jsonl") as
+        | { section: string; snippet: string }
+        | undefined;
       const gapCount = index
         .prepare("SELECT COUNT(*) AS count FROM gaps WHERE source = ?")
-        .get("interactions.jsonl") as { count: number } | undefined;
-      if (sourceCount === undefined || gapCount === undefined)
+        .get(".beads/interactions.jsonl") as { count: number } | undefined;
+      if (
+        sourceCount === undefined ||
+        interaction === undefined ||
+        gapCount === undefined
+      )
         throw new Error("memory index count query returned no row");
       expect(sourceCount.count).toBeGreaterThan(0);
-      expect(gapCount.count).toBe(1);
+      expect(interaction.section).toBe("interactions");
+      expect(interaction.snippet).toContain("Fixture interaction corpus");
+      expect(gapCount.count).toBe(0);
     } finally {
       index.close();
     }
@@ -118,6 +136,23 @@ describe("memory consolidation", () => {
         ),
       ]),
     ).resolves.toEqual(episodic);
+  });
+
+  test("reports a missing interactions corpus with the searched path", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-memory-interactions-"));
+    await mkdir(join(root, "fort", "memory", "facts"), { recursive: true });
+    await writeFile(
+      join(root, "fort", "memory", "facts", "current-truth.md"),
+      fact,
+    );
+
+    await run(process.execPath, [assembler, root]);
+
+    await expect(
+      readFile(join(root, "fort", "memory", "current.md"), "utf8"),
+    ).resolves.toContain(
+      ".beads/interactions.jsonl: absent at searched path .beads/interactions.jsonl",
+    );
   });
 
   test("pins the migrated cycle-7 correction as the active Forge truth", async () => {
@@ -176,6 +211,26 @@ describe("memory consolidation", () => {
     expect(current).toContain(
       "17 of 19 open beads shown; full list via bd ready",
     );
+  });
+
+  test("reports invalid handoff timestamps and picks the latest suffixed handoff", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-memory-handoffs-"));
+    await cp(handoffFixtureRoot, root, { recursive: true });
+
+    await run(process.execPath, [assembler, root]);
+    const current = await readFile(
+      join(root, "fort", "memory", "current.md"),
+      "utf8",
+    );
+    expect(current).toContain("mayor-2026-08-11-b.md");
+    expect(current).toContain("Mayor suffix.");
+    expect(current).toContain("forge-2026-08-11-r3.md");
+    expect(current).toContain("Forge round three.");
+    expect(current).toContain("warden-2026-08-10.md");
+    expect(current).toContain(
+      'fort/handoffs/warden-2026-08-11.md: unparseable timestamp "2026-08-11T"',
+    );
+    expect(current).not.toContain("Warden invalid.");
   });
 
   test("fails lint for schema violations and retired instruction references", async () => {

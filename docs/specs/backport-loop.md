@@ -111,7 +111,11 @@ The watcher is read-only toward every fort. Its only writes are:
 2. **One `drift.scan` event** per run in Manyhalls' stream (category added to
    `schema/events.md` in or2.3 — categories are add-only): payload counts
    forts scanned, files compared, findings filed, findings suppressed,
-   sources unreadable.
+   sources unreadable. (E7, 2026-08-12, add-only: `findingsCommented`,
+   `findingsDeferred`, `allowlistLapsed`.)
+3. **Comments appended to drift beads already open**, added by E7 — see the
+   amendment below. Still never an edit: bead descriptions are written once,
+   at filing, and every later observation is an appended comment.
 
 Discipline carried over from the memory work: an unreadable fort, file, or
 registry entry is a DISCLOSED gap in the report and the event payload, never
@@ -120,6 +124,57 @@ fingerprint (fort + path + both content hashes), and an open drift bead with
 the same fingerprint suppresses filing. Closed-without-action beads act as
 one-shot suppressions; permanent suppression requires an allowlist entry.
 
+**AMENDED 2026-08-12 by edict E7 of fortkit-52vf (bead fortkit-52vf.8),
+against an observed failure. The paragraph above stands as the record of what
+was specified; this amendment supersedes its identity rule.** "A stable
+fingerprint (fort + path + both content hashes)" is not stable — it is stable
+against *time* and churns against *content*, and drift IS content changing.
+Measured: one Regent edict rewrote templates between two scheduled runs, and
+the second run re-filed 16 findings it had already filed, taking the open
+drift backlog from 29 beads to 51 (fortkit-zvz2).
+
+The identity of a finding is **(fort, path)** and nothing else. The content
+fingerprint survives as a CHANGE DETECTOR on an already-filed finding:
+
+| State | Action |
+|---|---|
+| open bead with this identity, same fingerprint | suppress |
+| open bead with this identity, different fingerprint | **append a comment** to that bead carrying the new fingerprint, reason and diff — never a second bead |
+| no open bead, but a closed one carrying this exact fingerprint | suppress once (the one-shot rule above, unchanged) |
+| no open bead, and the finding is `not-yet-propagated` | DEFER: disclosed in the report and event payload, no bead (§2 amendment below) |
+| otherwise | file |
+
+Appending rather than skipping is the load-bearing half: a file that drifts
+FURTHER after its bead is filed would otherwise keep a stale diff on record
+with nobody told. It also satisfies standing order 7 natively — the record
+grows and nothing is edited in place.
+
+Beads filed from 2026-08-12 carry an explicit `Drift identity: <sha256 of
+fort\0path>` line. The 51 beads filed before that date carry their identity
+only in their title, which the watcher has always written as
+`Drift: <fort> <path>`, and the matcher falls back to it. **Ruled:** a
+migration pass rewriting 51 descriptions was rejected as an in-place edit of
+records. Disclosed residual — rewording a legacy Drift title during triage
+breaks that bead's match and the next run files a fresh one; the window
+closes as the legacy beads close.
+
+**Classification amendment (fortkit-or2.8), same edict.** An absent file is
+not automatically a `regression`. A regression means a fort LOST something it
+had, and the watcher now asks the fort's own git history:
+
+- absent + the path appears in the fort's history → `regression`
+- absent + no history under that path → `not-yet-propagated`
+- absent + history unreadable → `regression`, and a disclosed gap
+
+`not-yet-propagated` findings are deferred rather than filed when no bead
+already tracks them. Their propagation is tracked by fortkit-vhk.7, and for
+the capital the state is permanent by design: Manyhalls IS the template
+source and its `fort/scripts` is installed by the Overseer's hand, so it will
+show absences forever. A watcher that files an unfixable bead every run
+trains its fort to ignore it, which is the habituation failure that retired
+the ruflo hooks. Defect 2 of or2.8 needs no capital special case: the history
+rule covers it.
+
 ### 3.4 The allowlist
 
 `civ/drift-allowlist.json` (tracked, reviewed like any change): entries of
@@ -127,6 +182,15 @@ one-shot suppressions; permanent suppression requires an allowlist entry.
 exactly one content state — if the file changes again, the drift resurfaces.
 This is how `local-by-design` divergence stays visible-but-quiet without the
 watcher going blind to future changes.
+
+**RULING 2026-08-12, edict E7.** The content-hash pin is DELIBERATE and is
+KEPT: an allowlist entry must not go on suppressing a file that has changed
+into something nobody approved. What was wrong is that the lapse was silent —
+a suppression the fort had authorized simply stopped applying, and the
+finding returned wearing no explanation. A lapsed entry (same fort and path,
+different content-hash) is now REPORTED: in the run report's `lapsed` array,
+in the `drift.scan` payload as `allowlistLapsed`, and on stderr where the
+journal will carry it. The finding still resurfaces, exactly as before.
 
 ## 4. Placement and trigger
 

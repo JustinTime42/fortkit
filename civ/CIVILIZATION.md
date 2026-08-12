@@ -1,6 +1,6 @@
 # The Civilization — handbook
 
-*Generated 2026-08-05T23:21:36-08:00 by `bin/civ-index`. Never edit by hand: regenerate. Everything here is read from the live record, so if something looks wrong the record is wrong and that is worth chasing.*
+*Generated 2026-08-12T10:44:07-08:00 by `bin/civ-index`. Never edit by hand: regenerate. Everything here is read from the live record, so if something looks wrong the record is wrong and that is worth chasing.*
 
 ## Who is who
 
@@ -81,7 +81,7 @@
 1. **Tier promotion.** Moving to Tier N+1 requires the Overseer's judgment that Tier N's question is answered (Tier 0's answer comes from the 3-week live tester run — a permanently human bead).
 2. **Design-pillar amendments and the GDD itself** → Overseer only. Agents propose via beads.
 3. **Monetization decisions** → Overseer only (GDD §9.6: nothing that sells economic advantage).
-4. The fort's own constitution — `fort/` files, seat definitions, launchers, permission profiles → Warden + Overseer review (Proofdelve gate 6, inherited).
+4. The fort's own constitution — the enumerated set, and only it: `fort/charter.md`, `fort/seats/`, `fort/profiles/`, `.claude/`, host-executed scripts in `fort/scripts/`, and `.git/config` + `.git/hooks` → Warden + Over
 5. `.env*` / secrets → deny-listed from all agent access from day zero.
 6. Anything public-facing (domains, store pages, published builds) → Overseer.
 
@@ -92,7 +92,7 @@
 ### Manyhalls
 
 **Human gates:**
-1. The fort's own constitution — `fort/` files, seat definitions, launchers, permission profiles → Warden + Overseer review. The fort proposes amendments to itself through beads; it never applies them unreviewed.
+1. The fort's own constitution — `fort/` files, seat definitions, launchers, permission profiles → Warden + Overseer review. The fort proposes amendments to itself through beads; it never applies them unreviewed. (Amendm
 2. `.env*` / secrets → deny-listed from all agent access from day zero.
 3. Anything public-facing (publishing, domains, releases, external accounts) → Overseer.
 
@@ -105,7 +105,7 @@
 | Civilization law | `fortkit/civ/covenant.md` |
 | Civ officer seats, handoffs, events | `fortkit/civ/{seats,handoffs,events}/` |
 | Fort law | `<repo>/fort/charter.md` |
-| Fort operational facts (read every session) | `<repo>/fort/remember.md` |
+| Fort operational facts (read every session) | `<repo>/fort/memory/current.md` (distilled view; ledger in `<repo>/fort/memory/facts/`) |
 | Seat identities and personalities | `<repo>/fort/seats/*.md` |
 | Work graph | beads, per repo (`bd ready`, `bd list`) |
 | Announcements / history | `<repo>/fort/events/events-<date>.jsonl` |
@@ -139,8 +139,8 @@
 
 | Fort | Open | In progress | Unpushed | Worktrees |
 |---|---|---|---|---|
-| Proofdelve | 57 | 0 | 0 | 1 |
-| Farlantern | 41 | 1 | no remote | 27 |
-| Manyhalls | 36 | 0 | no remote | 3 |
+| Proofdelve | 110 | 0 | 7 | 34 |
+| Farlantern | 167 | 2 | 13 | 46 |
+| Manyhalls | 167 | 2 | 2 | 76 |
 
 *Counts are a snapshot. `fortstat` inside a repo is the live view.*
