@@ -205,6 +205,83 @@ describe("memory consolidation", () => {
     });
   });
 
+  test("covers every live instruction surface while allowing retirement records", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-memory-retired-"));
+    const violations = [
+      "fort/charter.md",
+      "fort/seats/forge.md",
+      "templates/fort/seats/forge.md",
+      "fort/scripts/forge.sh",
+      "bin/forge",
+    ];
+    await Promise.all([
+      mkdir(join(root, "fort", "memory", "facts"), { recursive: true }),
+      mkdir(join(root, "fort", "seats"), { recursive: true }),
+      mkdir(join(root, "templates", "fort", "seats"), { recursive: true }),
+      mkdir(join(root, "fort", "scripts"), { recursive: true }),
+      mkdir(join(root, "scripts"), { recursive: true }),
+      mkdir(join(root, "templates", "fort", "memory"), { recursive: true }),
+      mkdir(join(root, "bin"), { recursive: true }),
+      mkdir(join(root, "civ", "handoffs"), { recursive: true }),
+    ]);
+    await Promise.all([
+      writeFile(
+        join(root, "fort", "memory", "facts", "current-truth.md"),
+        fact,
+      ),
+      writeFile(
+        join(root, "fort", "remember.md"),
+        "Pointer: fort/remember.md\n",
+      ),
+      writeFile(
+        join(root, "scripts", "memory-lint.mjs"),
+        '"fort/remember.md"\n',
+      ),
+      writeFile(
+        join(root, "templates", "fort", "memory", "memory-lint.mjs"),
+        '"fort/remember.md"\n',
+      ),
+      writeFile(join(root, "bin", "fort-init"), "cat > fort/remember.md\n"),
+      writeFile(
+        join(root, "civ", "handoffs", "migration.md"),
+        "Historical record: fort/remember.md\n",
+      ),
+      writeFile(
+        join(root, "civ", "remember.md"),
+        "History: fort/remember.md\n",
+      ),
+      ...violations.map((path) =>
+        writeFile(
+          join(root, path),
+          path === "fort/charter.md"
+            ? "Amended 2026-08-11: the migration retired fort/remember.md because the ledger succeeded.\n\nRead fort/remember.md before work.\n"
+            : "Read fort/remember.md before work.\n",
+        ),
+      ),
+    ]);
+
+    const stderrPath = join(root, "memory-lint.stderr");
+    const failure = await run("sh", [
+      "-c",
+      '"$1" "$2" "$3" 2> "$4"',
+      "sh",
+      process.execPath,
+      lint,
+      root,
+      stderrPath,
+    ]).catch((error: { code?: number }) => error);
+    expect(failure).toMatchObject({ code: 1 });
+    const stderr = await readFile(stderrPath, "utf8");
+    for (const path of violations) expect(stderr).toContain(join(root, path));
+
+    await Promise.all(
+      violations.map((path) =>
+        writeFile(join(root, path), "Current memory.\n"),
+      ),
+    );
+    await expect(run(process.execPath, [lint, root])).resolves.toBeDefined();
+  });
+
   test("enforces each seat's core budget and reports the shared floor", async () => {
     const root = await mkdtemp(join(tmpdir(), "fortkit-memory-seat-budget-"));
     await Promise.all([

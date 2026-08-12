@@ -107,7 +107,60 @@ for (const file of files) {
   }
 }
 const retiredReferences = ["fort/remember.md", ...supersededFactKeys];
-for (const instructionFile of ["AGENTS.md", "CLAUDE.md"]) {
+const selfReferentialRetirementGuards = new Set([
+  "scripts/memory-lint.mjs",
+  "templates/fort/memory/memory-lint.mjs",
+]);
+const pointerStubWriter = "bin/fort-init";
+
+async function filesBelow(directory, predicate) {
+  let entries = [];
+  try {
+    entries = await readdir(join(root, directory), { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const files = [];
+  for (const entry of entries) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...(await filesBelow(path, predicate)));
+    else if (entry.isFile() && predicate(path)) files.push(path);
+  }
+  return files;
+}
+
+function isHistoricalCharterReference(path, text, referenceIndex) {
+  if (path !== "fort/charter.md") return false;
+  const paragraphStart = text.lastIndexOf("\n\n", referenceIndex) + 2;
+  const paragraphEnd = text.indexOf("\n\n", referenceIndex);
+  const paragraph = text.slice(
+    paragraphStart,
+    paragraphEnd === -1 ? text.length : paragraphEnd,
+  );
+  return (
+    /\b(amended|historical|migrat(?:ed|ion)|retir(?:ed|ement))\b/iu.test(
+      paragraph,
+    ) && !/\b(read|consult|open|use|follow)\b/iu.test(paragraph)
+  );
+}
+
+const retiredReferenceFiles = [
+  "AGENTS.md",
+  "CLAUDE.md",
+  "fort/charter.md",
+  ...(await filesBelow("fort/seats", (path) => path.endsWith(".md"))),
+  ...(await filesBelow("templates", () => true)),
+  ...(await filesBelow("fort/scripts", (path) =>
+    /^fort\/scripts\/[^/]+\.sh$/u.test(path),
+  )),
+  ...(await filesBelow("bin", () => true)),
+];
+for (const instructionFile of retiredReferenceFiles) {
+  if (
+    selfReferentialRetirementGuards.has(instructionFile) ||
+    instructionFile === pointerStubWriter
+  )
+    continue;
   const path = join(root, instructionFile);
   let text;
   try {
@@ -115,9 +168,24 @@ for (const instructionFile of ["AGENTS.md", "CLAUDE.md"]) {
   } catch {
     continue;
   }
-  for (const reference of retiredReferences)
-    if (text.includes(reference))
+  for (const reference of retiredReferences) {
+    let referenceIndex = text.indexOf(reference);
+    let liveReference = false;
+    while (referenceIndex !== -1) {
+      if (
+        !isHistoricalCharterReference(instructionFile, text, referenceIndex)
+      ) {
+        liveReference = true;
+        break;
+      }
+      referenceIndex = text.indexOf(
+        reference,
+        referenceIndex + reference.length,
+      );
+    }
+    if (liveReference)
       failures.push(`${path}: references retired memory item ${reference}`);
+  }
 }
 console.log(
   `core shared floor [all]: ${sharedCoreFacts} facts / ${sharedCoreLines} lines`,
