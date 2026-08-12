@@ -26,7 +26,7 @@ The handbook is an index, not a corpus. When the question needs detail, read the
 | Who is X, what are they like, what may they write | `<repo>/fort/seats/<role>.md` or `fortkit/civ/seats/<office>.md` — personalities are in the seats' own words |
 | What is the rule about X in fort Y | `<repo>/fort/charter.md` — gates, threat model, prose gates, standing orders |
 | What is the law above the forts | `fortkit/civ/covenant.md` |
-| What must a session here know operationally | `<repo>/fort/remember.md` |
+| What must a session here know operationally | `<repo>/fort/memory/current.md` (distilled view; facts ledger in `<repo>/fort/memory/facts/`) |
 | What is being worked / what happened to bead Z | `bd list`, `bd show <id>` **run inside that repo** — bd is cwd-sensitive |
 | What happened today / recently | `<repo>/fort/events/events-<date>.jsonl`, and `fortkit/civ/events/` for officer activity |
 | Why was a decision made | `<repo>/fort/annals/` (ceremonies, rulings of record), bead close reasons, `<repo>/fort/handoffs/` |
