@@ -57,6 +57,7 @@ const coreBySeat = new Map(seats.map((seat) => [seat, { facts: 0, lines: 0 }]));
 let sharedCoreFacts = 0;
 let sharedCoreLines = 0;
 const supersededFactKeys = [];
+const activeCoreFactKeys = [];
 for (const file of files) {
   const path = join(factsDirectory, file);
   const parsed = parseFact(await readFile(path, "utf8"));
@@ -89,6 +90,8 @@ for (const file of files) {
     !files.includes(`${frontmatter["superseded-by"]}.md`)
   )
     failures.push(`${path}: superseded-by does not resolve`);
+  if (frontmatter.tier === "core" && frontmatter.status === "active")
+    activeCoreFactKeys.push(key);
   if (frontmatter.tier === "core") {
     const factSeats = scopeSeats(scope);
     const factLines = body.split(/\r?\n/u).length + coreFactOverheadLines;
@@ -185,6 +188,77 @@ for (const instructionFile of retiredReferenceFiles) {
     }
     if (liveReference)
       failures.push(`${path}: references retired memory item ${reference}`);
+  }
+}
+// fortkit-c1kj — THE MEMORY STALENESS GATE.
+//
+// Nothing regenerated fort/memory/current.md and no verifier detected it as
+// stale, so for a day the distilled view served a SUPERSEDED core fact — the
+// cycle-7 write boundaries — to every seat at session start, while the ledger
+// and the seat file had both been corrected (fortkit-1gz3). It is the
+// widest-read of the three places that record lived.
+//
+// THE GATE KEYS ON IDENTITY, NEVER ON PROSE. Two earlier shapes were rejected
+// with a measurement each: regenerating and diffing the whole file goes red on
+// ordinary bead traffic (a regeneration after fifteen closures produced a diff
+// whose only content was "232 -> 228 open beads"), and pinning a substring of
+// the rendering goes red on a benign reflow that changes no truth. Both turn
+// the correct action into a red build and get disabled within a day. What is
+// asserted here instead is set equality between the facts the ledger says
+// belong in the view and the fact paths the view actually links, which is
+// immune to reflow, to wording, and to bead churn.
+//
+// scripts/consolidate-memory.mjs renders exactly `status: active` + `tier:
+// core` and links each as `fort/memory/facts/<key>.md`, so that path IS the
+// identity anchor. Both directions are checked, and the second is why the
+// converse was safe to assert: the bead warned that "every active fact
+// renders" would be wrong, and it would be — `tier: on-demand` facts correctly
+// do not render — but "every active CORE fact renders" is precisely the
+// generator's own filter.
+const viewPath = join(root, "fort", "memory", "current.md");
+let view = null;
+try {
+  view = await readFile(viewPath, "utf8");
+} catch {
+  // A fort mid-founding may have a ledger before its first generated view.
+  // SKIPPING IS ANNOUNCED, NEVER SILENT: a checker that checks nothing must
+  // never report success without saying so.
+  console.log(
+    "distilled view: fort/memory/current.md absent — staleness gate SKIPPED (generate it with consolidate-memory.mjs)",
+  );
+}
+if (view !== null) {
+  const coreHeading = "## Core facts";
+  const headingIndex = view.indexOf(coreHeading);
+  if (headingIndex === -1)
+    failures.push(
+      `${viewPath}: no "${coreHeading}" section — the view is not in the shape consolidate-memory.mjs generates, so the staleness gate cannot read it`,
+    );
+  else {
+    const sectionStart = headingIndex + coreHeading.length;
+    const nextHeading = view.indexOf("\n## ", sectionStart);
+    const section = view.slice(
+      sectionStart,
+      nextHeading === -1 ? view.length : nextHeading,
+    );
+    const rendered = new Set(
+      [...section.matchAll(/fort\/memory\/facts\/([a-z0-9-]+)\.md/gu)].map(
+        ([, key]) => key,
+      ),
+    );
+    console.log(
+      `distilled view: ${rendered.size} core facts rendered / ${activeCoreFactKeys.length} active in the ledger`,
+    );
+    for (const key of supersededFactKeys)
+      if (rendered.has(key))
+        failures.push(
+          `${viewPath}: renders SUPERSEDED fact '${key}' — the view is stale and every seat reads it at session start; regenerate with consolidate-memory.mjs`,
+        );
+    for (const key of activeCoreFactKeys)
+      if (!rendered.has(key))
+        failures.push(
+          `${viewPath}: omits ACTIVE core fact '${key}' — the view is stale; regenerate with consolidate-memory.mjs`,
+        );
   }
 }
 console.log(
