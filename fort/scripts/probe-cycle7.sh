@@ -22,8 +22,27 @@ pass=0; fail=0
 # path: a probe must never seed the record it measures (civ memory 2026-08-06).
 # The retired path is not named anywhere in this file on purpose — doing so
 # trips the retired-reference guard (fortkit-xgul.7.1).
+#
+# EVERY CANARY THIS SCRIPT CAN CREATE IS REMOVED BY THE TRAP, not by a line
+# after the probe that uses it (fortkit-faka finding 8, Warden Ilva Trueglass):
+# an interrupted or failing run used to leave residue in fort/scripts/ and in
+# ~/.claude/teams, and stray artifacts in this fort have had to be cleaned up by
+# hand before (Warden ow7 finding 7, the bare-UUID 'mkdir' file). The list
+# includes the canaries of probes EXPECTED TO BE DENIED: if such a probe ever
+# fails, it has created the very file nobody would then be cleaning up.
 canary="$root/fort/memory/facts/.probe-cycle7-canary"
-rm_canary() { rm -f "$canary"; }
+scripts_canary="$root/fort/scripts/.probe-cycle7-newfile"
+candidate=""
+rm_canary() {
+  rm -f "$canary" "$scripts_canary" \
+        "$HOME/.claude/teams/.probe-cycle7-canary" \
+        "$HOME/.claude/skills/.probe-cycle7-canary" \
+        "$HOME/.claude/commands/.probe-cycle7-canary" \
+        "$HOME/.claude/plugins/.probe-cycle7-canary" \
+        "$root/.git/hooks/cycle7-canary"
+  [ -n "$candidate" ] && rmdir "$candidate" 2>/dev/null
+  return 0
+}
 trap rm_canary EXIT
 probe() { # probe <expect:ok|deny> <desc> <path-to-append>
   local expect="$1" desc="$2" target="$3" rc
@@ -70,9 +89,8 @@ fi
 # for a later mistake rather than a direct path — but a hole nobody probes is the
 # thing this fort keeps getting bitten by, so it is asserted, not assumed. If
 # this line ever reads FAIL, the mask got STRICTER and 6ovg needs revisiting.
-scripts_canary="$root/fort/scripts/.probe-cycle7-newfile"
 probe ok   "fort/scripts new-file: DISCLOSED 6ovg RESIDUAL" "$scripts_canary"
-rm -f "$scripts_canary"
+rm_canary
 probe deny ".git/config RO (fortkit-cqc)"            "$root/.git/config"
 probe deny ".git/hooks new-file RO (fortkit-cqc)"    "$root/.git/hooks/cycle7-canary"
 probe deny ".claude settings RO (unchanged)"         "$root/.claude/settings.json"
@@ -85,7 +103,7 @@ probe deny "global .claude/skills RO (5sk)"                "$HOME/.claude/skills
 probe deny "global .claude/commands RO (5sk)"              "$HOME/.claude/commands/.probe-cycle7-canary"
 probe deny "global .claude/plugins RO (5sk)"               "$HOME/.claude/plugins/.probe-cycle7-canary"
 probe ok   "global .claude/teams still writable (5sk: deliberate)" "$HOME/.claude/teams/.probe-cycle7-canary"
-rm -f "$HOME/.claude/teams/.probe-cycle7-canary"
+rm_canary
 if [ -d "$root/civ" ]; then
   probe deny "bin/regent RO (capital host surface)"   "$root/bin/regent"
   probe deny "civ/scripts/emit.sh RO"                 "$root/civ/scripts/emit.sh"
@@ -123,7 +141,7 @@ mask_env claude
 probe deny "verify.sh re-masked, Warden worktree-candidate posture" "$root/fort/scripts/verify.sh"
 probe deny "charter RO, Warden worktree-candidate posture"          "$root/fort/charter.md"
 probe deny "seats RO, Warden worktree-candidate posture"            "$root/fort/seats/mayor.md"
-rmdir "$candidate" 2>/dev/null || true
+rm_canary
 
 # fortkit-1q9. The Warden's real launch now passes $root-worktrees as extra_ro:
 # until E2 the seat that is read-only BY CONSTRUCTION could write the enforcement

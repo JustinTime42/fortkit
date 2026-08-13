@@ -144,6 +144,15 @@ require_bwrap || exit $?
 # so a worktree-candidate review still locks $root — the Warden is read-only
 # by construction in every posture, and the verify.sh Mayor re-grant is
 # re-masked here regardless of which tree is under review.
+# fortkit-1q9 (E2, 2026-08-12): $root-worktrees is the third argument for the
+# same reason and a measured one. Until it was added, the Warden — the seat that
+# is read-only BY CONSTRUCTION — could write the enforcement layer of every
+# worktree one directory sideways: fort/scripts, bin/ and civ/scripts in any of
+# them, proven WRITABLE by the E2 mask harness under this exact call. No change
+# to seat-sandbox.sh alone can close it, because the lib only carves the trees
+# its caller declares; only this argument can. Do not drop it when adapting this
+# launcher — the factory shipped it for a cycle with none of this reasoning
+# attached, which is fortkit-faka finding 6.
 build_mask claude "$root" "$root" "$root-worktrees" "$src"
 mask_env claude
 # Read-only node_modules bind (fortkit-8cv6, defect 2; longburn-5if). Appended
