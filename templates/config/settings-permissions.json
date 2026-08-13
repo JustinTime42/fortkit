@@ -53,9 +53,7 @@
       "Edit(docs/**)",
       "Edit(fort/**)",
       "WebFetch",
-      "WebSearch",
-      "Write(docs/**)",
-      "Write(fort/**)"
+      "WebSearch"
     ],
     "deny": [
       "Bash(cat *.env*)",
@@ -71,6 +69,7 @@
       "Edit(.git/config)",
       "Edit(.git/hooks/**)",
       "Edit(fort/events/*)",
+      "Edit(fort/events/*.jsonl)",
       "Edit(fort/scripts/emit.sh)",
       "Edit(fort/scripts/forge.sh)",
       "Edit(fort/scripts/lib/**)",
@@ -78,18 +77,7 @@
       "Edit(fort/scripts/status.sh)",
       "Edit(fort/scripts/warden.sh)",
       "Read(**/.env*)",
-      "Read(.env*)",
-      "Write(**/.env*)",
-      "Write(.env*)",
-      "Write(.git/config)",
-      "Write(.git/hooks/**)",
-      "Write(fort/events/*.jsonl)",
-      "Write(fort/scripts/emit.sh)",
-      "Write(fort/scripts/forge.sh)",
-      "Write(fort/scripts/lib/**)",
-      "Write(fort/scripts/mayor.sh)",
-      "Write(fort/scripts/status.sh)",
-      "Write(fort/scripts/warden.sh)"
+      "Read(.env*)"
     ],
     "additionalDirectories": ["{{REPO_PATH}}-worktrees"]
   },
