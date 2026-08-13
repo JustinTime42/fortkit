@@ -17,7 +17,9 @@ import { describe, expect, test } from "vitest";
 import {
   beadIdentity,
   descriptionOf,
+  diffBody,
   identityOf,
+  normalizer,
   rosterFromSeats,
   rows,
   run,
@@ -627,6 +629,131 @@ describe("drift watcher", () => {
     } finally {
       await rm(subject.directory, { recursive: true, force: true });
     }
+  });
+
+  // ── fortkit-o9iu finding 6: the roster gap was all-or-nothing ───────────
+  //
+  // readRoster raised the 9qts gap only when NO seat file parsed, so ONE seat
+  // file spelled a third way silently dropped THAT citizen, whose name then
+  // read as architecture drift in every launcher carrying it, undisclosed.
+  // Ilva's rule, and the reason it sits at the same noise level as before: an
+  // unseated fort's `{{UNFILLED}}` line DOES parse, so keying on "contains
+  // `Held by` and yields no occupant" adds no noise for a fort nobody has
+  // seated yet.  Its deliberate limit is pinned in the second half — a file
+  // with no `Held by` at all is not claimed to be a seat file.
+  test("discloses ONE seat file whose occupant line does not parse", async () => {
+    const subject = await fixture();
+    try {
+      await seat(subject.fort, "Emrith Cairnwright", "she/her");
+      const warden = join(subject.fort, "fort", "seats", "warden.md");
+      await writeFile(
+        warden,
+        (await readFile(warden, "utf8")).replace(
+          /^\*\*Held by:.*$/mu,
+          "**Held by** — Ilva Trueglass (she/her), a third spelling",
+        ),
+      );
+      const gaps = (await scan(subject)).gaps;
+      expect(
+        gaps.some(
+          (gap: { source: string; reason: string }) =>
+            gap.source.includes("warden.md") &&
+            gap.reason.includes("fortkit-o9iu"),
+        ),
+      ).toBe(true);
+
+      // The limit, stated as an assertion so it cannot be mistaken for a bug:
+      // a seat file carrying no `Held by` at all raises nothing, because the
+      // rule declines to guess which markdown files are seat files.
+      await writeFile(
+        warden,
+        (await readFile(warden, "utf8")).replace(
+          /^\*\*Held by.*$/mu,
+          "Occupant: someone, in a spelling nothing parses",
+        ),
+      );
+      expect(
+        (await scan(subject)).gaps.some((gap: { reason: string }) =>
+          gap.reason.includes("fortkit-o9iu"),
+        ),
+      ).toBe(false);
+    } finally {
+      await rm(subject.directory, { recursive: true, force: true });
+    }
+  });
+
+  // ── fortkit-o9iu finding 5: `-a` collapsed the token after ANY `-a` ──────
+  //
+  // The actor position is collapsed on both sides because the template writes
+  // the seat word and a seated fort writes its citizen's id.  The old pattern
+  // was `-a\s+\S+`, which swallows the token after any short `-a` flag —
+  // `rsync -a --delete` against `rsync -a --exclude` normalized EQUAL and the
+  // difference vanished, which is the one direction the module's own doc
+  // comment says nothing downstream can recover.
+  test("collapses the actor position without swallowing other -a flags", () => {
+    const normalize = normalizer(
+      { path: "/dev/null", name: "Alpha", project: "alpha" },
+      ["Emrith Cairnwright"],
+    );
+    expect(normalize("emit.sh work.begun 'x' -a mayor -s mayor")).toBe(
+      normalize("emit.sh work.begun 'x' -a emrith -s mayor"),
+    );
+    expect(normalize("rsync -a --delete src/ dst/")).not.toBe(
+      normalize("rsync -a --exclude=node_modules src/ dst/"),
+    );
+    expect(normalize("rsync -a \\")).toBe("rsync -a \\");
+  });
+
+  // ── fortkit-qu46: the diff can make a seat ERASE a citizen ───────────────
+  //
+  // E9 made the body identity-NORMALIZED, so a body no longer contains a
+  // citizen's name — but the body is `--- template / +++ fort`, and a seat
+  // converging a fort TOWARD the template applies the MINUS side.  Redaction
+  // stops a name being COPIED OUT; it does nothing to stop one being
+  // OVERWRITTEN.  The fixture is the capital's live mayor.sh shape.
+  test("labels a hunk pairing an identity placeholder against prose", () => {
+    const suspect = diffBody(
+      "Alpha",
+      "fort/scripts/mayor.sh",
+      'emit.sh session.start "The Overseer summons the Mayor" -a {{ACTOR}}\n',
+      'emit.sh session.start "The Overseer summons {{ACTOR}}" -a {{ACTOR}}\n',
+    );
+    expect(suspect.suspect).toBe(1);
+    expect(suspect.body).toContain("IDENTITY-SUSPECT");
+
+    // And the other direction must stay quiet: real architecture, no
+    // placeholder imbalance, is not to be labelled suspect or a reader learns
+    // to ignore the label.
+    const architecture = diffBody(
+      "Alpha",
+      "fort/scripts/mayor.sh",
+      "Never push or deploy on your own initiative.\n",
+      "Never push or deploy on your own initiative, or in a batch of other work.\n",
+    );
+    expect(architecture.suspect).toBe(0);
+    expect(architecture.body).not.toContain("IDENTITY-SUSPECT");
+  });
+
+  // ── fortkit-o9iu finding 2: the clip cut the divergence out of the body ──
+  //
+  // E9 raised the per-line cap to 1200 on mayor.sh's evidence.  The longest
+  // line in the corpus is fort/scripts/warden.sh's smoke prompt, which is
+  // byte-identical to roughly char 1123 and diverges after it — so a clip
+  // taken from the START of the line kept the identical prefix and threw away
+  // the only part anybody needed to read.  The window follows the divergence.
+  test("clips a long line around the divergence, not from its start", () => {
+    const shared = "x".repeat(2000);
+    const { body } = diffBody(
+      "Alpha",
+      "fort/scripts/warden.sh",
+      `${shared}TEMPLATE-TAIL\n`,
+      `${shared}FORT-TAIL-WORDING\n`,
+    );
+    expect(body).toContain("TEMPLATE-TAIL");
+    expect(body).toContain("FORT-TAIL-WORDING");
+    // The elision is disclosed rather than silent — degraded evidence a reader
+    // can see is degraded, never a lie by omission.
+    expect(body).toContain("elided");
   });
 
   // NON-VACUITY, and the assertion the pre-E9 watcher fails: with the roster

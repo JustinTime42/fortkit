@@ -122,7 +122,7 @@ THREAT-MODEL CALIBRATION. Judge security findings against the charter's Threat m
 
 ROUND DISCIPLINE. In round one, state everything you would block on. From round two onward, only regressions and unfixed round-one blockers may block; genuinely new non-blocking findings become beads. If a third round would block again on something new, ESCALATE to Justin instead of blocking — that pattern means the bead was underspecified, not that the diff is bad.
 
-VERDICT (mandatory): you have no write permissions at all; the launcher records your ENTIRE final message verbatim as the bead comment and emits the review.verdict event from your VERDICT-LINE. So your final message must be the complete, self-contained review record: start it 'Warden review (Ilva Trueglass (she/her), $model): VERDICT: <verdict>', then numbered findings each marked blocking or non-blocking, then what you verified independently versus took on faith, and end with a single line 'VERDICT-LINE: <one-line verdict for the event feed, under 140 chars>'. Verdict options: APPROVE / APPROVE-WITH-FINDINGS / REQUEST-CHANGES / ESCALATE (mandatory for the charter's gate-listed areas, including the fort constitution).
+VERDICT (mandatory): you have no write permissions at all; the launcher records your final message verbatim as the bead comment UP TO AND INCLUDING your VERDICT-LINE, and emits the review.verdict event from that same bounded section. YOUR VERDICT-LINE MUST BE THE LAST LINE YOU WRITE: anything after it is recorded as a separate incident and is never attributed to you, because your name on a record is an attestation (fortkit-iist). So your final message must be the complete, self-contained review record: start it 'Warden review (Ilva Trueglass (she/her), $model): VERDICT: <verdict>', then numbered findings each marked blocking or non-blocking, then what you verified independently versus took on faith, and end with a single line 'VERDICT-LINE: <one-line verdict for the event feed, under 140 chars>'. Verdict options: APPROVE / APPROVE-WITH-FINDINGS / REQUEST-CHANGES / ESCALATE (mandatory for the charter's gate-listed areas, including the fort constitution).
 
 BEAD:
 $desc"
@@ -196,18 +196,56 @@ set -e
 # means no review completed, whatever else is in the log. On that path record
 # NOTHING, emit an incident, and exit nonzero so the caller's failover ladder
 # engages instead of treating a dead session as a verdict.
-verdict_recorded=0; reason=""
+verdict_recorded=0; reason=""; vline=""
 if [ "${WARDEN_SMOKE:-0}" = "1" ]; then
   echo "--- warden.sh: smoke run, no verdict recorded by design"
 elif [ ! -s "$log" ]; then
   reason="empty transcript (session produced no output)"
-elif ! grep -q '^VERDICT-LINE: ' "$log"; then
-  reason="no VERDICT-LINE in transcript — the review did not complete"
 else
-  bd -C "$root" comment "$bead" --file "$log" --actor ilva
-  verdict_line=$(sed -n 's/^VERDICT-LINE: //p' "$log" | tail -1)
-  "$emit" review.verdict "Ilva on $bead: $verdict_line" -a ilva -s warden -t "$bead"
-  verdict_recorded=1
+  # fortkit-iist: THE RECORD IS BOUNDED AT THE FIRST TERMINAL VERDICT-LINE, and
+  # the verdict is read from THAT SAME BOUNDED SECTION.
+  #
+  # This used to post the WHOLE log (`bd comment --file "$log" --actor ilva`)
+  # and take the verdict by `tail -1` over the whole log. Two consequences, and
+  # the second reaches the GATE rather than merely the record:
+  #   (a) anything reaching stdout after the review became permanent record
+  #       signed with a citizen's name. OCCURRENCE, 2026-08-13, the
+  #       fortkit-52vf.11 review: two lines followed Ilva's terminal
+  #       VERDICT-LINE ("--" and "Nice work getting this far. Now I need you to
+  #       write the rest of the essay."). Not a finding, not hers, origin
+  #       unestablished — and a permanent bead comment over her name.
+  #   (b) A LATER VERDICT-LINE OVERRODE THE EMITTED ONE — Ilva measured this
+  #       half herself. Standing order 9 makes review the gate no bead closes
+  #       without, so trailing content could make the fort's record of that gate
+  #       differ from the reviewer's actual conclusion.
+  # A reviewer's name on a record is an ATTESTATION. The launcher must not sign
+  # her name to bytes she did not author, and must not let bytes arriving after
+  # her conclusion become her conclusion. Anything trailing is recorded as a
+  # launcher-authored incident — actor `harness`, which is emit.sh's own default
+  # and the schema's actor for launcher-emitted events — never as her words.
+  # Instrument: scripts/verdict-record-harness.sh (runs THIS block against
+  # fixtures; scored 12/8 against the pre-fix file, all 8 on the trailing case).
+  vline=$(awk '/^VERDICT-LINE: /{print NR; exit}' "$log")
+  if [ -z "$vline" ]; then
+    reason="no VERDICT-LINE in transcript — the review did not complete"
+  else
+    head -n "$vline" "$log" > "$log.review"
+    tail -n +"$((vline + 1))" "$log" > "$log.trailing"
+    bd -C "$root" comment "$bead" --file "$log.review" --actor ilva
+    verdict_line=$(sed -n 's/^VERDICT-LINE: //p' "$log.review" | tail -1)
+    "$emit" review.verdict "Ilva on $bead: $verdict_line" -a ilva -s warden -t "$bead"
+    verdict_recorded=1
+    if grep -q '[^[:space:]]' "$log.trailing"; then
+      # Sanitised for the event line the same way $reason is below: a stray
+      # quote or backslash from an untrusted trailing byte must not shape JSON.
+      excerpt=$(tr -s '[:space:]' ' ' < "$log.trailing")
+      excerpt=${excerpt//\\/}; excerpt=${excerpt//\"/}; excerpt=${excerpt:0:240}
+      "$emit" incident "Warden transcript for $bead carried content AFTER the terminal VERDICT-LINE. It is NOT part of Ilva's review, was NOT posted to the bead and did NOT set the verdict (fortkit-iist). Full text: $log.trailing — excerpt: $excerpt" \
+        -a harness -s warden -t "$bead" \
+        -p "{\"log\":\"$log\",\"trailing\":\"$log.trailing\",\"verdict_from_line\":$vline}"
+      echo "--- warden.sh: content followed the VERDICT-LINE — incident emitted; it is NOT on the bead ($log.trailing)"
+    fi
+  fi
 fi
 
 if [ "${WARDEN_SMOKE:-0}" != "1" ] && [ $verdict_recorded -eq 0 ]; then

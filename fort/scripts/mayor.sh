@@ -1,5 +1,17 @@
 #!/bin/bash
 # Talk to the Mayor. Usage: fort/scripts/mayor.sh  (add an alias: alias mayor='~/dev/fortkit/fort/scripts/mayor.sh')
+# In-sandbox launch refusal (longburn-5v4, amended on that fort's Mayor's own
+# finding): no seat launches another Mayor — any marker at all, including the
+# Mayor's own and the legacy '1', refuses. Only an unmasked shell launches this.
+# HOISTED ABOVE REPO RESOLUTION (fortkit-px7e, Warden blocking finding round 1,
+# measured "expected code 77, received code 1"): placed below the `cd`, a
+# directory that is not a git checkout dies at that line and the refusal is
+# NEVER EVALUATED — exit 1, no message, which is the opaque failure the guard
+# exists to replace. It reads nothing the repo resolution produces.
+if [ -n "${FORT_MASKED:-}" ]; then
+  echo "mayor.sh: REFUSED — already inside the '$FORT_MASKED' seat mask; no seat launches another Mayor (longburn-5v4)" >&2
+  exit 77
+fi
 REPO="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/fortkit)"
 cd "$REPO" || exit 1
 fort/scripts/emit.sh session.start "The Overseer summons Emrith" -a emrith -s mayor 2>/dev/null || true

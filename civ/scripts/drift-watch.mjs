@@ -27,6 +27,20 @@ import { execFile } from "node:child_process";
  * remaining hunks of the IDENTITY-NORMALIZED texts, so a seat acting on a
  * finding is reading architecture with the names already redacted and cannot
  * port a citizen by copying what it was shown.
+ *
+ * THAT SECOND GUARANTEE HOLDS IN ONE DIRECTION ONLY, and fortkit-qu46 is the
+ * other one.  The body is `--- template / +++ fort`, so a seat converging a
+ * fort TOWARD the template applies the MINUS side — and the template's side of
+ * an identity hunk is generic office prose (`the Mayor`) where the fort's is a
+ * placeholder (`{{ACTOR}}`).  Redaction stops a name being COPIED OUT; nothing
+ * about it stops one being OVERWRITTEN.  Normalization cannot close this,
+ * because `the Mayor` and `{{ACTOR}}` are both post-normalization text and
+ * nothing in the token substitution marks one as the office and the other as
+ * the person.  So such hunks are LABELLED — see `identitySuspect()` — and no
+ * record built from this file claims a hunk is architecture when it may not
+ * be.  Standing order 12 is applied per hunk: if you cannot separate them,
+ * stop and ask.  Converging the file is not the safe default; it is the
+ * destructive one.
  */
 import { createHash } from "node:crypto";
 import { access, readdir, readFile, stat } from "node:fs/promises";
@@ -98,7 +112,20 @@ function tokenPattern(token) {
 // seat-office word (`-a mayor`) and a seated fort with its citizen's id
 // (`-a emrith`); no token substitution can equate those, but their POSITION
 // can.  `-s <seat>` is deliberately untouched: the seat is architecture.
-const actorFlag = /(^|\s)-a\s+\S+/gmu;
+//
+// fortkit-o9iu finding 5: this was `-a\s+\S+`, which collapsed the token after
+// ANY short `-a` flag, positionally, on both sides.  `rsync -a --delete`
+// against `rsync -a --exclude=...` normalized EQUAL and the difference became
+// INVISIBLE — the one direction this module's own doc comment says nothing
+// downstream can recover.  Nothing was hidden yet only because the live
+// instance (`rsync -a \` in warden.sh:74 and its template twin) swallowed the
+// same continuation backslash on both sides.  Requiring ACTOR-ID SHAPE keeps
+// every real actor position and matches no flag, no backslash and no path.
+// RESIDUAL, disclosed rather than argued away: bash's own `[ x -a y ]` test
+// operator would still be collapsed.  It does not occur in the corpus, and
+// narrowing further would need to know which `-a` belongs to `emit.sh`, which
+// is exactly the kind of cleverness that fails silently.
+const actorFlag = /(^|\s)-a\s+([A-Za-z][\w-]*)(?=\s|$)/gmu;
 
 /**
  * Erase identity from a text so that what remains is architecture.
@@ -117,6 +144,21 @@ export function normalizer(fort, roster) {
   add(fort.path, "{{REPO_PATH}}");
   add(fort.name, "{{FORT_NAME}}");
   add(fort.project, "{{PROJECT}}");
+  // fortkit-o9iu finding 5, two sub-items DECLINED with the reason recorded,
+  // because for both of them the tightening costs more than the risk:
+  //   * `add(first.toLowerCase())` substitutes a bare given name everywhere.
+  //     It is how `-a emrith` and `Emrith Cairnwright` become one token, which
+  //     is load-bearing.  A citizen whose given name is also a corpus word
+  //     would over-normalize; no such name exists in any roster, the failure
+  //     is a name away and would be visible as a vanished finding, and any
+  //     length or dictionary guard would silently stop normalizing a real
+  //     citizen — a worse failure in the direction that cannot be recovered.
+  //   * `tokenPattern` does not stop substitution inside hyphenated compounds.
+  //     That is REQUIRED here, not tolerated: the template writes
+  //     `{{REPO_PATH}}-worktrees` (forge.sh:12, settings-permissions.json), so
+  //     the substitution must reach inside `/home/justin/dev/fortkit-worktrees`
+  //     or every worktree-bearing line reads as permanent drift.  Excluding
+  //     `-` from the guard would regress a working case to fix a hypothetical.
   for (const actor of roster) {
     add(actor, "{{ACTOR}}");
     const first = actor.split(/\s+/u)[0];
@@ -185,6 +227,22 @@ async function readRoster(fortPath, gaps, fortName) {
         reason:
           "no occupant line parsed in any seat file; identity cannot be normalized and will read as architecture drift (fortkit-9qts)",
       });
+    // fortkit-o9iu finding 6: the check above is ALL-OR-NOTHING, so a single
+    // seat file spelled some third way dropped THAT citizen silently — the
+    // same failure class as 9qts, one quarter as loud, and undisclosed.  The
+    // per-file rule keys on a file that CLAIMS an occupant (`Held by`) and
+    // yields none, which is why it adds no noise for an unseated fort: the
+    // template's `{{UNFILLED}}` line parses, and is then discarded by
+    // `rosterFromSeats` as the placeholder it is.  DELIBERATE LIMIT: a seat
+    // file carrying no `Held by` at all raises nothing, because this rule
+    // declines to guess which markdown files are meant to be seat files.
+    for (const [index, path] of seats.entries())
+      if (/Held by/u.test(texts[index]) && !occupantLine.test(texts[index]))
+        gaps.push({
+          source: `${fortName}:${relative(fortPath, path)}`,
+          reason:
+            "seat file carries a 'Held by' line that does not parse; THIS citizen is dropped from the roster and their name will read as architecture drift (fortkit-o9iu finding 6)",
+        });
     return rosterFromSeats(texts);
   } catch (error) {
     gaps.push({
@@ -291,10 +349,90 @@ export function lineHunks(before, after) {
   return hunks;
 }
 
-const clip = (line) =>
-  line.length > diffColumnCap
-    ? `${line.slice(0, diffColumnCap)} …[clipped]`
-    : line;
+/**
+ * The first column at which a line and its counterpart diverge.
+ */
+function firstDifference(left, right) {
+  if (typeof right !== "string") return 0;
+  const limit = Math.min(left.length, right.length);
+  let index = 0;
+  while (index < limit && left[index] === right[index]) index += 1;
+  return index;
+}
+
+/**
+ * fortkit-o9iu finding 2.  E9 raised the per-line cap to 1200 on `mayor.sh`'s
+ * evidence and STILL cut the divergence out of the largest real case: the
+ * longest line in the compared corpus is `fort/scripts/warden.sh`'s smoke
+ * prompt, byte-identical to roughly char 1123 and diverging after it, so a
+ * clip taken from the START of the line kept 1123 characters nobody needed and
+ * threw away the only part anybody did.
+ *
+ * The window FOLLOWS the divergence instead, which fixes the class rather than
+ * the instance and — the reason this was preferred to raising the cap — costs
+ * no extra bytes.  The sibling cost is real: every filed bead description and
+ * appended comment carries this body, and `.beads/issues.jsonl` is git-tracked
+ * and ships to the elder forts under fortkit-or2.1.  So `diffCharCap` stays at
+ * 12000 and the existing budget is spent on the right part of the line.
+ * The elision is disclosed in the body: degraded evidence a reader can SEE is
+ * degraded, never a lie by omission.
+ */
+const clipLead = 200;
+const clip = (line, focus = 0) => {
+  if (line.length <= diffColumnCap) return line;
+  const start = Math.max(
+    0,
+    Math.min(focus - clipLead, line.length - diffColumnCap),
+  );
+  const end = Math.min(line.length, start + diffColumnCap);
+  return [
+    start > 0 ? `…[${start} identical chars elided] ` : "",
+    line.slice(start, end),
+    end < line.length ? " …[clipped]" : "",
+  ].join("");
+};
+
+/**
+ * What `normalizer()` leaves behind where a PERSON or a SETTLEMENT used to be.
+ *
+ * `{{PROJECT}}` and `{{REPO_PATH}}` are deliberately NOT here, and the reason
+ * is measured rather than aesthetic: a fort-local bead id carries the project
+ * name (`ForgeOs-8c9`, `longburn-suti`), so it normalizes to
+ * `{{PROJECT}}-8c9` — and counting those flagged 4 of 7 hunks in Farlantern's
+ * `seat-sandbox.sh`, none of which is a citizen.  A label a reader learns to
+ * dismiss protects nobody.  fortkit-qu46 names `{{ACTOR}}`/`{{FORT_NAME}}`
+ * precisely, and the measured fixture (the capital's `mayor.sh`) is still
+ * caught by both of them.
+ */
+const identityPlaceholder = /\{\{(?:ACTOR|FORT_NAME)\}\}/gu;
+
+function placeholderCensus(lines) {
+  const census = new Map();
+  for (const line of lines)
+    for (const match of line.matchAll(identityPlaceholder))
+      census.set(match[0], (census.get(match[0]) ?? 0) + 1);
+  return census;
+}
+
+/**
+ * fortkit-qu46: does this hunk pair an identity placeholder against prose?
+ *
+ * Counts, not sets, because the measured case on the capital's `mayor.sh` is
+ * `-a {{ACTOR}}` on one side against `"...summons {{ACTOR}}" -a {{ACTOR}}` on
+ * the other: the same placeholder, a different number of times.  A mismatch
+ * means one side says a citizen goes here and the other says office prose
+ * does, which is precisely the hunk whose MINUS side overwrites a living
+ * citizen.  Over-flagging is the safe direction and the label says SUSPECT
+ * rather than forbidden: it asks a reader to look, which is what standing
+ * order 12 asks for anyway.
+ */
+export function identitySuspect(hunk) {
+  const template = placeholderCensus(hunk.template);
+  const fort = placeholderCensus(hunk.fort);
+  for (const key of new Set([...template.keys(), ...fort.keys()]))
+    if ((template.get(key) ?? 0) !== (fort.get(key) ?? 0)) return true;
+  return false;
+}
 
 /**
  * The budget is on the WHOLE body, not only on the line count, because the
@@ -308,9 +446,12 @@ const clip = (line) =>
 const diffCharCap = 12000;
 
 /**
- * The evidence a reader acts on: the architecture hunks, with identity already
- * redacted to `{{ACTOR}}` and friends.  A seat that copies what this shows it
- * cannot port a citizen's name, because the name is not in it.
+ * The evidence a reader acts on: the hunks surviving identity normalization,
+ * with identity already redacted to `{{ACTOR}}` and friends.  A seat that
+ * copies what this shows it cannot port a citizen's name, because the name is
+ * not in it — and a hunk whose MINUS side would OVERWRITE one is labelled
+ * IDENTITY-SUSPECT (fortkit-qu46), because redaction does not cover that
+ * direction and the count must not claim it does.
  */
 export function diffBody(fortName, path, templateText, fortText) {
   const hunks = lineHunks(templateText, fortText);
@@ -320,26 +461,39 @@ export function diffBody(fortName, path, templateText, fortText) {
   ];
   let emitted = 0;
   let omitted = 0;
+  let suspect = 0;
   let budget = diffCharCap;
   const full = () => emitted >= diffLineCap || budget <= 0;
   for (const [index, hunk] of hunks.entries()) {
+    // Counted BEFORE the budget check: a hunk dropped for space is still a
+    // hunk the reader must be told about, or the census under-reports exactly
+    // when the body is too big to read.
+    const flagged = identitySuspect(hunk);
+    if (flagged) suspect += 1;
     if (full()) {
       omitted += hunk.template.length + hunk.fort.length;
       continue;
     }
     body.push(
-      `@@ hunk ${index + 1} of ${hunks.length}${hunk.coarse ? " (whole file: too large for a line diff)" : ""} @@`,
+      `@@ hunk ${index + 1} of ${hunks.length}${hunk.coarse ? " (whole file: too large for a line diff)" : ""}${flagged ? " [IDENTITY-SUSPECT — one side carries an identity placeholder the other does not; applying the '-' side may OVERWRITE A LIVING CITIZEN (fortkit-qu46). Standing order 12: separate them, or stop and ask]" : ""} @@`,
     );
-    for (const [sign, lines] of [
-      ["-", hunk.template],
-      ["+", hunk.fort],
+    for (const [sign, lines, counterparts] of [
+      ["-", hunk.template, hunk.fort],
+      ["+", hunk.fort, hunk.template],
     ])
-      for (const line of lines) {
+      for (const [position, line] of lines.entries()) {
         if (full()) {
           omitted += 1;
           continue;
         }
-        const rendered = `${sign}${clip(line)}`;
+        // The clip window follows the divergence only when the two sides pair
+        // up one-for-one; otherwise there is no counterpart to diverge from
+        // and it falls back to the start of the line.
+        const focus =
+          lines.length === counterparts.length
+            ? firstDifference(line, counterparts[position])
+            : 0;
+        const rendered = `${sign}${clip(line, focus)}`;
         body.push(rendered);
         emitted += 1;
         budget -= rendered.length;
@@ -347,9 +501,9 @@ export function diffBody(fortName, path, templateText, fortText) {
   }
   if (omitted > 0)
     body.push(
-      `[${omitted} further changed lines omitted; ${hunks.length} architecture hunks in total — read the files for the rest]`,
+      `[${omitted} further changed lines omitted; ${hunks.length} hunks surviving identity normalization in total — read the files for the rest]`,
     );
-  return { body: body.join("\n"), hunks: hunks.length };
+  return { body: body.join("\n"), hunks: hunks.length, suspect };
 }
 
 /** The stable identity of a finding: a fort and a path, and nothing else. */
@@ -368,7 +522,7 @@ function makeFinding(
 ) {
   const fortHash = sha256(fortContent);
   const templateHash = sha256(templateContent);
-  const { body, hunks } = diffBody(
+  const { body, hunks, suspect } = diffBody(
     fort.name,
     path,
     normalize(templateContent),
@@ -382,6 +536,7 @@ function makeFinding(
     fortHash,
     templateHash,
     hunks,
+    suspect,
     identity: identityOf(fort.name, path),
     fingerprint: sha256(`${fort.name}\0${path}\0${fortHash}\0${templateHash}`),
     diff: body,
@@ -580,7 +735,10 @@ export async function scan({
               fortContent,
               templateContent,
               direction === "template" ? "upgrade-offer" : "backport",
-              `${direction}-newer divergence outside identity`,
+              // fortkit-qu46: NOT "outside identity".  Normalization erases
+              // tokens, not phrasing, so what survives it is not thereby
+              // architecture — see identitySuspect().
+              `${direction}-newer divergence surviving identity normalization`,
               normalize,
             ),
           );
@@ -791,7 +949,12 @@ export function descriptionOf(finding) {
   return [
     finding.reason,
     `Suggested classification: ${finding.suggestion}`,
-    `Architecture hunks (identity normalized): ${finding.hunks}`,
+    `Hunks surviving identity normalization: ${finding.hunks}`,
+    ...(finding.suspect > 0
+      ? [
+          `IDENTITY-SUSPECT hunks: ${finding.suspect} — at least one hunk pairs an identity placeholder against prose. Applying the '-' side of those hunks can OVERWRITE A LIVING CITIZEN (fortkit-qu46); standing order 12 is applied per hunk, so separate them or stop and ask.`,
+        ]
+      : []),
     `Drift identity: ${finding.identity}`,
     `Drift fingerprint: ${finding.fingerprint}`,
     "",
@@ -807,7 +970,12 @@ export function commentOf(finding) {
     "",
     finding.reason,
     `Suggested classification: ${finding.suggestion}`,
-    `Architecture hunks (identity normalized): ${finding.hunks}`,
+    `Hunks surviving identity normalization: ${finding.hunks}`,
+    ...(finding.suspect > 0
+      ? [
+          `IDENTITY-SUSPECT hunks: ${finding.suspect} — at least one hunk pairs an identity placeholder against prose. Applying the '-' side of those hunks can OVERWRITE A LIVING CITIZEN (fortkit-qu46); standing order 12 is applied per hunk, so separate them or stop and ask.`,
+        ]
+      : []),
     `Drift identity: ${finding.identity}`,
     `Drift fingerprint: ${finding.fingerprint}`,
     "",
@@ -871,6 +1039,15 @@ function byIdentity(beads) {
  * the bead already exists and a second one would inflate the board
  * (fortkit-fnjn).  Deferred and re-observed findings alike are counted in
  * `report.propagationGaps`, which is the census the parity gate reads.
+ *
+ * ONE CLAUSE ON THAT COMPLETENESS, because the comment used to overstate it
+ * (fortkit-o9iu finding 7): the census is built from `decide()`'s decisions,
+ * which derive from `scan()`'s ACTIVE findings, and allowlist-suppressed
+ * findings are filtered before they reach either.  So an ALLOWLISTED absence
+ * is absent from this census.  That is the intended behaviour — an allowlist
+ * entry is an approved suppression, the analogue of the explicit written
+ * decline above — but it is a stated exception rather than a gap in a census
+ * that claims to have none.
  */
 export async function decide(findings, beads, readComments) {
   const { open, closed } = byIdentity(beads);
