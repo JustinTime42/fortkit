@@ -19,6 +19,12 @@ const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const templateLauncher = join(repoRoot, "templates/fort/scripts/mayor.sh");
 const roots: string[] = [];
 
+function unmaskedEnvironment() {
+  const environment = { ...process.env };
+  delete environment.FORT_MASKED;
+  return environment;
+}
+
 async function createFort() {
   const root = await mkdtemp(join(tmpdir(), "fortkit-mayor-launcher-"));
   roots.push(root);
@@ -63,7 +69,7 @@ describe("Mayor template launcher", () => {
       await expect(
         execFileAsync("bash", [launcher], {
           cwd: root,
-          env: { ...process.env, FORT_MASKED: marker },
+          env: { ...unmaskedEnvironment(), FORT_MASKED: marker },
           timeout: 5_000,
         }),
       ).rejects.toMatchObject({
@@ -83,7 +89,7 @@ describe("Mayor template launcher", () => {
       execFileAsync("bash", [launcher], {
         cwd: root,
         env: {
-          ...process.env,
+          ...unmaskedEnvironment(),
           MAYOR_NO_MASK: "1",
           PATH: `${join(root, "bin")}:${process.env.PATH}`,
         },
