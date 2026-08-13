@@ -142,5 +142,10 @@ run_step test npm run test
 # lib was linted and the FACTORY's copy of it was not — and the factory copy is
 # the one every future fort is founded on. scripts/*.sh joined with it, so the
 # repo's own tooling (mask-harness.sh, verify-impl.sh) is on the surface too.
-run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh templates/fort/scripts/*.sh templates/fort/scripts/lib/*.sh civ/scripts/*.sh scripts/*.sh
+# templates/scripts/*.sh joined 2026-08-13 (fortkit-n3bk finding 4): E2b created
+# templates/scripts/verify-impl.sh in the same sitting that put the SHIPPED
+# scripts/*.sh on the surface, and the factory's copy was left off it — the same
+# class as fortkit-ddvo, one directory over. The factory's verifier is the one
+# every future fort inherits, so it is exactly the copy that must not rot.
+run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh templates/fort/scripts/*.sh templates/fort/scripts/lib/*.sh templates/scripts/*.sh civ/scripts/*.sh scripts/*.sh
 emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck"]}'
