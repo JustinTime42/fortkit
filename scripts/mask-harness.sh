@@ -69,9 +69,24 @@ build_fixture() {
 inmask() { bwrap "${mask[@]}" -- bash -c "$1" 2>&1; }
 
 # Assert a path is NOT writable-through-content (append must fail).
+#
+# ZERO-BYTE APPEND, NOT `printf x` (fortkit-qbq2, 2026-08-12). Four of this
+# function's callers target REAL global files, not fixture copies — A8a-A8d point
+# at $HOME/.claude/{civilization.json,skills/civ/SKILL.md,commands/park.md,
+# plugins/installed_plugins.json}, because the 5sk carve-outs bind those exact
+# paths and a fixture copy would not test them. With `printf x` this function
+# APPENDED A BYTE to each one whenever the path was writable — which is precisely
+# the positive-control case — so the harness corrupted the real civilization
+# registry and the real plugin manifest into invalid JSON, and the Regent could
+# not launch at all (exit 5, no output). The harness damaged the system exactly
+# when it was proving it discriminates.
+#
+# `printf '' >>` still fails EROFS on a read-only bind, because open(O_WRONLY|
+# O_APPEND) is refused before any write happens, and it writes NOTHING when the
+# path is writable. Verified by hand the same day on a kernel-RO path.
 assert_ro() {
   local label="$1" path="$2" out
-  out="$(inmask "printf x >> '$path' && echo WROTE || echo BLOCKED:\$?")"
+  out="$(inmask "printf '' >> '$path' && echo WROTE || echo BLOCKED:\$?")"
   case "$out" in
     *WROTE*)   bad "$label" "APPEND SUCCEEDED — path is writable" ;;
     *BLOCKED*) ok  "$label" "append blocked" ;;
