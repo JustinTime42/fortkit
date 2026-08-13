@@ -1164,3 +1164,98 @@ should name the seat if it matters who learned it.
   sits at its END. Budget the WHOLE body, not the line count, and disclose the
   cap in the body. **Check what your truncation removes on the specific case the
   work is about, not on the average case.**
+
+- 2026-08-13 (edict 19, E10 of the fortkit-52vf programme — five beads no seat
+  can touch): **A LAUNCHER THAT PIPES A SESSION'S RAW STDOUT INTO A DURABLE
+  RECORD UNDER AN ACTOR ID CAN RECORD A VERDICT THE REVIEWER DID NOT GIVE.**
+  `warden.sh` posted the WHOLE transcript as a bead comment signed `ilva` and
+  took the verdict by `tail -1` over the whole log, so bytes arriving AFTER her
+  conclusion became her conclusion — and standing order 9 makes review the gate
+  no bead closes without. Repaired by bounding the record at the FIRST terminal
+  `VERDICT-LINE` and reading the verdict from that same bounded section.
+  **`forge.sh` and `herald.sh` are clean; `civ/scripts/chronicler.sh` had BOTH
+  halves** (`cp "$log" "$record"` plus the same `tail -1`) and was repaired in
+  the same change. When a launcher's behaviour narrows, THE SEAT PROMPT MOVES
+  WITH IT: both prompts claimed "the launcher records your ENTIRE final message
+  verbatim", which the fix made an overstatement — the same class of defect as
+  the one being repaired.
+
+- 2026-08-13: **REDACTION IS DIRECTIONAL, AND A DIFF HAS TWO SIDES.** E9 made
+  the drift watcher's finding bodies identity-normalized so a body cannot leak a
+  citizen's name. The body is `--- template / +++ fort`, so a seat converging a
+  fort TOWARD the template applies the MINUS side — and writes "The Overseer
+  summons the Mayor" OVER a living citizen. **Stopping a name being COPIED OUT
+  does nothing to stop one being OVERWRITTEN**, and normalization cannot close
+  it, because `the Mayor` and `{{ACTOR}}` are both post-normalization text.
+  Hunks pairing a placeholder against prose are now labelled IDENTITY-SUSPECT
+  and counted separately — by COUNTS, not sets, because the measured case is the
+  same placeholder a different number of times on each side.
+
+- 2026-08-13: **A DETECTOR TUNED ON THE WRONG TOKEN SET TEACHES READERS TO
+  IGNORE IT.** My first identity-suspect rule counted `{{PROJECT}}` and
+  `{{REPO_PATH}}`. A fort-local BEAD ID carries the project name, so
+  `ForgeOs-8c9` normalizes to `{{PROJECT}}-8c9` and flagged 4 of 7 hunks in a lib
+  file, none of which is a citizen. Narrowed to `{{ACTOR}}`/`{{FORT_NAME}}` —
+  what the bead specified in the first place — and the measured fixture is still
+  caught. **Over-flagging is the safe direction only while the label is still
+  believed.**
+
+- 2026-08-13: **A CORRECTION THAT QUOTES THE FALSE CLAIM VERBATIM STILL GREPS AS
+  THE DEFECT.** My repair of the lib's false deny-table clause quoted the retired
+  wording, so the bead's own acceptance check (`grep … show zero remain`) scored
+  1 in all four copies instead of 0. Paraphrase the retired claim; a literal in a
+  comment fails a zero-tolerance check exactly like a live instruction (the E1
+  lesson, second sighting).
+
+- 2026-08-13: **AN EDICT'S SCOPE EXCLUSION IS A CLAIM, AND CLAIMS GET MEASURED.**
+  E10 excluded Farlantern from the mayor.sh backport — "longburn is the ORIGIN
+  and needs nothing" — on a recorded measurement that it "checks on ENTRY, at its
+  lines 8-9". Measured: `cd "$REPO" || exit 1` sits at line 4 and the guard at
+  8-11, so **the origin carried the very defect its own backport was hoisting to
+  fix**, and two forts were repaired against a description of a file nobody had
+  re-read. The earlier reading counted `FORT_MASKED` line numbers and never asked
+  what line 4 was. **A false premise is not by itself authority to widen an
+  edict**: measured, reported, asked the Overseer, then acted.
+
+- 2026-08-13: **A PROBE OF A LAUNCHER MUST NOT BE ABLE TO LAUNCH IT.** Testing
+  the mayor.sh guard means running mayor.sh, and a guard that has regressed runs
+  on past the check to `emit.sh session.start` and `exec bwrap … claude` — a
+  false `session.start` and a live Mayor, the false-record class recorded twice
+  in this civilization. **The safe shape: render the copy to scratch with its
+  repo FALLBACK repointed at a path that does not exist**, so `cd` fails on
+  anything reaching it. That is also exactly the non-git-checkout condition the
+  defect lives in, so the safety measure and the test are the same construction.
+  Scores: 4 FAIL / 1 PASS in all three live forts before, 5 PASS after, with the
+  template at 5/5 throughout as the discriminating control.
+
+- 2026-08-13: **ONE `emit.sh` PER BASH CALL, EACH IN ITS OWN `( cd … && … )`.**
+  I wrote `cd /home/justin/dev/longburn && ./fort/scripts/emit.sh …` and then a
+  second `./fort/scripts/emit.sh …` on the NEXT LINE of the same call. Cwd
+  persists within a call and emit.sh resolves its stream from `$PWD`, so a
+  fortkit incident landed in Farlantern's stream. **This is fortkit-nvk, this
+  seat's founding scar, committed by the seat that carries it in its own
+  briefing.** Corrected append-only with `incident.corrected` naming the misfiled
+  timestamp. A remember entry you have read is still not a defect you have
+  avoided — the only thing that avoids it is the shell construction.
+
+- 2026-08-13: **`build_mask claude "$root" "$root"` IS THE WARDEN'S POSTURE, NOT
+  THE MAYOR'S.** The second `$root` is an extra READ-ONLY path, which is what
+  makes the Warden read-only by construction — and it made my in-mask verify
+  probe die EROFS on `node_modules/.vite-temp`. For a Mayor-shaped mask it is
+  `build_mask claude "$REPO"` with no extra_ro. Both spellings look correct and
+  only one of them is the posture you meant.
+
+- 2026-08-13: **`bd comment <id> --file <path>` IS THE SAFE LANE FOR PROSE ON A
+  BEAD**, and it retires the whole hazard family recorded here (executed
+  backticks, quote mangling, heredoc delimiters). Every record in this sitting
+  went that way and none of them could fire. Use it for anything longer than a
+  sentence.
+
+- 2026-08-13: **A HARNESS SHOULD TEST THE SHIPPED CODE, NOT A COPY OF ITS
+  LOGIC.** `scripts/verdict-record-harness.sh` extracts the REAL recording block
+  from the REAL launcher by anchors chosen to exist in BOTH the pre-fix and
+  post-fix files, then runs it against fixtures with `bd` and the emitter
+  stubbed. That is what let it score 12/8 against the shipped file and 20/0
+  against the fix, with all 8 failures on the one fixture. It refuses (exit 3) on
+  an empty extraction, which it did on its first run — the anchors are the
+  fragile part, so the refusal is the load-bearing feature.
