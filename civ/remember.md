@@ -814,3 +814,117 @@ should name the seat if it matters who learned it.
   fifteen minutes. Watch them with `kill -0 <pid>` in a loop — and parse your
   own pid list correctly: `read -r n p` on "fortkit warden smoke pid=NNN" gives
   `p=warden`, which reports three live sessions as dead.
+
+- 2026-08-12 (edict 16, E2b of the fortkit-52vf programme — clearing the
+  kernel-RO decks): **SHAPE B, AND THE LESSON IS THAT A PER-FILE MOUNT PROTECTS
+  A FILE AND NOT A LOCATION.** Shape A made every file in `fort/scripts` a
+  read-only mount point and left the DIRECTORY writable so `verify.sh` could be
+  edited. The harness measured `unlink=NO rename=YES`: a seat could rename the
+  whole directory aside, put its own `fort/scripts` in place, and
+  `~/.local/bin/mayor` would exec it ON THE HOST, UNMASKED. The answer was to
+  stop carving and start MOVING — `fort/scripts` is one whole-directory bind
+  again, `verify.sh` is a read-only shim, and `scripts/verify-impl.sh` holds the
+  verifier the fort evolves. **When a design needs one file in a locked
+  directory to be mutable, move the file out; do not unlock the directory.**
+
+- 2026-08-12: **RELOCATING A FILE MOVES ITS PERMISSIONS TOO, AND THE NEW
+  LOCATION'S DEFAULT IS PROBABLY WRONG.** Moving the verifier into repo
+  `scripts/` put it inside `$root`, which is READ-WRITE to the Forge apart from
+  the carve-outs — so Shape B, uncorrected, would have let the unattended seat
+  edit the verifier that judges its own work, while closing a different hole.
+  The Overseer's own spec called this "the wrinkle absent from my first
+  description". The fix is one line in the codex posture. **Ask what the
+  destination directory grants before deciding a relocation is safe.**
+
+- 2026-08-12: **THE HARNESS MUST BE INVERTED BEFORE THE CODE IS TOUCHED.** E2b's
+  assertions were rewritten first and run against the OLD lib: 55 pass / 6 fail,
+  and the six were exactly the defects the edict names. Then the lib changed and
+  scored 61/0 on all four copies. Doing it in that order makes the six a
+  POSITIVE CONTROL rather than a hoped-for result, and it is the only way to
+  know an inverted assertion actually inverted. The pre-E2 lib scores 44/17 on
+  the same set, so the instrument's discriminating power is re-established with
+  numbers rather than assumed from last time.
+
+- 2026-08-12: **A DESTRUCTIVE PROBE NEEDS A RESTORE THAT ABORTS THE RUN WHEN IT
+  FAILS.** `assert_dir_immovable` renames a directory that CAN move, unlike
+  `assert_immovable` whose rename always fails. The naive version left
+  `fort/scripts` renamed for a whole run and made four later assertions pass
+  VACUOUSLY — "append blocked" and "new file blocked" are trivially true of a
+  path that is gone. The rewritten one restores, VERIFIES the restore, and
+  prints a banner and `exit 3` if the restore failed. Its restore path was
+  exercised for real against the Shape A lib and the remaining 55 assertions ran
+  normally, which is the only proof that matters. And a probe of this class
+  belongs on a FIXTURE: `probe-cycle7.sh` runs against live forts and says in a
+  comment why the rename half is deliberately not there.
+
+- 2026-08-12: **`[ -f ]` IS FALSE FOR A SOCKET, so the obvious belt would have
+  silently stopped masking the docker socket.** fortkit-faka finding 5 asked for
+  `[ -e ]` -> `[ -f ]` at the secret-glob sweep (right: a directory matching
+  `*env*~` reaching `--ro-bind /dev/null` ABORTS BWRAP and no seat launches
+  anywhere) and suggested the same at the bind site "for belt" (wrong:
+  MASK_FILES also carries the docker and podman sockets and `SSH_AUTH_SOCK`).
+  The bind site tests `[ -e ] && [ ! -d ]`. **A predicate that is right for one
+  member of a list is not right for the list.**
+
+- 2026-08-12: **A CORRUPTION THAT BREAKS A PARSER GETS FIXED THE SAME HOUR; THE
+  IDENTICAL CORRUPTION IN A FILE NOBODY PARSES SITS UNTIL SOMEONE DIFFS IT.**
+  fortkit-qbq2's harness appended a byte to four real `~/.claude` files. The two
+  JSON ones became invalid and were repaired immediately. The two MARKDOWN ones
+  — `skills/civ/SKILL.md` and `commands/park.md` — still carried `xx` when I
+  looked eight hours later, and the first of those is the `/civ` skill loaded as
+  INSTRUCTION into every session that invokes it. Repaired by truncating exactly
+  two bytes with the pre-image byte count asserted.
+
+- 2026-08-12: **A SYMLINK DOES NOT INHERIT ITS TARGET'S MASK.** The installed
+  skills are now symlinks into `fortkit/skills/` (fortkit-4n8c), so
+  `~/.claude/skills` being kernel-RO stopped protecting the CONTENT the moment
+  the entries became links — a masked seat could change the loaded instruction
+  by editing a tracked repo file. `skills/` therefore joins `fort/charter.md`
+  and `fort/seats/` under the cycle-7 line: prose-gated for attended seats,
+  kernel-locked for the Forge, which cannot ask first. **Check what a link
+  resolves to before treating the link's bind as protection.**
+
+- 2026-08-12: **`claude --help` DOES NOT RESOLVE PERMISSION RULES, so a
+  --help-based check for inert `Write()` rules measures nothing and reports 0.**
+  My first measurement of fortkit-yowr was "0 warnings in all three forts" and
+  it was worthless; the positive control (a scratch project with exactly one
+  `Write()` deny rule, which also scored 0) is what caught it. The detector that
+  discriminates is `claude --dangerously-skip-permissions < /dev/null`. Also
+  confirmed: `Edit(x)` alone still binds the WRITE tool, so converting each
+  `Write(x)` to `Edit(x)` loses nothing — 37/42/31 inert lines removed, 0
+  warnings in three real Mayor launches.
+
+- 2026-08-12: **A WRAPPER THAT ENDS IN `exec` HAS NO `--help`.** My smoke test
+  of the repaired `~/.local/bin/mayor` was `mayor --help | head -3`. It exec'd
+  `fort/scripts/mayor.sh` and started a REAL Mayor session, putting a
+  `session.start` under Emrith's actor id in the capital's stream before SIGPIPE
+  killed it. Corrected as an appended incident naming the timestamp. Three more
+  followed deliberately at 22:45:45 for the acceptance test, one per fort, each
+  corrected the same way. **Every Regent launcher verification writes under the
+  fort's OWN citizen's actor id; the bracketing edict.begun/ended is the only
+  correlation, and the correction is owed each time.**
+
+- 2026-08-12: **THE INSTALL LANE FOR KERNEL-RO PATHS IS
+  `python3 <patcher> "$f" "$f.tmp" && mv`, AND IT WORKS WHERE `cp` DOES NOT.**
+  Four `seat-sandbox.sh` copies, `probe-cycle7.sh`, three `verify.sh` and
+  `bin/fort-init` all landed this way without a single Overseer round trip,
+  against the 2026-08-11 and 2026-08-12 entries predicting hand-installs. `bin/`
+  refused a compound `python3 … && mv` in one command and accepted
+  `install -m 755` from scratch as its own command. `civ/scripts/**` was not
+  tested this sitting and the 2026-08-12 entry about it stands.
+
+- 2026-08-12: **WHEN A FIX MUST REACH FOUR DIVERGED COPIES, THE PATCHER IS
+  GATED ON REPRODUCING THE PROVEN CANDIDATE.** Used three times tonight (B, C,
+  A): hand-write for fortkit, prove by harness and by a dedicated probe, then
+  require the patcher to regenerate that exact file byte-for-byte from the
+  unpatched original before it is allowed near another copy — then read every
+  REMOVED line of every copy individually. B removed 2 lines per copy, C removed
+  2, A removed 45. Nothing of longburn's codex-auth redesign or ForgeOs's NuGet
+  grant was flattened.
+
+- 2026-08-12: **ForgeOs's `forge.sh` IS THE LAST INLINE MASK AND NOTHING IN THE
+  LIB REACHES IT.** Shape B's codex carve-out for `scripts/verify-impl.sh`
+  could not reach Proofdelve's Forge, which would have made it the one seat in
+  the civilization able to rewrite the verifier judging its own work. Four
+  RO_PATHS entries were added to that launcher directly, commented as a stopgap.
+  **fortkit-6jf should be the next sitting: every mask edit widens that gap.**
