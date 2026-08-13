@@ -25,10 +25,16 @@ build_fixture() {
   # Refuse to operate anywhere but the probe path — this function deletes.
   case "$ROOT" in *e2probe) : ;; *) echo "refusing: probe root must end in e2probe (got $ROOT)"; exit 2 ;; esac
   rm -rf "$ROOT" "$WTS" 2>/dev/null
-  mkdir -p "$ROOT"/{fort/scripts/lib,fort/profiles,fort/seats,bin,civ/scripts,civ/profiles,.claude,sub,src}
+  mkdir -p "$ROOT"/{fort/scripts/lib,fort/profiles,fort/seats,bin,civ/scripts,civ/profiles,.claude,sub,src,scripts,skills/civ}
   for s in verify.sh mayor.sh warden.sh emit.sh; do
     printf '#!/bin/bash\n# probe %s\n' "$s" > "$ROOT/fort/scripts/$s"; chmod +x "$ROOT/fort/scripts/$s"
   done
+  # Shape B (fortkit-6ovg / fortkit-x9ou): the verifier's IMPLEMENTATION lives
+  # outside the locked directory, and skills/ is the source the installed
+  # ~/.claude/skills symlinks point at (fortkit-4n8c). Both are new fixture
+  # surfaces because both are new write boundaries.
+  printf '#!/bin/bash\n# probe verify-impl\n' > "$ROOT/scripts/verify-impl.sh"; chmod +x "$ROOT/scripts/verify-impl.sh"
+  printf '# probe skill\n' > "$ROOT/skills/civ/SKILL.md"
   cp "$LIB" "$ROOT/fort/scripts/lib/seat-sandbox.sh"
   printf '{}\n'            > "$ROOT/fort/profiles/warden-settings.json"
   printf '{}\n'            > "$ROOT/.claude/settings.json"
@@ -110,13 +116,36 @@ assert_no_newfile() {
     *)         ok  "$label" "new file blocked" ;;
   esac
 }
-assert_newfile_expected() {
-  local label="$1" dir="$2" out
-  out="$(inmask "touch '$dir/.e2-newfile' && echo CREATED || echo BLOCKED:\$?")"
-  case "$out" in
-    *CREATED*) ok  "$label" "new file created — DISCLOSED HOLE, expected pass" ;;
-    *)         bad "$label" "expected the disclosed hole to be open, got: $out" ;;
-  esac
+# Assert a DIRECTORY cannot be renamed out from under its own contents.
+#
+# THIS IS THE ASSERTION THAT POISONED A WHOLE RUN, AND THE REASON IT DID
+# (fortkit-x9ou, correction of record 2026-08-12). The first version of it
+# called assert_immovable, which does `mv` and never moves the path back —
+# correct for a mount point, where the mv always fails and no restore is ever
+# needed, and catastrophic for a directory where the mv SUCCEEDS. It left
+# fort/scripts renamed for the rest of the run: A5 through A10 then failed
+# against a stale mask, and worse, several later assertions PASSED VACUOUSLY,
+# because "append blocked" and "new file blocked" are trivially true of a path
+# that is gone. Only A1-A4 and the assertion itself were trustworthy.
+#
+# So this version restores the fixture, VERIFIES the restore, and if the restore
+# fails it aborts the entire run rather than printing numbers nobody can trust.
+# A harness that cannot restore what it moved has no business continuing.
+assert_dir_immovable() {
+  local label="$1" dir="$2"
+  inmask "mv '$dir' '$dir.moved' >/dev/null 2>&1" >/dev/null
+  if [ -e "$dir.moved" ] || [ ! -d "$dir" ]; then
+    mv "$dir.moved" "$dir" 2>/dev/null
+    if [ -d "$dir" ] && [ ! -e "$dir.moved" ]; then
+      bad "$label" "RENAME SUCCEEDED — the directory is not a mount point (fixture restored)"
+    else
+      printf '\n  ****  FIXTURE RESTORE FAILED: %s is not back in place.\n' "$dir" >&2
+      printf '  ****  Every assertion after this point would be VACUOUS. ABORTING (fortkit-x9ou).\n\n' >&2
+      exit 3
+    fi
+  else
+    ok "$label" "rename refused — the directory is itself a mount point"
+  fi
 }
 # Assert a path cannot be unlinked or renamed over (mount-point property).
 assert_immovable() {
@@ -150,21 +179,35 @@ source "$LIB"
 echo
 echo "--- A. MAYOR posture:  build_mask claude \$root"
 mask=(); build_mask claude "$ROOT" || { echo "build_mask FAILED"; exit 1; }
-sha_before="$(sha256sum "$ROOT/fort/scripts/verify.sh" | cut -d' ' -f1)"
-out="$(inmask "sed -i 's/\r\$//' '$ROOT/fort/scripts/verify.sh' && echo SEDOK || echo SEDFAIL:\$?")"
-sha_after="$(sha256sum "$ROOT/fort/scripts/verify.sh" | cut -d' ' -f1)"
+# SHAPE B: the Mayor's editable verifier is scripts/verify-impl.sh, OUTSIDE the
+# locked directory. These two assertions are the whole point of the reshape —
+# `sed -i` and `git checkout` are the two operations that failed for a cycle
+# under the cycle-7 arrangement while `test -w` reported TRUE.
+impl="$ROOT/scripts/verify-impl.sh"
+sha_before="$(sha256sum "$impl" | cut -d' ' -f1)"
+out="$(inmask "sed -i 's/\r\$//' '$impl' && echo SEDOK || echo SEDFAIL:\$?")"
+sha_after="$(sha256sum "$impl" | cut -d' ' -f1)"
 if [ "$out" = "SEDOK" ] && [ "$sha_before" = "$sha_after" ]; then
-  ok "A1 6ovg verify.sh: sed -i (create sibling + rename) works" "content identical after"
-else bad "A1 6ovg verify.sh: sed -i works" "$out (sha $sha_before -> $sha_after)"; fi
-out="$(inmask "cd '$ROOT' && printf '\n' >> fort/scripts/verify.sh && git checkout -- fort/scripts/verify.sh && echo CHECKOUTOK || echo CHECKOUTFAIL:\$?")"
-sha_after="$(sha256sum "$ROOT/fort/scripts/verify.sh" | cut -d' ' -f1)"
+  ok "A1 6ovg verify-impl.sh: sed -i (sibling + rename) works" "content identical after"
+else bad "A1 6ovg verify-impl.sh: sed -i works" "$out (sha $sha_before -> $sha_after)"; fi
+out="$(inmask "cd '$ROOT' && printf '\n' >> scripts/verify-impl.sh && git checkout -- scripts/verify-impl.sh && echo CHECKOUTOK || echo CHECKOUTFAIL:\$?")"
+sha_after="$(sha256sum "$impl" | cut -d' ' -f1)"
 if [[ "$out" == *CHECKOUTOK* ]] && [ "$sha_before" = "$sha_after" ]; then
-  ok "A2 6ovg verify.sh: git checkout replaces it" "restored, sha matches"
-else bad "A2 6ovg verify.sh: git checkout replaces it" "$out (sha $sha_after)"; fi
+  ok "A2 6ovg verify-impl.sh: git checkout replaces it" "restored, sha matches"
+else bad "A2 6ovg verify-impl.sh: git checkout replaces it" "$out (sha $sha_after)"; fi
+assert_ro "A2b SHAPE B: the verify.sh SHIM is read-only"  "$ROOT/fort/scripts/verify.sh"
+assert_rw "A2c skills/ writable for an attended seat (prose gate, 4n8c)" "$ROOT/skills/civ/SKILL.md"
 assert_ro        "A3 mayor.sh not writable"            "$ROOT/fort/scripts/mayor.sh"
 assert_immovable "A4 mayor.sh not unlinkable/renamable" "$ROOT/fort/scripts/mayor.sh"
 assert_ro        "A5 lib/seat-sandbox.sh not writable"  "$ROOT/fort/scripts/lib/seat-sandbox.sh"
-assert_newfile_expected "A6 6ovg DISCLOSED HOLE: new file in fort/scripts" "$ROOT/fort/scripts"
+# A4b — THE MEASUREMENT SHAPE A FAILED AND SHAPE B EXISTS FOR. Under Shape A
+# this printed `unlink=NO rename=YES`: the FILES were mount points and the
+# DIRECTORY was not, so a seat could rename fort/scripts aside and have
+# ~/.local/bin/mayor exec its replacement on the host, unmasked (fortkit-x9ou).
+assert_dir_immovable "A4b fort/scripts DIRECTORY not renamable" "$ROOT/fort/scripts"
+# A6 — INVERTED BY SHAPE B. This asserted the disclosed new-file hole was OPEN.
+# There is no hole now: the directory is a single read-only bind again.
+assert_no_newfile "A6 SHAPE B: no new file in fort/scripts"    "$ROOT/fort/scripts"
 assert_ro "A7a fort/profiles not writable"  "$ROOT/fort/profiles/warden-settings.json"
 assert_ro "A7b .claude not writable"        "$ROOT/.claude/settings.json"
 assert_ro "A7c bin/ not writable"           "$ROOT/bin/regent"
@@ -207,7 +250,9 @@ echo "        worktree bin/ under today's Warden call:                  $out"
 echo
 echo "--- B. WARDEN posture: build_mask claude \$root \$root \$src \$root-worktrees"
 mask=(); build_mask claude "$ROOT" "$ROOT" "$ROOT" "$WTS" || { echo "build_mask FAILED"; exit 1; }
-assert_ro "B1 6ovg verify.sh re-masked for the Warden"      "$ROOT/fort/scripts/verify.sh"
+assert_ro "B1a 6ovg verify.sh shim RO for the Warden"       "$ROOT/fort/scripts/verify.sh"
+assert_ro "B1b 6ovg verify-impl.sh RO for the Warden"       "$ROOT/scripts/verify-impl.sh"
+assert_ro "B1c skills/ RO for the Warden (whole checkout)"  "$ROOT/skills/civ/SKILL.md"
 assert_no_newfile "B2 6ovg hole ABSENT for the Warden"      "$ROOT/fort/scripts"
 assert_ro "B3a 1q9 worktree fort/scripts not writable"      "$WTS/wt1/fort/scripts/mayor.sh"
 assert_no_newfile "B3b 1q9 worktree fort/scripts no newfile" "$WTS/wt1/fort/scripts"
@@ -229,6 +274,13 @@ assert_ro "C2e 1q9 worktree charter RO (codex keeps lock)"  "$WTS/wt1/fort/chart
 assert_ro "C3 1q9 OTHER worktree not writable at all"       "$WTS/wt2/src/app.ts"
 assert_ro "C4a codex: \$root verify.sh RO (whole-dir lock)" "$ROOT/fort/scripts/verify.sh"
 assert_no_newfile "C4b codex: no new-file hole at \$root"   "$ROOT/fort/scripts"
+# THE WRINKLE SHAPE B WOULD HAVE OPENED. repo scripts/ rides the $root grant,
+# so without an explicit carve-out the unattended seat could edit the verifier
+# that judges its own work. Same for skills/, which is session-executed
+# instruction the Forge cannot ask permission to change.
+assert_ro "C4c codex: verify-impl.sh RO (the Shape B wrinkle)" "$ROOT/scripts/verify-impl.sh"
+assert_ro "C4d codex: \$root skills/ RO (unattended lock)"    "$ROOT/skills/civ/SKILL.md"
+assert_ro "C4e codex: declared worktree verify-impl.sh RO"     "$WTS/wt1/scripts/verify-impl.sh"
 assert_zero_bytes "C5a --rw-tree sweeps worktree secrets"   "$WTS/wt1/.env.local"
 assert_zero_bytes "C5b --rw-tree sweeps worktree residue"   "$WTS/wt1/..env.local.kate-swp"
 n="$(inmask "cat '$HOME/.claude/settings.json' 2>/dev/null | wc -c" | tr -d ' \n')"
@@ -240,7 +292,8 @@ echo "--- D. RESEARCHER posture: build_mask claude \$root --env-root \$wts \$roo
 mask=(); build_mask claude "$ROOT" --env-root "$WTS" "$ROOT" "$WTS" || { echo "build_mask FAILED"; exit 1; }
 assert_ro "D1 whole \$root RO"                              "$ROOT/src/app.ts"
 assert_ro "D2 whole \$root-worktrees RO"                    "$WTS/wt1/src/app.ts"
-assert_ro "D3 verify.sh RO"                                 "$ROOT/fort/scripts/verify.sh"
+assert_ro "D3 verify.sh shim RO"                            "$ROOT/fort/scripts/verify.sh"
+assert_ro "D4 verify-impl.sh RO"                            "$ROOT/scripts/verify-impl.sh"
 
 echo
 echo "=============================================================="

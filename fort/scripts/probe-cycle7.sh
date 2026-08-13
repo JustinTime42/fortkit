@@ -62,34 +62,47 @@ rm_canary
 probe deny "profiles RO"                             "$root/fort/profiles/warden-settings.json"
 probe deny "scripts/emit.sh RO (host-executed)"      "$root/fort/scripts/emit.sh"
 probe deny "scripts/lib/seat-sandbox.sh RO"          "$root/fort/scripts/lib/seat-sandbox.sh"
-# fortkit-6ovg. `: >>` is an O_APPEND open, and an O_APPEND open SUCCEEDED for a
-# whole cycle while every real edit failed — that is precisely the false positive
-# that hid this defect in three forts (test -w TRUE, open-for-append OK, sed -i
-# and git checkout both EROFS on a SIBLING temp path). Keep the append probe as
-# the cheap signal, but the load-bearing assertion is the DIRECTORY one below.
-probe ok   "scripts/verify.sh writable (re-grant)"   "$root/fort/scripts/verify.sh"
+# fortkit-6ovg, SHAPE B (Overseer ruling 2026-08-12). fort/scripts/verify.sh is
+# now a read-only SHIM and the editable verifier is scripts/verify-impl.sh, so
+# both expectations here inverted: the shim must be DENIED and the
+# implementation must be writable. `: >>` is an O_APPEND open, and an O_APPEND
+# open SUCCEEDED for a whole cycle while every real edit failed — that is
+# precisely the false positive that hid the original defect in three forts
+# (test -w TRUE, open-for-append OK, sed -i and git checkout both EROFS on a
+# SIBLING temp path). Keep the append probe as the cheap signal; the
+# load-bearing assertion is the sed -i one below.
+probe deny "scripts/verify.sh SHIM RO (Shape B)"     "$root/fort/scripts/verify.sh"
+probe ok   "scripts/verify-impl.sh writable (Mayor)" "$root/scripts/verify-impl.sh"
 # THE REAL 6ovg PROPERTY: a rewrite-in-place needs to create a sibling and rename
 # over the target. `sed -i` with an expression that changes nothing exercises the
 # whole path and leaves the file byte-identical; the sha is checked either way,
 # so a probe that damaged what it measures would be caught here rather than
 # discovered later.
-v="$root/fort/scripts/verify.sh"
+v="$root/scripts/verify-impl.sh"
 sha_before="$(sha256sum "$v" | cut -d' ' -f1)"
 if bwrap "${mask[@]}" -- sed -i 's/\r$//' "$v" 2>/dev/null \
    && [ "$(sha256sum "$v" | cut -d' ' -f1)" = "$sha_before" ]; then
-  echo "PASS (ok) verify.sh rewritable in place (sed -i: sibling + rename)"; pass=$((pass+1))
+  echo "PASS (ok) verify-impl.sh rewritable in place (sed -i: sibling + rename)"; pass=$((pass+1))
 else
-  echo "FAIL verify.sh NOT rewritable in place — 6ovg has regressed"; fail=$((fail+1))
+  echo "FAIL verify-impl.sh NOT rewritable in place — 6ovg has regressed"; fail=$((fail+1))
 fi
-[ "$(sha256sum "$v" | cut -d' ' -f1)" = "$sha_before" ] || { echo "FAIL probe MODIFIED verify.sh"; fail=$((fail+1)); }
-# THE DISCLOSED RESIDUAL, PROBED AS AN EXPECTED PASS (Overseer ruling on 6ovg,
-# Shape A). Making the directory writable so verify.sh can be edited also lets a
-# seat CREATE a new file in a host-executed directory. Nothing there is
-# auto-executed and every launcher is named explicitly, so it is a staging area
-# for a later mistake rather than a direct path — but a hole nobody probes is the
-# thing this fort keeps getting bitten by, so it is asserted, not assumed. If
-# this line ever reads FAIL, the mask got STRICTER and 6ovg needs revisiting.
-probe ok   "fort/scripts new-file: DISCLOSED 6ovg RESIDUAL" "$scripts_canary"
+[ "$(sha256sum "$v" | cut -d' ' -f1)" = "$sha_before" ] || { echo "FAIL probe MODIFIED verify-impl.sh"; fail=$((fail+1)); }
+# INVERTED BY SHAPE B, and it used to be the opposite (Overseer ruling on 6ovg,
+# Shape A, 2026-08-11): making the directory writable so verify.sh could be
+# edited also let a seat CREATE a new file in a host-executed directory, and
+# that hole was probed here as an EXPECTED PASS and carried in the charter as an
+# accepted residual. Shape B removed the hole rather than disclosing it, so this
+# is now a deny — and a FAIL on this line means the hole is back.
+#
+# THE OTHER HALF OF THE SHAPE B PROPERTY IS DELIBERATELY NOT PROBED HERE: that
+# fort/scripts, being a whole-directory bind, is itself a mount point and refuses
+# rename. Establishing that requires actually attempting `mv` on the directory,
+# and this script runs against LIVE FORTS. The naive version of that probe left
+# fort/scripts renamed for a whole harness run and made four later assertions
+# pass vacuously (fortkit-x9ou). It is asserted instead in
+# scripts/mask-harness.sh (A4b), against a synthetic fixture, with a restore
+# that aborts the run if it fails.
+probe deny "fort/scripts new-file DENIED (Shape B, 6ovg)" "$scripts_canary"
 rm_canary
 probe deny ".git/config RO (fortkit-cqc)"            "$root/.git/config"
 probe deny ".git/hooks new-file RO (fortkit-cqc)"    "$root/.git/hooks/cycle7-canary"
@@ -127,6 +140,7 @@ mask=()
 build_mask claude "$root" "$root" "$root"
 mask_env claude
 probe deny "verify.sh re-masked, Warden main-checkout posture" "$root/fort/scripts/verify.sh"
+probe deny "verify-impl.sh RO, Warden main-checkout posture"   "$root/scripts/verify-impl.sh"
 probe deny "charter RO, Warden main-checkout posture"          "$root/fort/charter.md"
 if bwrap "${mask[@]}" -- head -c 1 "$root/fort/scripts/verify.sh" >/dev/null 2>&1; then
   echo "PASS warden posture can still read (positive control)"; pass=$((pass+1))
@@ -139,6 +153,7 @@ mask=()
 build_mask claude "$root" "$root" "$candidate"
 mask_env claude
 probe deny "verify.sh re-masked, Warden worktree-candidate posture" "$root/fort/scripts/verify.sh"
+probe deny "verify-impl.sh RO, Warden worktree-candidate posture"   "$root/scripts/verify-impl.sh"
 probe deny "charter RO, Warden worktree-candidate posture"          "$root/fort/charter.md"
 probe deny "seats RO, Warden worktree-candidate posture"            "$root/fort/seats/mayor.md"
 rm_canary
@@ -161,6 +176,9 @@ if [ -n "$wt_probe" ] && [ -e "$wt_probe/fort/scripts/mayor.sh" ]; then
   build_mask codex "$root" --rw-tree "$wt_probe"
   mask_env codex
   probe deny "1q9 declared worktree fort/scripts RO, Forge posture" "$wt_probe/fort/scripts/mayor.sh"
+  # Shape B's wrinkle: the relocated verifier rides the $root grant, so the
+  # unattended seat needs an explicit carve-out or it can edit its own judge.
+  [ -e "$wt_probe/scripts/verify-impl.sh" ] && probe deny "verify-impl.sh RO in the declared worktree, Forge posture" "$wt_probe/scripts/verify-impl.sh"
   wt_other="$(find "$root-worktrees" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sed -n 2p)"
   [ -n "$wt_other" ] && probe deny "1q9 OTHER worktree unwritable, Forge posture" "$wt_other/.probe-cycle7"
 else

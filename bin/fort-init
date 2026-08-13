@@ -32,6 +32,16 @@ for s in mayor forge warden; do render "$T/fort/seats/$s.md" "fort/seats/$s.md";
 for sc in emit status mayor forge warden verify; do render "$T/fort/scripts/$sc.sh" "fort/scripts/$sc.sh"; done
 mkdir -p fort/scripts/lib
 render "$T/fort/scripts/lib/seat-sandbox.sh" fort/scripts/lib/seat-sandbox.sh
+# The verifier is a SHIM in fort/scripts and an IMPLEMENTATION out here (Shape B,
+# fortkit-6ovg / fortkit-x9ou). fort/scripts is a whole-directory read-only bind
+# in every seat mask, so the one tool in that set the fort evolves has to live
+# where the Mayor can still rewrite it. Founding a fort without this file leaves
+# a shim that exits 70 and verifies nothing — which is exactly how the founding
+# smoke test caught the omission when Shape B first landed.
+[ -e scripts/verify-impl.sh ] && { echo "fort-init: $REPO/scripts/verify-impl.sh already exists - refusing to overwrite it" >&2; exit 1; }
+mkdir -p scripts
+render "$T/scripts/verify-impl.sh" scripts/verify-impl.sh
+chmod +x scripts/verify-impl.sh
 mkdir -p fort/profiles
 render "$T/fort/profiles/warden-settings.json" fort/profiles/warden-settings.json
 chmod +x fort/scripts/*.sh
