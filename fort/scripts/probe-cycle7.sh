@@ -32,9 +32,15 @@ pass=0; fail=0
 # fails, it has created the very file nobody would then be cleaning up.
 canary="$root/fort/memory/facts/.probe-cycle7-canary"
 scripts_canary="$root/fort/scripts/.probe-cycle7-newfile"
+# fortkit-52vf.10 (E8): ~/.codex is now a WRITABLE DIRECTORY BIND for both seat
+# types, so proving it is writable means creating something there. The canary is
+# a name nothing else can collide with, and it joins the trap list rather than a
+# line after the probe — a probe must never seed the record it measures, and an
+# interrupted run must not leave residue in the Codex runtime's own directory.
+codex_canary="$HOME/.codex/.probe-cycle7-canary"
 candidate=""
 rm_canary() {
-  rm -f "$canary" "$scripts_canary" \
+  rm -f "$canary" "$scripts_canary" "$codex_canary" \
         "$HOME/.claude/teams/.probe-cycle7-canary" \
         "$HOME/.claude/skills/.probe-cycle7-canary" \
         "$HOME/.claude/commands/.probe-cycle7-canary" \
@@ -157,6 +163,53 @@ probe deny "verify-impl.sh RO, Warden worktree-candidate posture"   "$root/scrip
 probe deny "charter RO, Warden worktree-candidate posture"          "$root/fort/charter.md"
 probe deny "seats RO, Warden worktree-candidate posture"            "$root/fort/seats/mayor.md"
 rm_canary
+
+# ---------------------------------------------------------------------------
+# THE FORGE'S POSTURE AT $root, UNCONDITIONALLY (fortkit-n3bk finding 9, Warden
+# Ilva Trueglass on the E2b review; added by the E8 sitting, fortkit-52vf.10,
+# 2026-08-13).
+#
+# Until now the codex posture was built ONLY inside the worktree block below, and
+# two things went unasserted per fort as a result. First, $root/scripts/verify-impl.sh
+# was never probed under it — and that carve-out is the load-bearing half of
+# Shape B's safety, the one line stopping the unattended seat from editing the
+# verifier that judges its own work. Second, and worse because nothing said so:
+# IN A FORT WITH NO WORKTREE THE CODEX POSTURE WAS NEVER BUILT AT ALL, so the
+# standing probe measured nothing whatever about the Forge's mask and still
+# printed a clean pass line. The unmasked harness asserts these (C4c/C4e), but
+# the harness needs an unmasked shell and THIS is what runs per fort.
+mask=()
+build_mask codex "$root"
+mask_env codex
+probe deny "codex: \$root scripts/verify-impl.sh RO (Shape B)" "$root/scripts/verify-impl.sh"
+probe deny "codex: \$root fort/scripts/verify.sh RO"          "$root/fort/scripts/verify.sh"
+probe deny "codex: \$root fort/scripts/emit.sh RO"            "$root/fort/scripts/emit.sh"
+# The cycle-7 prose gate is for ATTENDED seats only: an unattended seat cannot
+# ask first, so the Forge keeps the mechanical lock the Mayor and Warden lost.
+# These two are the exact inverse of the first two probes in this file, which is
+# why they are worth asserting rather than assuming.
+probe deny "codex: charter.md RO (unattended keeps the lock)"  "$root/fort/charter.md"
+probe deny "codex: seats/mayor.md RO (unattended keeps the lock)" "$root/fort/seats/mayor.md"
+# fortkit-52vf.10 (E8): the unified ~/.codex grant, one mechanism in all three
+# forts. config.toml must stay READ-ONLY — it is the disarm-the-next-launch
+# vector (ForgeOs-21f.5) — while the DIRECTORY itself must be WRITABLE, because
+# codex rotates its token by RENAME and a pinned auth.json inode revoked the
+# refresh token and took both seat lanes down in Farlantern on 2026-08-05
+# (longburn-1p9). Proofdelve's Forge got NEITHER until this edict: its lib branch
+# had never executed, so the port would have met EROFS on first token refresh.
+probe deny "codex: ~/.codex/config.toml RO"                    "$HOME/.codex/config.toml"
+probe ok   "codex: ~/.codex writable (rotation, longburn-1p9)" "$codex_canary"
+rm_canary
+# The dispatch lane is the CLAUDE posture — the Mayor launches the Forge and the
+# child codex inherits her mount namespace — so the same two properties are
+# asserted there. This is where 1p9 actually broke.
+mask=()
+build_mask claude "$root"
+mask_env claude
+probe deny "claude: ~/.codex/config.toml RO (dispatch lane)"   "$HOME/.codex/config.toml"
+probe ok   "claude: ~/.codex writable (dispatch lane)"         "$codex_canary"
+rm_canary
+# ---------------------------------------------------------------------------
 
 # fortkit-1q9. The Warden's real launch now passes $root-worktrees as extra_ro:
 # until E2 the seat that is read-only BY CONSTRUCTION could write the enforcement
