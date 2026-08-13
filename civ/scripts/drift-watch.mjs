@@ -15,6 +15,18 @@ import { execFile } from "node:child_process";
  * different fingerprint appends a comment to the existing bead rather than
  * filing a second one.  Appending, never skipping, because a changed
  * fingerprint on a known file is real new information (standing order 7).
+ *
+ * ARCHITECTURE PORTS BETWEEN FORTS; IDENTITY NEVER DOES (standing order 12,
+ * fortkit-k1pq, and edict E9 of fortkit-52vf, 2026-08-13).  The order is
+ * applied PER HUNK and never per file, because the two mix inside one file:
+ * `fort/scripts/mayor.sh` diverges from the template both by its Mayor's name
+ * and by a push-gate hardening the template lacks.  Two consequences run
+ * through everything below.  First, `normalizer()` erases identity from BOTH
+ * sides before anything is compared, so a file that differs only by who sits
+ * in it is not a finding at all.  Second, a finding's diff body is the
+ * remaining hunks of the IDENTITY-NORMALIZED texts, so a seat acting on a
+ * finding is reading architecture with the names already redacted and cannot
+ * port a citizen by copying what it was shown.
  */
 import { createHash } from "node:crypto";
 import { access, readdir, readFile, stat } from "node:fs/promises";
@@ -34,6 +46,13 @@ const maxBuffer = 64 * 1024 * 1024;
 // flock -n exits with this code, and ONLY this code, when the lock is held.
 // Anything else came from the child (fortkit-bpuv).
 const lockConflictExit = 75;
+// A diff body is evidence for a reader, not an archive.  Caps DISCLOSE
+// themselves in the body (standing order: no silent caps).
+const diffLineCap = 60;
+const diffColumnCap = 1200;
+// Above this the line-level LCS is not worth its memory; say so rather than
+// silently degrading.
+const diffLineCeiling = 4000;
 
 async function text(path) {
   return readFile(path, "utf8");
@@ -59,28 +78,121 @@ async function files(directory) {
   return found.sort(compare);
 }
 
-function normalizer(fort, roster) {
-  const substitutions = new Map();
-  for (const [from, to] of [
-    [fort.path, "{{REPO_PATH}}"],
-    [fort.name, "{{FORT_NAME}}"],
-    ...roster.map((actor) => [actor, "{{ACTOR}}"]),
-  ]) {
-    if (from) substitutions.set(from, to);
-  }
-  return (value) =>
-    [...substitutions.entries()]
-      .sort(
-        ([left], [right]) => right.length - left.length || compare(left, right),
-      )
-      .reduce((result, [from, to]) => result.split(from).join(to), value);
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+
+/**
+ * Word-guarded where the token is a word and unguarded where it is not.  A
+ * repo path starts with `/`, and `\b` fails against a non-word character, so
+ * anchoring every token the same way silently stops substituting paths — which
+ * is how `/home/justin/dev/fortkit` survived normalization long enough to be
+ * mistaken for architecture.
+ */
+function tokenPattern(token) {
+  const head = /^\w/u.test(token) ? "(?<!\\w)" : "";
+  const tail = /\w$/u.test(token) ? "(?!\\w)" : "";
+  return new RegExp(`${head}${escapeRegExp(token)}${tail}`, "gu");
 }
 
-function rosterFromCharter(charter) {
-  const occupants = /^\*\*Held by:\*\*\s*([^\n(]+)/gmu;
-  return [...charter.matchAll(occupants)].map(
-    (match) => match[1].trim().split(/\s+/u)[0],
-  );
+// An actor id is identity by definition and never ports, so `-a <id>` is
+// collapsed positionally on BOTH sides.  The template spells it with the
+// seat-office word (`-a mayor`) and a seated fort with its citizen's id
+// (`-a emrith`); no token substitution can equate those, but their POSITION
+// can.  `-s <seat>` is deliberately untouched: the seat is architecture.
+const actorFlag = /(^|\s)-a\s+\S+/gmu;
+
+/**
+ * Erase identity from a text so that what remains is architecture.
+ *
+ * Conservative on purpose: under-normalizing reports identity as architecture,
+ * which is a false alarm a reader can dismiss, while over-normalizing HIDES
+ * architecture, which nothing downstream can recover.  Only tokens that are
+ * identity by the charter's definition are substituted — the repo path, the
+ * project, the fort name, the roster's citizens, and the actor-id position.
+ */
+export function normalizer(fort, roster) {
+  const substitutions = new Map();
+  const add = (from, to) => {
+    if (from && !substitutions.has(from)) substitutions.set(from, to);
+  };
+  add(fort.path, "{{REPO_PATH}}");
+  add(fort.name, "{{FORT_NAME}}");
+  add(fort.project, "{{PROJECT}}");
+  for (const actor of roster) {
+    add(actor, "{{ACTOR}}");
+    const first = actor.split(/\s+/u)[0];
+    add(first, "{{ACTOR}}");
+    add(first.toLowerCase(), "{{ACTOR}}");
+  }
+  // Longest first, so `/home/justin/dev/fortkit` is consumed before `fortkit`
+  // and `Emrith Cairnwright` before `Emrith`.
+  const ordered = [...substitutions.entries()]
+    .sort(
+      ([left], [right]) => right.length - left.length || compare(left, right),
+    )
+    .map(([from, to]) => [tokenPattern(from), to]);
+  return (value) =>
+    ordered
+      .reduce((result, [pattern, to]) => result.replace(pattern, to), value)
+      .replace(actorFlag, "$1-a {{ACTOR}}");
+}
+
+/**
+ * The fort's citizens, read from its SEAT FILES and accepting BOTH spellings.
+ *
+ * fortkit-9qts: this read `fort/charter.md` for `**Held by:** Name`, which is
+ * the TEMPLATE's spelling of a line that appears only in `fort/seats/*.md`.
+ * Two faults, either alone sufficient: the wrong file, and a spelling no
+ * seated fort uses — a fort writes `**Held by: Ilva Trueglass** (she/her...)`,
+ * with the asterisks closing after the NAME.  The roster was therefore empty
+ * in every fort that has ever existed, no citizen was ever normalized, and
+ * every launcher carrying a name read as permanent architecture drift.  Both
+ * spellings are pinned in the regression tests: a fix that satisfies only the
+ * template spelling reintroduces the bug invisibly, which is how this one
+ * survived from the watcher's first run.
+ */
+const occupantLine = /^\*\*Held by:(?:\*\*)?\s*([^\n(*]+)/mu;
+
+export function rosterFromSeats(texts) {
+  const occupants = new RegExp(occupantLine.source, "gmu");
+  const found = [];
+  for (const value of texts)
+    for (const match of value.matchAll(occupants)) {
+      const name = match[1].trim();
+      // `{{UNFILLED — set at the Founding Moot}}` is the template's own
+      // placeholder, not a citizen.
+      if (name && !name.includes("{{")) found.push(name);
+    }
+  return [...new Set(found)];
+}
+
+async function readRoster(fortPath, gaps, fortName) {
+  const directory = join(fortPath, "fort", "seats");
+  try {
+    const seats = (await files(directory)).filter((path) =>
+      path.endsWith(".md"),
+    );
+    const texts = await Promise.all(seats.map(text));
+    // An UNSEATED fort — one whose seat files still carry the template's
+    // `{{UNFILLED}}` placeholder — has no roster by design, and that is not a
+    // defect.  What is a defect is seat files in which the occupant line does
+    // not parse AT ALL, because that is precisely the shape of fortkit-9qts:
+    // the roster silently empties, every citizen's name survives into the
+    // comparison, and identity reads as architecture drift forever.  Disclose
+    // the second and never the first.
+    if (seats.length > 0 && !texts.some((value) => occupantLine.test(value)))
+      gaps.push({
+        source: `${fortName}:fort/seats`,
+        reason:
+          "no occupant line parsed in any seat file; identity cannot be normalized and will read as architecture drift (fortkit-9qts)",
+      });
+    return rosterFromSeats(texts);
+  } catch (error) {
+    gaps.push({
+      source: `${fortName}:fort/seats`,
+      reason: `roster unreadable, identity will read as architecture drift: ${String(error.message)}`,
+    });
+    return [];
+  }
 }
 
 function headings(value) {
@@ -132,6 +244,114 @@ async function newerThan(left, right, gitTime) {
   return "unknown";
 }
 
+/**
+ * The changed regions between two texts, as whole lines.  Used only AFTER both
+ * sides are identity-normalized, so every hunk it returns is architecture by
+ * construction — that is the per-hunk half of standing order 12.
+ */
+export function lineHunks(before, after) {
+  const left = before.split("\n");
+  const right = after.split("\n");
+  if (left.length > diffLineCeiling || right.length > diffLineCeiling)
+    return [{ template: left, fort: right, coarse: true }];
+  const rows = left.length;
+  const columns = right.length;
+  const common = Array.from(
+    { length: rows + 1 },
+    () => new Int32Array(columns + 1),
+  );
+  for (let row = rows - 1; row >= 0; row -= 1)
+    for (let column = columns - 1; column >= 0; column -= 1)
+      common[row][column] =
+        left[row] === right[column]
+          ? common[row + 1][column + 1] + 1
+          : Math.max(common[row + 1][column], common[row][column + 1]);
+  const hunks = [];
+  let current = null;
+  let row = 0;
+  let column = 0;
+  while (row < rows || column < columns) {
+    if (row < rows && column < columns && left[row] === right[column]) {
+      current = null;
+      row += 1;
+      column += 1;
+      continue;
+    }
+    if (!current) {
+      current = { template: [], fort: [] };
+      hunks.push(current);
+    }
+    if (
+      column >= columns ||
+      (row < rows && common[row + 1][column] >= common[row][column + 1])
+    )
+      current.template.push(left[row++]);
+    else current.fort.push(right[column++]);
+  }
+  return hunks;
+}
+
+const clip = (line) =>
+  line.length > diffColumnCap
+    ? `${line.slice(0, diffColumnCap)} …[clipped]`
+    : line;
+
+/**
+ * The budget is on the WHOLE body, not only on the line count, because the
+ * lines that matter here are long: a launcher's `--append-system-prompt` is
+ * one ~1400-character line, and the push-gate hardening that standing order 12
+ * cites as the thing that MUST port sits at the end of it.  A per-line cap
+ * tight enough to bound a 34-hunk file clipped that hardening out of the only
+ * hunk anybody needed to read.  Measured on Manyhalls `fort/scripts/mayor.sh`,
+ * 2026-08-13.
+ */
+const diffCharCap = 12000;
+
+/**
+ * The evidence a reader acts on: the architecture hunks, with identity already
+ * redacted to `{{ACTOR}}` and friends.  A seat that copies what this shows it
+ * cannot port a citizen's name, because the name is not in it.
+ */
+export function diffBody(fortName, path, templateText, fortText) {
+  const hunks = lineHunks(templateText, fortText);
+  const body = [
+    `--- ${path} (template, identity normalized)`,
+    `+++ ${path} (${fortName}, identity normalized)`,
+  ];
+  let emitted = 0;
+  let omitted = 0;
+  let budget = diffCharCap;
+  const full = () => emitted >= diffLineCap || budget <= 0;
+  for (const [index, hunk] of hunks.entries()) {
+    if (full()) {
+      omitted += hunk.template.length + hunk.fort.length;
+      continue;
+    }
+    body.push(
+      `@@ hunk ${index + 1} of ${hunks.length}${hunk.coarse ? " (whole file: too large for a line diff)" : ""} @@`,
+    );
+    for (const [sign, lines] of [
+      ["-", hunk.template],
+      ["+", hunk.fort],
+    ])
+      for (const line of lines) {
+        if (full()) {
+          omitted += 1;
+          continue;
+        }
+        const rendered = `${sign}${clip(line)}`;
+        body.push(rendered);
+        emitted += 1;
+        budget -= rendered.length;
+      }
+  }
+  if (omitted > 0)
+    body.push(
+      `[${omitted} further changed lines omitted; ${hunks.length} architecture hunks in total — read the files for the rest]`,
+    );
+  return { body: body.join("\n"), hunks: hunks.length };
+}
+
 /** The stable identity of a finding: a fort and a path, and nothing else. */
 export function identityOf(fort, path) {
   return sha256(`${fort}\0${path}`);
@@ -144,9 +364,16 @@ function makeFinding(
   templateContent,
   suggestion,
   reason,
+  normalize = (value) => value,
 ) {
   const fortHash = sha256(fortContent);
   const templateHash = sha256(templateContent);
+  const { body, hunks } = diffBody(
+    fort.name,
+    path,
+    normalize(templateContent),
+    normalize(fortContent),
+  );
   return {
     fort: fort.name,
     path,
@@ -154,9 +381,10 @@ function makeFinding(
     reason,
     fortHash,
     templateHash,
+    hunks,
     identity: identityOf(fort.name, path),
     fingerprint: sha256(`${fort.name}\0${path}\0${fortHash}\0${templateHash}`),
-    diff: `--- ${path} (template)\n+++ ${path} (${fort.name})\n-${templateContent.slice(0, 600)}\n+${fortContent.slice(0, 600)}`,
+    diff: body,
   };
 }
 
@@ -237,12 +465,10 @@ async function loadRegistry(path) {
       continue;
     }
     const candidate = entry;
+    const project =
+      typeof candidate.project === "string" ? candidate.project : null;
     const name =
-      typeof candidate.fort_name === "string"
-        ? candidate.fort_name
-        : typeof candidate.project === "string"
-          ? candidate.project
-          : null;
+      typeof candidate.fort_name === "string" ? candidate.fort_name : project;
     if (name === null || typeof candidate.repo !== "string") {
       gaps.push({
         source: `${path} entry ${number}`,
@@ -252,6 +478,11 @@ async function loadRegistry(path) {
     }
     forts.push({
       name,
+      // The project is the {{PROJECT}} placeholder's value and is a SEPARATE
+      // identity token from the fort name: Manyhalls is the fort, fortkit is
+      // the project, and both appear in the launchers.  Keeping only the name
+      // (which is what this did) left `{{PROJECT}}` unsubstituted forever.
+      project,
       path: isAbsolute(candidate.repo)
         ? candidate.repo
         : resolve(dirname(path), candidate.repo),
@@ -305,7 +536,8 @@ export async function scan({
   )) {
     try {
       const charter = await text(join(fort.path, "fort", "charter.md"));
-      const normalize = normalizer(fort, rosterFromCharter(charter));
+      const roster = await readRoster(fort.path, gaps, fort.name);
+      const normalize = normalizer(fort, roster);
       for (const [fortSurface, templateSurface, accepts] of binarySurfaces) {
         const templateDir = join(templateRoot, templateSurface);
         const fortDir = join(fort.path, fortSurface);
@@ -329,6 +561,7 @@ export async function scan({
                 await text(templateFile),
                 suggestion,
                 reason,
+                normalize,
               ),
             );
             continue;
@@ -347,7 +580,8 @@ export async function scan({
               fortContent,
               templateContent,
               direction === "template" ? "upgrade-offer" : "backport",
-              `${direction}-newer byte divergence`,
+              `${direction}-newer divergence outside identity`,
+              normalize,
             ),
           );
         }
@@ -359,21 +593,36 @@ export async function scan({
       const fortPermissions =
         JSON.parse(await text(join(fort.path, ".claude", "settings.json")))
           .permissions ?? {};
-      for (const key of ["allow", "deny"])
+      for (const key of ["allow", "deny"]) {
+        // The fort's rules are normalized INTO the template's spelling, not the
+        // other way round: the template writes `Bash({{REPO_PATH}}/...)` and a
+        // founded fort writes the rendered path, so a raw comparison reported
+        // every path-bearing rule as absent forever.  Measured in the capital
+        // 2026-08-13: two of eight "absent" permissions were this artifact and
+        // six were real (fortkit-9qts, same class, different surface).
+        const held = new Set((fortPermissions[key] ?? []).map(normalize));
         for (const rule of templatePermissions[key] ?? []) {
           compared += 1;
-          if (!(fortPermissions[key] ?? []).includes(rule))
+          if (!held.has(rule))
             findings.push(
               makeFinding(
                 fort,
                 ".claude/settings.json",
+                // Hashed inputs are UNCHANGED from the pre-E9 watcher on
+                // purpose: the fingerprint is a change detector on an
+                // already-filed finding, and re-minting it would append a
+                // "drift changed" comment to every settings bead for a change
+                // that happened in this file rather than in any fort (the E7
+                // scar, fortkit-zvz2).
                 JSON.stringify(fortPermissions),
                 JSON.stringify(templatePermissions),
                 "regression",
                 `template permission ${rule} is absent`,
+                normalize,
               ),
             );
         }
+      }
       const templateCharter = await text(
         join(templateRoot, "fort", "charter.md"),
       );
@@ -392,6 +641,7 @@ export async function scan({
               templateCharter,
               "regression",
               `template ${requirement.kind} is absent: ${requirement.value}`,
+              normalize,
             ),
           );
       }
@@ -415,6 +665,7 @@ export async function scan({
               await text(templateSeat),
               suggestion,
               reason,
+              normalize,
             ),
           );
           continue;
@@ -423,6 +674,11 @@ export async function scan({
           text(templateSeat),
           text(fortSeat),
         ]);
+        // HEADINGS ONLY, and deliberately so: a seat file's protocol sections
+        // are architecture and its prose is that citizen's own.  This is
+        // standing order 12 already implemented correctly, and it is the model
+        // the rest of the comparison follows.  Do not turn it into a content
+        // comparison.
         for (const heading of headings(templateContent)) {
           compared += 1;
           if (!headings(fortContent).has(heading))
@@ -434,6 +690,7 @@ export async function scan({
                 templateContent,
                 "regression",
                 `required protocol heading is absent: ${heading}`,
+                normalize,
               ),
             );
         }
@@ -495,6 +752,11 @@ export async function scan({
 const identityLine = /Drift identity:\s*([a-f0-9]{64})/iu;
 const fingerprintLine = /Drift fingerprint:\s*([a-f0-9]{64})/giu;
 const driftTitle = /^Drift:\s+(\S+)\s+(\S.*?)\s*$/u;
+/**
+ * The ONLY thing that lets a closed bead go on suppressing an ABSENCE: an
+ * explicit, written decline.  See `decide()`.
+ */
+const declineMarker = /Drift decision:\s*declined/iu;
 
 /**
  * A bead's identity, preferring the explicit machine-readable line.
@@ -529,6 +791,7 @@ export function descriptionOf(finding) {
   return [
     finding.reason,
     `Suggested classification: ${finding.suggestion}`,
+    `Architecture hunks (identity normalized): ${finding.hunks}`,
     `Drift identity: ${finding.identity}`,
     `Drift fingerprint: ${finding.fingerprint}`,
     "",
@@ -544,6 +807,7 @@ export function commentOf(finding) {
     "",
     finding.reason,
     `Suggested classification: ${finding.suggestion}`,
+    `Architecture hunks (identity normalized): ${finding.hunks}`,
     `Drift identity: ${finding.identity}`,
     `Drift fingerprint: ${finding.fingerprint}`,
     "",
@@ -582,7 +846,7 @@ function byIdentity(beads) {
 }
 
 /**
- * The three-way decision, plus the two cases that are neither.
+ * The three-way decision, plus the cases that are neither.
  *
  *   open bead, same fingerprint       -> suppress (unchanged drift)
  *   open bead, different fingerprint  -> comment on it (drift changed)
@@ -590,13 +854,29 @@ function byIdentity(beads) {
  *   ...but a CLOSED bead carrying this exact fingerprint suppresses once
  *      (the spec's one-shot suppression: this content state was adjudicated),
  *   ...and a never-propagated file with no open bead is DEFERRED, not filed
- *      (fortkit-or2.8) — its propagation is tracked by fortkit-vhk.7 and, for
- *      the capital, it is a permanent structural state.
+ *      (fortkit-or2.8) — filing an unfixable bead every run trains a fort to
+ *      ignore its watcher.
+ *
+ * ABSENCE IS NOT ADJUDICABLE BY CLOSURE (fortkit-6b8y, edict E9).  For an
+ * absent file the fort-side hash is the hash of the empty string, so the
+ * fingerprint is stable for as long as the TEMPLATE file is unchanged, and a
+ * closed bead therefore silenced the finding INDEFINITELY while the fort still
+ * lacked the file — measured on four beads (fortkit-bn7i, fortkit-p6pe,
+ * fortkit-5913, fortkit-b3gb), every one of them a Researcher-seat file that
+ * two settlements still do not have.  Closing them was reasonable triage; the
+ * side effect was invisible to whoever closed them.  So a closed bead now
+ * suppresses an absence ONLY when it carries an explicit written decline
+ * (`Drift decision: declined`, in the description or a comment).  Absent that,
+ * the finding is RE-OBSERVED: reported and counted, never re-filed, because
+ * the bead already exists and a second one would inflate the board
+ * (fortkit-fnjn).  Deferred and re-observed findings alike are counted in
+ * `report.propagationGaps`, which is the census the parity gate reads.
  */
 export async function decide(findings, beads, readComments) {
   const { open, closed } = byIdentity(beads);
   const decisions = [];
   for (const finding of findings) {
+    const absent = finding.suggestion === "not-yet-propagated";
     const matches = open.get(finding.identity) ?? [];
     if (matches.length > 0) {
       const known = new Set(
@@ -617,13 +897,29 @@ export async function decide(findings, beads, readComments) {
       fingerprintsIn(bead.description).includes(finding.fingerprint),
     );
     if (adjudicated) {
-      decisions.push({ finding, action: "adjudicated", bead: adjudicated.id });
+      if (!absent) {
+        decisions.push({
+          finding,
+          action: "adjudicated",
+          bead: adjudicated.id,
+        });
+        continue;
+      }
+      let declined = declineMarker.test(adjudicated.description ?? "");
+      if (!declined)
+        for (const comment of await readComments(adjudicated.id))
+          if (declineMarker.test(comment)) {
+            declined = true;
+            break;
+          }
+      decisions.push({
+        finding,
+        action: declined ? "declined" : "re-observed",
+        bead: adjudicated.id,
+      });
       continue;
     }
-    decisions.push({
-      finding,
-      action: finding.suggestion === "not-yet-propagated" ? "defer" : "file",
-    });
+    decisions.push({ finding, action: absent ? "defer" : "file" });
   }
   return decisions;
 }
@@ -671,12 +967,14 @@ async function defaultCommands(root) {
         findingsCommented: report.commented,
         findingsSuppressed: report.suppressed.length,
         findingsDeferred: report.deferred.length,
+        propagationGaps: report.propagationGaps.length,
+        propagationGapsReobserved: report.reobserved.length,
         allowlistLapsed: report.lapsed.length,
         sourcesUnreadable: report.gaps.length,
       });
       await execFileAsync(join(root, "fort", "scripts", "emit.sh"), [
         "drift.scan",
-        `drift scan: ${report.filed} filed, ${report.commented} commented, ${report.suppressed.length} suppressed, ${report.deferred.length} deferred, ${report.gaps.length} gaps`,
+        `drift scan: ${report.filed} filed, ${report.commented} commented, ${report.suppressed.length} suppressed, ${report.propagationGaps.length} propagation gaps, ${report.gaps.length} gaps`,
         "-a",
         "watcher:drift",
         "-t",
@@ -719,14 +1017,52 @@ export async function run(options = {}) {
       by: "closed-bead",
       bead: decision.bead,
     });
+  for (const decision of chosen("declined"))
+    report.suppressed.push({
+      finding: decision.finding,
+      by: "declined",
+      bead: decision.bead,
+    });
   report.deferred = chosen("defer").map((decision) => decision.finding);
+  report.reobserved = chosen("re-observed").map((decision) => ({
+    fort: decision.finding.fort,
+    path: decision.finding.path,
+    bead: decision.bead,
+    reason:
+      "closed bead carries no explicit decline and the fort still lacks this file",
+  }));
+  // THE CENSUS THE PARITY GATE READS.  Every not-yet-propagated finding
+  // appears here whatever the filing decision was, because the question
+  // "which files does this fort still not have" must not be answerable only
+  // by whoever happens to read the filing plan (fortkit-6b8y).
+  report.propagationGaps = decisions
+    .filter((decision) => decision.finding.suggestion === "not-yet-propagated")
+    .map((decision) => ({
+      fort: decision.finding.fort,
+      path: decision.finding.path,
+      action: decision.action,
+      bead: decision.bead ?? null,
+    }))
+    .sort(
+      (left, right) =>
+        compare(left.fort, right.fort) || compare(left.path, right.path),
+    );
   report.identityMatches =
-    chosen("suppress").length + toComment.length + chosen("adjudicated").length;
+    chosen("suppress").length +
+    toComment.length +
+    chosen("adjudicated").length +
+    chosen("declined").length +
+    chosen("re-observed").length;
   report.plan = {
     file: toFile.length,
     comment: toComment.length,
-    suppress: chosen("suppress").length + chosen("adjudicated").length,
+    suppress:
+      chosen("suppress").length +
+      chosen("adjudicated").length +
+      chosen("declined").length,
     defer: report.deferred.length,
+    reobserved: report.reobserved.length,
+    propagationGaps: report.propagationGaps.length,
   };
   report.dryRun = Boolean(options.dryRun);
   if (options.dryRun) {
@@ -807,6 +1143,17 @@ async function main() {
   for (const entry of report.lapsed)
     process.stderr.write(
       `allowlist entry for ${entry.fort} ${entry.path} lapsed: content-hash no longer matches (approved ${entry.approved.slice(0, 12)}, observed ${entry.observed.slice(0, 12)}, bead ${entry.bead})\n`,
+    );
+  // Absence is announced on stderr as well as in the report, because the whole
+  // defect this replaced was a gap that existed only in a field nobody read.
+  if (report.propagationGaps.length > 0)
+    process.stderr.write(
+      `propagation gaps: ${report.propagationGaps.length} template file(s) absent from a fort — ${report.propagationGaps
+        .map(
+          (gap) =>
+            `${gap.fort} ${gap.path} [${gap.action}${gap.bead ? ` ${gap.bead}` : ""}]`,
+        )
+        .join("; ")}\n`,
     );
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 }

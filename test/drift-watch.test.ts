@@ -2,6 +2,7 @@ import {
   cp,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   rm,
   utimes,
@@ -17,6 +18,7 @@ import {
   beadIdentity,
   descriptionOf,
   identityOf,
+  rosterFromSeats,
   rows,
   run,
   scan,
@@ -31,6 +33,8 @@ type Finding = {
   identity: string;
   fingerprint: string;
   fortHash: string;
+  hunks: number;
+  diff: string;
 };
 
 type Bead = {
@@ -132,6 +136,21 @@ const wardenProfile = (fort: string) =>
 
 async function appendTo(path: string, line: string) {
   await writeFile(path, `${await readFile(path, "utf8")}\n${line}\n`);
+}
+
+/**
+ * Seat a fixture fort's Mayor in the LIVE spelling — asterisks closing after
+ * the name — which is the spelling the pre-E9 roster regex never matched.
+ */
+async function seat(fortPath: string, name: string, pronouns: string) {
+  const path = join(fortPath, "fort", "seats", "mayor.md");
+  await writeFile(
+    path,
+    (await readFile(path, "utf8")).replace(
+      /^\*\*Held by:.*$/mu,
+      `**Held by: ${name}** (${pronouns}, declared 2026-08-03 at the Founding Moot)`,
+    ),
+  );
 }
 
 describe("drift watcher", () => {
@@ -548,6 +567,319 @@ describe("drift watcher", () => {
           reason: expect.stringContaining("fort_name/project or repo"),
         }),
       ]);
+    } finally {
+      await rm(subject.directory, { recursive: true, force: true });
+    }
+  });
+
+  // ── fortkit-9qts: identity must never read as architecture ──────────────
+  //
+  // The roster regex was written against the TEMPLATE's spelling and has never
+  // matched a seated fort, so every launcher carrying a citizen's name read as
+  // permanent drift.  BOTH spellings are pinned here, verbatim from the live
+  // seat files, because a fix satisfying only the template spelling
+  // reintroduces the bug invisibly — which is how it survived this long.
+  test("reads the roster in both the template and the seated spelling", () => {
+    expect(
+      rosterFromSeats([
+        "**Held by: Ilva Trueglass** (she/her, declared 2026-08-03 at the Founding Moot)\n",
+        "**Held by: Saelin Stillmere** (it/its, declared 2026-08-10 at its seating)\n",
+        "**Held by:** Plain Name\n",
+        "**Held by:** {{UNFILLED — set at the Founding Moot}}\n",
+        "no occupant line here at all\n",
+      ]),
+    ).toEqual(["Ilva Trueglass", "Saelin Stillmere", "Plain Name"]);
+  });
+
+  test("discloses seat files whose occupant line does not parse, but not an unseated fort", async () => {
+    const subject = await fixture();
+    try {
+      // The fixture's seats carry `{{UNFILLED}}`: unseated, which is lawful.
+      expect((await scan(subject)).gaps).toEqual([]);
+
+      const seatPath = join(subject.fort, "fort", "seats", "mayor.md");
+      await writeFile(
+        seatPath,
+        (await readFile(seatPath, "utf8")).replace(
+          /^\*\*Held by:.*$/mu,
+          "Occupant: someone, in a spelling nothing parses",
+        ),
+      );
+      const broken = await scan(subject);
+      expect(
+        broken.gaps.some((gap: { source: string; reason: string }) =>
+          gap.reason.includes("fortkit-9qts"),
+        ),
+      ).toBe(false);
+
+      for (const name of await readdir(join(subject.fort, "fort", "seats")))
+        await writeFile(
+          join(subject.fort, "fort", "seats", name),
+          (
+            await readFile(join(subject.fort, "fort", "seats", name), "utf8")
+          ).replace(/^\*\*Held by:.*$/mu, "Occupant: unparseable"),
+        );
+      expect(
+        (await scan(subject)).gaps.some((gap: { reason: string }) =>
+          gap.reason.includes("fortkit-9qts"),
+        ),
+      ).toBe(true);
+    } finally {
+      await rm(subject.directory, { recursive: true, force: true });
+    }
+  });
+
+  // NON-VACUITY, and the assertion the pre-E9 watcher fails: with the roster
+  // empty, the identity-only file below WAS a finding in every fort forever.
+  // The second half proves the fix has not simply gone blind — one
+  // architectural line still surfaces through the same normalization.
+  test("a file differing only by identity is not a finding; one architectural line makes it one", async () => {
+    const subject = await fixture();
+    try {
+      await seat(subject.fort, "Emrith Cairnwright", "she/her");
+      // The fort name and the project are DIFFERENT identity tokens — as
+      // Manyhalls and fortkit are — and the launchers carry both.  Keeping
+      // only the name left `{{PROJECT}}` unsubstituted in every real fort.
+      await writeFile(
+        subject.registryPath,
+        JSON.stringify({
+          forts: [
+            { fort_name: "Alpha", project: "alphaworks", repo: subject.fort },
+            { fort_name: "Beta", project: "betaworks", repo: subject.sibling },
+          ],
+        }),
+      );
+      const templateScript = join(
+        subject.root,
+        "templates",
+        "fort",
+        "scripts",
+        "ident.sh",
+      );
+      const fortScript = join(subject.fort, "fort", "scripts", "ident.sh");
+      await writeFile(
+        templateScript,
+        '#!/bin/bash\nfort/scripts/emit.sh session.start "hello" -a mayor -s mayor\necho "{{FORT_NAME}} runs {{PROJECT}} at {{REPO_PATH}}"\n',
+      );
+      await writeFile(
+        fortScript,
+        `#!/bin/bash\nfort/scripts/emit.sh session.start "hello" -a emrith -s mayor\necho "Alpha runs alphaworks at ${subject.fort}"\n`,
+      );
+
+      const identityOnly = (await scan(subject)).findings.filter(
+        (finding: Finding) =>
+          finding.fort === "Alpha" && finding.path.endsWith("ident.sh"),
+      );
+      expect(identityOnly).toEqual([]);
+
+      await writeFile(
+        fortScript,
+        `${await readFile(fortScript, "utf8")}set -euo pipefail\n`,
+      );
+      const architectural = (await scan(subject)).findings.find(
+        (finding: Finding) =>
+          finding.fort === "Alpha" && finding.path.endsWith("ident.sh"),
+      ) as Finding;
+      expect(architectural).toBeDefined();
+      expect(architectural.hunks).toBe(1);
+      // The evidence a seat acts on carries the architecture and NOT the name.
+      expect(architectural.diff).toContain("set -euo pipefail");
+      expect(architectural.diff).not.toContain("Emrith");
+      expect(architectural.diff).not.toContain("emrith");
+    } finally {
+      await rm(subject.directory, { recursive: true, force: true });
+    }
+  });
+
+  test("normalizes the project placeholder in permission rules, and still sees a real absence", async () => {
+    const subject = await fixture();
+    try {
+      const settings = join(subject.fort, ".claude", "settings.json");
+      const permissions = JSON.parse(await readFile(settings, "utf8"))
+        .permissions as { allow: string[]; deny: string[] };
+      await writeFile(
+        settings,
+        JSON.stringify({
+          permissions: {
+            allow: permissions.allow.map((rule) =>
+              rule.replaceAll("{{REPO_PATH}}", subject.fort),
+            ),
+            // One real loss, to prove the comparison still discriminates.
+            deny: permissions.deny.slice(1),
+          },
+        }),
+      );
+
+      const reasons =
+        (
+          (await scan(subject)).findings.find(
+            (finding: Finding) =>
+              finding.fort === "Alpha" &&
+              finding.path === ".claude/settings.json",
+          ) as Finding
+        )?.reason.split("; ") ?? [];
+      expect(reasons).toHaveLength(1);
+      expect(reasons[0]).toContain(permissions.deny[0]);
+    } finally {
+      await rm(subject.directory, { recursive: true, force: true });
+    }
+  });
+
+  // ── fortkit-6b8y: absence must be visible, and closure must not silence it ─
+  test("a closed bead does not suppress an absence unless it carries an explicit decline", async () => {
+    const subject = await fixture();
+    try {
+      await writeFile(
+        join(subject.root, "templates", "fort", "scripts", "newcomer.sh"),
+        "#!/usr/bin/env bash\necho newcomer\n",
+      );
+      const absent = (await scan(subject)).findings.find(
+        (finding: Finding) =>
+          finding.fort === "Alpha" && finding.path.endsWith("newcomer.sh"),
+      ) as Finding;
+      expect(absent.suggestion).toBe("not-yet-propagated");
+      const closed: Bead = {
+        id: "fortkit-closed-absence",
+        title: `Drift: Alpha ${absent.path}`,
+        description: descriptionOf(absent),
+        status: "closed",
+      };
+
+      // Closed with no decline: the fort still lacks the file, so the watcher
+      // says so rather than going quiet — and still files nothing.
+      const quiet = tracker([closed]);
+      const reobserved = await run({ ...subject, commands: quiet.commands });
+      expect(reobserved.filed).toBe(0);
+      expect(quiet.beads).toHaveLength(1);
+      expect(reobserved.reobserved).toEqual([
+        expect.objectContaining({
+          fort: "Alpha",
+          path: absent.path,
+          bead: "fortkit-closed-absence",
+        }),
+      ]);
+      expect(
+        reobserved.suppressed.some(
+          (entry: { by: string }) => entry.by === "closed-bead",
+        ),
+      ).toBe(false);
+
+      // An explicit written decline is the one thing that does suppress it.
+      const declined = tracker([
+        {
+          ...closed,
+          description: `${closed.description}\n\nDrift decision: declined`,
+        },
+      ]);
+      const silent = await run({ ...subject, commands: declined.commands });
+      expect(silent.reobserved).toEqual([]);
+      expect(
+        silent.suppressed.some(
+          (entry: { by: string }) => entry.by === "declined",
+        ),
+      ).toBe(true);
+
+      // A decline recorded as a COMMENT counts too: corrections are appended.
+      const commented = tracker([closed]);
+      commented.comments.set("fortkit-closed-absence", [
+        "Drift decision: declined — this fort does not want the file.",
+      ]);
+      const alsoSilent = await run({
+        ...subject,
+        commands: commented.commands,
+      });
+      expect(alsoSilent.reobserved).toEqual([]);
+    } finally {
+      await rm(subject.directory, { recursive: true, force: true });
+    }
+  });
+
+  test("every absent file is counted in the propagation census whatever the filing decision was", async () => {
+    const subject = await fixture();
+    try {
+      for (const name of ["deferred.sh", "known.sh", "shut.sh"])
+        await writeFile(
+          join(subject.root, "templates", "fort", "scripts", name),
+          `#!/usr/bin/env bash\necho ${name}\n`,
+        );
+      const absences = (await scan(subject)).findings.filter(
+        (finding: Finding) =>
+          finding.fort === "Alpha" &&
+          finding.suggestion === "not-yet-propagated",
+      );
+      const of = (name: string) =>
+        absences.find((finding: Finding) =>
+          finding.path.endsWith(name),
+        ) as Finding;
+      const fake = tracker([
+        {
+          id: "fortkit-open",
+          title: `Drift: Alpha ${of("known.sh").path}`,
+          description: descriptionOf(of("known.sh")),
+          status: "open",
+        },
+        {
+          id: "fortkit-shut",
+          title: `Drift: Alpha ${of("shut.sh").path}`,
+          description: descriptionOf(of("shut.sh")),
+          status: "closed",
+        },
+      ]);
+
+      const report = await run({ ...subject, commands: fake.commands });
+      // Three states — deferred, suppressed behind an open bead, re-observed
+      // behind a closed one — and the census must carry all three, for both
+      // forts.  The pre-E9 report exposed only the first, in a field nothing
+      // read (fortkit-6b8y).
+      expect(report.propagationGaps).toHaveLength(6);
+      const alpha = report.propagationGaps.filter(
+        (gap: { fort: string }) => gap.fort === "Alpha",
+      );
+      expect(
+        alpha.map((gap: { path: string; action: string }) => [
+          gap.path.replace("fort/scripts/", ""),
+          gap.action,
+        ]),
+      ).toEqual([
+        ["deferred.sh", "defer"],
+        ["known.sh", "suppress"],
+        ["shut.sh", "re-observed"],
+      ]);
+      expect(report.plan.propagationGaps).toBe(6);
+      expect(report.filed).toBe(0);
+    } finally {
+      await rm(subject.directory, { recursive: true, force: true });
+    }
+  });
+
+  // The seat comparison is standing order 12 already implemented correctly.
+  // This pins it so a later pass cannot "improve" it into a content diff.
+  test("seat files are compared by heading only, never by content", async () => {
+    const subject = await fixture();
+    try {
+      const seatPath = join(subject.fort, "fort", "seats", "warden.md");
+      const original = await readFile(seatPath, "utf8");
+      await writeFile(
+        seatPath,
+        `${original}\nEntirely different prose that belongs to this citizen alone.\n`,
+      );
+      expect(
+        (await scan(subject)).findings.some((finding: Finding) =>
+          finding.path.endsWith("seats/warden.md"),
+        ),
+      ).toBe(false);
+
+      await writeFile(
+        seatPath,
+        original.replace(/^## .+$/mu, "## Renamed away"),
+      );
+      expect(
+        (await scan(subject)).findings.some(
+          (finding: Finding) =>
+            finding.path.endsWith("seats/warden.md") &&
+            finding.reason.includes("required protocol heading is absent"),
+        ),
+      ).toBe(true);
     } finally {
       await rm(subject.directory, { recursive: true, force: true });
     }
