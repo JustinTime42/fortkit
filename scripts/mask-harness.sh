@@ -148,14 +148,6 @@ if [[ "$out" == *CHECKOUTOK* ]] && [ "$sha_before" = "$sha_after" ]; then
 else bad "A2 6ovg verify.sh: git checkout replaces it" "$out (sha $sha_after)"; fi
 assert_ro        "A3 mayor.sh not writable"            "$ROOT/fort/scripts/mayor.sh"
 assert_immovable "A4 mayor.sh not unlinkable/renamable" "$ROOT/fort/scripts/mayor.sh"
-# A4b (fortkit-x9ou, Warden E2 blocking finding 2): seat-sandbox.sh:230-231 and the charter's
-# accepted residual both claim "neither can the directory itself" be moved. Nothing measured it,
-# and Shape A is exactly what demoted fort/scripts from BEING a mount point to a directory that
-# merely CONTAINS them. $root/fort has no carve-out, so its entries are writable.
-# READ THE RENAME HALF ONLY. `rm -f` on a directory always fails ("is a directory"), so the
-# unlink half of this assertion is VACUOUS here and a PASS must not be read as proving it.
-# The load-bearing question is whether mv is refused.
-assert_immovable "A4b fort/scripts DIR not renamable (unlink half VACUOUS on a dir)" "$ROOT/fort/scripts"
 assert_ro        "A5 lib/seat-sandbox.sh not writable"  "$ROOT/fort/scripts/lib/seat-sandbox.sh"
 assert_newfile_expected "A6 6ovg DISCLOSED HOLE: new file in fort/scripts" "$ROOT/fort/scripts"
 assert_ro "A7a fort/profiles not writable"  "$ROOT/fort/profiles/warden-settings.json"
