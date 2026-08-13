@@ -177,8 +177,12 @@ assert_ro "A8b 5sk ~/.claude/skills RO"            "$HOME/.claude/skills/civ/SKI
 assert_ro "A8c 5sk ~/.claude/commands RO"          "$HOME/.claude/commands/park.md"
 assert_ro "A8d 5sk ~/.claude/plugins RO"           "$HOME/.claude/plugins/installed_plugins.json"
 out="$(inmask "touch '$HOME/.claude/teams/.e2-probe' && echo CREATED || echo BLOCKED")"
-[ "$out" = "CREATED" ] && { ok "A8e ~/.claude/teams STILL WRITABLE (harness state)" "deliberate"; rm -f "$HOME/.claude/teams/.e2-probe"; } \
-                       || bad "A8e ~/.claude/teams still writable" "$out — masked launches will break"
+if [ "$out" = "CREATED" ]; then
+  ok "A8e ~/.claude/teams STILL WRITABLE (harness state)" "deliberate"
+  rm -f "$HOME/.claude/teams/.e2-probe"
+else
+  bad "A8e ~/.claude/teams still writable" "$out — masked launches will break"
+fi
 assert_zero_bytes "A9a 2kub .env.staging.local"             "$ROOT/.env.staging.local"
 assert_zero_bytes "A9b 2kub ..env.staging.local.kate-swp"   "$ROOT/..env.staging.local.kate-swp"
 assert_zero_bytes "A9c 2kub .#env.local (emacs lock)"       "$ROOT/.#env.local"
