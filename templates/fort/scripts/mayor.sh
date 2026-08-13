@@ -4,6 +4,13 @@
 # renames them — a fort must never inherit another settlement's citizen (fortkit-ebm/fd2).
 # shellcheck disable=SC1083  # template placeholders read as literal braces
 # Talk to the Mayor. Usage: fort/scripts/mayor.sh  (add an alias: alias mayor (global launcher finds any fort))
+# In-sandbox launch refusal (longburn-5v4, amended on the Mayor's finding):
+# no seat launches another Mayor — any marker at all, including the Mayor's
+# own and the legacy '1', refuses. Only an unmasked shell launches this.
+if [ -n "${FORT_MASKED:-}" ]; then
+  echo "mayor.sh: REFUSED — already inside the '$FORT_MASKED' seat mask; no seat launches another Mayor (longburn-5v4)" >&2
+  exit 77
+fi
 REPO="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo {{REPO_PATH}})"
 cd "$REPO" || exit 1
 fort/scripts/emit.sh session.start "The Overseer summons the Mayor" -a mayor -s mayor 2>/dev/null || true
@@ -26,7 +33,7 @@ mask=()
 # shellcheck source=fort/scripts/lib/seat-sandbox.sh
 # shellcheck disable=SC1091  # resolved at runtime; build_mask fills mask[]
 source "$REPO/fort/scripts/lib/seat-sandbox.sh"
-launch=(claude --append-system-prompt "You are the Mayor of the {{PROJECT}} fort (see fort/seats/mayor.md) — the design, triage, and decomposition seat, and the seat Justin talks to. Follow fort/seats/mayor.md exactly: session-start protocol (read fort/charter.md, fort/memory/current.md (distilled view; facts ledger in fort/memory/facts/), latest fort/handoffs/mayor-*.md, then bd ready and bd list), the standing orders in the charter, and the consensual handoff protocol at session end. You write specs, beads, and docs — never product code. When Justin gives intent, decompose it into a bead tree and present it for approval before filing. When he asks for status, use bd and fort/handoffs/ and answer concretely. You may run git push and deploy commands, but they are gated by prose, not by the sandbox: ASK JUSTIN FIRST, every time, and say exactly what you intend to push or deploy and why. Never push or deploy on your own initiative.")
+launch=(claude --append-system-prompt "You are the Mayor of the {{PROJECT}} fort (see fort/seats/mayor.md) — the design, triage, and decomposition seat, and the seat Justin talks to. Follow fort/seats/mayor.md exactly: session-start protocol (read fort/charter.md, fort/memory/current.md (distilled view; facts ledger in fort/memory/facts/), latest fort/handoffs/mayor-*.md, then bd ready and bd list), the standing orders in the charter, and the consensual handoff protocol at session end. You write specs, beads, and docs — never product code. When Justin gives intent, decompose it into a bead tree and present it for approval before filing. When he asks for status, use bd and fort/handoffs/ and answer concretely. You may run git push and deploy commands, but they are gated by prose, not by the sandbox: ASK JUSTIN FIRST, every time, and say exactly what you intend to push or deploy and why. Never push or deploy on your own initiative, in a batch of other work, or because it seems implied. If you are unsure whether he has approved this specific action, you have not been approved.")
 if [ "${MAYOR_NO_MASK:-0}" = "1" ]; then
   fort/scripts/emit.sh incident "Mayor launched UNMASKED (MAYOR_NO_MASK=1) — no kernel boundary this session" -a mayor -s mayor 2>/dev/null || true
   exec "${launch[@]}"
@@ -46,4 +53,3 @@ mask_env claude
 export FORT_MASKED=1
 mask+=(--setenv FORT_MASKED 1)
 exec bwrap "${mask[@]}" -- "${launch[@]}"
-
