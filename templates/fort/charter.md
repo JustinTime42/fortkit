@@ -24,6 +24,10 @@ Controls in this fort are justified against these threats, in priority order. A 
 3. **Supply chain** — a package or plugin silently overwriting harness files. Observed in this civilization: a ruflo upgrade that severed reflexion capture.
 4. **Credential leakage into transcripts** — a secret reaching a model's context or a log, from which it cannot be recalled.
 
+**Accepted residuals (measured, not assumed).** Standing order 11 admits a residual here only with a measurement attached. A gap recorded here is one this fort has decided to live with and can say why; a gap not recorded here is one nobody has looked at yet, and the difference matters to whoever reads this next.
+
+- **The Warden's read-only property is profile-enforced at `~/.codex`, not kernel-enforced.** Your `fort/scripts/lib/seat-sandbox.sh` binds `~/.codex` live read-write for BOTH seat types, because the Codex runtime rotates its auth token by RENAME and a re-bound `auth.json` file pins the inode so rotation fails — a read-only bind there costs you your Forge on its first token refresh. The Warden is a claude seat, so the bind reaches her: at the kernel she can write `~/.codex/AGENTS.md`, `skills/` and `plugins/`, which is instruction the next Forge launch executes outside her mask. What holds the line is `fort/profiles/warden-settings.json`, which denies `Edit(**)` and every write verb, so the seat stays read-only at the TOOL layer; `~/.codex/config.toml` is separately bound read-only, closing the disarm-the-next-launch vector. **Read side, stated rather than left to be inferred from the write side:** `~/.codex` is readable in full to claude seats except `sessions/`, `log/` and `history.jsonl` — including `config.toml`, which in Codex commonly carries MCP server definitions and their environment. Consistent with the standing "reads across `$HOME` stay open" decision. Origin: Manyhalls `fortkit-3jv7`, carried to this fort at founding. **If you tighten anything here, measure it first** — a read-only bind on `skills/` or `plugins/` was tried and ruled out as a launch-abort risk.
+
 **Explicitly out of scope: a motivated human adversary who already has shell access on this machine.** Such an actor has no need to defeat a deny glob; they can read the file directly. Controls are not designed against them, findings that require them are documented rather than blocked on, and effort spent hardening against them is effort not spent on 1-4.
 
 ## Standing orders (generic, scar-tested — sources: Proofdelve/Farlantern annals)
@@ -47,7 +51,7 @@ Controls in this fort are justified against these threats, in priority order. A 
 |---|---|---|---|
 | Mayor | Design, triage, decomposition, specs; the seat the Overseer talks to | Claude Code: Opus 5 → Fable 5 → GPT-5.6 Sol | specs, beads, docs — never product code |
 | Forge | Implementation in isolated worktrees | Codex CLI (`codex exec`, workspace-write, stdin `</dev/null`, worktree pre-trusted): GPT-5.6 Terra → Sol → Claude Sonnet 5 → Opus 5 | product code in its worktree |
-| Warden | Review, read-only by construction | Opus 5 → GPT-5.6 Sol → block and page the Overseer (never degrades below frontier) | review verdicts only |
+| Warden | Review, read-only — kernel-enforced everywhere except `~/.codex`, profile-enforced there (see accepted residuals) | Opus 5 → GPT-5.6 Sol → block and page the Overseer (never degrades below frontier) | review verdicts only |
 
 Occupants: chosen at this fort's Founding Moot (`fort/annals/founding-moot.md`). New fort, new founders — other settlements' citizens remain their own. Moot law: Borda 3-2-1, self-votes at full weight with conflicts declared; an office-word conflict is grounds to withhold your own vote, never to shorten another's ballot; a discount rule may be adopted before a vote, never during one.
 
