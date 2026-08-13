@@ -155,14 +155,16 @@ describe("memory consolidation", () => {
     );
   });
 
-  test("pins the migrated cycle-7 correction as the active Forge truth", async () => {
+  test("pins the active cycle-13 write-boundaries truth in the distilled view", async () => {
     const current = await readFile(
       join(repositoryRoot, "fort", "memory", "current.md"),
       "utf8",
     );
     expect(current).toContain("attended seats (Mayor, Warden) have");
-    expect(current).toContain("PROSE- gated");
-    expect(current).not.toContain("Forge runs with a kernel mask");
+    expect(current).toContain(
+      "scripts/verify-impl.sh: writable to the Mayor, kernel-RO to the Forge",
+    );
+    expect(current).not.toContain("except Mayor-writable verify.sh");
   });
 
   test("caps ready beads without dropping in-progress or gate-labeled work", async () => {
