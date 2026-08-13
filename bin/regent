@@ -363,7 +363,7 @@ PROTOCOL
 
 {
   echo '#!/bin/bash'
-  echo "exec claude --model '$model' --dangerously-skip-permissions --append-system-prompt \"\$(cat '$SYSPROMPT')\" ${instruction:+\"$instruction\"}"
+  echo "exec claude --model '$model' --dangerously-skip-permissions --append-system-prompt-file '$SYSPROMPT' ${instruction:+\"$instruction\"}"
 } > "$RUNNER"
 chmod +x "$RUNNER"
 
