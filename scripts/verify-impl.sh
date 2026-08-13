@@ -83,11 +83,32 @@ run_step() {
 # surface (CI, a fresh clone) there is nothing to check, and a checker that
 # checks nothing must never report success without saying so.
 skills_install_check() {
-  local base="$HOME/.claude/skills" src name dst bad=0 checked=0
+  local base="$HOME/.claude/skills" src name dst bad=0 checked=0 gcd canonical
   if [ ! -d "$base" ]; then
     printf 'skills-install: SKIPPED — %s does not exist, so nothing here is installed.\n' "$base" >&2
     return 0
   fi
+  # THE INSTALLED SYMLINK CAN ONLY EVER POINT AT ONE CHECKOUT (fortkit-52vf.9, Warden
+  # blocking finding 1). The first version of this step compared readlink -f "$dst"
+  # against readlink -f "$src", and $src resolves against the CURRENT tree — so the
+  # comparison was false in every checkout except /home/justin/dev/fortkit, this step is
+  # 2 of 7, and typecheck/lint/test/shellcheck never ran. It reported failure having
+  # verified almost nothing, and the lane it broke is the FORGE's: forge.sh runs
+  # `cd "$wt" && ./fort/scripts/verify.sh` in a worktree, so every Forge bead would have
+  # drawn a red launcher-observed verifier and standing order 9 could never be satisfied
+  # from a worktree. A false red rather than a false green, and still a broken verifier.
+  #
+  # Resolve the CANONICAL checkout from git's common dir, so a worktree compares against
+  # the same target the canonical checkout does instead of against itself.
+  gcd="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+  if [ -z "$gcd" ] || [ ! -d "$gcd" ]; then
+    printf 'skills-install: SKIPPED — %s is not a git checkout, so the canonical repository cannot be resolved and an installed symlink cannot be attributed to it.\n' "$PWD" >&2
+    return 0
+  fi
+  canonical="$(cd "$gcd/.." && pwd)" || {
+    printf 'skills-install: SKIPPED — could not resolve the canonical checkout from %s.\n' "$gcd" >&2
+    return 0
+  }
   for src in skills/*/; do
     [ -d "$src" ] || continue
     name="$(basename "$src")"; dst="$base/$name"; checked=$((checked+1))
@@ -95,8 +116,8 @@ skills_install_check() {
       printf 'skills-install: %s is NOT a symlink — an installed copy can diverge from its reviewed source (fortkit-4n8c).\n' "$dst" >&2
       bad=1; continue
     fi
-    if [ "$(readlink -f "$dst")" != "$(readlink -f "$src")" ]; then
-      printf 'skills-install: %s -> %s, expected %s\n' "$dst" "$(readlink "$dst")" "$(readlink -f "$src")" >&2
+    if [ "$(readlink -f "$dst")" != "$canonical/skills/$name" ]; then
+      printf 'skills-install: %s -> %s, expected %s\n' "$dst" "$(readlink "$dst")" "$canonical/skills/$name" >&2
       bad=1
     fi
   done

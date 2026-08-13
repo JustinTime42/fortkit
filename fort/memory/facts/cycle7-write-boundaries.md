@@ -1,7 +1,7 @@
 ---
 key: cycle7-write-boundaries
-status: active
-superseded-by: null
+status: superseded
+superseded-by: cycle13-write-boundaries
 tier: core
 scope:
   seats: [all]
