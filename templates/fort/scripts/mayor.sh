@@ -4,8 +4,6 @@
 # renames them — a fort must never inherit another settlement's citizen (fortkit-ebm/fd2).
 # shellcheck disable=SC1083  # template placeholders read as literal braces
 # Talk to the Mayor. Usage: fort/scripts/mayor.sh  (add an alias: alias mayor (global launcher finds any fort))
-REPO="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo {{REPO_PATH}})"
-cd "$REPO" || exit 1
 # In-sandbox launch refusal (longburn-5v4, amended on the Mayor's finding):
 # no seat launches another Mayor — any marker at all, including the Mayor's
 # own and the legacy '1', refuses. Only an unmasked shell launches this.
@@ -13,6 +11,8 @@ if [ -n "${FORT_MASKED:-}" ]; then
   echo "mayor.sh: REFUSED — already inside the '$FORT_MASKED' seat mask; no seat launches another Mayor (longburn-5v4)" >&2
   exit 77
 fi
+REPO="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo {{REPO_PATH}})"
+cd "$REPO" || exit 1
 fort/scripts/emit.sh session.start "The Overseer summons the Mayor" -a mayor -s mayor 2>/dev/null || true
 trap 'fort/scripts/emit.sh session.end "The Mayor'\''s audience with the Overseer ends" -a mayor -s mayor 2>/dev/null || true' EXIT
 # Kernel mask layer (civilization cycle 4). Permission rules bind a SPELLING,
