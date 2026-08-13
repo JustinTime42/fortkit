@@ -51,11 +51,6 @@ build_mask() {
         env_roots+=("$2")
         shift 2
         ;;
-      --mask-file)
-        [ "$#" -ge 2 ] || { echo "build_mask: --mask-file requires a path" >&2; return 2; }
-        mask_files_extra+=("$2")
-        shift 2
-        ;;
       --rw-tree)
         # fortkit-1q9. A declared tree is BOTH granted and protected: it joins
         # RW_PATHS, every RO carve-out below is computed for it, and its secrets
@@ -64,6 +59,11 @@ build_mask() {
         [ "$#" -ge 2 ] || { echo "build_mask: --rw-tree requires a path" >&2; return 2; }
         rw_trees+=("$2")
         env_roots+=("$2")
+        shift 2
+        ;;
+      --mask-file)
+        [ "$#" -ge 2 ] || { echo "build_mask: --mask-file requires a path" >&2; return 2; }
+        mask_files_extra+=("$2")
         shift 2
         ;;
       --mask-ssh-auth-sock)
