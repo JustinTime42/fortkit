@@ -1,0 +1,553 @@
+{
+  "schemaVersion": 6,
+  "generatedAt": "2026-08-09T05:54:40.690Z",
+  "provider": "PixelLab",
+  "spendCapUsd": 15,
+  "generationCap": 30,
+  "assets": [
+    {
+      "id": "forge-building",
+      "kind": "building",
+      "file": "forge-building.png",
+      "requestedModel": "pixflux",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+      "prompt": "32-bit pixel art, single object or character, orthographic 3/4 exterior, humble dwarven stone forge building, chimney, anvil sign without text, no text, no logo",
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 41001,
+      "params": {
+        "imageSize": {
+          "width": 128,
+          "height": 128
+        },
+        "no_background": true,
+        "outline": "selective outline"
+      },
+      "requestedImageSize": {
+        "width": 128,
+        "height": 128
+      },
+      "actualImageSize": {
+        "width": 128,
+        "height": 128
+      },
+      "generatedAt": "2026-08-09T04:55:14.869Z",
+      "cost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "45e0ebbe406a4814df6b442a5571498353d3fb67c8ce73b5927bcb6845781dce",
+      "reference": null,
+      "referencePadding": null,
+      "reusedAt": "2026-08-09T05:54:40.690Z"
+    },
+    {
+      "id": "tavern-building",
+      "kind": "building",
+      "file": "tavern-building.png",
+      "requestedModel": "pixflux",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+      "prompt": "32-bit pixel art, single object or character, orthographic 3/4 exterior, warm dwarven stone tavern building, barrel and lantern, no readable sign, no text, no logo",
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 41002,
+      "params": {
+        "imageSize": {
+          "width": 128,
+          "height": 128
+        },
+        "no_background": true,
+        "outline": "selective outline"
+      },
+      "requestedImageSize": {
+        "width": 128,
+        "height": 128
+      },
+      "actualImageSize": {
+        "width": 128,
+        "height": 128
+      },
+      "generatedAt": "2026-08-09T04:55:48.921Z",
+      "cost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "578e3cf28f1b8a4d9e9810f981155c54df86997f42354a0071587652ceba5cb3",
+      "reference": null,
+      "referencePadding": null,
+      "reusedAt": "2026-08-09T05:54:40.693Z"
+    },
+    {
+      "id": "kethra-citizen",
+      "kind": "citizen-master",
+      "file": "kethra-citizen.png",
+      "requestedModel": "pixflux",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+      "prompt": "32-bit pixel art, single object or character, orthographic 3/4 exterior, dwarven forge master Kethra, leather apron, hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame, no text, no logo",
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 42001,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 64
+        },
+        "no_background": true,
+        "outline": "selective outline"
+      },
+      "requestedImageSize": {
+        "width": 32,
+        "height": 64
+      },
+      "actualImageSize": {
+        "width": 32,
+        "height": 64
+      },
+      "generatedAt": "2026-08-09T04:56:18.032Z",
+      "cost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "7a061c2ea94b9cdada035b0dd9592c97aaa6ad3f8d7b0a7439f09b1552724b6e",
+      "reference": null,
+      "referencePadding": null,
+      "reusedAt": "2026-08-09T05:54:40.693Z"
+    },
+    {
+      "id": "tavern-master",
+      "kind": "citizen-master",
+      "file": "tavern-master.png",
+      "requestedModel": "pixflux",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+      "prompt": "32-bit pixel art, single object or character, orthographic 3/4 exterior, dwarven tavern master, apron and tankard, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame, no text, no logo",
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 42002,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 64
+        },
+        "no_background": true,
+        "outline": "selective outline"
+      },
+      "requestedImageSize": {
+        "width": 32,
+        "height": 64
+      },
+      "actualImageSize": {
+        "width": 32,
+        "height": 64
+      },
+      "generatedAt": "2026-08-09T04:56:33.581Z",
+      "cost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "94683662c01979639a4fde8ca487ec6e88019ea7ec874278638658e5348be730",
+      "reference": null,
+      "referencePadding": null,
+      "reusedAt": "2026-08-09T05:54:40.693Z"
+    },
+    {
+      "id": "implementation-crate",
+      "kind": "item-glyph",
+      "file": "implementation-crate.png",
+      "requestedModel": "pixflux",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+      "prompt": "32-bit pixel art, single object or character, orthographic 3/4 exterior, small wooden crate of forge tools for implementation work, no text, no logo",
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 44001,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 32
+        },
+        "no_background": true,
+        "outline": "selective outline"
+      },
+      "requestedImageSize": {
+        "width": 32,
+        "height": 32
+      },
+      "actualImageSize": {
+        "width": 32,
+        "height": 32
+      },
+      "generatedAt": "2026-08-09T04:56:49.541Z",
+      "cost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "2a2c5f25a9493d2b32f035c2d25fedfb37958495bff5d28c485c0a28aeea8813",
+      "reference": null,
+      "referencePadding": null,
+      "reusedAt": "2026-08-09T05:54:40.693Z"
+    },
+    {
+      "id": "research-scroll",
+      "kind": "item-glyph",
+      "file": "research-scroll.png",
+      "requestedModel": "pixflux",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+      "prompt": "32-bit pixel art, single object or character, orthographic 3/4 exterior, rolled research scroll and magnifying glass, no text, no logo",
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 44002,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 32
+        },
+        "no_background": true,
+        "outline": "selective outline"
+      },
+      "requestedImageSize": {
+        "width": 32,
+        "height": 32
+      },
+      "actualImageSize": {
+        "width": 32,
+        "height": 32
+      },
+      "generatedAt": "2026-08-09T04:57:07.548Z",
+      "cost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "69126d228d91792202dfab8b765129276c4be4f231474340ee2acf278476a4c5",
+      "reference": null,
+      "referencePadding": null,
+      "reusedAt": "2026-08-09T05:54:40.694Z"
+    },
+    {
+      "id": "review-lantern",
+      "kind": "item-glyph",
+      "file": "review-lantern.png",
+      "requestedModel": "pixflux",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+      "prompt": "32-bit pixel art, single object or character, orthographic 3/4 exterior, inspection lantern for review work, no text, no logo",
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 44003,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 32
+        },
+        "no_background": true,
+        "outline": "selective outline"
+      },
+      "requestedImageSize": {
+        "width": 32,
+        "height": 32
+      },
+      "actualImageSize": {
+        "width": 32,
+        "height": 32
+      },
+      "generatedAt": "2026-08-09T04:57:23.025Z",
+      "cost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "527d06fda5f5f1c9653eec2599162dd1af7a4c615db81d28cf96bc27f81301f6",
+      "reference": null,
+      "referencePadding": null,
+      "reusedAt": "2026-08-09T05:54:40.694Z"
+    },
+    {
+      "id": "coordination-token",
+      "kind": "item-glyph",
+      "file": "coordination-token.png",
+      "requestedModel": "pixflux",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+      "prompt": "32-bit pixel art, single object or character, orthographic 3/4 exterior, dwarven coordination token, small linked rings, no text, no logo",
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 44004,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 32
+        },
+        "no_background": true,
+        "outline": "selective outline"
+      },
+      "requestedImageSize": {
+        "width": 32,
+        "height": 32
+      },
+      "actualImageSize": {
+        "width": 32,
+        "height": 32
+      },
+      "generatedAt": "2026-08-09T04:57:46.508Z",
+      "cost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "2546fb33b0b5b49ef9e69f54f68847bd1404423a65b67be044536e27ff5ddff1",
+      "reference": null,
+      "referencePadding": null,
+      "reusedAt": "2026-08-09T05:54:40.694Z"
+    },
+    {
+      "id": "kethra-walk-east-01",
+      "kind": "walk-frame",
+      "file": "kethra-walk-east-01.png",
+      "requestedModel": "animate-with-text",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/animate-with-text",
+      "prompt": "dwarven forge master Kethra walking east, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
+      "frameIndex": 1,
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 43001,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 64
+        },
+        "no_background": true,
+        "view": "side",
+        "direction": "east",
+        "action": "walk",
+        "n_frames": 4
+      },
+      "requestedImageSize": {
+        "width": 64,
+        "height": 64
+      },
+      "actualImageSize": {
+        "width": 64,
+        "height": 64
+      },
+      "generatedAt": "2026-08-09T05:55:06.583Z",
+      "amortizedCost": {
+        "meter": "generations",
+        "amount": 0.25
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "fead49fef5572fc79e28bdeb517d7bcdf5191f016c88ec4ccebdc5c14cdf1c7c",
+      "reference": {
+        "file": "kethra-citizen.png",
+        "sha256": "7a061c2ea94b9cdada035b0dd9592c97aaa6ad3f8d7b0a7439f09b1552724b6e"
+      },
+      "referencePadding": {
+        "from": {
+          "width": 32,
+          "height": 64
+        },
+        "to": {
+          "width": 64,
+          "height": 64
+        },
+        "placement": "bottom-center"
+      }
+    },
+    {
+      "id": "kethra-walk-east-02",
+      "kind": "walk-frame",
+      "file": "kethra-walk-east-02.png",
+      "requestedModel": "animate-with-text",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/animate-with-text",
+      "prompt": "dwarven forge master Kethra walking east, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
+      "frameIndex": 2,
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 43001,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 64
+        },
+        "no_background": true,
+        "view": "side",
+        "direction": "east",
+        "action": "walk",
+        "n_frames": 4
+      },
+      "requestedImageSize": {
+        "width": 64,
+        "height": 64
+      },
+      "actualImageSize": {
+        "width": 64,
+        "height": 64
+      },
+      "generatedAt": "2026-08-09T05:55:06.586Z",
+      "amortizedCost": {
+        "meter": "generations",
+        "amount": 0.25
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "3a73b543abbb200eb11ac189b9dad17106b4701dd52094e7cdbc131bb5723462",
+      "reference": {
+        "file": "kethra-citizen.png",
+        "sha256": "7a061c2ea94b9cdada035b0dd9592c97aaa6ad3f8d7b0a7439f09b1552724b6e"
+      },
+      "referencePadding": {
+        "from": {
+          "width": 32,
+          "height": 64
+        },
+        "to": {
+          "width": 64,
+          "height": 64
+        },
+        "placement": "bottom-center"
+      }
+    },
+    {
+      "id": "kethra-walk-east-03",
+      "kind": "walk-frame",
+      "file": "kethra-walk-east-03.png",
+      "requestedModel": "animate-with-text",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/animate-with-text",
+      "prompt": "dwarven forge master Kethra walking east, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
+      "frameIndex": 3,
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 43001,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 64
+        },
+        "no_background": true,
+        "view": "side",
+        "direction": "east",
+        "action": "walk",
+        "n_frames": 4
+      },
+      "requestedImageSize": {
+        "width": 64,
+        "height": 64
+      },
+      "actualImageSize": {
+        "width": 64,
+        "height": 64
+      },
+      "generatedAt": "2026-08-09T05:55:06.588Z",
+      "amortizedCost": {
+        "meter": "generations",
+        "amount": 0.25
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "f8b09411d3ec316101e4f3c3de1ea32b33efb5f0b127f663f893c825eb191fb5",
+      "reference": {
+        "file": "kethra-citizen.png",
+        "sha256": "7a061c2ea94b9cdada035b0dd9592c97aaa6ad3f8d7b0a7439f09b1552724b6e"
+      },
+      "referencePadding": {
+        "from": {
+          "width": 32,
+          "height": 64
+        },
+        "to": {
+          "width": 64,
+          "height": 64
+        },
+        "placement": "bottom-center"
+      }
+    },
+    {
+      "id": "kethra-walk-east-04",
+      "kind": "walk-frame",
+      "file": "kethra-walk-east-04.png",
+      "requestedModel": "animate-with-text",
+      "confirmedModel": null,
+      "endpoint": "https://api.pixellab.ai/v1/animate-with-text",
+      "prompt": "dwarven forge master Kethra walking east, leather apron and hammer, 32 by 48 visible pixels aligned to the bottom of a 32 by 64 transparent frame",
+      "frameIndex": 4,
+      "negativeConstraints": "no words, no UI, no watermark, no photorealism, no isometric grid, no extra people",
+      "seed": 43001,
+      "params": {
+        "imageSize": {
+          "width": 32,
+          "height": 64
+        },
+        "no_background": true,
+        "view": "side",
+        "direction": "east",
+        "action": "walk",
+        "n_frames": 4
+      },
+      "requestedImageSize": {
+        "width": 64,
+        "height": 64
+      },
+      "actualImageSize": {
+        "width": 64,
+        "height": 64
+      },
+      "generatedAt": "2026-08-09T05:55:06.590Z",
+      "amortizedCost": {
+        "meter": "generations",
+        "amount": 0.25
+      },
+      "requestCost": {
+        "meter": "generations",
+        "amount": 1
+      },
+      "sha256": "e4cd2ac955f203cc1a41ebb237544e578c5f135b6a309d71167319a31ef64dfe",
+      "reference": {
+        "file": "kethra-citizen.png",
+        "sha256": "7a061c2ea94b9cdada035b0dd9592c97aaa6ad3f8d7b0a7439f09b1552724b6e"
+      },
+      "referencePadding": {
+        "from": {
+          "width": 32,
+          "height": 64
+        },
+        "to": {
+          "width": 64,
+          "height": 64
+        },
+        "placement": "bottom-center"
+      }
+    }
+  ]
+}
