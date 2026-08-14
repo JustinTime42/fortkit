@@ -69,6 +69,21 @@ if ! require_bwrap; then
 fi
 build_mask codex "$root" --rw-tree "$wt" --mask-ssh-auth-sock
 mask_env codex
+# SEAT-NAMED MASK MARKER (fortkit-ugw4; the shape Farlantern has shipped
+# since longburn-5v4). mayor.sh refuses under ANY non-empty FORT_MASKED and
+# prints the value, so this one line makes 'no seat launches another Mayor'
+# true from this seat too, and names it in the refusal. Until 2026-08-14 only
+# mayor.sh set the marker, so the guard read as covering three seats and
+# covered one — and the uncovered pair included the Forge, the seat that holds
+# Bash. Not a capability hole (a nested bwrap cannot widen its parent's mount
+# namespace) but diagnosability, which is what the guard is for.
+# ONE LINE, NOT TWO. mayor.sh pairs its --setenv with a host-side `export
+# FORT_MASKED`; that export reaches nothing, because mask_env appends
+# --clearenv and bwrap then rebuilds the child environment from --setenv
+# alone (measured 2026-08-14: `FOO=x bwrap --clearenv --setenv BAR 1 -- env`
+# prints BAR and not FOO). An export here would additionally assert, falsely,
+# that this host-side launcher process is itself inside a mask.
+mask+=(--setenv FORT_MASKED forge)
 
 "$emit" session.start "Kethra begins work on $bead ($model)" -a kethra -s forge -t "$bead" -p "{\"model\":\"$model\",\"worktree\":\"$wt\"}"
 desc=$(bd show "$bead" 2>/dev/null || echo "See bead $bead")

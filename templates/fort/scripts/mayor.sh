@@ -1,5 +1,8 @@
 #!/bin/bash
-# TEMPLATE — rendered by fort-init; {{PLACEHOLDERS}} resolved at founding.
+# TEMPLATE — rendered by fort-init; its placeholder tokens resolve at founding.
+# Written without a brace literal on purpose: a founded fort is checked for
+# surviving render tokens, and a literal in a comment fails a zero-tolerance
+# check exactly like a live one (fortkit-wg8w.1, third sighting of the class).
 # Actor ids are seat-office names (mayor/forge/warden) until the Founding Moot
 # renames them — a fort must never inherit another settlement's citizen (fortkit-ebm/fd2).
 # shellcheck disable=SC1083  # template placeholders read as literal braces

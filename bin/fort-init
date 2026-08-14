@@ -24,12 +24,57 @@ bd export -o .beads/issues.jsonl
 
 mkdir -p fort/{seats,handoffs,annals,events,specs,scripts,telemetry,memory/facts}
 touch fort/handoffs/.gitkeep
-render() { sed -e "s|{{REPO_PATH}}|$REPO|g" -e "s|{{PROJECT}}|$PROJECT|g" -e "s|{{DATE}}|$DATE|g" \
+# ONE SUBSTITUTION LIST, TWO CALLERS (fortkit-0po6). Everything that renders a
+# file calls render(); the permission merge further down needs the rendered text
+# on stdout rather than in a file, so it calls render_stream(). It kept a sed of
+# its OWN until 2026-08-14, and that sed knew only {{REPO_PATH}} — so any token
+# added here shipped as a LITERAL into every new fort's .claude/settings.json,
+# where a rule containing braces matches nothing and denies nothing. That is the
+# fortkit-f3y double-slash class one layer up, failing in the direction where the
+# fort believes it is protected. Two seds cannot drift if there is one.
+#
+# {{HOME}} exists so a deny OUTSIDE the repo can be spelled correctly once
+# (Overseer ruling on fortkit-0po6, shape (a); the ~/.codex rule that uses it is
+# fortkit-hgbe, the Forge's half). fortkit-4wlz's "no absolute-path denies in
+# the templates" is NARROWED ON THE RECORD by that ruling to {{REPO_PATH}}
+# specifically — the token whose value is concatenated after a leading slash,
+# which is what produced the double-slash class. It was never about absolutes.
+render_stream() { sed -e "s|{{REPO_PATH}}|$REPO|g" -e "s|{{PROJECT}}|$PROJECT|g" -e "s|{{DATE}}|$DATE|g" \
+  -e "s|{{HOME}}|$HOME|g" \
   -e "s|{{FORT_NAME}}|(unnamed — moot pending)|g" -e "s|{{FORT_BANNER}}|${PROJECT^^} FORT STATUS (moot pending)|g" \
-  -e "s|{{FOUNDING_SPEC}}|$SPEC|g" -e "s|{{PURPOSE}}|$PURPOSE|g" -e "s|{{EXTRA_GATES}}||g" -e "s|{{EXTRA_ORDERS}}||g" "$1" > "$2"; }
+  -e "s|{{FOUNDING_SPEC}}|$SPEC|g" -e "s|{{PURPOSE}}|$PURPOSE|g" -e "s|{{EXTRA_GATES}}||g" -e "s|{{EXTRA_ORDERS}}||g" "$1"; }
+render() { render_stream "$1" > "$2"; }
 render "$T/fort/charter.md" fort/charter.md
-for s in mayor forge warden; do render "$T/fort/seats/$s.md" "fort/seats/$s.md"; done
-for sc in emit status mayor forge warden verify; do render "$T/fort/scripts/$sc.sh" "fort/scripts/$sc.sh"; done
+# THE SEAT ROSTER — one list, four consumers (fortkit-naju): the seat files and
+# launchers here, the permission profiles below, the founding fact, and the
+# seat.founded events. Those were four hand-maintained enumerations until
+# 2026-08-14, and the Researcher — whose four templates had all shipped — was in
+# none of them, so a fort founded today was born without the seat and its own
+# audit stream said nothing about it.
+#
+# SEATS ONLY, NO PERSONHOOD (Overseer ruling, 2026-08-14): no names, no pronouns,
+# no personalities. Those belong to the Founding Moot and to the citizens
+# themselves; a fort must never inherit another settlement's citizen.
+#
+# Deriving the roster from the template directories was considered and is worse,
+# recorded so nobody re-derives it: templates/fort/scripts/ mixes seat launchers
+# with emit/status/verify, and templates/fort/profiles/ holds a profile for only
+# some of the seats. Derivation needs a naming convention that does not exist.
+# An explicit list is still ONE place, which was the whole objective.
+#
+# Each artifact is rendered IF ITS TEMPLATE EXISTS — a seat with no boundary
+# probe or no profile of its own is normal, and an `if` rather than a `&&` chain
+# because a trailing false test under `set -e` would abort the founding.
+SEATS=(mayor forge warden researcher)
+SEAT_OFFICES=$(IFS=/; echo "${SEATS[*]}")
+for s in "${SEATS[@]}"; do
+  if [ -f "$T/fort/seats/$s.md" ]; then render "$T/fort/seats/$s.md" "fort/seats/$s.md"; fi
+  if [ -f "$T/fort/scripts/$s.sh" ]; then render "$T/fort/scripts/$s.sh" "fort/scripts/$s.sh"; fi
+  if [ -f "$T/fort/scripts/probe-$s-boundaries.sh" ]; then
+    render "$T/fort/scripts/probe-$s-boundaries.sh" "fort/scripts/probe-$s-boundaries.sh"
+  fi
+done
+for sc in emit status verify; do render "$T/fort/scripts/$sc.sh" "fort/scripts/$sc.sh"; done
 mkdir -p fort/scripts/lib
 render "$T/fort/scripts/lib/seat-sandbox.sh" fort/scripts/lib/seat-sandbox.sh
 # The verifier is a SHIM in fort/scripts and an IMPLEMENTATION out here (Shape B,
@@ -43,7 +88,11 @@ mkdir -p scripts
 render "$T/scripts/verify-impl.sh" scripts/verify-impl.sh
 chmod +x scripts/verify-impl.sh
 mkdir -p fort/profiles
-render "$T/fort/profiles/warden-settings.json" fort/profiles/warden-settings.json
+for s in "${SEATS[@]}"; do
+  if [ -f "$T/fort/profiles/$s-settings.json" ]; then
+    render "$T/fort/profiles/$s-settings.json" "fort/profiles/$s-settings.json"
+  fi
+done
 chmod +x fort/scripts/*.sh
 cp "$T/fort/events/README.md" fort/events/README.md
 
@@ -88,7 +137,7 @@ provenance:
 ---
 This fort was founded via fort-init on $DATE; its fort name is pending the
 Founding Moot. Until the moot, actor ids default to the seat offices
-(mayor/forge/warden), never personal names.
+($SEAT_OFFICES), never personal names.
 EOF
 cat > fort/memory/facts/codex-launch-recipe.md <<EOF
 ---
@@ -148,7 +197,7 @@ EOF
 
 # Permission profile: merge template permissions with any existing settings (preserving bd's hook)
 mkdir -p .claude
-PERMS=$(sed "s|{{REPO_PATH}}|$REPO|g" "$T/config/settings-permissions.json")
+PERMS=$(render_stream "$T/config/settings-permissions.json")
 if [ -f .claude/settings.json ]; then
   jq -s '.[0] * .[1]' .claude/settings.json <(printf '%s' "$PERMS") > .claude/settings.json.new && mv .claude/settings.json.new .claude/settings.json
 else
@@ -177,7 +226,7 @@ jq --arg p "$PROJECT" --arg r "$REPO" --arg d "$DATE" \
   '.forts += [{"project":$p,"repo":$r,"founded":$d,"fort_name":null}]' "$REG" > "$REG.new" && mv "$REG.new" "$REG"
 
 fort/scripts/emit.sh fort.founded "The $PROJECT fort is founded via fort-init" -a overseer
-for s in mayor forge warden; do fort/scripts/emit.sh seat.founded "The ${s^} seat stands empty, awaiting the moot" -s "$s"; done
+for s in "${SEATS[@]}"; do fort/scripts/emit.sh seat.founded "The ${s^} seat stands empty, awaiting the moot" -s "$s"; done
 
 # Generate the distilled view from the seed ledger (docs/specs/memory.md 6.1).
 # A fort born with a ledger but no current.md is a fort born broken; run it after
