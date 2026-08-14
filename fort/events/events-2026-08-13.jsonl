@@ -98,3 +98,4 @@
 {"ts":"2026-08-13T16:46:32-08:00","actor":"ilva","seat":"warden","category":"review.verdict","target":"fortkit-52vf.12","detail":"Ilva on fortkit-52vf.12: ESCALATE: mandatory gate-1 referral, no blocking findings — verify.sh green 180/180, six beads; recommend sign-off","payload":null}
 {"ts":"2026-08-13T16:46:32-08:00","actor":"ilva","seat":"warden","category":"session.end","target":"fortkit-52vf.12","detail":"Ilva's session on fortkit-52vf.12 ended (exit 0)","payload":{"exit":0,"log":"/tmp/warden-52vf.12.log","verdict_recorded":true}}
 {"ts":"2026-08-13T16:54:56-08:00","actor":"emrith","seat":"mayor","category":"session.end","target":null,"detail":"Emrith's audience with the Overseer ends — hand-emitted (fortkit-t9iw)","payload":null}
+{"ts":"2026-08-13T17:19:11-08:00","actor":"emrith","seat":"mayor","category":"session.start","target":null,"detail":"The Overseer summons Emrith","payload":null}
