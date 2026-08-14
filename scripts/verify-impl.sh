@@ -53,6 +53,23 @@ emit() {
   fi
 }
 
+# Scratch-tree cleanup for template_render_lint, installed once at script level so an
+# interrupt cannot leak a temp tree. Empty until that step runs; the guard keeps
+# `rm -rf` away from an empty argument on every other exit path.
+VERIFY_SCRATCH=""
+trap '[ -n "$VERIFY_SCRATCH" ] && rm -rf "$VERIFY_SCRATCH"' INT TERM
+
+# THE TEMPLATE SHELL SURFACE, DEFINED ONCE (Warden finding 3 on fortkit-8ib).
+# Two steps lint these files — the raw shellcheck leg and template_render_lint — and
+# this fort has been bitten three times by exactly one such list going stale:
+# fortkit-ddvo (the lib on the surface, the factory's copy of it not),
+# fortkit-n3bk finding 4 (templates/scripts/ left off in the sitting that created it),
+# and fortkit-8ib's own SO7 correction (a bead asserting a gap that two passenger
+# fixes had already closed). Adding a second enumeration would have doubled that
+# surface, so there is one. Globs expand HERE, after the cd to repo_root, so both
+# consumers see the identical file list rather than two lists that agree today.
+TEMPLATE_SH=(templates/fort/scripts/*.sh templates/fort/scripts/lib/*.sh templates/scripts/*.sh)
+
 run_step() {
   local step="$1"
   shift
@@ -151,50 +168,89 @@ skills_install_check() {
 # correctly" are adjacent claims that this bead already lost the distinction between
 # once (fortkit-uj3q).
 #
-# TWO PASSES, because the space pass is the failure mode placeholders introduce:
-# an unquoted {{REPO_PATH}} parses fine against /home/justin/dev/fortkit and becomes
-# two arguments the moment a path contains a space. Static analysis catches that only
-# if the value it sees has one.
+# THREE PASSES, and the distinguishing case for each is recorded here BECAUSE THE
+# FIRST VERSION OF THIS COMMENT RECORDED ONE THAT DOES NOT DISTINGUISH ANYTHING
+# (Warden finding 1 on fortkit-8ib, measured with ShellCheck 0.11.0 and re-measured
+# before this edit). A later reader who tests the recorded example, finds no
+# difference between passes, and deletes one has been misled by this comment rather
+# than by the code — which is the fortkit-uj3q class landing in the very block that
+# cites it.
+#   plain   a normal path. The baseline.
+#   spaced  a path containing spaces. THE CASE THAT DISTINGUISHES IT IS A TEST
+#           EXPRESSION, NOT A bare cd: `[ -d /home/fort keeper/x ]` is SC1072/SC1073,
+#           a hard parse error, while the plain value lints clean. The originally
+#           recorded example, `cd {{REPO_PATH}}`, draws SC2164 in BOTH passes and
+#           therefore demonstrates nothing about this pass at all.
+#   empty   the empty string. bin/fort-init:27-29 renders {{EXTRA_GATES}} and
+#           {{EXTRA_ORDERS}} to EMPTY, so a path value is not what the factory
+#           actually substitutes for every token. An empty render turns `cd {{X}}`
+#           into a bare `cd` and `foo {{X}} bar` into a different command, and
+#           neither path pass can see it. Every placeholder in the templates sits
+#           inside double quotes today, so this pass is here for the tokens
+#           fortkit-0po6 and fortkit-fd2 are about to add.
+# Pass values must contain no `&` or `\`: they are interpolated into a sed
+# replacement, where both are special. All three are controlled literals.
 #
 # ZERO FILES CHECKED IS A FAILURE, NEVER A PASS, and the positive control at the end
 # is not decoration: this fort has shipped an anti-vacuity harness wired into nothing
 # (fortkit-52vf.12 finding 4) and a probe suite whose every assertion expected deny
 # with no permitted control (fortkit-vhk.5.1 finding 8) in the same month.
 template_render_lint() {
-  local tmp src name rendered checked=0 pass value
+  local tmp src rendered checked=0 pass value
   tmp="$(mktemp -d)" || {
     printf 'template-render: FAILED — could not create a scratch directory.\n' >&2
     return 1
   }
+  # An interrupt must not leak a scratch tree (Warden finding 6 on fortkit-8ib).
+  # NOT a RETURN trap: one set inside a function PERSISTS after that function
+  # returns and fires again on the next function return, where $tmp is unbound and
+  # `set -u` reddens the whole verifier. Measured the hard way — the first version
+  # of this fix did exactly that and turned main red. The scratch path is published
+  # to a script-scope variable instead, and the trap that reads it is installed once
+  # at script level.
+  VERIFY_SCRATCH="$tmp"
 
-  for pass in plain spaced; do
+  for pass in plain spaced empty; do
     case "$pass" in
       plain)  value="/home/fortkeeper/dev/scratchfort" ;;
       spaced) value="/home/fort keeper/dev/scratch fort" ;;
+      empty)  value="" ;;
     esac
-    for src in templates/fort/scripts/*.sh templates/fort/scripts/lib/*.sh templates/scripts/*.sh; do
+    for src in "${TEMPLATE_SH[@]}"; do
       [ -f "$src" ] || continue
-      name="$(basename "$src")"
-      rendered="$tmp/$pass-$name"
+      # Flattened by PATH, not basename: a future templates/scripts/status.sh would
+      # otherwise silently overwrite templates/fort/scripts/status.sh's rendering
+      # while `checked` counted both — silent coverage loss inside the step whose
+      # whole purpose is to refuse it (Warden finding 4 on fortkit-8ib).
+      rendered="$tmp/$pass-${src//\//_}"
       # Generic substitution: ANY {{TOKEN}} becomes the pass value, so a placeholder
       # added tomorrow is covered without editing this list.
       sed -E "s|\{\{[A-Z_]+\}\}|$value|g" "$src" > "$rendered"
       if grep -q '{{' "$rendered"; then
         printf 'template-render: %s still contains an unsubstituted placeholder after rendering — the token spelling does not match [A-Z_]+.\n' "$rendered" >&2
-        rm -rf "$tmp"; return 1
+        rm -rf "$tmp"; VERIFY_SCRATCH=""
+        return 1
       fi
-      [ "$pass" = plain ] && checked=$((checked+1))
+      # An explicit `if`, not `[ ... ] && ...`: the && form returns 1 on every
+      # non-plain iteration, which is harmless under run_step's `if` but aborts the
+      # script when a maintainer calls this function directly under `set -e`
+      # (Warden finding 5 on fortkit-8ib).
+      if [ "$pass" = plain ]; then
+        checked=$((checked+1))
+      fi
     done
   done
 
   if [ "$checked" -eq 0 ]; then
     printf 'template-render: FAILED — rendered zero template scripts, so this step proved nothing.\n' >&2
-    rm -rf "$tmp"; return 1
+    rm -rf "$tmp"; VERIFY_SCRATCH=""
+    return 1
   fi
 
   if ! shellcheck -x -s bash "$tmp"/*.sh >&2; then
     printf 'template-render: FAILED — %s template scripts rendered, and the rendered output does not pass shellcheck.\n' "$checked" >&2
-    rm -rf "$tmp"; return 1
+    rm -rf "$tmp"; VERIFY_SCRATCH=""
+    return 1
   fi
 
   # POSITIVE CONTROL. A clean sweep above means nothing unless this step can go red.
@@ -204,11 +260,12 @@ template_render_lint() {
   printf '#!/bin/bash\ncd $1\n' > "$tmp/control.sh"
   if shellcheck -x -s bash "$tmp/control.sh" >/dev/null 2>&1; then
     printf 'template-render: FAILED — the positive control passed shellcheck, so a green above proves nothing about the rendered output.\n' >&2
-    rm -rf "$tmp"; return 1
+    rm -rf "$tmp"; VERIFY_SCRATCH=""
+    return 1
   fi
 
-  printf 'template-render: %s template scripts rendered in 2 passes and linted clean; positive control went red as required.\n' "$checked" >&2
-  rm -rf "$tmp"
+  printf 'template-render: %s template scripts rendered in 3 passes and linted clean; positive control went red as required.\n' "$checked" >&2
+  rm -rf "$tmp"; VERIFY_SCRATCH=""
   return 0
 }
 
@@ -231,6 +288,6 @@ run_step test npm run test
 # scripts/*.sh on the surface, and the factory's copy was left off it — the same
 # class as fortkit-ddvo, one directory over. The factory's verifier is the one
 # every future fort inherits, so it is exactly the copy that must not rot.
-run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh templates/fort/scripts/*.sh templates/fort/scripts/lib/*.sh templates/scripts/*.sh civ/scripts/*.sh scripts/*.sh
+run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh "${TEMPLATE_SH[@]}" civ/scripts/*.sh scripts/*.sh
 run_step template-render template_render_lint
 emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
