@@ -128,7 +128,91 @@ skills_install_check() {
   return "$bad"
 }
 
-emit verify.run "Verifier started" -p '{"steps":["memory-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck"]}'
+# fortkit-8ib, Overseer ruling 2026-08-13: LINT THE RENDERED OUTPUT, not just the
+# templates. The raw templates have been on the shellcheck surface since fortkit-ddvo
+# and they pass clean — but a template passing shellcheck does NOT prove that
+# SUBSTITUTING its placeholders yields valid bash, and substitution is what every
+# founded fort actually runs. The declined alternative was a
+# `# shellcheck disable=SC1083` header in each template, which silences the
+# placeholder warning and leaves the shipped artifact unchecked.
+#
+# THE DEADLINE THIS ANSWERS WAS REAL: fortkit-0po6 adds a {{HOME}} placeholder to
+# render() and fortkit-fd2 adds {{PLACEHOLDER}} personality tokens to the seat
+# files. Both land in files this step covers, and the strategy had to exist before
+# the mechanism, not after its first casualty.
+#
+# WHY THIS DOES NOT REUSE bin/fort-init's render(). Sharing one substitution table
+# between the factory and the verifier is the better design and it is NOT AVAILABLE
+# TO THIS SEAT: bin/ is kernel read-only to every masked seat
+# (fort/scripts/lib/seat-sandbox.sh:187-203), so extracting render() is Regent work.
+# What this step proves is therefore the rendered SHAPE, not the factory's VALUES.
+# fortkit-domm proves the values, against a really-founded fort. Two layers, and the
+# labels are named here because "the templates lint" and "the factory renders
+# correctly" are adjacent claims that this bead already lost the distinction between
+# once (fortkit-uj3q).
+#
+# TWO PASSES, because the space pass is the failure mode placeholders introduce:
+# an unquoted {{REPO_PATH}} parses fine against /home/justin/dev/fortkit and becomes
+# two arguments the moment a path contains a space. Static analysis catches that only
+# if the value it sees has one.
+#
+# ZERO FILES CHECKED IS A FAILURE, NEVER A PASS, and the positive control at the end
+# is not decoration: this fort has shipped an anti-vacuity harness wired into nothing
+# (fortkit-52vf.12 finding 4) and a probe suite whose every assertion expected deny
+# with no permitted control (fortkit-vhk.5.1 finding 8) in the same month.
+template_render_lint() {
+  local tmp src name rendered checked=0 pass value
+  tmp="$(mktemp -d)" || {
+    printf 'template-render: FAILED — could not create a scratch directory.\n' >&2
+    return 1
+  }
+
+  for pass in plain spaced; do
+    case "$pass" in
+      plain)  value="/home/fortkeeper/dev/scratchfort" ;;
+      spaced) value="/home/fort keeper/dev/scratch fort" ;;
+    esac
+    for src in templates/fort/scripts/*.sh templates/fort/scripts/lib/*.sh templates/scripts/*.sh; do
+      [ -f "$src" ] || continue
+      name="$(basename "$src")"
+      rendered="$tmp/$pass-$name"
+      # Generic substitution: ANY {{TOKEN}} becomes the pass value, so a placeholder
+      # added tomorrow is covered without editing this list.
+      sed -E "s|\{\{[A-Z_]+\}\}|$value|g" "$src" > "$rendered"
+      if grep -q '{{' "$rendered"; then
+        printf 'template-render: %s still contains an unsubstituted placeholder after rendering — the token spelling does not match [A-Z_]+.\n' "$rendered" >&2
+        rm -rf "$tmp"; return 1
+      fi
+      [ "$pass" = plain ] && checked=$((checked+1))
+    done
+  done
+
+  if [ "$checked" -eq 0 ]; then
+    printf 'template-render: FAILED — rendered zero template scripts, so this step proved nothing.\n' >&2
+    rm -rf "$tmp"; return 1
+  fi
+
+  if ! shellcheck -x -s bash "$tmp"/*.sh >&2; then
+    printf 'template-render: FAILED — %s template scripts rendered, and the rendered output does not pass shellcheck.\n' "$checked" >&2
+    rm -rf "$tmp"; return 1
+  fi
+
+  # POSITIVE CONTROL. A clean sweep above means nothing unless this step can go red.
+  # shellcheck disable=SC2016  # the literal $1 IS the defect being planted; expanding it here
+  # would write this verifier's own positional argument into the control and the control would
+  # then pass, which is the exact failure this block exists to detect.
+  printf '#!/bin/bash\ncd $1\n' > "$tmp/control.sh"
+  if shellcheck -x -s bash "$tmp/control.sh" >/dev/null 2>&1; then
+    printf 'template-render: FAILED — the positive control passed shellcheck, so a green above proves nothing about the rendered output.\n' >&2
+    rm -rf "$tmp"; return 1
+  fi
+
+  printf 'template-render: %s template scripts rendered in 2 passes and linted clean; positive control went red as required.\n' "$checked" >&2
+  rm -rf "$tmp"
+  return 0
+}
+
+emit verify.run "Verifier started" -p '{"steps":["memory-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
 run_step memory-lint node scripts/memory-lint.mjs
 run_step skills-install skills_install_check
 run_step typecheck npm run typecheck
@@ -148,4 +232,5 @@ run_step test npm run test
 # class as fortkit-ddvo, one directory over. The factory's verifier is the one
 # every future fort inherits, so it is exactly the copy that must not rot.
 run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh templates/fort/scripts/*.sh templates/fort/scripts/lib/*.sh templates/scripts/*.sh civ/scripts/*.sh scripts/*.sh
-emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck"]}'
+run_step template-render template_render_lint
+emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
