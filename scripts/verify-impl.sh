@@ -53,11 +53,30 @@ emit() {
   fi
 }
 
-# Scratch-tree cleanup for template_render_lint, installed once at script level so an
-# interrupt cannot leak a temp tree. Empty until that step runs; the guard keeps
-# `rm -rf` away from an empty argument on every other exit path.
-VERIFY_SCRATCH=""
-trap '[ -n "$VERIFY_SCRATCH" ] && rm -rf "$VERIFY_SCRATCH"' INT TERM
+# NO SIGNAL TRAP HERE, DELIBERATELY, AND THIS IS THE THIRD ATTEMPT AT THE SAME
+# COSMETIC FIX (fortkit-8ib, Warden findings 6/r1 and 1/r2). The observation being
+# declined: template_render_lint's scratch tree survives an interrupt. It cleans up
+# explicitly on all five of its return paths, so this only ever concerns SIGINT or
+# SIGTERM mid-step, and the residue is one directory under $TMPDIR.
+#
+# WHAT THE TWO ATTEMPTS COST, both measured rather than reasoned:
+#   1. `trap ... RETURN` inside the function. A RETURN trap PERSISTS past the
+#      function that sets it and fires again on the next function return, where
+#      $tmp is unbound; `set -u` turned MAIN RED.
+#   2. `trap '... rm -rf ...' INT TERM` at script level, handler with no `exit`.
+#      A signal handler that does not exit makes the script NON-TERMINATING on that
+#      signal: bash defers it, runs it, and resumes. Measured on the real artifact —
+#      `CI=1 timeout --foreground --signal=TERM 3 fort/scripts/verify.sh --no-emit`
+#      ran every remaining step to completion and `timeout` exited 124. Before that
+#      commit, bash's default disposition terminated the script. THE VERIFIER IS RUN
+#      BY forge.sh AND warden.sh, so a launcher that cannot TERM it is a worse defect
+#      than the leak, by a wide margin.
+#
+# The correct idiom exists (`trap 'cleanup; exit 143' INT TERM`) and is one line. It
+# is declined anyway: two regressions in two rounds, in the fort's own gate, to stop
+# a temp directory outliving a Ctrl-C. If someone later wants it, the requirement is
+# that the handler EXITS and that a TERM test is added alongside it — not the trap on
+# its own, which is what failed twice.
 
 # THE TEMPLATE SHELL SURFACE, DEFINED ONCE (Warden finding 3 on fortkit-8ib).
 # Two steps lint these files — the raw shellcheck leg and template_render_lint — and
@@ -185,11 +204,25 @@ skills_install_check() {
 #           {{EXTRA_ORDERS}} to EMPTY, so a path value is not what the factory
 #           actually substitutes for every token. An empty render turns `cd {{X}}`
 #           into a bare `cd` and `foo {{X}} bar` into a different command, and
-#           neither path pass can see it. Every placeholder in the templates sits
-#           inside double quotes today, so this pass is here for the tokens
-#           fortkit-0po6 and fortkit-fd2 are about to add.
-# Pass values must contain no `&` or `\`: they are interpolated into a sed
-# replacement, where both are special. All three are controlled literals.
+#           neither path pass can see it. This pass is here for the tokens
+#           fortkit-0po6 and fortkit-fd2 are about to add; it catches nothing today.
+#
+# TWO PLACEHOLDERS IN THE SHIPPED TEMPLATES ARE UNQUOTED IN EXECUTABLE POSITION,
+# which is worth stating exactly because the round-2 version of this comment claimed
+# the opposite (Warden finding 2 on fortkit-8ib, verified here before rewriting):
+#   templates/fort/scripts/status.sh:5   ... || echo {{REPO_PATH}})
+#   templates/fort/scripts/mayor.sh:14   ... || echo {{REPO_PATH}})
+# Both sit inside a $( ), which opens a FRESH quoting context — the enclosing double
+# quotes do not carry into it. So the spaced pass is exercising a real unquoted
+# placeholder in shipped code right now, not a hypothetical future one. ShellCheck
+# does not flag either (a multi-word literal argument to `echo` is legal), which is
+# why the step is green over them in all three passes; the point is that the pass
+# this comment justifies has a live subject.
+#
+# Pass values must contain no `&`, `\` or `|`: they are interpolated into the
+# replacement half of `s|...|$value|g`, where all three are special — `|` because it
+# is the delimiter (Warden finding 3 on fortkit-8ib; bin/fort-init's own render()
+# makes the same delimiter choice). All three current values are controlled literals.
 #
 # ZERO FILES CHECKED IS A FAILURE, NEVER A PASS, and the positive control at the end
 # is not decoration: this fort has shipped an anti-vacuity harness wired into nothing
@@ -208,7 +241,6 @@ template_render_lint() {
   # of this fix did exactly that and turned main red. The scratch path is published
   # to a script-scope variable instead, and the trap that reads it is installed once
   # at script level.
-  VERIFY_SCRATCH="$tmp"
 
   for pass in plain spaced empty; do
     case "$pass" in
@@ -228,7 +260,7 @@ template_render_lint() {
       sed -E "s|\{\{[A-Z_]+\}\}|$value|g" "$src" > "$rendered"
       if grep -q '{{' "$rendered"; then
         printf 'template-render: %s still contains an unsubstituted placeholder after rendering — the token spelling does not match [A-Z_]+.\n' "$rendered" >&2
-        rm -rf "$tmp"; VERIFY_SCRATCH=""
+        rm -rf "$tmp"
         return 1
       fi
       # An explicit `if`, not `[ ... ] && ...`: the && form returns 1 on every
@@ -243,13 +275,13 @@ template_render_lint() {
 
   if [ "$checked" -eq 0 ]; then
     printf 'template-render: FAILED — rendered zero template scripts, so this step proved nothing.\n' >&2
-    rm -rf "$tmp"; VERIFY_SCRATCH=""
+    rm -rf "$tmp"
     return 1
   fi
 
   if ! shellcheck -x -s bash "$tmp"/*.sh >&2; then
     printf 'template-render: FAILED — %s template scripts rendered, and the rendered output does not pass shellcheck.\n' "$checked" >&2
-    rm -rf "$tmp"; VERIFY_SCRATCH=""
+    rm -rf "$tmp"
     return 1
   fi
 
@@ -260,12 +292,12 @@ template_render_lint() {
   printf '#!/bin/bash\ncd $1\n' > "$tmp/control.sh"
   if shellcheck -x -s bash "$tmp/control.sh" >/dev/null 2>&1; then
     printf 'template-render: FAILED — the positive control passed shellcheck, so a green above proves nothing about the rendered output.\n' >&2
-    rm -rf "$tmp"; VERIFY_SCRATCH=""
+    rm -rf "$tmp"
     return 1
   fi
 
   printf 'template-render: %s template scripts rendered in 3 passes and linted clean; positive control went red as required.\n' "$checked" >&2
-  rm -rf "$tmp"; VERIFY_SCRATCH=""
+  rm -rf "$tmp"
   return 0
 }
 
