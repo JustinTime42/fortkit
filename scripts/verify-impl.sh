@@ -67,10 +67,19 @@ emit() {
 #      A signal handler that does not exit makes the script NON-TERMINATING on that
 #      signal: bash defers it, runs it, and resumes. Measured on the real artifact —
 #      `CI=1 timeout --foreground --signal=TERM 3 fort/scripts/verify.sh --no-emit`
-#      ran every remaining step to completion and `timeout` exited 124. Before that
-#      commit, bash's default disposition terminated the script. THE VERIFIER IS RUN
-#      BY forge.sh AND warden.sh, so a launcher that cannot TERM it is a worse defect
-#      than the leak, by a wide margin.
+#      ran every remaining step to completion. Before that commit, bash's default
+#      disposition terminated the script. (The exit code does NOT discriminate here:
+#      `timeout` returns 124 whenever it fires, dead process or not. The signal is
+#      whether the final step's line appears in the output.)
+#      WHO SENDS THAT SIGNAL — the two real sites, corrected after an earlier version
+#      of this comment named a wrong one (Warden finding 2 on fortkit-8ib r3):
+#        fort/scripts/forge.sh:149     runs the verifier in the Forge's worktree
+#        .github/workflows/ci.yml:29   runs it in Actions, where a CANCELLED JOB is
+#                                      exactly the signal-to-the-process case, and is
+#                                      the strongest instance of the argument
+#      NOT warden.sh: every `verify` hit in that file is prompt text instructing the
+#      Warden to reproduce the gate inside her own sandbox. A gate the launchers and
+#      CI cannot terminate is a worse defect than the leak, by a wide margin.
 #
 # The correct idiom exists (`trap 'cleanup; exit 143' INT TERM`) and is one line. It
 # is declined anyway: two regressions in two rounds, in the fort's own gate, to stop
@@ -234,13 +243,10 @@ template_render_lint() {
     printf 'template-render: FAILED — could not create a scratch directory.\n' >&2
     return 1
   }
-  # An interrupt must not leak a scratch tree (Warden finding 6 on fortkit-8ib).
-  # NOT a RETURN trap: one set inside a function PERSISTS after that function
-  # returns and fires again on the next function return, where $tmp is unbound and
-  # `set -u` reddens the whole verifier. Measured the hard way — the first version
-  # of this fix did exactly that and turned main red. The scratch path is published
-  # to a script-scope variable instead, and the trap that reads it is installed once
-  # at script level.
+  # Cleanup is EXPLICIT, on all five return paths below, and there is deliberately no
+  # signal trap. If you are here to add one, read the block at the top of this file
+  # first — two attempts at it shipped two regressions, and it records the conditions
+  # a third would have to meet.
 
   for pass in plain spaced empty; do
     case "$pass" in
