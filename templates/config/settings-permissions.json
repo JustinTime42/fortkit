@@ -52,6 +52,7 @@
       "Edit(README.md)",
       "Edit(docs/**)",
       "Edit(fort/**)",
+      "Edit(scripts/**)",
       "WebFetch",
       "WebSearch"
     ],
@@ -70,12 +71,9 @@
       "Edit(.git/hooks/**)",
       "Edit(fort/events/*)",
       "Edit(fort/events/*.jsonl)",
-      "Edit(fort/scripts/emit.sh)",
-      "Edit(fort/scripts/forge.sh)",
-      "Edit(fort/scripts/lib/**)",
-      "Edit(fort/scripts/mayor.sh)",
-      "Edit(fort/scripts/status.sh)",
-      "Edit(fort/scripts/warden.sh)",
+      "Edit(.claude/**)",
+      "Edit(fort/profiles/**)",
+      "Edit(fort/scripts/**)",
       "Read(**/.env*)",
       "Read(.env*)"
     ],
