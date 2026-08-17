@@ -153,6 +153,46 @@ describe.each(emitCopies)("%s emit.sh", (_copyName, emitPath) => {
 
 describe("fort-init", () => {
   test.skipIf(!foundingSmokeToolsAvailable)(
+    "renders the Mayor's Codex deny with the founding home path",
+    async () => {
+      const root = await createFort();
+      const registryDirectory = join(root, "registry");
+      const founderHome = join(root, "founder-home");
+      await mkdir(registryDirectory);
+      await mkdir(founderHome);
+
+      await execFileAsync(
+        "bash",
+        [
+          join(repoRoot, "bin/fort-init"),
+          root,
+          "permissions",
+          "Permission test.",
+        ],
+        {
+          env: {
+            ...process.env,
+            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
+            HOME: founderHome,
+          },
+        },
+      );
+
+      const settings = await readFile(
+        join(root, ".claude", "settings.json"),
+        "utf8",
+      );
+      const foundedPermissions = JSON.parse(settings).permissions as {
+        deny: string[];
+      };
+      expect(foundedPermissions.deny).toContain(
+        `Edit(${founderHome}/.codex/**)`,
+      );
+      expect(settings).not.toMatch(/{{[A-Z_]*}}/);
+    },
+  );
+
+  test.skipIf(!foundingSmokeToolsAvailable)(
     `founds a fort whose shipped verifier passes (${foundingSmokeSkipReason})`,
     async () => {
       const root = await createFort();
