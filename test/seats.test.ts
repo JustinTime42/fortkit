@@ -284,9 +284,41 @@ describe("seat-file lint (fortkit-x508)", () => {
     expect(orphan.stdout).toContain("SKIPPED");
   });
 
-  test("the live capital passes its own lint", async () => {
+  test("the live capital passes its own lint against a pinned registry", async () => {
+    // THE REGISTRY IS PINNED, AND THAT IS THE WHOLE POINT OF THIS VERSION.
+    // The first one ran the lint with no FORT_REGISTRY and asserted "rule 3
+    // enforced", which holds only when the checkout it happens to run in is listed
+    // in $HOME/.claude/civilization.json with a non-null fort_name. That is ambient
+    // machine state, and it turned the fort's authoritative verifier RED in the
+    // Warden's review scratch (measured, blocking finding 1 on fortkit-x508) and
+    // would turn it red on a GitHub runner, which has no registry at all
+    // (.github/workflows/ci.yml:29). Same class as fortkit-h5i: green for the author,
+    // red everywhere else. Pinning asserts the CODE against the real roster instead
+    // of asserting the disk.
+    //
+    // WHAT THIS DOES NOT COVER, stated so nobody reads it as more than it is: rules 2
+    // and 3 are structurally unenforceable on a runner, because a runner has neither
+    // a registry nor sibling forts. The shared gate carries rule 1 and the charter
+    // cross-check everywhere; rules 2 and 3 are enforced only on a machine that hosts
+    // the civilization.
     const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
-    const result = await run(process.execPath, [lint, repositoryRoot]);
+    const base = await mkdtemp(join(tmpdir(), "fortkit-seat-lint-capital-"));
+    const registry = join(base, "civilization.json");
+    await writeFile(
+      registry,
+      JSON.stringify({
+        civilization: "test",
+        forts: [
+          {
+            project: "fortkit",
+            repo: repositoryRoot,
+            founded: "2026-08-03",
+            fort_name: "Manyhalls",
+          },
+        ],
+      }),
+    );
+    const result = await lintFort(repositoryRoot, registry);
     expect(result.stdout).toContain("rule 3 enforced");
     expect(result.stdout).toContain("charter cross-check");
   });

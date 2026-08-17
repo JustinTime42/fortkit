@@ -156,7 +156,17 @@ async function canonicalCheckout(directory) {
   }
 }
 
+async function resolveRepo(path) {
+  return await realpath(path).catch(() => path);
+}
+
 let entry = null;
+// The RESOLVED path of this fort's own entry. Rule 2's self-skip compares against
+// this rather than against the raw `fort.repo` string (Warden finding 5 on
+// fortkit-x508): a registry listing one repo under two spellings — a symlink, a
+// trailing slash — would otherwise make this fort foreign to itself and hard-fail
+// every seat file against its own citizens.
+let entryRepo = null;
 if (registry !== null) {
   const own = await realpath(root).catch(() => root);
   const canonical = await canonicalCheckout(own);
@@ -165,8 +175,12 @@ if (registry !== null) {
       `registry: ${own} is a worktree of ${canonical}; placed in the registry by its canonical checkout`,
     );
   for (const fort of registry.forts ?? []) {
-    const fortRepo = await realpath(fort.repo).catch(() => fort.repo);
-    if (fortRepo === canonical || fort.repo === root) entry = fort;
+    const fortRepo = await resolveRepo(fort.repo);
+    if (fortRepo === canonical || fort.repo === root) {
+      entry = fort;
+      entryRepo = fortRepo;
+      break;
+    }
   }
   if (entry === null)
     notes.push(
@@ -207,7 +221,7 @@ console.log(
 if (entry !== null) {
   const foreign = [];
   for (const fort of registry.forts ?? []) {
-    if (fort.repo === entry.repo) continue;
+    if ((await resolveRepo(fort.repo)) === entryRepo) continue;
     const directory = join(fort.repo, "fort", "seats");
     let files = [];
     try {
@@ -234,7 +248,11 @@ if (entry !== null) {
     for (const { name, fort } of foreign) {
       // Full name and bare given name both, on word boundaries: fortkit-qu46 was a
       // whole citizen erased by convergence, and a half-copied name is the same
-      // failure caught earlier.
+      // failure caught earlier. KNOWN LATENT COST of the bare-given-name half
+      // (Warden finding 6 on fortkit-x508): a foreign given name that is also an
+      // ordinary English word would false-red a Personality line. Every name in the
+      // civilization today is invented, so this is unrealised; if it ever fires,
+      // narrow to the full name rather than deleting the rule.
       const given = name.split(/\s+/u)[0];
       const pattern = new RegExp(
         `\\b(${name.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}|${given.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")})\\b`,
