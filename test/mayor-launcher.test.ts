@@ -111,4 +111,11 @@ describe("Mayor template launcher", () => {
       "If you are unsure whether he has approved this specific action, you have not been approved.",
     );
   });
+
+  test("sets only a seat-named child mask marker", async () => {
+    const source = await readFile(templateLauncher, "utf8");
+
+    expect(source).toContain("mask+=(--setenv FORT_MASKED mayor)");
+    expect(source).not.toMatch(/^export FORT_MASKED=/m);
+  });
 });
