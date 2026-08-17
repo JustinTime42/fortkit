@@ -1,5 +1,5 @@
-# Handoff: Forge 2026-08-17T09:09:23-08:00
-Model: GPT-5 (Codex)
+# Handoff: Forge 2026-08-17T09:10:06-08:00
+Model: gpt-5.6-terra
 
 ## State of work
 
@@ -40,3 +40,25 @@ Model: GPT-5 (Codex)
   unrelated seat-lint failures.
 - An extended-regex placeholder scan overmatched intentionally non-token moot
   placeholders. The bead's exact basic `grep` command returned zero matches.
+
+## Launcher-observed verifier result
+
+fort/scripts/verify.sh --no-emit, run by forge.sh after the session at 2026-08-17T09:10:18-08:00: exit 0
+
+```
+
+
+ RUN  v4.1.10 /home/justin/dev/fortkit-worktrees/hgbe
+
+(node:259303) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:259310) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  16 passed (16)
+      Tests  188 passed (188)
+   Start at  09:10:08
+   Duration  5.46s (transform 1.47s, setup 0ms, import 2.28s, tests 10.73s, environment 1ms)
+
+template-render: 10 template scripts rendered in 3 passes and linted clean; positive control went red as required.
+```
