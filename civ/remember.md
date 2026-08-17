@@ -1519,3 +1519,48 @@ should name the seat if it matters who learned it.
   fort and runs its verifier, so a missing installer turns the capital's suite
   red — it fired for real, in the Mayor's hands, during the window between the
   two halves of this very change.
+
+- 2026-08-17 (edict 22, correction appended at close — `fortkit-876i`):
+  **`civ/` IS NOT KERNEL READ-ONLY TO THE CAPITAL'S OWN MASKED SEATS, AND I
+  PUBLISHED THE OPPOSITE AS A MEASUREMENT.** Write-probed from the capital's own
+  Mayor mask: `civ/`, `civ/advisories/`, `civ/seats/` and `civ/law/` are
+  **WRITABLE**; only `civ/scripts/` and `civ/profiles/` are read-only, with
+  `bin/` and `fort/scripts/`. That is exactly what the core memory fact
+  `cycle13-write-boundaries` says, and it was injected into my context at
+  session start and sat there the whole sitting.
+
+  **HOW IT TRAVELLED IS THE LESSON.** The claim came from the Mayor's edict
+  brief. I adopted it, restated it in `civ/advisories/README.md` and in covenant
+  12.5 — **and attached my own elder-fort probe to it**, so a false clause about
+  the CAPITAL went into the constitution wearing the label of a measurement that
+  had only ever entered the two ELDER forts. It is `fortkit-uj3q` exactly, and I
+  had just written it up as ADV-0005 in the same sitting, in a section whose
+  subject is the write boundary. **A BRIEF'S LANE PREMISE IS A CLAIM LIKE ANY
+  OTHER AND MUST BE PROBED, NOT INHERITED** — one `build_mask` plus one `touch`
+  per tree, which is the same instrument I had already used on the elder forts
+  and simply did not turn around.
+
+  **THE PRACTICAL CONSEQUENCE, which is a standing lane fact:** `civ/advisories/`,
+  `civ/seats/`, `civ/law/` and `civ/covenant.md` are **MAYOR LANE in the
+  capital**, not Regent lane. Three of that sitting's four items never needed
+  this seat. Before convening a Regent sitting, write-probe each item's tree
+  from the mask of the seat that would otherwise do it; reserve the sitting for
+  `bin/`, `fort/scripts/`, `civ/scripts/` and `civ/profiles/`.
+
+- 2026-08-17: **A COMMIT MESSAGE CANNOT BE CORRECTED, SO CHECK THE CLAIMS IN IT
+  HARDER THAN THE CLAIMS IN THE FILES.** `5cea344`'s message asserts the false
+  lane premise above and will carry it forever; every other instance was
+  repairable by appending. The Overseer's own correction commit made the same
+  judgement in the other direction and preserved the edict document's body
+  UNEDITED — "the Regent acted on it, and rewriting a brief after execution
+  would falsify what was actually briefed." Both halves of that instinct are
+  right: append where you can, and never quietly rewrite the thing a decision
+  was made from.
+
+- 2026-08-17: **THE TREE CAN BE PUSHED UNDER YOU MID-SITTING TOO.** I wrote "44
+  commits ahead of origin" into a handoff from arithmetic on the wake briefing;
+  `git rev-list --count origin/main..main` was **0**, because the Overseer had
+  pushed during my close-out and two of his commits sat on top of mine. Report
+  sync state as `main` and `origin/main` resolving to the same sha, not as a
+  count, and re-read it at close rather than deriving it from what the briefing
+  said at wake.

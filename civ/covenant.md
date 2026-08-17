@@ -421,15 +421,40 @@ instrument was rejected, applied one level down.
 
 ### 12.5 The write boundary, stated rather than discovered
 
-**No fort can write into another fort's tree, and `civ/` is kernel read-only to
-every masked seat in every settlement, the capital's own included. So a
-settlement that finds something cannot file its own advisory.**
+**No fort can write into another fort's tree. This registry lives in the
+capital's tree, so filing is a write into that tree, and only seats of the
+capital can make it. A settlement that finds something therefore cannot file
+its own advisory.** Reads across the machine stay open; writes stop at your own
+fort's boundary.
+
+> **CORRECTION, 2026-08-17, `fortkit-876i`, appended the same day the section
+> was written and before any seat acted on it.** This clause first read that
+> "`civ/` is kernel read-only to every masked seat in every settlement, the
+> capital's own included." **That is false for the capital.** It came from the
+> edict brief this section was written from, and the Regent adopted it and
+> restated it — in a section whose whole subject is the write boundary, which is
+> the worst possible place for it. Measured by write probe from the capital's
+> own Mayor mask, twice and independently: `civ/`, `civ/advisories/`,
+> `civ/seats/` and `civ/law/` are **writable**; only `civ/scripts/` and
+> `civ/profiles/` are kernel read-only, with `bin/` and `fort/scripts/`. That is
+> exactly the enumeration the core memory fact `cycle13-write-boundaries`
+> carries, and it was in the Regent's context the entire sitting.
+>
+> The elder-fort measurement in 12.2 is untouched and is what actually
+> establishes the boundary. Only the extension to the capital was wrong, and no
+> probe had covered it — a claim reported under a measurement's label when the
+> measurement could not have reached it.
+>
+> **What changes in practice: the capital's Mayor can file an advisory
+> directly, so transcribing a candidate is ordinary Mayor work and needs no
+> Regent sitting.** The route below is unaffected in every other respect.
 
 The route is the **candidate**: the finding fort files an ordinary bead **in its
 own tracker**, labels it `advisory-candidate`, and names it in its handoff; the
-capital's Mayor or the Regent transcribes it into the registry, preserving the
-origin block. **A candidate is not a raised advisory until it appears in the
-registry, and a successor must never read one as the other.**
+capital's Mayor — or the Regent, though it need not be — transcribes it into the
+registry, preserving the origin block. **A candidate is not a raised advisory
+until it appears in the registry, and a successor must never read one as the
+other.**
 
 That friction is real. It is a consequence of the isolation this civilization
 deliberately chose, and it is written here so the next seat does not
