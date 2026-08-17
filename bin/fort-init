@@ -108,6 +108,17 @@ render "$T/fort/scripts/lib/seat-sandbox.sh" fort/scripts/lib/seat-sandbox.sh
 mkdir -p scripts
 render "$T/scripts/verify-impl.sh" scripts/verify-impl.sh
 chmod +x scripts/verify-impl.sh
+# The seat-file lint, beside the verifier that runs it (fortkit-bucl, the Regent
+# half of fortkit-e69p). It lints fort/seats/ and the civilization registry, so it
+# lives in scripts/ with its subject rather than under fort/memory/ with the memory
+# lints — the same reasoning that put each memory lint where it sits.
+#
+# THIS LINE AND templates/scripts/seat-lint.mjs ARE ONE CHANGE AND MUST NOT BE
+# SEPARATED. This line without the file is a cp of nothing; the file and the
+# template's verifier step without this line kills every founded fort's verifier at
+# its first step. Neither is a state a settlement should be founded in.
+[ -e scripts/seat-lint.mjs ] && { echo "fort-init: $REPO/scripts/seat-lint.mjs already exists - refusing to overwrite it" >&2; exit 1; }
+cp "$T/scripts/seat-lint.mjs" scripts/seat-lint.mjs
 mkdir -p fort/profiles
 for s in "${SEATS[@]}"; do
   if [ -f "$T/fort/profiles/$s-settings.json" ]; then
@@ -116,6 +127,13 @@ for s in "${SEATS[@]}"; do
 done
 chmod +x fort/scripts/*.sh
 cp "$T/fort/events/README.md" fort/events/README.md
+
+# The advisory answer ledger (fortkit-p5mr.2). Standing order 13 tells every fort to
+# record its answer to an advisory in fort/advisories.md — "checked, result,
+# decision" — so a fort founded without the file receives a constitutional
+# instruction to write to a path it does not have. Founded WITH the mechanism
+# rather than taught it later; the first answer just appends a row.
+render "$T/fort/advisories.md" fort/advisories.md
 
 # Memory: the facts ledger (docs/specs/memory.md). Since fortkit-xgul.1 a fort is
 # founded ON the ledger, not on a flat remember.md. The index generator and the
@@ -252,11 +270,49 @@ for s in "${SEATS[@]}"; do fort/scripts/emit.sh seat.founded "The ${s^} seat sta
 # Generate the distilled view from the seed ledger (docs/specs/memory.md 6.1).
 # A fort born with a ledger but no current.md is a fort born broken; run it after
 # the founding events so the view captures them.
-if command -v node >/dev/null 2>&1; then
-  node fort/memory/consolidate-memory.mjs "$REPO" \
-    || echo "fort-init: WARNING — consolidate-memory.mjs failed; run it by hand to generate fort/memory/current.md" >&2
-else
-  echo "fort-init: WARNING — node not found; fort/memory/current.md not generated (run: node fort/memory/consolidate-memory.mjs \"$REPO\")" >&2
+#
+# THIS USED TO BE A WARNING AND THAT WAS THE DEFECT (fortkit-byhp, Warden finding 4
+# on fortkit-8t5u). The consolidate step ran under `||` and downgraded any failure
+# to a line on stderr, so a fort could be founded EXIT 0 without its distilled view
+# and then start every session blind to its own state while founding reported
+# success. An artifact the factory produces and runs unattended, whose failure
+# nothing goes red for, is the exact class fortkit-8t5u was filed over.
+#
+# THE ASSERTION IS ON THE ARTIFACT, NOT ON THE EXIT CODE, and that is deliberate.
+# An exit-code check catches a crash and misses a SILENT PARTIAL WRITE, which the
+# bead names explicitly. Requiring the file to exist and to be non-trivial catches
+# the crash, the missing interpreter and the truncated write with one test. The
+# founding smoke makes the same assertion from the outside, which is the half that
+# stops this regressing.
+# EVERY FAILURE PATH HERE PRINTS A SENTENCE. The first draft of this repair let
+# `set -e` abort on the node failure, which exchanged a warning nobody reads for a
+# SILENT DEATH — measured: a founding against a crashing consolidate-memory exited 3
+# with its last line of output an unrelated `bd` message, and nothing saying why.
+# That is not an improvement on the defect. Capture the status, say what happened,
+# then assert the artifact, then exit.
+if ! command -v node >/dev/null 2>&1; then
+  echo "fort-init: node not found, and it is required to found a fort — fort/memory/current.md is the distilled view injected into every seat at session start, and this fort would be born without it" >&2
+  exit 1
+fi
+CONSOLIDATE_STATUS=0
+node fort/memory/consolidate-memory.mjs "$REPO" || CONSOLIDATE_STATUS=$?
+if [ "$CONSOLIDATE_STATUS" -ne 0 ]; then
+  echo "fort-init: consolidate-memory.mjs exited $CONSOLIDATE_STATUS — the distilled view was not generated cleanly" >&2
+fi
+# NOT `cat f | wc -c`. This script runs under `set -o pipefail`, so a missing file
+# makes cat fail, makes the PIPELINE fail, and kills the assignment under `set -e`
+# BEFORE the check below can print anything — the silent death again, in the branch
+# written to prevent it. Measured, not reasoned: the crash control exited 1 with the
+# refusal message absent from the log. Same family as the recorded `grep -q` in a
+# pipeline scar. The redirect form never builds a pipeline.
+CURRENT_BYTES=$(wc -c < fort/memory/current.md 2>/dev/null || echo 0)
+if [ "$CURRENT_BYTES" -lt 200 ]; then
+  echo "fort-init: fort/memory/current.md is missing or trivial ($CURRENT_BYTES bytes) — refusing to report a founding that produced no distilled view" >&2
+  exit 1
+fi
+if [ "$CONSOLIDATE_STATUS" -ne 0 ]; then
+  echo "fort-init: refusing to report a successful founding after the distilled view failed to generate" >&2
+  exit "$CONSOLIDATE_STATUS"
 fi
 
 echo ""

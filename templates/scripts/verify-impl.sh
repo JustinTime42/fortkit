@@ -70,10 +70,25 @@ run_step() {
   fi
 }
 
-emit verify.run "Verifier started" -p '{"steps":["typecheck","lint","test","shellcheck"]}'
+emit verify.run "Verifier started" -p '{"steps":["seat-lint","typecheck","lint","test","shellcheck"]}'
+# THE ROSTER'S THREE RULES, run every session rather than once at founding: no two
+# actor ids one keystroke apart, no other settlement's citizen in a Held-by or
+# Personality line, no unfilled placeholder surviving once the moot has named this
+# fort. (That last rule is stated here WITHOUT writing a brace pair, deliberately: the
+# render lint refuses any brace literal whose token spelling is not [A-Z_]+, and a
+# comment quoting the thing it describes fails a zero-tolerance check exactly like a
+# live instruction. This fort has now paid for that class five times.)
+# It is in the VERIFIER and not in the factory because the factory runs ONCE per fort
+# while roster edits happen forever afterward, at every moot and every reseating.
+#
+# A CORRECTLY FOUNDED FORT PASSES THIS ON DAY ZERO WHILE STILL FULL OF PLACEHOLDERS.
+# Before the moot the registry carries "fort_name": null, which is the signal that
+# placeholders are legal; rules 2 and 3 then announce a SKIP and exit 0. That skip is
+# correct behaviour, and a founding smoke that reads it as a failure would be wrong.
+run_step seat-lint node scripts/seat-lint.mjs
 run_step typecheck npm run typecheck
 run_step lint npm run lint
 run_step test npm run test
 # -x follows sourced files so fort/scripts/lib/* is linted too, not skipped.
 run_step shellcheck shellcheck -x fort/scripts/*.sh fort/scripts/lib/*.sh
-emit verify.pass "Verifier passed" -p '{"steps":["typecheck","lint","test","shellcheck"]}'
+emit verify.pass "Verifier passed" -p '{"steps":["seat-lint","typecheck","lint","test","shellcheck"]}'
