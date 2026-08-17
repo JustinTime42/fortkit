@@ -226,12 +226,32 @@ believe it could file and discover otherwise at the moment it had something
 urgent to report. Farlantern found it by running a write probe rather than by
 reasoning, and the order was repaired the same day.
 
-**No fort but the capital can file its own.** This directory is in the capital's repository and
-`civ/` is kernel read-only to every masked seat, in every fort, including the
-capital's own. No fort can write into another fort's tree either. Measured
-2026-08-17 from inside both elder forts' real Mayor masks: `civ/covenant.md`
-read at its full byte count in both, and a write into `civ/` refused
-`Read-only file system` in both.
+**No fort but the capital can file its own**, and the reason is simpler than the
+one first written here: **no fort can write into another fort's tree at all.**
+This directory is in the capital's repository, so filing is a write into that
+tree, and only seats of the capital can make it. Measured 2026-08-17 from inside
+both elder forts' real Mayor masks: `civ/covenant.md` read at its full byte
+count in both, and a write into `civ/` refused `Read-only file system` in both.
+Reads across the machine stay open; writes stop at your own fort's boundary.
+
+> **CORRECTION, 2026-08-17, `fortkit-876i`.** The sentence above previously read
+> that "`civ/` is kernel read-only to every masked seat, in every fort, including
+> the capital's own." **That is false for the capital and it was the Mayor's error,
+> not the Regent's** — it came from the edict brief this sitting was worked from and
+> was adopted here in good faith. Measured by write probe from a live masked Mayor
+> session in the capital: `civ/`, `civ/advisories/`, `civ/seats/` and `civ/law/` are
+> **writable**; only `civ/scripts/` and `civ/profiles/` are kernel read-only, along
+> with `bin/` and `fort/scripts/`. That matches the core memory fact
+> `cycle13-write-boundaries`, which enumerates the set precisely.
+>
+> The elder-fort measurement in the corrected paragraph is the Regent's and is
+> untouched: it is real, it was taken from inside both forts, and it is what
+> actually establishes the boundary. Only the extension to the capital was wrong,
+> and no probe had covered it.
+>
+> **What changes in practice: the capital's Mayor can file an advisory directly,
+> so transcribing a candidate needs no Regent sitting.** The duty is ordinary
+> Mayor work.
 
 So the route is the **candidate**:
 
