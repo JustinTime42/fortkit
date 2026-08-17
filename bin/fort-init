@@ -35,14 +35,35 @@ touch fort/handoffs/.gitkeep
 #
 # {{HOME}} exists so a deny OUTSIDE the repo can be spelled correctly once
 # (Overseer ruling on fortkit-0po6, shape (a); the ~/.codex rule that uses it is
-# fortkit-hgbe, the Forge's half). fortkit-4wlz's "no absolute-path denies in
-# the templates" is NARROWED ON THE RECORD by that ruling to {{REPO_PATH}}
-# specifically — the token whose value is concatenated after a leading slash,
-# which is what produced the double-slash class. It was never about absolutes.
-render_stream() { sed -e "s|{{REPO_PATH}}|$REPO|g" -e "s|{{PROJECT}}|$PROJECT|g" -e "s|{{DATE}}|$DATE|g" \
-  -e "s|{{HOME}}|$HOME|g" \
-  -e "s|{{FORT_NAME}}|(unnamed — moot pending)|g" -e "s|{{FORT_BANNER}}|${PROJECT^^} FORT STATUS (moot pending)|g" \
-  -e "s|{{FOUNDING_SPEC}}|$SPEC|g" -e "s|{{PURPOSE}}|$PURPOSE|g" -e "s|{{EXTRA_GATES}}||g" -e "s|{{EXTRA_ORDERS}}||g" "$1"; }
+# fortkit-hgbe, the Forge's half). The "no absolute-path denies in the
+# templates" reading is fortkit-0po6's MIS-DESCRIPTION of fortkit-4wlz, which
+# is open and holds no such decision — 4wlz states a defect in two .ssh/.aws
+# lines and asks for a ruling among three options. The fortkit-0po6 ruling
+# narrows that reading to {{REPO_PATH}} specifically — the token whose value
+# is concatenated after a leading slash, which is what produced the
+# double-slash class. It was never about absolutes. Attributing the phrase to
+# 4wlz sends a stranger to a bead that does not contain it (fortkit-obva).
+# EVERY VALUE BELOW LANDS IN THE REPLACEMENT HALF OF A sed s|...|...|g, where
+# three characters are syntax: | ends the expression, & expands to the whole
+# match, and \ escapes either. $PURPOSE is FREE TEXT FROM THE COMMAND LINE
+# (positional $3) and $REPO/$HOME are paths, so without escaping one keystroke
+# at founding mangles EVERY rendered file — the fort would be founded subtly
+# wrong rather than failing loudly. Escaped once here rather than trusting the
+# caller. Filed under standing order 11 with no observed occurrence
+# (fortkit-qfnf); the identical hazard is recorded one layer up at
+# scripts/verify-impl.sh:231-234 for the render lint's own pass values.
+sed_rhs() { printf '%s' "${1-}" | sed -e 's/[\\&|]/\\&/g' -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g'; }
+render_stream() {
+  local repo project date home spec purpose banner
+  repo=$(sed_rhs "$REPO"); project=$(sed_rhs "$PROJECT"); date=$(sed_rhs "$DATE")
+  home=$(sed_rhs "$HOME"); spec=$(sed_rhs "$SPEC"); purpose=$(sed_rhs "$PURPOSE")
+  banner=$(sed_rhs "${PROJECT^^} FORT STATUS (moot pending)")
+  sed -e "s|{{REPO_PATH}}|$repo|g" -e "s|{{PROJECT}}|$project|g" -e "s|{{DATE}}|$date|g" \
+    -e "s|{{HOME}}|$home|g" \
+    -e "s|{{FORT_NAME}}|(unnamed — moot pending)|g" -e "s|{{FORT_BANNER}}|$banner|g" \
+    -e "s|{{FOUNDING_SPEC}}|$spec|g" -e "s|{{PURPOSE}}|$purpose|g" \
+    -e "s|{{EXTRA_GATES}}||g" -e "s|{{EXTRA_ORDERS}}||g" "$1"
+}
 render() { render_stream "$1" > "$2"; }
 render "$T/fort/charter.md" fort/charter.md
 # THE SEAT ROSTER — one list, four consumers (fortkit-naju): the seat files and

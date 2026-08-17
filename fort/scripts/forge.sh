@@ -77,8 +77,9 @@ mask_env codex
 # covered one — and the uncovered pair included the Forge, the seat that holds
 # Bash. Not a capability hole (a nested bwrap cannot widen its parent's mount
 # namespace) but diagnosability, which is what the guard is for.
-# ONE LINE, NOT TWO. mayor.sh pairs its --setenv with a host-side `export
-# FORT_MASKED`; that export reaches nothing, because mask_env appends
+# ONE LINE, NOT TWO. mayor.sh paired its --setenv with a host-side `export
+# FORT_MASKED` until fortkit-mm7m removed it; that export reached nothing,
+# because mask_env appends
 # --clearenv and bwrap then rebuilds the child environment from --setenv
 # alone (measured 2026-08-14: `FOO=x bwrap --clearenv --setenv BAR 1 -- env`
 # prints BAR and not FOO). An export here would additionally assert, falsely,

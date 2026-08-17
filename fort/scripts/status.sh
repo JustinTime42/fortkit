@@ -39,7 +39,15 @@ echo "── Git ──"
 # both at once — "?" in the sentence, and ${AHEAD:-0} on the next line
 # defaulting the SAME unknown to zero, which silently disarmed the drift warning
 # at exactly the moment the fort could not see its own state.
-SYNCED=$(git log -g -1 --format=%cd --date=iso refs/remotes/origin/main 2>/dev/null)
+# %gd, NOT %cd: under `git log -g` the -g is INERT for %cd, which remains
+# the COMMIT's committer date — so the old spelling rendered a commit date
+# under a sync label (7s adrift in this clone, unbounded under git fetch: a
+# tip another clone committed a week ago reads as 'synced' a week ago no
+# matter when you fetched it). %gd is the reflog entry's own time; the sed
+# strips git's `origin/main@{...}` wrapper. Do not simplify this back.
+# (Ilva Trueglass, blocking finding 1 on fortkit-wg8w.1; fortkit-rw86.)
+SYNCED=$(git log -g -1 --format=%gd --date=iso refs/remotes/origin/main 2>/dev/null \
+  | sed 's/^[^{]*{//; s/}$//')
 if AHEAD=$(git rev-list --count origin/main..main 2>/dev/null); then
   echo "  branch: $(git branch --show-current), $AHEAD commit(s) since last sync with origin/main${SYNCED:+ (synced $SYNCED)}"
   if [ "$AHEAD" -gt 3 ]; then
@@ -56,3 +64,6 @@ tail -5 fort/events/events-*.jsonl 2>/dev/null | grep '^{' | tail -5 | jq -r '" 
 echo
 echo "── Staging ──"
 timeout 5 curl -sf -o /dev/null -w "  /api/health: %{http_code} (%{time_total}s)\n" \
+  "$(grep -o 'https://[^"]*azurecontainerapps.io' docs/azure-staging-runbook.md 2>/dev/null | head -1)/api/health" 2>/dev/null \
+  || echo "  (health check skipped: no URL found or unreachable)"
+echo "═══════════════════════════════════════════════════════════"

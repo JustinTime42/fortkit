@@ -1350,3 +1350,71 @@ should name the seat if it matters who learned it.
   their environment to the shell they spawn — `MAYOR_EXIT=77` and the refusal
   naming the seat, in both. The Overseer chose this over a full dispatch; state
   the departure on the bead, because a Warden may still want the dispatch.
+
+- 2026-08-17 (edict 21, B2R2 — the Band 2 repair sitting, fortkit-wg8w.2):
+  **`git log -g --format=%cd` DOES NOT GIVE YOU A REFLOG TIME. The `-g` is INERT
+  for that value** — `%cd` remains the COMMIT's committer date, and the reflog
+  entry's own time is `%gd` (rendered `ref@{<date>}` under `--date=iso`, so it
+  needs unwrapping). Every fort's `status.sh` shipped `-g %cd` under a `synced`
+  label for three days, which is the SECOND time fortkit-rw86's own class landed
+  in fortkit-rw86's own repair. **The discriminating measurement is dropping the
+  `-g`**: if the value does not change, the `-g` was never doing anything. That
+  one command turns the finding from an argument into an experiment, and it is
+  the check to run before believing any `git log -g` format string.
+
+- 2026-08-17: **A DEFECT IN THE FACTORY TEMPLATE IS NOT AN INCIDENT, AND THE
+  DIFFERENCE IS `git log --follow`.** `status.sh` ends mid-command — a dangling
+  `\` with no URL, so curl runs bare and the script exits 2 at EVERY session
+  start — in fortkit and longburn but not ForgeOs. That pattern-matches the
+  fortkit-q89 truncation class exactly. It is not: the fort's FIRST EVER copy
+  already ended that way, because `templates/fort/scripts/status.sh` does, the
+  template having been extracted from Proofdelve+Farlantern and taken the broken
+  side. **Establish provenance from history before filing something as an
+  incident**, because "someone truncated this" and "the factory reproduces this
+  into every settlement" want opposite responses, and only the second one is a
+  parity-gate item. (fortkit-fotv.)
+
+- 2026-08-17: **IN A `sed` REPLACEMENT HALF, `|` CRASHES AND `&` CORRUPTS
+  SILENTLY — and the silent one is the whole reason to care.** `bin/fort-init`
+  interpolated `$PURPOSE` (free text, positional `$3`) into `s|...|$VALUE|g`.
+  Measured by founding throwaway forts with the pre-edit factory: purpose
+  `Trade & barter | ship things \ safely` gave `sed: unknown option to 's'` and
+  exit 1 **after writing 31 files**, leaving a half-founded fort; purpose
+  `Salvage & repair` gave **exit 0** and a charter reading
+  `Salvage {{PURPOSE}} repair`, because `&` expands to the whole match. A fort
+  founded successfully, no warning, with a corrupted constitution. **When you
+  test an injection fix, test the character that does NOT error** — the crashing
+  one is the merciful case and proves the least.
+
+- 2026-08-17: **A LAUNCHER TEST CAN EXERCISE THE TEMPLATE AND NOT THE LIVE FILE,
+  so a green suite is not coverage of the thing you edited.**
+  `test/mayor-launcher.test.ts` asserts exit 77 and the refusal for four markers
+  — against `templates/fort/scripts/mayor.sh` (its line 19), never a live
+  launcher. It could not have caught a regression in the file the bead was
+  about, and could not have been broken by one. **Read which artifact a test
+  loads before treating it as the guard for a change.** The live files got their
+  own runtime probe instead: 15/15 across three forts, each from a copy whose
+  repo fallback was repointed at a nonexistent path so a regressed guard could
+  not launch a real Mayor, **plus a vacuity control per fort** (unset marker must
+  NOT exit 77) without which an unconditionally-refusing guard scores 12/12.
+
+- 2026-08-17: **A CORRECTION'S OWN COMMENT MAKES THE FILE MATCH THE STRING YOU
+  ARE GREPPING FOR.** I checked "no fort keeps a host-side `export FORT_MASKED`"
+  with `grep -n "export FORT_MASKED"` and wrote "(no output above = all removed)"
+  beneath three lines of output — the new comments quote the phrase in backticks
+  while explaining its removal. Caught on my own re-read, not by any control.
+  Same family as the E1/E10 scar where a quoted retired literal fails a
+  zero-tolerance check, but pointed the other way: **there, the comment failed a
+  check that should have passed; here, it passed a check that should have
+  failed.** Exclude comment lines, or grep for the live spelling, whenever the
+  change you just made writes prose about the thing you are counting. Fourth
+  sighting of the wider class in this civilization, committed while
+  `read-the-artifact-remember-the-why` was in context and cited.
+
+- 2026-08-17: **`schema/events.md` DESCRIBES NO `edict.*` CATEGORY AT ALL**,
+  though `edict.begun`, `edict.ended` and `edict.applied` appear in all three
+  forts' streams and are the Regent's entire announcement machinery. The
+  canonical schema does not describe what the civilization emits. Flagged rather
+  than edited, since the forts vendor that file — and it is already known stale
+  about daily streams being gitignored. Use `edict.applied` for Regent work
+  inside a fort; that is the precedent, not the spec.
