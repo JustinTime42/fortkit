@@ -1,10 +1,12 @@
 import { execFile, execFileSync } from "node:child_process";
 import {
   access,
+  cp,
   mkdir,
   mkdtemp,
   readFile,
   rm,
+  unlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -198,7 +200,7 @@ describe("fort-init", () => {
   );
 
   test.skipIf(!foundingSmokeToolsAvailable)(
-    `founds a fort whose shipped verifier passes (${foundingSmokeSkipReason})`,
+    `executes the founded fort's unattended artifacts (${foundingSmokeSkipReason})`,
     async () => {
       const root = await createFort();
       const registryDirectory = join(root, "registry");
@@ -227,10 +229,81 @@ describe("fort-init", () => {
       );
 
       await expect(
+        execFileAsync("bash", ["fort/scripts/status.sh"], { cwd: root }),
+      ).resolves.toMatchObject({ stdout: expect.any(String) });
+      await expect(
         execFileAsync("bash", ["fort/scripts/verify.sh", "--no-emit"], {
           cwd: root,
         }),
       ).resolves.toMatchObject({ stdout: expect.any(String) });
+    },
+  );
+
+  test.skipIf(!foundingSmokeToolsAvailable)(
+    `fails when a rendered status template is broken (${foundingSmokeSkipReason})`,
+    async () => {
+      const root = await createFort();
+      const registryDirectory = join(root, "registry");
+      const kit = join(root, "kit");
+      await mkdir(registryDirectory);
+      await cp(join(repoRoot, "bin"), join(kit, "bin"), { recursive: true });
+      await cp(join(repoRoot, "templates"), join(kit, "templates"), {
+        recursive: true,
+      });
+      await writeFile(
+        join(kit, "templates/fort/scripts/status.sh"),
+        "#!/bin/bash\nexit 91\n",
+      );
+
+      await execFileAsync(
+        "bash",
+        [join(kit, "bin/fort-init"), root, "broken-status", "Smoke test fort."],
+        {
+          env: {
+            ...process.env,
+            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
+          },
+        },
+      );
+
+      await expect(
+        execFileAsync("bash", ["fort/scripts/status.sh"], { cwd: root }),
+      ).rejects.toMatchObject({ code: 91 });
+    },
+  );
+
+  test.skipIf(!foundingSmokeToolsAvailable)(
+    `fails loudly when the founded verifier implementation is missing (${foundingSmokeSkipReason})`,
+    async () => {
+      const root = await createFort();
+      const registryDirectory = join(root, "registry");
+      await mkdir(registryDirectory);
+
+      await execFileAsync(
+        "bash",
+        [
+          join(repoRoot, "bin/fort-init"),
+          root,
+          "broken-verifier",
+          "Smoke test fort.",
+        ],
+        {
+          env: {
+            ...process.env,
+            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
+          },
+        },
+      );
+      await unlink(join(root, "scripts/verify-impl.sh"));
+
+      await expect(
+        execFileAsync("bash", ["fort/scripts/verify.sh", "--no-emit"], {
+          cwd: root,
+        }),
+      ).rejects.toMatchObject({
+        code: 70,
+        stderr: expect.stringContaining("NOTHING WAS VERIFIED"),
+      });
     },
   );
 
