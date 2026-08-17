@@ -307,8 +307,16 @@ template_render_lint() {
   return 0
 }
 
-emit verify.run "Verifier started" -p '{"steps":["memory-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
+emit verify.run "Verifier started" -p '{"steps":["memory-lint","seat-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
 run_step memory-lint node scripts/memory-lint.mjs
+# fortkit-x508. The roster's three rules — no actor ids one keystroke apart, no
+# other settlement's citizen in a Held-by or Personality line, no surviving
+# placeholder once the moot has named the fort. It sits in the VERIFIER and not in
+# bin/fort-init because the factory runs once per fort while roster edits happen
+# forever afterward, which is the half of fortkit-8rh the factory could never have
+# delivered. Rules 2 and 3 need the registry and announce a skip when they cannot
+# reach it; rule 1 and the charter cross-check run everywhere.
+run_step seat-lint node scripts/seat-lint.mjs
 run_step skills-install skills_install_check
 run_step typecheck npm run typecheck
 run_step browser-typecheck npm run typecheck:browser
@@ -328,4 +336,4 @@ run_step test npm run test
 # every future fort inherits, so it is exactly the copy that must not rot.
 run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh "${TEMPLATE_SH[@]}" civ/scripts/*.sh scripts/*.sh
 run_step template-render template_render_lint
-emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
+emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","seat-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
