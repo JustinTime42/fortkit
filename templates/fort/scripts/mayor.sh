@@ -53,6 +53,16 @@ require_bwrap || exit $?
 launch+=(--dangerously-skip-permissions)
 build_mask claude "$REPO"
 mask_env claude
-export FORT_MASKED=1
-mask+=(--setenv FORT_MASKED 1)
+# SEAT-NAMED MASK MARKER (fortkit-mm7m). This seat has carried the marker
+# longest and was the last to still spell it `1`, so a refusal raised from a
+# Mayor-launched seat read "already inside the '1' seat mask" while forge.sh
+# and warden.sh named theirs. Diagnosability is the marker's ONLY purpose —
+# the refusal at the head of this file triggers on ANY non-empty value, so
+# this changes what a refusal SAYS and never whether one fires.
+# ONE LINE, NOT TWO. The host-side `export FORT_MASKED` that stood here
+# reached nothing and is gone: mask_env appends --clearenv, so bwrap rebuilds
+# the child environment from --setenv alone (measured 2026-08-14), and an
+# export would additionally assert, falsely, that this launcher process is
+# itself inside a mask.
+mask+=(--setenv FORT_MASKED mayor)
 exec bwrap "${mask[@]}" -- "${launch[@]}"
