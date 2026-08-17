@@ -96,6 +96,32 @@ close this one — the port covering `forge.sh` and `warden.sh` touches those tw
 files only, so coverage stays at three of four live and two of four in the
 factory even after it merges.
 
+> **CORRECTION, 2026-08-17 (Warden finding 2 on `fortkit-p5mr.10`; SO7, appended
+> not edited).** The paragraph above contains two errors and this note withdraws
+> both. **The factory count is THREE of four, not two**, and the repair it calls
+> "pending" had already merged.
+>
+> Measured at the reviewed commit and re-measured by the Mayor:
+> `templates/fort/scripts/mayor.sh` **4**, `forge.sh` **3**, `warden.sh` **3**,
+> `researcher.sh` **0**. No reading of the pre-port state yields two either — it
+> was one of four.
+>
+> The port is `fortkit-881h`, commit `7867132`, which merged at 11:30:16 on
+> 2026-08-17, **two and a half hours before this sitting opened.** It was
+> described as pending because the sitting read it as pending, not because the
+> tree said so.
+>
+> **What is unchanged and still true:** the live count of three of four, the
+> CHECK table, the APPLICABILITY section, and the defect itself. `researcher.sh`
+> carries no marker in any fort or in the factory, and that is the whole subject
+> of this advisory.
+>
+> Recorded prominently rather than quietly because of what shipped alongside it:
+> this advisory went out in the same batch as **ADV-0005, whose subject is a
+> claim and its subject drifting apart.** A civilization-wide record carrying a
+> stale count, in a batch teaching the civilization to distrust stale counts, is
+> the instructive case and not the embarrassing one.
+
 **Recorded as owed rather than established:** nobody has launched a Researcher
 and attempted a Mayor launch from inside it. The claim is read off the four
 launchers and `mayor.sh`'s refusal condition, not executed.

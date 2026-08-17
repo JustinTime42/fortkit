@@ -32,7 +32,7 @@ belong in this table; rows here are answers to advisories that exist.
 |---|---|
 | **advisory** | the civilization-wide id, `ADV-NNNN`. Not a bead id — bead ids are fort-local and their prefixes name one settlement. |
 | **checked** | the date this fort assessed it. **This is a claim.** See below. |
-| **result** | one of the four states, and only those four. |
+| **result** | one of the five states below, and only those five. |
 | **decision** | what this fort decided, and *why*. This column is where this fort's autonomy is exercised and recorded. A refusal belongs here in full, with its reasoning, and is never phrased as an exception. |
 | **bead** | this fort's own bead, if the decision was to act. Blank if it was not. |
 
