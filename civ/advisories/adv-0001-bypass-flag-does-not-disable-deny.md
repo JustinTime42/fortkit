@@ -51,8 +51,40 @@ Valid only where your `mayor.sh` descends from the shared template. If you
 wrote your own launcher, the applicability section above is the whole of it.
 
 ```
-grep -n "dangerously-skip-permissions bypasses" fort/scripts/mayor.sh
+grep -n "bypasses ALL permission checks" fort/scripts/mayor.sh
 ```
+
+> **CORRECTION, 2026-08-17 (Warden finding 3 on `fortkit-p5mr.10`; SO7, appended
+> not edited). THE CHECK PUBLISHED HERE DID NOT DISCRIMINATE, AND THE COMMAND
+> ABOVE IS ITS REPLACEMENT.**
+>
+> The original was `grep -n "dangerously-skip-permissions bypasses" fort/scripts/mayor.sh`.
+> In every copy the flag name sits immediately before the word "bypasses", so the
+> pattern matches the affected and the unaffected alike. Measured across all four
+> copies, which the Warden flagged as suspect and could not reach:
+>
+> | copy | old pattern | new pattern | wording |
+> |---|---|---|---|
+> | Manyhalls | 1 | 1 | bypasses **ALL** permission |
+> | factory template | 1 | 1 | bypasses **ALL** permission |
+> | **Proofdelve** | **1** | **0** | bypasses **most** permission |
+> | Farlantern | 1 | 1 | bypasses **ALL** permission |
+>
+> **So the old check returned a FALSE POSITIVE on the one fort this advisory
+> names as its free negative control.** A Proofdelve seat running it as published
+> would have matched, concluded `present`, and recorded a defect its fort does not
+> have — in the fort that got this right before the capital did.
+>
+> This is the failure the registry's own README tells reviewers to reject: *a
+> signature that cannot return "absent" for a healthy fort is not a signature.*
+> The advisory shipped with a table showing four matches and read it as evidence
+> the check worked, when four-out-of-four was the symptom. The right question was
+> the one `ADV-0005` teaches: **what result would have falsified this?** Nothing
+> the old pattern could return.
+>
+> The claim in the paragraph below — that the origin fort's run "is recorded as
+> evidence that the check discriminates" — is withdrawn for the old pattern and
+> holds for the new one.
 
 **Run 2026-08-17 across every copy the origin fort could read.** This is
 recorded as evidence that the check discriminates, and it is **not** any of
