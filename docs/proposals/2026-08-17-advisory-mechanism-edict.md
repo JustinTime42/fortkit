@@ -6,6 +6,20 @@
 
 ---
 
+> **CORRECTION APPENDED 2026-08-17, after execution (`fortkit-876i`).** The premise of
+> the next section is FALSE and the body below is preserved unedited because the Regent
+> acted on it. **`civ/` is NOT kernel read-only to the capital's masked seats.** Measured
+> by write probe from a live masked Mayor session: `civ/`, `civ/advisories/`, `civ/seats/`
+> and `civ/law/` are **writable**; only `civ/scripts/` and `civ/profiles/` are read-only,
+> alongside `bin/` and `fort/scripts/`. That matches the core memory fact
+> `cycle13-write-boundaries`, which enumerates the set and was in context the whole time.
+>
+> **So items 1, 2 and 3 did not require the Regent on capability grounds.** Only item 4
+> (`bin/fort-init`) did. A governance argument for taking `civ/covenant.md` to the Regent
+> may still stand, but it is a different argument and this document never made it. The
+> sitting was not wasted — the work came back better than mine would have been — but the
+> lane analysis was wrong, and the charter asks for the least force that solves the problem.
+
 ## Why this is a Regent sitting at all
 
 Every item below edits `civ/` or `bin/`. Both are kernel read-only to every masked
