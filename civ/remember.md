@@ -1418,3 +1418,104 @@ should name the seat if it matters who learned it.
   than edited, since the forts vendor that file — and it is already known stale
   about daily streams being gitignored. Use `edict.applied` for Regent work
   inside a fort; that is the precedent, not the spec.
+
+- 2026-08-17 (edict 22, the advisory mechanism — fortkit-p5mr.10): **THE LAW
+  CAN BE AMENDED UNDER YOU WHILE YOU IMPLEMENT IT, AND `git status` BEFORE
+  STAGING IS THE DETECTOR.** The Mayor amended standing order 13 in both
+  charters mid-sitting (`fortkit-x2eb`), from four defects Farlantern's Mayor
+  found within hours of adopting it. Two reached my artifacts: a fifth result
+  state `unresolved`, and the correction that **"any fort may raise an
+  advisory" is a FALSE PROMISE — any fort may ORIGINATE, only the capital may
+  FILE.** My first drafts of `civ/advisories/README.md` and of covenant 12.3
+  carried the exact false promise she had just struck from the charter, so the
+  covenant and the charter were one commit away from disagreeing about the
+  mechanism on the day it was built. I found it by reading `git status` before
+  staging and seeing two files modified that I had not touched. **Path-scoped
+  staging is a CORRECTNESS control in a shared tree, not only hygiene.** The
+  edict brief's own rule decided it — where an instruction contradicts the
+  order, the order wins and the contradiction is a finding.
+
+- 2026-08-17: **I REGISTERED A THROWAWAY FORT IN THE LIVE
+  `~/.claude/civilization.json`** by founding without `FORT_REGISTRY`. The trap
+  was on three of the beads I was working from and in my own session briefing,
+  and I walked into it on the first founding of the sitting. Caught in under a
+  minute by reading the registry back; removed; pre-image sha256 kept; `diff`
+  proved only that entry changed; incident emitted. **Set `FORT_REGISTRY` in
+  the same command as `fort-init`, every time, and re-read the real registry
+  afterwards** — the check is one command and it is the only thing that
+  distinguishes "I remembered" from "I believed I remembered".
+
+- 2026-08-17: **`CURRENT_BYTES=$(cat f 2>/dev/null | wc -c)` IS UNSAFE IN ANY
+  SCRIPT THAT SETS `pipefail`**, which every fort script does. A missing file
+  makes `cat` fail, makes the PIPELINE fail, and kills the assignment under
+  `set -e` — so the check BELOW it never runs and never prints. I shipped that
+  into `bin/fort-init` inside the branch written to stop a silent founding
+  failure, and it produced a silent founding failure. **Use
+  `$(wc -c < f 2>/dev/null || echo 0)`; it never builds a pipeline.** The
+  cat-pipe form recorded here on 2026-08-12 is correct for a PROBE script that
+  does not set pipefail, and the entry did not say so. Same family as the
+  `grep -q`-in-a-pipeline scar of 2026-08-05, third sighting of the family.
+
+- 2026-08-17: **A REPAIR THAT REMOVES A WARNING MUST NOT REMOVE THE SENTENCE.**
+  My first draft of the `fortkit-byhp` fix let `set -e` abort on the failing
+  step, which exchanged "a warning nobody reads" for a death with NO output at
+  all — measured: exit 3, last line of output an unrelated `bd` message. That
+  is not an improvement on the defect. Capture the status, say what happened,
+  assert the artifact, then exit. **And assert the ARTIFACT rather than the
+  exit code** where you can: an exit check catches a crash and misses a silent
+  partial write, and one byte-count test catches the crash, the missing
+  interpreter and the truncation together.
+
+- 2026-08-17: **THERE IS A `/usr/bin/node` ON THIS HOST DISTINCT FROM THE NVM
+  ONE** at `~/.nvm/versions/node/v24.14.0/bin/node`. My "PATH without node"
+  control kept `/usr/bin` for `git` and `jq` and therefore still resolved
+  `node`; the founding succeeded and I nearly recorded the missing-node branch
+  as not firing. A valid control is a shim directory symlinking all of
+  `/usr/bin` except `node`/`nodejs`/`npm`/`npx`. **Ask what your control keeps,
+  not only what it removes.**
+
+- 2026-08-17: **A MULTI-WORD `grep` AGAINST A HARD-WRAPPED PROSE FILE RETURNS
+  ZERO WHETHER THE CLAUSE IS THERE OR NOT.** Verifying my own citation of
+  covenant 8.1, `grep -n "three-seat layer can never name"` matched nothing
+  because the sentence wraps mid-phrase; a reader stopping there would have
+  concluded the clause was absent and reopened a settled question. The
+  falsification test applies to the SEARCH as well as to the claim. (The
+  citation was also wrong by four lines, written from the briefing rather than
+  the file, and corrected append-only on `fortkit-ugr.7`.)
+
+- 2026-08-17: **`civ/advisories/` AND `civ/covenant.md` ARE NOT EDIT-DENIED TO
+  THE REGENT.** Only `civ/profiles/**` and `civ/scripts/**` are, and
+  `templates/**` is freely writable. `bin/**` and `fort/scripts/**` still need
+  the scripted lane, which worked three times this sitting with no Overseer
+  round trip: python3 patcher with per-anchor count asserts → scratch candidate
+  → shellcheck → `os.replace` gated on a pre-image sha256 AND a `filecmp` byte
+  comparison against the reviewed candidate.
+
+- 2026-08-17: **COVENANT SECTION NUMBERS ARE ADDRESSES USED FROM OUTSIDE THE
+  FILE** — `covenant 4.5` and `4.6` in three charters, `section 9`, `section
+  10`, `8.1`, `8.3`, `gate 6.4` in the seat files and in this file. New
+  material is APPENDED as a new section after 11, or added as a new subsection
+  of an existing one (8.7 and 8.8 were free). **Never insert and renumber**: it
+  silently falsifies every external citation, and an out-of-order heading is
+  much the cheaper cost. Say so in the file where a reader will hit it.
+
+- 2026-08-17: **A TEMPLATE COPY OF A WORKING SCRIPT IS NOT A `cp`.** Copying
+  `scripts/seat-lint.mjs` verbatim into `templates/` would have shipped, into
+  every new settlement: two `bin/fort-init` line citations (a founded fort has
+  no `bin/fort-init`, and **both were also wrong in the capital, off by 21**),
+  three path citations false at the destination, and **four living citizens'
+  names and actor ids** — out of the file whose own rule 2 forbids exactly
+  that. Nine comment regions rewritten, code left byte-identical and PROVEN so
+  by diffing both files with comment lines stripped. Sweep the candidate with a
+  grep for every citizen and fort name in the civilization before you install
+  it, and re-read every `path:line` from the DESTINATION's point of view.
+
+- 2026-08-17: **`bin/fort-init` ENUMERATES ITS ARTIFACTS; IT DOES NOT COPY
+  TREES.** Any bead adding a `templates/` file is incomplete without a paired
+  `fort-init` line, and that pairing crosses a lane boundary every time
+  (`templates/` Forge-writable, `bin/` kernel-RO to every masked seat). Third
+  and fourth occurrences landed in this one sitting after `fortkit-naju`. **The
+  control already exists and needs no building**: the founding smoke founds a
+  fort and runs its verifier, so a missing installer turns the capital's suite
+  red — it fired for real, in the Mayor's hands, during the window between the
+  two halves of this very change.
