@@ -1564,3 +1564,63 @@ should name the seat if it matters who learned it.
   sync state as `main` and `origin/main` resolving to the same sha, not as a
   count, and re-read it at close rather than deriving it from what the briefing
   said at wake.
+
+- 2026-08-24 (edict 23, the airlock feedback-scan mask in Proofdelve —
+  `ForgeOs-15k.2`): **A FORT-LOCAL PATH DOES NOT BELONG IN THE SHARED MASK LIB,
+  AND THE PARAMETER FOR IT ALREADY EXISTS.** The bead asked for the entry in
+  `lib/seat-sandbox.sh`'s `claude)` branch; that lib is ONE FILE ACROSS FOUR
+  COPIES (`fortkit-6jf`, measured divergence from the capital today: 61 lines,
+  every one comment reflow or a bead id), so a path existing in one settlement
+  would be permanent drift the watcher flags forever. The `extra_ro` positional
+  (lib `:82`, bound `:438`) is what `warden.sh:72` has always used and what the
+  lib's own header names for "deltas the shared list cannot know". One line in
+  that fort's `mayor.sh`, no lib edit. **And the Warden needed nothing**: she
+  passes her whole checkout as `extra_ro`, so a seat-by-seat sweep hands her an
+  entry that is a no-op reading as protection. Ask which seats are ALREADY
+  covered before writing an entry per seat.
+
+- 2026-08-24: **MASKS BIND AT LAUNCH, WHICH MAKES THE LIVE SESSION A SCHEDULING
+  INSTRUMENT AND NOT ONLY A HAZARD.** Making a file read-only to a seat also
+  makes it un-mergeable by that seat — a read-only bind is a MOUNT POINT and git
+  replaces a file by unlinking a sibling over it, so `merge`, `switch`,
+  `checkout --` and `stash` across ANY commit touching it fail
+  (`fortkit-6ovg`, `longburn-3195`). The Mayor's own message anticipated the
+  EDIT half ("those become the Regent's work") and not the MERGE half, which is
+  the one that bites, because it takes the whole repo's branch operations with
+  it. **The seat locked out is usually the seat that must merge the branch
+  INTRODUCING the file.** Here it cost nothing only because her session
+  (pid 2314124, launched 15:36:04) built its mask hours before the edict and can
+  still merge. Install such a mask while that session is live, deliberately, and
+  say so in the record — or merge first and mask after.
+
+- 2026-08-24: **AN RO BIND IS EXISTENCE-GUARDED, SO A MASK FOR AN UNMERGED FILE
+  PROTECTS NOTHING AND CANNOT BE MEASURED EITHER.** To measure the acceptance
+  criterion at all I rendered the real file from its bead branch to the real
+  path as a FIXTURE, probed three masks, and removed it. **The load-bearing part
+  is the vacuity control**: an unmasked sibling in the same directory must come
+  back WRITABLE, or an all-read-only result is indistinguishable from a mask
+  that denies everything. Six assertions, one of them the control and one a
+  positive control on the file the precedent came from.
+
+- 2026-08-24: **A BEAD'S CLAIM ABOUT A PRECEDENT IS A CLAIM, AND THIS ONE WAS
+  FALSE FOR ONE SEAT OF THREE — WHICH IS HOW THE REAL DEFECT WAS FOUND.**
+  `ForgeOs-15k.2` said the staging deploy script "is explicitly masked in both
+  seat postures". True of the Forge (`--mask-file` ×2) and the Warden (whole
+  checkout `extra_ro`); **false of the Mayor**, measured `writable=YES`, 13215
+  bytes — the human-only script that mutates Azure and runs EF migrations, plus
+  `backfill-staging-slack-feedback.sh` beside it. So applying the bead as written
+  left the NEW script better protected than the one it was modelled on. Filed
+  `ForgeOs-hi9c` (P1) and did NOT widen the edict into it: a false premise found
+  inside a brief is a finding to report, never authority to act beyond it (the
+  2026-08-13 E10 rule, second application). **Probe the precedent a bead cites,
+  not only the file it names.**
+
+- 2026-08-24: **A HOST-EXECUTED SCRIPT THAT SOURCES AN UNTRACKED ENV FILE CANNOT
+  BE SMOKE-TESTED FROM A WORKTREE.** `airlock-feedback-scan.sh` resolves its root
+  from `$BASH_SOURCE/..` and dies unless `$root/.env.staging.local` exists;
+  `test -f` found it present in the main checkout and ABSENT in the bead
+  worktree, because it is untracked. So "run it before merging to de-risk the
+  merge" was not available, and the only way to make it available — copying the
+  env file — is the gate-4 secret duplication the design exists to prevent.
+  Measured with `test -f` and never by reading the file. Expect this shape for
+  every airlock operation in every fort.
