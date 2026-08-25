@@ -1,0 +1,3 @@
+{"ts":"2026-08-25T05:00:06-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins the morning run (opus)","payload":{"model":"opus"}}
+{"ts":"2026-08-25T05:06:05-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Herald 2026-08-25: 1 draft (the neighbour test always passes); truncation blinded the constitution-diff watch on 2 Proofdelve diffs, ENOENT exports 11th run","payload":{"drafts":1}}
+{"ts":"2026-08-25T05:06:20-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's morning run ended (exit 0); report filed","payload":{"exit":0,"report":"/home/justin/Documents/Obsidian Vault/herald/reports/2026-08-25.md","report_filed":true}}
