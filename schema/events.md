@@ -19,6 +19,31 @@ Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `for
 - `bead.filed`, `bead.claimed`, `bead.closed`, `bead.blocked`, `bead.unblocked`
 - `verify.run`, `verify.pass`, `verify.fail`, `review.verdict`, `merge`, `push`, `deploy`
 - `incident`, `incident.corrected`, `laurel`, `overseer.decision`, `watcher.alert`, `drift.scan`
+- `edict.begun`, `edict.ended`, `edict.applied`, `watcher.repaired` (fortkit-7vdm)
+- `rule.fired`, `rule.retired`, `advisory.raised` (fortkit-gbhk.6)
+
+**Four of these were being emitted before they were listed** (`edict.begun` 42
+times, `edict.ended` 36, `edict.applied` 3, `watcher.repaired` 2, counted
+2026-08-29). Two of them the charter MANDATES and instructs every seat to police
+as a security signal, so the canonical schema omitted the categories the fort
+escalates on. That is `fortkit-7vdm`, closed here. It was possible because
+`fort/scripts/emit.sh:16-18` validates only that a category is non-empty and does
+not begin with `-`: **this list is documentation, not a fence.** Making it one
+is `fortkit-4ah3.4` (Regent lane, since `fort/scripts/` is read-only whole to
+every seat), and until that lands a typo'd category is silently accepted and
+invisible.
+
+`rule.fired` and `rule.retired` support the law ledger (`docs/specs/law.md`).
+`rule.fired` names the ruling a control acted under and is what makes "has this
+rule ever caught anything" answerable; `rule.retired` is required by §5 of that
+spec, which forbids a ruling leaving the corpus silently. **Decide `rule.fired`'s
+cardinality before first emission, not after** — a fence that refuses on every
+tool call must not emit per call — because the stream is append-only and a
+volume mistake cannot be taken back.
+
+**This file is the CANONICAL COPY and the elder forts vendor it.** Per standing
+order 13 these additions reach them as an advisory rather than a sweep, and
+declining is a complete answer.
 
 ## Emission points (who must emit, when)
 
