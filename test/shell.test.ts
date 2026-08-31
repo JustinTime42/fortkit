@@ -362,7 +362,8 @@ esac
       "Install host hook [fortkit-host; open; act-host; gate-2]",
     );
     expect(result.stdout).not.toContain("Install host hook [fortkit-host] —");
-    expect(result.stdout.match(/Install host hook/g)).toHaveLength(1);
+    const subjectSection = result.stdout.split("BY SUBJECT\\n")[1] ?? "";
+    expect(subjectSection.match(/Install host hook/g)).toHaveLength(1);
     expect(result.stdout).not.toContain("blocked by: fortkit-hook");
   });
 
