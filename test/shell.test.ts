@@ -1,6 +1,7 @@
 import { execFile, execFileSync } from "node:child_process";
 import {
   access,
+  chmod,
   cp,
   mkdir,
   mkdtemp,
@@ -155,6 +156,107 @@ describe.each(emitCopies)("%s emit.sh", (_copyName, emitPath) => {
         payload: null,
       })}\n`,
     );
+  });
+});
+
+describe("scripts/digest.sh", () => {
+  async function installDigest(root: string) {
+    await mkdir(join(root, "scripts"), { recursive: true });
+    await mkdir(join(root, "fort", "events"), { recursive: true });
+    await writeFile(
+      join(root, "scripts", "digest.sh"),
+      await readFile(join(repoRoot, "scripts", "digest.sh"), "utf8"),
+    );
+    await chmod(join(root, "scripts", "digest.sh"), 0o755);
+  }
+
+  async function installFakeBd(root: string) {
+    const bin = join(root, "bin");
+    await mkdir(bin);
+    await writeFile(
+      join(bin, "bd"),
+      `#!/bin/sh
+case "$*" in
+  *--label=gate-1*) printf '%s\\n' '[{"id":"fortkit-gate","status":"open","title":"Needs a constitution decision"}]' ;;
+  *) printf '%s\\n' '[]' ;;
+esac
+`,
+    );
+    await chmod(join(bin, "bd"), 0o755);
+    return bin;
+  }
+
+  test("announces an empty event window instead of succeeding silently", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", "2026-08-01T00:00:00Z"],
+      {
+        cwd: root,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+
+    expect(result.stdout).toContain("EMPTY WINDOW");
+    expect(result.stdout).toContain("GATE 2: no decisions waiting");
+    expect(result.stdout).toContain("no verifier event in the selected window");
+  });
+
+  test("uses the main event stream from a worktree and reports the blocking gate", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-01.jsonl"),
+      `${JSON.stringify({
+        ts: "2026-08-01T23:24:00-08:00",
+        actor: "harness",
+        seat: null,
+        category: "verify.pass",
+        target: "fortkit-gate",
+        detail: "Verifier passed",
+        payload: null,
+      })}\n`,
+    );
+    await execFileAsync("git", ["add", "scripts/digest.sh"], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "fixture",
+      ],
+      { cwd: root },
+    );
+    const worktree = `${root}-worktree`;
+    await execFileAsync(
+      "git",
+      ["worktree", "add", "--detach", "--quiet", worktree],
+      { cwd: root },
+    );
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", "2026-08-02T07:00:00Z"],
+      {
+        cwd: worktree,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+
+    expect(result.stdout).toContain("GATE 1:");
+    expect(result.stdout).toContain(
+      "fortkit-gate [open] Needs a constitution decision",
+    );
+    expect(result.stdout).toContain("2026-08-01T23:24:00-08:00 verify.pass");
   });
 });
 
