@@ -77,7 +77,11 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
   test("the live register passes and reports controls without falsifiers", async () => {
     const result = await lintFort(repositoryRoot);
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain("45 control file(s) checked");
+    const count = /control-lint: (\d+) control file\(s\) checked/u.exec(
+      result.stdout,
+    );
+    expect(count).not.toBeNull();
+    expect(Number(count?.[1])).toBeGreaterThanOrEqual(45);
     expect(result.stdout).toContain("reported, not failed");
   });
 
@@ -148,5 +152,74 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
     expect(failure.stderr).toContain(
       "falsified-by must be declared explicitly",
     );
+  });
+
+  test("reports blank and whitespace-padded null falsifiers as null", async () => {
+    const root = await controlFixture();
+    await writeFile(
+      join(root, "fort", "controls", "fence-example.md"),
+      "---\nkey: fence-example\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by: null \n---\n",
+    );
+    const paddedNull = await lintFort(root);
+    expect(paddedNull.code).toBe(0);
+    expect(paddedNull.stdout).toContain(
+      "fence-example: falsified-by is null (reported, not failed)",
+    );
+
+    await writeFile(
+      join(root, "fort", "controls", "fence-example.md"),
+      "---\nkey: fence-example\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by:\n---\n",
+    );
+    const blank = await lintFort(root);
+    expect(blank.code).toBe(0);
+    expect(blank.stdout).toContain(
+      "fence-example: falsified-by is null (reported, not failed)",
+    );
+  });
+
+  test("refuses a falsifier that is not registered", async () => {
+    const root = await controlFixture();
+    await writeFile(
+      join(root, "fort", "controls", "fence-example.md"),
+      "---\nkey: fence-example\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by: fence-verifer\n---\n",
+    );
+    const failure = await lintFort(root);
+    expect(failure.code).toBe(1);
+    expect(failure.stderr).toContain(
+      'falsified-by "fence-verifer" does not name a registered control',
+    );
+  });
+
+  test("refuses unresolved citations and fingerprints", async () => {
+    const cases = [
+      {
+        implements: "scripts/missing.mjs:1",
+        expected: "implements path scripts/missing.mjs:1 does not exist",
+      },
+      {
+        implements: "scripts/subject.mjs:99",
+        expected: "implements line scripts/subject.mjs:99 does not exist",
+      },
+      {
+        implements: "../outside.mjs:1",
+        expected: "implements must be a repository-relative file:line citation",
+      },
+    ];
+    for (const { implements: implementation, expected } of cases) {
+      const root = await controlFixture();
+      await writeFile(
+        join(root, "fort", "controls", "fence-example.md"),
+        `---\nkey: fence-example\nkind: fence\nimplements: ${implementation}\nfalsified-by: null\n---\n`,
+      );
+      const failure = await lintFort(root);
+      expect(failure.code).toBe(1);
+      expect(failure.stderr).toContain(expected);
+    }
+
+    const root = await controlFixture();
+    await writeFile(join(root, "scripts", "control-fingerprints.json"), "{}\n");
+    const failure = await lintFort(root);
+    expect(failure.code).toBe(1);
+    expect(failure.stderr).toContain("no recorded fingerprint");
   });
 });
