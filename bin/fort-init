@@ -119,6 +119,19 @@ chmod +x scripts/verify-impl.sh
 # its first step. Neither is a state a settlement should be founded in.
 [ -e scripts/seat-lint.mjs ] && { echo "fort-init: $REPO/scripts/seat-lint.mjs already exists - refusing to overwrite it" >&2; exit 1; }
 cp "$T/scripts/seat-lint.mjs" scripts/seat-lint.mjs
+# The session digest and its gates (fortkit-zj8e.10, adopting ADV-0008 from
+# Proofdelve). THE SAME COUPLING THE seat-lint COMMENT ABOVE RECORDS:
+# templates/scripts/verify-impl.sh already wires merge-event-check as a stage.
+# The template verifier ANNOUNCES A SKIP for that stage while the script is
+# absent rather than failing, so a fort founded before these lines is honest
+# rather than broken - but it does not get the control until they exist.
+# RENDER, not cp: merge-event-check.sh carries {{DATE}} (its audit lower bound,
+# so a new fort audits from its founding rather than the epoch) and {{PROJECT}}.
+for sc in digest quiescent digest-hook merge-event-check; do
+  [ -e "scripts/$sc.sh" ] && { echo "fort-init: $REPO/scripts/$sc.sh already exists - refusing to overwrite it" >&2; exit 1; }
+  render "$T/scripts/$sc.sh" "scripts/$sc.sh"
+  chmod +x "scripts/$sc.sh"
+done
 mkdir -p fort/profiles
 for s in "${SEATS[@]}"; do
   if [ -f "$T/fort/profiles/$s-settings.json" ]; then
