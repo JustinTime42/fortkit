@@ -81,6 +81,13 @@ bd human list
 bd list --status=open --label=gate-1 2>/dev/null | wc -l
 ```
 
+**Run these without a pager and without `head`.** The capital wrote a truncated
+figure into its own answer to this advisory within an hour of transcribing it —
+`29` read off a `head -30`-shortened list where the true count was `61`. That is
+the `fortkit-dqu5` mechanism (a watch that read a truncated event list and
+reported announced amendments as unannounced), and it landed in the row
+recording that this fort does not read its own queue.
+
 **How to read it.** An empty first command with open human-gated work is the
 origin fort's exact signature. A non-empty second command with no mechanism that
 surfaces it at end of run is the same defect wearing different labels. **Neither
