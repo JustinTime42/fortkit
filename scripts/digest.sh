@@ -22,8 +22,8 @@ case "$git_common" in /*) ;; *) git_common="$repo_root/$git_common" ;; esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 events_dir="$main_root/fort/events"
 emitter="$main_root/fort/scripts/emit.sh"
-all_events="$(mktemp)"; timestamped_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"; timestamp_report="$(mktemp)"; audit_merges="$(mktemp)"; audit_coverage="$(mktemp)"; live_gate_beads="$(mktemp)"; all_beads="$(mktemp)"; gate_one="$(mktemp)"; gate_two="$(mktemp)"; gate_three="$(mktemp)"
-trap 'rm -f "$all_events" "$timestamped_events" "$window_events" "$closed_beads" "$timestamp_report" "$audit_merges" "$audit_coverage" "$live_gate_beads" "$all_beads" "$gate_one" "$gate_two" "$gate_three"' EXIT
+all_events="$(mktemp)"; timestamped_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"; timestamp_report="$(mktemp)"; audit_merges="$(mktemp)"; audit_coverage="$(mktemp)"; live_gate_beads="$(mktemp)"; all_beads="$(mktemp)"; gate_one="$(mktemp)"; gate_two="$(mktemp)"; gate_three="$(mktemp)"; action_render="$(mktemp)"; subject_render="$(mktemp)"
+trap 'rm -f "$all_events" "$timestamped_events" "$window_events" "$closed_beads" "$timestamp_report" "$audit_merges" "$audit_coverage" "$live_gate_beads" "$all_beads" "$gate_one" "$gate_two" "$gate_three" "$action_render" "$subject_render"' EXIT
 max_decisions_per_action=5
 boundary_tolerance_seconds=120
 
@@ -121,10 +121,10 @@ live_gate_status=$(( gate_one_status != 0 ? gate_one_status : gate_two_status !=
 if [ "$live_gate_status" -eq 0 ]; then jq -s 'add | unique_by(.id)' "$gate_one" "$gate_two" "$gate_three" >"$live_gate_beads"; fi
 if [ "$live_gate_status" -ne 0 ]; then
   printf '  ACTION GROUPS: UNAVAILABLE (bd exit %s)\n' "$live_gate_status"
-elif ! jq -e 'type == "array"' "$live_gate_beads" >/dev/null 2>&1; then
+elif [ "$(jq -r 'type' "$live_gate_beads")" != "array" ]; then
   printf '  ACTION GROUPS: UNAVAILABLE (bd returned invalid JSON)\n'
 else
-  node - "$live_gate_beads" "$max_decisions_per_action" <<'NODE'
+  if node - "$live_gate_beads" "$max_decisions_per_action" >"$action_render" <<'NODE'
 const fs = require("node:fs");
 const [beadsPath, limitArg] = process.argv.slice(2);
 const beads = JSON.parse(fs.readFileSync(beadsPath, "utf8"));
@@ -150,6 +150,11 @@ for (const [action, heading] of groups) {
   if (members.length > shown.length) console.log(`    ${members.length - shown.length} decision(s) elided; full count is ${members.length}.`);
 }
 NODE
+  then
+    cat "$action_render"
+  else
+    printf '  ACTION GROUPS: UNAVAILABLE (renderer failed)\n'
+  fi
 fi
 
 if [ "$by_subject" -eq 1 ]; then
@@ -165,7 +170,7 @@ if [ "$by_subject" -eq 1 ]; then
   elif [ "$live_gate_status" -ne 0 ]; then
     printf '  SUBJECT VIEW: UNAVAILABLE (the live gate queue is unavailable)\n'
   else
-    node - "$live_gate_beads" "$all_beads" <<'NODE'
+    if node - "$live_gate_beads" "$all_beads" >"$subject_render" <<'NODE'
 const fs = require("node:fs");
 const [livePath, allPath] = process.argv.slice(2);
 const live = JSON.parse(fs.readFileSync(livePath, "utf8"));
@@ -213,6 +218,11 @@ for (const { root, members } of [...groups.values()].sort((left, right) => Strin
 }
 if (groups.size === 0) console.log("  no decisions waiting");
 NODE
+    then
+      cat "$subject_render"
+    else
+      printf '  SUBJECT VIEW: UNAVAILABLE (renderer failed)\n'
+    fi
   fi
 fi
 

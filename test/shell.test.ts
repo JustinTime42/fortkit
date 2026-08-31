@@ -363,7 +363,8 @@ esac
     );
     expect(result.stdout).not.toContain("Install host hook [fortkit-host] —");
     const subjectSection = result.stdout.split("BY SUBJECT\n")[1];
-    if (subjectSection === undefined) throw new Error("BY SUBJECT section was not rendered");
+    if (subjectSection === undefined)
+      throw new Error("BY SUBJECT section was not rendered");
     expect(subjectSection.match(/Install host hook/g)).toHaveLength(1);
     expect(result.stdout).not.toContain("blocked by: fortkit-hook");
   });
