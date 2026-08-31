@@ -259,7 +259,6 @@ esac
         env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
       },
     );
-
     expect(result.stdout).toContain("EMPTY WINDOW");
     expect(result.stdout).toContain("DECIDE: 7 decision(s) waiting");
     expect(result.stdout).toContain("SUMMON REGENT: 1 decision(s) waiting");
@@ -360,8 +359,10 @@ esac
       "Active decision [fortkit-gate-active; in_progress; act-decide; gate-1]",
     );
     expect(result.stdout).toContain(
-      "Install host hook [fortkit-host] — 0/1 done",
+      "Install host hook [fortkit-host; open; act-host; gate-2]",
     );
+    expect(result.stdout).not.toContain("Install host hook [fortkit-host] —");
+    expect(result.stdout.match(/Install host hook/g)).toHaveLength(1);
     expect(result.stdout).not.toContain("blocked by: fortkit-hook");
   });
 
