@@ -21,6 +21,17 @@ Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `for
 - `incident`, `incident.corrected`, `laurel`, `overseer.decision`, `watcher.alert`, `drift.scan`
 - `edict.begun`, `edict.ended`, `edict.applied`, `watcher.repaired` (fortkit-7vdm)
 - `rule.fired`, `rule.retired`, `advisory.raised` (fortkit-gbhk.6)
+- `digest.emitted` (fortkit-zj8e.2) — the session digest's window anchor:
+  the next default run reads its timestamp as the lower bound. **Listed
+  BEFORE the first one is emitted**, which is the whole point of the
+  paragraph below and the first time this fort has managed that order.
+
+**`digest.emitted` was listed before it was ever emitted (2026-08-31), and
+that is a deliberate contrast with the paragraph that follows.** The Warden
+caught it unlisted in round 1 of `fortkit-zj8e.2` — two days after this fort
+closed `fortkit-7vdm`, which existed because four categories had been emitted
+83 times between them without being listed. Knowing about a failure class two
+days earlier prevented nothing; a reviewer reading the canonical list did.
 
 **Four of these were being emitted before they were listed** (`edict.begun` 42
 times, `edict.ended` 36, `edict.applied` 3, `watcher.repaired` 2, counted
