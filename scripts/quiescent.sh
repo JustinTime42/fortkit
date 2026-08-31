@@ -44,6 +44,9 @@ check_forge_locks() {
 check_warden_and_verifier_processes() {
   local proc pid arg index is_warden is_verifier argv0 cwd resolved_arg
   local warden_script warden_settings
+  # Predicate: is a Warden or verifier belonging to THIS fort alive?  A script
+  # basename alone cannot answer that: editors, other forts, and inaccessible
+  # namespaces may carry the same name.
   warden_script="$main_root/fort/scripts/warden.sh"
   warden_settings="$main_root/fort/profiles/warden-settings.json"
 
@@ -52,7 +55,9 @@ check_warden_and_verifier_processes() {
     [ "$pid" = "$$" ] && continue
     [ -r "$proc/cmdline" ] || continue
     argv0=""; cwd=""; is_warden=0; is_verifier=0; index=0
-    while IFS= read -r -d '' arg; do
+    # A process may exit after the readability check and before this redirect.
+    # Treat that vanished process as quiet, then continue checking the rest.
+    if ! while IFS= read -r -d '' arg; do
       if [ "$index" -eq 0 ]; then
         argv0="$arg"
         index=$((index + 1))
@@ -64,14 +69,19 @@ check_warden_and_verifier_processes() {
       # Mayor launches `cd $main_root; fort/scripts/warden.sh ...`. Do not
       # search command text, since editors and other forts are not work.
       if [ "$index" -eq 1 ] && { [ "$argv0" = "/bin/bash" ] || [ "$argv0" = "/usr/bin/bash" ] || [ "$argv0" = "bash" ]; } && [[ "$arg" = */warden.sh || "$arg" = warden.sh ]]; then
-        cwd="$(readlink -f "$proc/cwd" 2>/dev/null || true)"
-        if [ -z "$cwd" ]; then
-          mark_busy "warden process pid=$pid is undetermined (cannot resolve cwd)"
+        if [[ "$arg" = /* ]]; then
+          # Absolute script paths remain scoped even when /proc/<pid>/cwd is
+          # unreadable, so they can be positively identified without guessing.
+          resolved_arg="$(realpath -m -- "$arg")"
         else
+          cwd="$(readlink -f "$proc/cwd" 2>/dev/null || true)"
+          # A relative path with an unreadable cwd cannot be attributed to this
+          # fort. Reporting it as undetermined would let another fort pin this
+          # hook forever, so only an inspectable candidate is fail-closed.
+          [ -n "$cwd" ] || { index=$((index + 1)); continue; }
           resolved_arg="$(realpath -m -- "$cwd/$arg")"
-          [[ "$arg" = /* ]] && resolved_arg="$(realpath -m -- "$arg")"
-          [ "$resolved_arg" != "$warden_script" ] || is_warden=1
         fi
+        [ "$resolved_arg" != "$warden_script" ] || is_warden=1
       fi
 
       # The Warden review itself is the bwrap child.  Scope its settings path
@@ -83,21 +93,23 @@ check_warden_and_verifier_processes() {
       # verify-impl remains a Bash parent while its individual gate commands
       # run.  Accept only this fort's main checkout or its own worktrees.
       if [ "$index" -eq 1 ] && { [ "$argv0" = "/bin/bash" ] || [ "$argv0" = "/usr/bin/bash" ] || [ "$argv0" = "bash" ]; } && [[ "$arg" = */verify-impl.sh || "$arg" = verify-impl.sh ]]; then
-        if [ -z "$cwd" ]; then
-          cwd="$(readlink -f "$proc/cwd" 2>/dev/null || true)"
-        fi
-        if [ -z "$cwd" ]; then
-          mark_busy "verifier process pid=$pid is undetermined (cannot resolve cwd)"
+        if [[ "$arg" = /* ]]; then
+          resolved_arg="$(realpath -m -- "$arg")"
         else
+          cwd="$(readlink -f "$proc/cwd" 2>/dev/null || true)"
+          # See the Warden branch: an uninspectable relative path is not
+          # sufficient evidence that this fort has a live verifier.
+          [ -n "$cwd" ] || { index=$((index + 1)); continue; }
           resolved_arg="$(realpath -m -- "$cwd/$arg")"
-          [[ "$arg" = /* ]] && resolved_arg="$(realpath -m -- "$arg")"
-          case "$resolved_arg" in
-            "$main_root/scripts/verify-impl.sh"|"$worktrees_root"/*/scripts/verify-impl.sh) is_verifier=1 ;;
-          esac
         fi
+        case "$resolved_arg" in
+          "$main_root/scripts/verify-impl.sh"|"$worktrees_root"/*/scripts/verify-impl.sh) is_verifier=1 ;;
+        esac
       fi
       index=$((index + 1))
-    done <"$proc/cmdline"
+    done <"$proc/cmdline"; then
+      continue
+    fi
     [ "$is_warden" -eq 0 ] || mark_busy "warden process pid=$pid"
     [ "$is_verifier" -eq 0 ] || mark_busy "verifier process pid=$pid"
   done

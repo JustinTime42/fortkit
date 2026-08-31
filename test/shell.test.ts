@@ -505,9 +505,12 @@ describe("scripts/quiescent.sh and digest-hook.sh", () => {
           ...process.env,
           FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
         },
-      });
+      }).catch((error: { stdout?: string }) => error);
 
-      expect(result.stdout).toBe("");
+      // The predicate observes /proc, so unrelated real seats may legitimately
+      // print their own busy reasons. The fixture's confounder must not.
+      expect(result.stdout).not.toContain(`pid=${child.pid}`);
+      expect(result.stdout).not.toContain(foreignWarden);
     } finally {
       child.kill("SIGTERM");
     }
@@ -552,6 +555,49 @@ while :; do sleep 1; done
 
       expect(result).toMatchObject({ code: 1 });
       expect(result.stdout).toContain("busy: warden process");
+    } finally {
+      child.kill("SIGTERM");
+    }
+  });
+
+  test("reports Bash executing this fort's Warden script by absolute path as busy", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const wardenDirectory = join(root, "fort", "scripts");
+    const wardenScript = join(wardenDirectory, "warden.sh");
+    const ready = join(root, "absolute-warden-ready");
+    await mkdir(wardenDirectory, { recursive: true });
+    await writeFile(
+      wardenScript,
+      `#!/bin/bash
+touch "${ready}"
+while :; do sleep 1; done
+`,
+    );
+    await chmod(wardenScript, 0o755);
+    const child = execFile("bash", [wardenScript], { cwd: root });
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          await access(ready);
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      await access(ready);
+
+      const result = await execFileAsync("bash", ["scripts/quiescent.sh"], {
+        cwd: root,
+        env: {
+          ...process.env,
+          FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+        },
+      }).catch((error: { code?: number; stdout?: string }) => error);
+
+      expect(result).toMatchObject({ code: 1 });
+      expect(result.stdout).toContain(`busy: warden process pid=${child.pid}`);
     } finally {
       child.kill("SIGTERM");
     }
