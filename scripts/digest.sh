@@ -141,6 +141,49 @@ else
   print_window_events 'select(.category == "merge" or .category == "bead.closed" or .category == "bead.filed")'
 fi
 
+# Audit coverage is deliberately a count comparison, rather than an inference
+# from commit prose. A retrospective event has the instant of the merge it
+# records, not the later instant at which the line was appended, so its parsed
+# event timestamp remains the correct window membership test.
+printf 'AUDIT COVERAGE\n'
+audit_ref='refs/heads/main'
+if ! git -C "$main_root" show-ref --verify --quiet "$audit_ref"; then audit_ref='HEAD'; fi
+if git -C "$main_root" rev-parse --verify --quiet "$audit_ref" >/dev/null; then
+  merge_commits="$(git -C "$main_root" log "$audit_ref" --merges --since="$since" --until="$now" --format=%H | awk 'END { print NR }')"
+else
+  merge_commits=0
+fi
+merge_events="$(jq -s '[.[] | select(.category == "merge")] | length' "$window_events")"
+printf '  merge events: %s of %s commits\n' "$merge_events" "$merge_commits"
+if [ "$merge_events" -lt "$merge_commits" ]; then
+  printf '  WARNING: %s merge commits in window, %s merge events — the stream is missing %s.\n' "$merge_commits" "$merge_events" "$((merge_commits - merge_events))"
+elif [ "$merge_events" -gt "$merge_commits" ]; then
+  printf '  WARNING: %s merge events in window, %s merge commits — the stream has %s unmatched event(s).\n' "$merge_events" "$merge_commits" "$((merge_events - merge_commits))"
+fi
+
+closed_window=0
+closed_status=0
+set +e
+bd -C "$main_root" list --status=closed --json >"$closed_beads"
+closed_status=$?
+set -e
+if [ "$closed_status" -eq 0 ] && ! jq -e 'type == "array"' "$closed_beads" >/dev/null 2>&1; then closed_status=1; fi
+if [ "$closed_status" -eq 0 ]; then
+  while IFS= read -r closed_at; do
+    closed_epoch="$(epoch "$closed_at")" || continue
+    if [ "$closed_epoch" -gt "$since_epoch" ] && [ "$closed_epoch" -le "$now_epoch" ]; then closed_window=$((closed_window + 1)); fi
+  done < <(jq -r '.[] | .closed_at // empty' "$closed_beads")
+  closed_events="$(jq -s '[.[] | select(.category == "bead.closed")] | length' "$window_events")"
+  printf '  bead.closed events: %s of %s closed beads\n' "$closed_events" "$closed_window"
+  if [ "$closed_events" -lt "$closed_window" ]; then
+    printf '  WARNING: %s closed beads in window, %s bead.closed events — the stream is missing %s.\n' "$closed_window" "$closed_events" "$((closed_window - closed_events))"
+  elif [ "$closed_events" -gt "$closed_window" ]; then
+    printf '  WARNING: %s bead.closed events in window, %s closed beads — the stream has %s unmatched event(s).\n' "$closed_events" "$closed_window" "$((closed_events - closed_window))"
+  fi
+else
+  printf '  bead.closed events: UNAVAILABLE (bd exit %s)\n' "$closed_status"
+fi
+
 printf 'VERIFIER\n'
 latest_verifier="$(jq -sr '[.[] | select(.category == "verify.pass" or .category == "verify.run" or .category == "verify.fail")] | if length == 0 then "" else max_by(._epoch) | [.ts, .category, (.target // ""), (.detail // "")] | @tsv end' "$window_events")"
 if [ -z "$latest_verifier" ]; then printf '  no verifier event in the selected window\n'

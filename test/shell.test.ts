@@ -178,6 +178,16 @@ describe("scripts/digest.sh", () => {
     await chmod(join(root, "scripts", "digest.sh"), 0o755);
   }
 
+  async function installMergeEventCheck(root: string) {
+    await mkdir(join(root, "scripts"), { recursive: true });
+    await mkdir(join(root, "fort", "events"), { recursive: true });
+    await writeFile(
+      join(root, "scripts", "merge-event-check.sh"),
+      await readFile(join(repoRoot, "scripts", "merge-event-check.sh"), "utf8"),
+    );
+    await chmod(join(root, "scripts", "merge-event-check.sh"), 0o755);
+  }
+
   async function installFakeBd(root: string) {
     const bin = join(root, "bin");
     await mkdir(bin);
@@ -185,7 +195,7 @@ describe("scripts/digest.sh", () => {
       join(bin, "bd"),
       `#!/bin/sh
 case "$*" in
-  *--status=closed*) printf '%s\\n' '[{"id":"fortkit-closed","status":"closed","title":"Already closed"}]' ;;
+  *--status=closed*) printf '%s\\n' '[{"id":"fortkit-closed","status":"closed","title":"Already closed","closed_at":"2021-01-01T00:00:00Z"}]' ;;
   *--status=in_progress*--label=gate-1*) printf '%s\\n' '[{"id":"fortkit-gate-active","status":"in_progress","title":"Active decision","updated_at":"2026-08-08T00:00:00Z"}]' ;;
   *--label=gate-1*) printf '%s\\n' '[
     {"id":"fortkit-gate-old","status":"open","title":"Older decision","updated_at":"2026-08-01T00:00:00Z"},
@@ -332,6 +342,164 @@ esac
     expect(result.stdout).toContain(
       "1 unmatched session start(s) omitted because the target bead is closed",
     );
+  });
+
+  test("reports merge and closed-bead audit discrepancies", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    await writeFile(join(root, "tracked"), "tracked\n");
+    await execFileAsync("git", ["add", "."], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "initial",
+      ],
+      { cwd: root },
+    );
+    await execFileAsync("git", ["branch", "-M", "main"], { cwd: root });
+    await execFileAsync("git", ["checkout", "--quiet", "-b", "fortkit-test"], {
+      cwd: root,
+    });
+    await writeFile(join(root, "change"), "change\n");
+    await execFileAsync("git", ["add", "change"], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "change",
+      ],
+      { cwd: root },
+    );
+    await execFileAsync("git", ["checkout", "--quiet", "main"], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "merge",
+        "--no-ff",
+        "--no-edit",
+        "fortkit-test",
+      ],
+      { cwd: root },
+    );
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", "2020-01-01T00:00:00Z"],
+      {
+        cwd: root,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+
+    expect(result.stdout).toContain("merge events: 0 of 1 commits");
+    expect(result.stdout).toContain(
+      "WARNING: 1 merge commits in window, 0 merge events",
+    );
+    expect(result.stdout).toContain("bead.closed events: 0 of 1 closed beads");
+    expect(result.stdout).toContain(
+      "WARNING: 1 closed beads in window, 0 bead.closed events",
+    );
+  });
+
+  test("merge-event check fails for an unmatched main merge and passes with its event", async () => {
+    const root = await createFort();
+    await installMergeEventCheck(root);
+    await writeFile(join(root, "tracked"), "tracked\n");
+    await execFileAsync("git", ["add", "."], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "initial",
+      ],
+      { cwd: root },
+    );
+    await execFileAsync("git", ["branch", "-M", "main"], { cwd: root });
+    await execFileAsync("git", ["checkout", "--quiet", "-b", "fortkit-test"], {
+      cwd: root,
+    });
+    await writeFile(join(root, "change"), "change\n");
+    await execFileAsync("git", ["add", "change"], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "change",
+      ],
+      { cwd: root },
+    );
+    await execFileAsync("git", ["checkout", "--quiet", "main"], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "merge",
+        "--no-ff",
+        "--no-edit",
+        "-m",
+        "Merge fortkit-test: fixture",
+        "fortkit-test",
+      ],
+      { cwd: root },
+    );
+    const merge = (
+      await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: root })
+    ).stdout.trim();
+
+    await expect(
+      execFileAsync(
+        "bash",
+        ["scripts/merge-event-check.sh", "--since", "2020-01-01T00:00:00Z"],
+        { cwd: root },
+      ),
+    ).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining("missing merge event"),
+    });
+
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-31.jsonl"),
+      `${JSON.stringify({ ts: "2026-08-31T00:00:00Z", actor: "emrith", seat: "mayor", category: "merge", target: "fortkit-test", detail: "fixture merged", payload: { mergeCommit: merge } })}\n`,
+    );
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/merge-event-check.sh", "--since", "2020-01-01T00:00:00Z"],
+      { cwd: root },
+    );
+    expect(result.stdout).toContain("1 of 1 main commits matched");
   });
 
   test("anchors a default window at its rendered upper boundary", async () => {
