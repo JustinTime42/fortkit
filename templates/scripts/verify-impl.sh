@@ -70,7 +70,20 @@ run_step() {
   fi
 }
 
-emit verify.run "Verifier started" -p '{"steps":["seat-lint","typecheck","lint","test","shellcheck"]}'
+merge_event_check() {
+  # The Forge ports the checker before the Regent can add fort-init's explicit
+  # copy line. A fort founded in that narrow interval must not inherit a
+  # verifier that fails on every run; announce the unavailable factory artifact
+  # instead. Once the copy line lands, this same stage runs the fence from the
+  # fort's first merge without another verifier edit.
+  if [ ! -x scripts/merge-event-check.sh ]; then
+    printf 'merge-event-check: SKIPPED — factory has not yet installed scripts/merge-event-check.sh.\n' >&2
+    return 0
+  fi
+  scripts/merge-event-check.sh
+}
+
+emit verify.run "Verifier started" -p '{"steps":["seat-lint","merge-events","typecheck","lint","test","shellcheck"]}'
 # THE ROSTER'S THREE RULES, run every session rather than once at founding: no two
 # actor ids one keystroke apart, no other settlement's citizen in a Held-by or
 # Personality line, no unfilled placeholder surviving once the moot has named this
@@ -86,9 +99,13 @@ emit verify.run "Verifier started" -p '{"steps":["seat-lint","typecheck","lint",
 # placeholders are legal; rules 2 and 3 then announce a SKIP and exit 0. That skip is
 # correct behaviour, and a founding smoke that reads it as a failure would be wrong.
 run_step seat-lint node scripts/seat-lint.mjs
+# Every merge after the factory's audit checkpoint must have an append-only
+# merge event. This travels with the template so a new fort has the fence from
+# its first merge, rather than discovering the omission in a later digest.
+run_step merge-events merge_event_check
 run_step typecheck npm run typecheck
 run_step lint npm run lint
 run_step test npm run test
 # -x follows sourced files so fort/scripts/lib/* is linted too, not skipped.
 run_step shellcheck shellcheck -x fort/scripts/*.sh fort/scripts/lib/*.sh
-emit verify.pass "Verifier passed" -p '{"steps":["seat-lint","typecheck","lint","test","shellcheck"]}'
+emit verify.pass "Verifier passed" -p '{"steps":["seat-lint","merge-events","typecheck","lint","test","shellcheck"]}'
