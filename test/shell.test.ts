@@ -537,6 +537,95 @@ esac
       { cwd: root },
     );
     expect(result.stdout).toContain("1 of 1 main commits matched");
+
+    await execFileAsync("git", ["checkout", "--quiet", "--detach"], {
+      cwd: root,
+    });
+    await execFileAsync("git", ["branch", "-D", "main"], { cwd: root });
+    const detachedResult = await execFileAsync(
+      "bash",
+      ["scripts/merge-event-check.sh", "--since", "2020-01-01T00:00:00Z"],
+      { cwd: root },
+    );
+    expect(detachedResult.stdout).toContain("1 of 1 main commits matched");
+  });
+
+  test("merge-event check consumes legacy bead events one merge at a time", async () => {
+    const root = await createFort();
+    await installMergeEventCheck(root);
+    await writeFile(join(root, "tracked"), "tracked\n");
+    await execFileAsync("git", ["add", "."], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "initial",
+      ],
+      { cwd: root },
+    );
+    await execFileAsync("git", ["branch", "-M", "main"], { cwd: root });
+
+    for (const suffix of ["first", "second"]) {
+      await execFileAsync("git", ["checkout", "--quiet", "-b", suffix], {
+        cwd: root,
+      });
+      await writeFile(join(root, suffix), `${suffix}\n`);
+      await execFileAsync("git", ["add", suffix], { cwd: root });
+      await execFileAsync(
+        "git",
+        [
+          "-c",
+          "user.name=test",
+          "-c",
+          "user.email=test@example.invalid",
+          "commit",
+          "--quiet",
+          "-m",
+          suffix,
+        ],
+        { cwd: root },
+      );
+      await execFileAsync("git", ["checkout", "--quiet", "main"], {
+        cwd: root,
+      });
+      await execFileAsync(
+        "git",
+        [
+          "-c",
+          "user.name=test",
+          "-c",
+          "user.email=test@example.invalid",
+          "merge",
+          "--no-ff",
+          "--no-edit",
+          "-m",
+          "Merge fortkit-test: fixture",
+          suffix,
+        ],
+        { cwd: root },
+      );
+    }
+
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-31.jsonl"),
+      `${JSON.stringify({ ts: "2026-08-31T00:00:00Z", actor: "emrith", seat: "mayor", category: "merge", target: "fortkit-test", detail: "legacy fixture merged", payload: null })}\n`,
+    );
+    await expect(
+      execFileAsync(
+        "bash",
+        ["scripts/merge-event-check.sh", "--since", "2020-01-01T00:00:00Z"],
+        { cwd: root },
+      ),
+    ).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining("missing merge event"),
+    });
   });
 
   test("merge-event check skips explicitly outside a git checkout", async () => {

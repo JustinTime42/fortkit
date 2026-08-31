@@ -17,7 +17,7 @@ done
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 git_common="$(git -C "$repo_root" rev-parse --git-common-dir 2>/dev/null || true)"
-if [ -z "$git_common" ]; then
+if [ -z "$git_common" ] || [ ! -d "$git_common" ]; then
   printf 'merge-event-check: SKIPPED — %s is not a git checkout, so main merge coverage is unavailable.\n' "$repo_root" >&2
   exit 0
 fi
@@ -40,10 +40,17 @@ while IFS= read -r -d '' event_file; do
   jq -Rc 'fromjson? | select(type == "object" and .category == "merge")' "$event_file" >>"$events"
 done < <(find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print0 | sort -z)
 
+# CI pull-request checkouts have no local main ref. In that posture, HEAD is the
+# checked-out merge candidate and remains the subject this fence can audit.
+audit_ref='refs/heads/main'
+if ! git -C "$main_root" show-ref --verify --quiet "$audit_ref"; then
+  audit_ref='HEAD'
+fi
+
 # The Mayor's no-ff merge convention names the bead in the subject. Refusing an
 # unparseable post-checkpoint merge makes a changed convention visible instead
 # of silently letting it bypass the correspondence check.
-git -C "$main_root" log refs/heads/main --merges --since="$since" --format='%H%x09%s' >"$merges"
+git -C "$main_root" log "$audit_ref" --merges --since="$since" --format='%H%x09%s' >"$merges"
 commit_count=0
 missing=0
 declare -A legacy_matches
