@@ -165,6 +165,7 @@ describe("seat-file lint (fortkit-x508)", () => {
         },
       ]);
       const passed = await lintFort(near.root, near.registry);
+      expect(passed.code).toBe(0);
       expect(passed.stderr).toContain("edit distance 2");
       expect(passed.stdout).toContain("2 occupied of 2 seat file(s)");
     }
@@ -182,6 +183,7 @@ describe("seat-file lint (fortkit-x508)", () => {
       },
     ]);
     const exempt = await lintFort(preMoot.root, preMoot.registry);
+    expect(exempt.code).toBe(0);
     expect(exempt.stdout).toContain("rule 3 EXEMPT");
 
     const postMoot = await buildCivilization([
@@ -209,7 +211,8 @@ describe("seat-file lint (fortkit-x508)", () => {
         },
       },
     ]);
-    await expect(lintFort(filled.root, filled.registry)).resolves.toBeDefined();
+    const filledResult = await lintFort(filled.root, filled.registry);
+    expect(filledResult.code).toBe(0);
   });
 
   test("refuses an inherited citizen while allowing an attribution", async () => {
@@ -257,6 +260,7 @@ describe("seat-file lint (fortkit-x508)", () => {
       elder,
     ]);
     const allowed = await lintFort(attribution.root, attribution.registry);
+    expect(allowed.code).toBe(0);
     expect(allowed.stdout).toContain("rule 2 checked against 1 citizen(s)");
   });
 
@@ -302,6 +306,7 @@ describe("seat-file lint (fortkit-x508)", () => {
       },
     ]);
     const orphan = await lintFort(root, join(root, "absent.json"));
+    expect(orphan.code).toBe(0);
     expect(orphan.stdout).toContain("rules 2 (foreign citizens) and 3");
     expect(orphan.stdout).toContain("SKIPPED");
   });
@@ -341,6 +346,7 @@ describe("seat-file lint (fortkit-x508)", () => {
       }),
     );
     const result = await lintFort(repositoryRoot, registry);
+    expect(result.code).toBe(0);
     expect(result.stdout).toContain("rule 3 enforced");
     expect(result.stdout).toContain("charter cross-check");
   });
