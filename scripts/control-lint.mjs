@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+// fortkit-4ah3.3 / fortkit-4ah3.9 — THE CONTROL-REGISTER LINT. Four rules over
+// fort/controls: known control kinds, explicit and resolvable falsifiers,
+// repository-relative implementation citations, and recorded line fingerprints.
+//
+// Zero controls is a FAILURE, not a pass. A control lint that accepts an empty
+// register proves nothing, which would let the enforcement vocabulary disappear
+// while its verifier still looked green.
 import { createHash } from "node:crypto";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
@@ -29,7 +36,7 @@ function parseFrontmatter(text) {
   return Object.fromEntries(
     [...match[1].matchAll(/^([a-z-]+):\s*(.*)$/gmu)].map(([, key, value]) => [
       key,
-      value === "null" ? null : value,
+      value.trim() === "" || value.trim() === "null" ? null : value.trim(),
     ]),
   );
 }
@@ -132,6 +139,13 @@ if (recording) {
   if (failures.length > 0) process.exitCode = 1;
 }
 
+let registeredControls = new Set();
+if (!recording) {
+  // `files` is sorted above, so both diagnostics and reported nulls remain stable.
+  // The set is built before validation so a control may name any registered key.
+  registeredControls = new Set(files.map((file) => file.replace(/\.md$/u, "")));
+}
+
 if (!recording)
   for (const file of files) {
     const controlPath = join(controlsDirectory, file);
@@ -150,6 +164,10 @@ if (!recording)
     if (!("falsified-by" in control))
       failures.push(`${controlPath}: falsified-by must be declared explicitly`);
     else if (control["falsified-by"] === null) missingFalsifiers.push(key);
+    else if (!registeredControls.has(control["falsified-by"]))
+      failures.push(
+        `${controlPath}: falsified-by ${JSON.stringify(control["falsified-by"])} does not name a registered control`,
+      );
 
     const citation = citationPath(root, control.implements);
     if (citation === null) {
