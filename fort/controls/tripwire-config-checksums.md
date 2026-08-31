@@ -1,6 +1,6 @@
 ---
 key: tripwire-config-checksums
-status: active
+status: absent
 kind: tripwire
 detects: "Harness config changing underneath the fort"
 implements: fort/charter.md:81

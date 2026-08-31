@@ -3,7 +3,7 @@ key: prose-gate-charter-amendment
 status: active
 kind: prose-gate
 refuses: "Charter edits without prior Overseer approval on the amendment's bead"
-implements: fort/charter.md:79
+implements: fort/charter.md:43
 falsified-by: tripwire-constitution-watch
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

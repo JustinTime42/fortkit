@@ -3,7 +3,7 @@ key: prose-gate-mayor-push-deploy
 status: active
 kind: prose-gate
 refuses: "The Mayor pushing or deploying without asking the Overseer first, every time"
-implements: fort/charter.md:75
+implements: fort/charter.md:39
 falsified-by: null
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

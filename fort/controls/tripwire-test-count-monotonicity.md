@@ -1,6 +1,6 @@
 ---
 key: tripwire-test-count-monotonicity
-status: active
+status: absent
 kind: tripwire
 detects: "The test count going down"
 implements: fort/charter.md:81

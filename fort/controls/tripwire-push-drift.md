@@ -1,6 +1,6 @@
 ---
 key: tripwire-push-drift
-status: active
+status: absent
 kind: tripwire
 detects: "Commits sitting unpushed"
 implements: fort/charter.md:81

@@ -1,15 +1,34 @@
 ---
 key: falsifier-researcher-probe
-status: active
+status: absent
 kind: falsifier
 detects: "A Researcher boundary that no longer denies the lr8h action class"
-implements: fort/scripts/researcher.sh:70
+implements: docs/specs/researcher-seat.md:170
 falsified-by: null
 provenance:
-  source: "read from the tree 2026-08-29 during fortkit-4ah3.2"
+  source: "read from the tree 2026-08-29 during fortkit-4ah3.2; CORRECTED 2026-08-31 after Warden round-1 blocking finding 1(c) on fortkit-4ah3.2"
   declared-by: emrith
-  date: 2026-08-29
+  date: 2026-08-31
 ---
-19 pass / 0 fail (fortkit-vhk.5.1); 7 of 8 on 5.2. NOT WIRED INTO THE VERIFIER —
-it is a one-off proof rather than a standing control, which is the difference
-between having measured a boundary once and knowing it still holds.
+STATUS ABSENT: THIS FORT HAS NO RUNNABLE RESEARCHER BOUNDARY PROBE.
+
+The v1 entry claimed `status: active` and cited `fort/scripts/researcher.sh:70`,
+which is the RESEARCH-COMPLETE grep and has nothing to do with a boundary probe.
+Both were wrong. The Warden resolved the citation by hand and found no probe in
+`scripts/`, `fort/scripts/` or `civ/scripts/`.
+
+WHAT DOES EXIST, and the Mayor found it after her finding: the probe is in the
+FACTORY at `templates/fort/scripts/probe-researcher-boundaries.sh`. The capital
+ships a Researcher boundary probe to every fort it founds and does not have one
+itself — the `fortkit-5aon` shape inverted. Filed as its own bead.
+
+`implements:` now cites §7 of the spec, "The boundary proof", which is the
+document of record for the control. The 19 pass / 0 fail (`fortkit-vhk.5.1`) and
+the 7 of 8 (`fortkit-vhk.5.2`) are historical one-off measurements recorded in
+that spec and in the session record. They are evidence the boundary held ONCE.
+They are not a standing control, and nothing re-runs them.
+
+CONSEQUENCE, stated because two other entries depend on it: this key is named as
+`falsified-by` by `fence-researcher-tool-whitelist` and `fence-researcher-deny-set`.
+Those two fences therefore currently name a falsifier that cannot run. That is
+worse than `null`, because it reads as covered. Repaired in the same pass.

@@ -1,6 +1,6 @@
 ---
 key: tripwire-secrets-scan
-status: active
+status: absent
 kind: tripwire
 detects: "Secrets reaching the tree"
 implements: fort/charter.md:81
