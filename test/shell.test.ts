@@ -461,6 +461,101 @@ describe("scripts/quiescent.sh and digest-hook.sh", () => {
     expect(result.stdout).toContain("busy: session forge|fortkit-live");
   });
 
+  test("ignores a Bash command that merely names another fort's Warden script", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const foreignWarden = join(
+      root,
+      "other-fort",
+      "fort",
+      "scripts",
+      "warden.sh",
+    );
+    await mkdir(join(root, "other-fort", "fort", "scripts"), {
+      recursive: true,
+    });
+    await writeFile(foreignWarden, "#!/bin/sh\n");
+    const ready = join(root, "foreign-warden-name-ready");
+    const child = execFile(
+      "bash",
+      [
+        "-c",
+        'touch "$1"; while :; do sleep 1; done',
+        "bash",
+        ready,
+        foreignWarden,
+      ],
+      { cwd: root },
+    );
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          await access(ready);
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      await access(ready);
+
+      const result = await execFileAsync("bash", ["scripts/quiescent.sh"], {
+        cwd: root,
+        env: {
+          ...process.env,
+          FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+        },
+      });
+
+      expect(result.stdout).toBe("");
+    } finally {
+      child.kill("SIGTERM");
+    }
+  });
+
+  test("reports Bash executing this fort's Warden script as busy", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const wardenDirectory = join(root, "fort", "scripts");
+    const wardenScript = join(wardenDirectory, "warden.sh");
+    const ready = join(root, "warden-ready");
+    await mkdir(wardenDirectory, { recursive: true });
+    await writeFile(
+      wardenScript,
+      `#!/bin/bash
+touch "${ready}"
+while :; do sleep 1; done
+`,
+    );
+    await chmod(wardenScript, 0o755);
+    const child = execFile("bash", [wardenScript], { cwd: root });
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          await access(ready);
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      await access(ready);
+
+      const result = await execFileAsync("bash", ["scripts/quiescent.sh"], {
+        cwd: root,
+        env: {
+          ...process.env,
+          FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+        },
+      }).catch((error: { code?: number; stdout?: string }) => error);
+
+      expect(result).toMatchObject({ code: 1 });
+      expect(result.stdout).toContain("busy: warden process");
+    } finally {
+      child.kill("SIGTERM");
+    }
+  });
+
   test("declines the hook with the quiescence reason and does not run the digest", async () => {
     const root = await createFort();
     await installQuiescence(root);

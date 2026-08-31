@@ -40,30 +40,41 @@ check_forge_locks() {
 }
 
 check_warden_and_verifier_processes() {
-  local proc pid arg previous is_warden is_verifier
+  local proc pid exe arg index is_warden is_verifier
+  local warden_script warden_settings
+  warden_script="$main_root/fort/scripts/warden.sh"
+  warden_settings="$main_root/fort/profiles/warden-settings.json"
+
   for proc in /proc/[0-9]*; do
     pid="${proc##*/}"
     [ "$pid" = "$$" ] && continue
     [ -r "$proc/cmdline" ] || continue
-    is_warden=0; is_verifier=0; previous=""
+    exe="$(readlink -f "$proc/exe" 2>/dev/null || true)"
+    is_warden=0; is_verifier=0; index=0
     while IFS= read -r -d '' arg; do
-      case "$arg" in
-        fort/scripts/warden.sh|*/fort/scripts/warden.sh|warden.sh)
-          is_warden=1
-          ;;
-        scripts/verify-impl.sh|*/scripts/verify-impl.sh)
-          is_verifier=1
-          ;;
-        warden-settings.json|*/warden-settings.json)
-          # The bwrap child is the process that does the Warden review, after
-          # warden.sh has launched it.  Its settings argument identifies it.
-          is_warden=1
-          ;;
-      esac
-      if [ "$previous" = "FORT_MASKED" ] && [ "$arg" = "warden" ]; then
+      # warden.sh is only live when Bash is actually executing THIS fort's
+      # script as argv[1].  Do not search command text: editors, pagers, and
+      # shell commands that merely name another fort's warden.sh are not work.
+      if [ "$index" -eq 1 ] && [ "$exe" = "/usr/bin/bash" ] && [ "$arg" = "$warden_script" ]; then
         is_warden=1
       fi
-      previous="$arg"
+
+      # The Warden review itself is the bwrap child.  Scope its settings path
+      # to this fort as well; a bwrap for another settlement is unrelated.
+      if [ "$exe" = "/usr/bin/bwrap" ] && [ "$arg" = "$warden_settings" ]; then
+        is_warden=1
+      fi
+
+      # verify-impl remains a Bash parent while its individual gate commands
+      # run.  Accept only this fort's main checkout or its own worktrees.
+      if [ "$index" -eq 1 ] && [ "$exe" = "/usr/bin/bash" ]; then
+        case "$arg" in
+          "$main_root/scripts/verify-impl.sh"|"$worktrees_root"/*/scripts/verify-impl.sh)
+            is_verifier=1
+            ;;
+        esac
+      fi
+      index=$((index + 1))
     done <"$proc/cmdline"
     [ "$is_warden" -eq 0 ] || mark_busy "warden process pid=$pid"
     [ "$is_verifier" -eq 0 ] || mark_busy "verifier process pid=$pid"
