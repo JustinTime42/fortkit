@@ -3,11 +3,13 @@
 # memory or infer outcomes from the event text.
 set -euo pipefail
 
-usage() { printf 'Usage: %s [--since ISO-8601-timestamp]\n' "${0##*/}"; }
+usage() { printf 'Usage: %s [--by-subject] [--since ISO-8601-timestamp]\n' "${0##*/}"; }
 
 since_override=""
+by_subject=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --by-subject) by_subject=1; shift ;;
     --since) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; since_override="$2"; shift 2 ;;
     --help|-h) usage; exit 0 ;;
     *) usage >&2; exit 2 ;;
@@ -20,9 +22,9 @@ case "$git_common" in /*) ;; *) git_common="$repo_root/$git_common" ;; esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 events_dir="$main_root/fort/events"
 emitter="$main_root/fort/scripts/emit.sh"
-all_events="$(mktemp)"; timestamped_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"; timestamp_report="$(mktemp)"; audit_merges="$(mktemp)"; audit_coverage="$(mktemp)"
-trap 'rm -f "$all_events" "$timestamped_events" "$window_events" "$closed_beads" "$timestamp_report" "$audit_merges" "$audit_coverage"' EXIT
-max_decisions_per_gate=5
+all_events="$(mktemp)"; timestamped_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"; timestamp_report="$(mktemp)"; audit_merges="$(mktemp)"; audit_coverage="$(mktemp)"; live_gate_beads="$(mktemp)"; all_beads="$(mktemp)"; gate_one="$(mktemp)"; gate_two="$(mktemp)"; gate_three="$(mktemp)"; action_render="$(mktemp)"; subject_render="$(mktemp)"
+trap 'rm -f "$all_events" "$timestamped_events" "$window_events" "$closed_beads" "$timestamp_report" "$audit_merges" "$audit_coverage" "$live_gate_beads" "$all_beads" "$gate_one" "$gate_two" "$gate_three" "$action_render" "$subject_render"' EXIT
+max_decisions_per_action=5
 boundary_tolerance_seconds=120
 
 epoch() { [ -n "$1" ] && date -d "$1" +%s 2>/dev/null; }
@@ -110,30 +112,119 @@ fi
 [ "$invalid_timestamps" -eq 0 ] || printf '  WARNING: %s valid stream record(s) had unreadable timestamps\n' "$invalid_timestamps"
 
 printf 'DECISIONS WAITING\n'
-for gate in gate-1 gate-2 gate-3; do
-  gate_number="${gate#gate-}"; gate_file="$(mktemp)"; gate_open="$(mktemp)"; gate_in_progress="$(mktemp)"
-  set +e; bd -C "$main_root" list --status=open --label="$gate" --json >"$gate_open"; gate_open_status=$?
-  bd -C "$main_root" list --status=in_progress --label="$gate" --json >"$gate_in_progress"; gate_in_progress_status=$?; set -e
-  if [ "$gate_open_status" -eq 0 ] && [ "$gate_in_progress_status" -eq 0 ]; then jq -s 'add | unique_by(.id)' "$gate_open" "$gate_in_progress" >"$gate_file"; fi
-  gate_status=$((gate_open_status != 0 ? gate_open_status : gate_in_progress_status))
-  if [ "$gate_status" -ne 0 ]; then
-    printf '  GATE %s: UNAVAILABLE (bd exit %s)\n' "$gate_number" "$gate_status"
-  elif ! jq -e 'type == "array"' "$gate_file" >/dev/null 2>&1; then
-    printf '  GATE %s: UNAVAILABLE (bd returned invalid JSON)\n' "$gate_number"
-  elif [ "$(jq 'length' "$gate_file")" -eq 0 ]; then
-    printf '  GATE %s: no decisions waiting\n' "$gate_number"
+set +e
+bd -C "$main_root" list --status=open,in_progress --label=gate-1 --json >"$gate_one"; gate_one_status=$?
+bd -C "$main_root" list --status=open,in_progress --label=gate-2 --json >"$gate_two"; gate_two_status=$?
+bd -C "$main_root" list --status=open,in_progress --label=gate-3 --json >"$gate_three"; gate_three_status=$?
+set -e
+live_gate_status=$(( gate_one_status != 0 ? gate_one_status : gate_two_status != 0 ? gate_two_status : gate_three_status ))
+if [ "$live_gate_status" -eq 0 ]; then jq -s 'add | unique_by(.id)' "$gate_one" "$gate_two" "$gate_three" >"$live_gate_beads"; fi
+if [ "$live_gate_status" -ne 0 ]; then
+  printf '  ACTION GROUPS: UNAVAILABLE (bd exit %s)\n' "$live_gate_status"
+elif [ "$(jq -r 'type' "$live_gate_beads")" != "array" ]; then
+  printf '  ACTION GROUPS: UNAVAILABLE (bd returned invalid JSON)\n'
+else
+  if node - "$live_gate_beads" "$max_decisions_per_action" >"$action_render" <<'NODE'
+const fs = require("node:fs");
+const [beadsPath, limitArg] = process.argv.slice(2);
+const beads = JSON.parse(fs.readFileSync(beadsPath, "utf8"));
+const limit = Number(limitArg);
+const groups = [
+  ["act-decide", "DECIDE"],
+  ["act-regent", "SUMMON REGENT"],
+  ["act-host", "ACT ON HOST"],
+  [null, "ACTION NOT YET CLASSIFIED"],
+];
+const actionOf = (bead) => groups.slice(0, 3).find(([label]) => bead.labels?.includes(label))?.[0] ?? null;
+const gateTag = (bead) => (bead.labels ?? []).filter((label) => /^gate-[123]$/.test(label)).sort().join(", ") || "gate unknown";
+for (const [action, heading] of groups) {
+  const members = beads.filter((bead) => actionOf(bead) === action)
+    .sort((left, right) => String(right.updated_at ?? right.created_at ?? "").localeCompare(String(left.updated_at ?? left.created_at ?? "")));
+  if (members.length === 0) {
+    console.log(`  ${heading}: no decisions waiting`);
+    continue;
+  }
+  const shown = members.slice(0, limit);
+  console.log(`  ${heading}: ${members.length} decision(s) waiting (showing ${shown.length} of ${members.length}, most recently updated)`);
+  for (const bead of shown) console.log(`    ${bead.title ?? "untitled"} [${bead.id ?? "UNKNOWN"}; ${bead.status ?? "open"}; ${gateTag(bead)}]`);
+  if (members.length > shown.length) console.log(`    ${members.length - shown.length} decision(s) elided; full count is ${members.length}.`);
+}
+NODE
+  then
+    cat "$action_render"
   else
-    gate_total="$(jq 'length' "$gate_file")"
-    gate_shown=$(( gate_total < max_decisions_per_gate ? gate_total : max_decisions_per_gate ))
-    printf '  GATE %s: %s decision(s) waiting (showing %s of %s, most recently updated)\n' "$gate_number" "$gate_total" "$gate_shown" "$gate_total"
-    jq -r --argjson limit "$max_decisions_per_gate" 'sort_by(.updated_at // .created_at // "") | reverse | .[:$limit][] | [(.id // "UNKNOWN"), (.status // "open"), (.title // "untitled")] | @tsv' "$gate_file" |
-      while IFS=$'\t' read -r id status title; do printf '    %s [%s] %s\n' "$id" "$status" "$title"; done
-    if [ "$gate_total" -gt "$gate_shown" ]; then
-      printf '    %s decision(s) elided; full count is %s.\n' "$((gate_total - gate_shown))" "$gate_total"
+    printf '  ACTION GROUPS: UNAVAILABLE (renderer failed)\n'
+  fi
+fi
+
+if [ "$by_subject" -eq 1 ]; then
+  printf 'BY SUBJECT\n'
+  set +e
+  bd -C "$main_root" list --all --json >"$all_beads"
+  all_beads_status=$?
+  set -e
+  if [ "$all_beads_status" -ne 0 ]; then
+    printf '  SUBJECT VIEW: UNAVAILABLE (bd exit %s)\n' "$all_beads_status"
+  elif ! jq -e 'type == "array"' "$all_beads" >/dev/null 2>&1; then
+    printf '  SUBJECT VIEW: UNAVAILABLE (bd returned invalid JSON)\n'
+  elif [ "$live_gate_status" -ne 0 ]; then
+    printf '  SUBJECT VIEW: UNAVAILABLE (the live gate queue is unavailable)\n'
+  else
+    if node - "$live_gate_beads" "$all_beads" >"$subject_render" <<'NODE'
+const fs = require("node:fs");
+const [livePath, allPath] = process.argv.slice(2);
+const live = JSON.parse(fs.readFileSync(livePath, "utf8"));
+const all = JSON.parse(fs.readFileSync(allPath, "utf8"));
+const byId = new Map(all.map((bead) => [bead.id, bead]));
+const rootOf = (bead) => {
+  const seen = new Set(); let current = bead;
+  while (current?.parent && byId.has(current.parent) && !seen.has(current.parent)) { seen.add(current.parent); current = byId.get(current.parent); }
+  return current ?? bead;
+};
+const groups = new Map();
+for (const bead of live) {
+  const root = rootOf(bead);
+  if (!groups.has(root.id)) groups.set(root.id, { root, members: [] });
+  groups.get(root.id).members.push(bead);
+}
+const tagFor = (bead) => {
+  const labels = bead.labels ?? [];
+  const action = ["act-decide", "act-regent", "act-host"].find((label) => labels.includes(label)) ?? "action not yet classified";
+  const gate = labels.filter((label) => /^gate-[123]$/.test(label)).sort().join(", ") || "gate unknown";
+  return `${action}; ${gate}`;
+};
+for (const { root, members } of [...groups.values()].sort((left, right) => String(left.root.title ?? "").localeCompare(String(right.root.title ?? "")))) {
+  const descendants = all.filter((bead) => rootOf(bead).id === root.id && bead.id !== root.id);
+  const hasChildren = descendants.length > 0;
+  // The filtered gate query is intentionally lean. Dependencies must come from
+  // the all-status record, so blockers outside that query still render by title.
+  const resolvedMembers = members.map((member) => byId.get(member.id) ?? member);
+  const blockerIds = resolvedMembers.flatMap((member) => (member.dependencies ?? []).filter((dependency) => dependency.type === "blocks").map((dependency) => dependency.depends_on_id));
+  const blockers = blockerIds.map((id) => byId.get(id)).filter(Boolean);
+  const blockerDataUnavailable = blockerIds.some((id) => !byId.has(id));
+  const blockerText = blockerDataUnavailable ? "; blocker data unavailable" : blockers.length ? `; blocked by: ${[...new Set(blockers.map((blocker) => blocker.title ?? "untitled"))].join("; ")}` : "";
+  if (!hasChildren) {
+    for (const member of members.sort((left, right) => String(left.title ?? "").localeCompare(String(right.title ?? "")))) {
+      console.log(`  ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}; ${tagFor(member)}]${blockerText}`);
+    }
+    continue;
+  }
+  const closed = descendants.filter((bead) => bead.status === "closed").length;
+  console.log(`  ${root.title ?? "untitled"} [${root.id ?? "UNKNOWN"}] — ${closed}/${descendants.length} done${blockerText}`);
+  for (const member of members.sort((left, right) => String(left.title ?? "").localeCompare(String(right.title ?? "")))) {
+    if (member.id === root.id) continue;
+    console.log(`    ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}; ${tagFor(member)}]`);
+  }
+}
+if (groups.size === 0) console.log("  no decisions waiting");
+NODE
+    then
+      cat "$subject_render"
+    else
+      printf '  SUBJECT VIEW: UNAVAILABLE (renderer failed)\n'
     fi
   fi
-  rm -f "$gate_file" "$gate_open" "$gate_in_progress"
-done
+fi
 
 printf 'SHIPPED\n'
 if [ "$(jq -s '[.[] | select(.category == "merge" or .category == "bead.closed" or .category == "bead.filed")] | length' "$window_events")" -eq 0 ]; then

@@ -195,17 +195,50 @@ describe("scripts/digest.sh", () => {
       join(bin, "bd"),
       `#!/bin/sh
 case "$*" in
-  *--status=closed*) printf '%s\\n' '[{"id":"fortkit-closed","status":"closed","title":"Already closed","closed_at":"2021-01-01T00:00:00Z"}]' ;;
-  *--status=in_progress*--label=gate-1*) printf '%s\\n' '[{"id":"fortkit-gate-active","status":"in_progress","title":"Active decision","updated_at":"2026-08-08T00:00:00Z"}]' ;;
-  *--label=gate-1*) printf '%s\\n' '[
-    {"id":"fortkit-gate-old","status":"open","title":"Older decision","updated_at":"2026-08-01T00:00:00Z"},
-    {"id":"fortkit-gate-new","status":"open","title":"Newest decision","updated_at":"2026-08-07T00:00:00Z"},
-    {"id":"fortkit-gate-3","status":"open","title":"Decision 3","updated_at":"2026-08-03T00:00:00Z"},
-    {"id":"fortkit-gate-4","status":"open","title":"Decision 4","updated_at":"2026-08-04T00:00:00Z"},
-    {"id":"fortkit-gate-5","status":"open","title":"Decision 5","updated_at":"2026-08-05T00:00:00Z"},
-    {"id":"fortkit-gate-6","status":"open","title":"Decision 6","updated_at":"2026-08-06T00:00:00Z"}
+  *--all*) printf '%s\\n' '[
+    {"id":"fortkit-session","status":"open","title":"Session digest","issue_type":"epic"},
+    {"id":"fortkit-gate-active","status":"in_progress","title":"Active decision","parent":"fortkit-session","labels":["gate-1","act-decide"],"dependencies":[{"depends_on_id":"fortkit-hook","type":"blocks"}],"updated_at":"2026-08-08T00:00:00Z"},
+    {"id":"fortkit-gate-old","status":"open","title":"Older decision","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-01T00:00:00Z"},
+    {"id":"fortkit-gate-new","status":"open","title":"Newest decision","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-gate-3","status":"open","title":"Decision 3","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-03T00:00:00Z"},
+    {"id":"fortkit-gate-4","status":"open","title":"Decision 4","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-04T00:00:00Z"},
+    {"id":"fortkit-gate-5","status":"open","title":"Decision 5","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-05T00:00:00Z"},
+    {"id":"fortkit-gate-6","status":"open","title":"Decision 6","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-06T00:00:00Z"},
+    {"id":"fortkit-regent","status":"open","title":"Regent sitting","parent":"fortkit-session","labels":["gate-3","act-regent"],"updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-host","status":"open","title":"Install host hook","labels":["gate-2","act-host"],"updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-unclassified","status":"open","title":"Needs classification","labels":["gate-2"],"updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-hook","status":"open","title":"Install the Stop hook"},
+    {"id":"fortkit-session-done","status":"closed","title":"Completed digest work","parent":"fortkit-session"}
   ]' ;;
-  *) printf '%s\\n' '[]' ;;
+  *--status=closed*) printf '%s\\n' '[{"id":"fortkit-closed","status":"closed","title":"Already closed","closed_at":"2021-01-01T00:00:00Z"}]' ;;
+  *gate-1*) printf '%s\\n' '[
+    {"id":"fortkit-gate-active","status":"in_progress","title":"Active decision","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-08T00:00:00Z"},
+    {"id":"fortkit-gate-old","status":"open","title":"Older decision","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-01T00:00:00Z"},
+    {"id":"fortkit-gate-new","status":"open","title":"Newest decision","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-gate-3","status":"open","title":"Decision 3","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-03T00:00:00Z"},
+    {"id":"fortkit-gate-4","status":"open","title":"Decision 4","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-04T00:00:00Z"},
+    {"id":"fortkit-gate-5","status":"open","title":"Decision 5","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-05T00:00:00Z"},
+    {"id":"fortkit-gate-6","status":"open","title":"Decision 6","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-06T00:00:00Z"}
+  ]' ;;
+  *gate-2*) printf '%s\\n' '[
+    {"id":"fortkit-host","status":"open","title":"Install host hook","labels":["gate-2","act-host"],"updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-unclassified","status":"open","title":"Needs classification","labels":["gate-2"],"updated_at":"2026-08-07T00:00:00Z"}
+  ]' ;;
+  *gate-3*) printf '%s\\n' '[
+    {"id":"fortkit-regent","status":"open","title":"Regent sitting","parent":"fortkit-session","labels":["gate-3","act-regent"],"updated_at":"2026-08-07T00:00:00Z"}
+  ]' ;;
+  *) printf '%s\\n' '[
+    {"id":"fortkit-gate-active","status":"in_progress","title":"Active decision","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-08T00:00:00Z"},
+    {"id":"fortkit-gate-old","status":"open","title":"Older decision","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-01T00:00:00Z"},
+    {"id":"fortkit-gate-new","status":"open","title":"Newest decision","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-gate-3","status":"open","title":"Decision 3","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-03T00:00:00Z"},
+    {"id":"fortkit-gate-4","status":"open","title":"Decision 4","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-04T00:00:00Z"},
+    {"id":"fortkit-gate-5","status":"open","title":"Decision 5","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-05T00:00:00Z"},
+    {"id":"fortkit-gate-6","status":"open","title":"Decision 6","parent":"fortkit-session","labels":["gate-1","act-decide"],"updated_at":"2026-08-06T00:00:00Z"},
+    {"id":"fortkit-regent","status":"open","title":"Regent sitting","parent":"fortkit-session","labels":["gate-3","act-regent"],"updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-host","status":"open","title":"Install host hook","labels":["gate-2","act-host"],"updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-unclassified","status":"open","title":"Needs classification","labels":["gate-2"],"updated_at":"2026-08-07T00:00:00Z"}
+  ]' ;;
 esac
 `,
     );
@@ -226,17 +259,23 @@ esac
         env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
       },
     );
-
     expect(result.stdout).toContain("EMPTY WINDOW");
-    expect(result.stdout).toContain("GATE 2: no decisions waiting");
+    expect(result.stdout).toContain("DECIDE: 7 decision(s) waiting");
+    expect(result.stdout).toContain("SUMMON REGENT: 1 decision(s) waiting");
+    expect(result.stdout).toContain("ACT ON HOST: 1 decision(s) waiting");
+    expect(result.stdout).toContain(
+      "ACTION NOT YET CLASSIFIED: 1 decision(s) waiting",
+    );
     expect(result.stdout).toContain("showing 5 of 7, most recently updated");
     expect(result.stdout).toContain("2 decision(s) elided; full count is 7");
     expect(result.stdout).toContain(
-      "fortkit-gate-active [in_progress] Active decision",
+      "Active decision [fortkit-gate-active; in_progress; gate-1]",
     );
-    expect(result.stdout).toContain("fortkit-gate-new [open] Newest decision");
+    expect(result.stdout).toContain(
+      "Newest decision [fortkit-gate-new; open; gate-1]",
+    );
     expect(result.stdout).not.toContain(
-      "fortkit-gate-old [open] Older decision",
+      "Older decision [fortkit-gate-old; open; gate-1]",
     );
     expect(result.stdout).toContain(
       "no merge/close/file events in the selected window",
@@ -291,9 +330,43 @@ esac
       },
     );
 
-    expect(result.stdout).toContain("GATE 1: 7 decision(s) waiting");
-    expect(result.stdout).toContain("fortkit-gate-new [open] Newest decision");
+    expect(result.stdout).toContain("DECIDE: 7 decision(s) waiting");
+    expect(result.stdout).toContain(
+      "Newest decision [fortkit-gate-new; open; gate-1]",
+    );
     expect(result.stdout).toContain("2026-08-01T23:24:00-08:00 verify.pass");
+  });
+
+  test("groups the live gate queue by subject with progress and titled blockers", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--by-subject", "--since", "2026-08-01T00:00:00Z"],
+      {
+        cwd: root,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+
+    expect(result.stdout).toContain("BY SUBJECT");
+    expect(result.stdout).toContain(
+      "Session digest [fortkit-session] — 1/9 done; blocked by: Install the Stop hook",
+    );
+    expect(result.stdout).toContain(
+      "Active decision [fortkit-gate-active; in_progress; act-decide; gate-1]",
+    );
+    expect(result.stdout).toContain(
+      "Install host hook [fortkit-host; open; act-host; gate-2]",
+    );
+    expect(result.stdout).not.toContain("Install host hook [fortkit-host] —");
+    const subjectSection = result.stdout.split("BY SUBJECT\n")[1];
+    if (subjectSection === undefined)
+      throw new Error("BY SUBJECT section was not rendered");
+    expect(subjectSection.match(/Install host hook/g)).toHaveLength(1);
+    expect(result.stdout).not.toContain("blocked by: fortkit-hook");
   });
 
   test("dates active sessions and omits unmatched starts for closed beads", async () => {
