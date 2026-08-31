@@ -3,7 +3,7 @@ key: fence-merge-event-audit
 status: inactive
 kind: fence
 refuses: "A post-backfill main merge with no corresponding merge event"
-implements: scripts/merge-event-check.sh:67
+implements: scripts/merge-event-check.sh:77
 falsified-by: null
 provenance:
   source: "fortkit-zj8e.7, 2026-08-31"

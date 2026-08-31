@@ -22,6 +22,10 @@ if [ -z "$git_common" ]; then
   exit 0
 fi
 case "$git_common" in /*) ;; *) git_common="$repo_root/$git_common" ;; esac
+if [ ! -d "$git_common" ]; then
+  printf 'merge-event-check: SKIPPED — %s is not a git checkout, so main merge coverage is unavailable.\n' "$repo_root" >&2
+  exit 0
+fi
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 events_dir="$main_root/fort/events"
 
@@ -40,10 +44,16 @@ while IFS= read -r -d '' event_file; do
   jq -Rc 'fromjson? | select(type == "object" and .category == "merge")' "$event_file" >>"$events"
 done < <(find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print0 | sort -z)
 
+audit_ref='refs/heads/main'
+if ! git -C "$main_root" show-ref --verify --quiet "$audit_ref"; then
+  printf 'merge-event-check: SKIPPED — refs/heads/main is not present in this checkout, so main merge coverage is unavailable.\n' >&2
+  exit 0
+fi
+
 # The Mayor's no-ff merge convention names the bead in the subject. Refusing an
 # unparseable post-checkpoint merge makes a changed convention visible instead
 # of silently letting it bypass the correspondence check.
-git -C "$main_root" log refs/heads/main --merges --since="$since" --format='%H%x09%s' >"$merges"
+git -C "$main_root" log "$audit_ref" --merges --since="$since" --format='%H%x09%s' >"$merges"
 commit_count=0
 missing=0
 declare -A legacy_matches

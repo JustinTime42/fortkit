@@ -20,9 +20,10 @@ case "$git_common" in /*) ;; *) git_common="$repo_root/$git_common" ;; esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 events_dir="$main_root/fort/events"
 emitter="$main_root/fort/scripts/emit.sh"
-all_events="$(mktemp)"; timestamped_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"; timestamp_report="$(mktemp)"
-trap 'rm -f "$all_events" "$timestamped_events" "$window_events" "$closed_beads" "$timestamp_report"' EXIT
+all_events="$(mktemp)"; timestamped_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"; timestamp_report="$(mktemp)"; audit_merges="$(mktemp)"; audit_coverage="$(mktemp)"
+trap 'rm -f "$all_events" "$timestamped_events" "$window_events" "$closed_beads" "$timestamp_report" "$audit_merges" "$audit_coverage"' EXIT
 max_decisions_per_gate=5
+boundary_tolerance_seconds=120
 
 epoch() { [ -n "$1" ] && date -d "$1" +%s 2>/dev/null; }
 
@@ -141,19 +142,95 @@ else
   print_window_events 'select(.category == "merge" or .category == "bead.closed" or .category == "bead.filed")'
 fi
 
-# Audit coverage is deliberately a count comparison, rather than an inference
-# from commit prose. A retrospective event has the instant of the merge it
-# records, not the later instant at which the line was appended, so its parsed
-# event timestamp remains the correct window membership test.
+# Audit coverage compares artifacts, including a small identity-matched margin
+# at each edge. Committer and event timestamps can differ by seconds; a matching
+# pair that straddles an edge is excluded from this window's count rather than
+# reported once as a missing event and again as an unmatched event.
 printf 'AUDIT COVERAGE\n'
 audit_ref='refs/heads/main'
 if ! git -C "$main_root" show-ref --verify --quiet "$audit_ref"; then audit_ref='HEAD'; fi
+audit_since="$(date -d "$since - $boundary_tolerance_seconds seconds" -Is)"
+audit_until="$(date -d "$now + $boundary_tolerance_seconds seconds" -Is)"
 if git -C "$main_root" rev-parse --verify --quiet "$audit_ref" >/dev/null; then
-  merge_commits="$(git -C "$main_root" log "$audit_ref" --merges --since="$since" --until="$now" --format=%H | awk 'END { print NR }')"
+  git -C "$main_root" log "$audit_ref" --merges --since="$audit_since" --until="$audit_until" --format='%H%x09%ct%x09%s' |
+    node -e '
+      let input = "";
+      process.stdin.setEncoding("utf8");
+      process.stdin.on("data", (chunk) => { input += chunk; });
+      process.stdin.on("end", () => {
+        for (const line of input.split("\n")) {
+          if (!line) continue;
+          const [commit, epoch, subject = ""] = line.split("\t", 3);
+          process.stdout.write(JSON.stringify({ commit, epoch: Number(epoch), subject }) + "\n");
+        }
+      });
+    ' >"$audit_merges"
 else
-  merge_commits=0
+  : >"$audit_merges"
 fi
-merge_events="$(jq -s '[.[] | select(.category == "merge")] | length' "$window_events")"
+closed_status=0
+set +e
+bd -C "$main_root" list --status=closed --json >"$closed_beads"
+closed_status=$?
+set -e
+if [ "$closed_status" -eq 0 ] && ! jq -e 'type == "array"' "$closed_beads" >/dev/null 2>&1; then closed_status=1; fi
+
+node - "$timestamped_events" "$audit_merges" "$closed_beads" "$since_epoch" "$now_epoch" "$boundary_tolerance_seconds" "$closed_status" <<'NODE' >"$audit_coverage"
+const [eventsPath, mergesPath, closedPath, since, now, tolerance, closedStatus] = process.argv.slice(2);
+const readJsonLines = (path) => require("node:fs").readFileSync(path, "utf8").split("\n").filter(Boolean).map(JSON.parse);
+const events = readJsonLines(eventsPath);
+const merges = readJsonLines(mergesPath);
+const lower = Number(since);
+const upper = Number(now);
+const margin = Number(tolerance);
+const inside = (epoch) => epoch > lower && epoch <= upper;
+const near = (epoch) => epoch > lower - margin && epoch <= upper + margin;
+const mergeTarget = (subject) => /^Merge (fortkit-[A-Za-z0-9.-]+):/.exec(subject)?.[1] ?? null;
+const eventMatchesMerge = (event, merge) =>
+  event.target === merge.commit || event.payload?.mergeCommit === merge.commit ||
+  (event.target === mergeTarget(merge.subject) && !event.payload?.mergeCommit);
+const crossBoundaryPairs = (subjects, records, matches) => {
+  const used = new Set();
+  let subjectInside = subjects.filter((subject) => inside(subject.epoch)).length;
+  let recordInside = records.filter((record) => inside(record._epoch)).length;
+  let pairs = 0;
+  for (const subject of subjects) {
+    for (let index = 0; index < records.length; index += 1) {
+      const record = records[index];
+      if (used.has(index) || !near(record._epoch) || inside(subject.epoch) === inside(record._epoch)) continue;
+      if (Math.abs(subject.epoch - record._epoch) > margin || !matches(record, subject)) continue;
+      used.add(index);
+      if (inside(record._epoch)) recordInside -= 1;
+      if (inside(subject.epoch)) subjectInside -= 1;
+      pairs += 1;
+      break;
+    }
+  }
+  return { subjects: subjectInside, records: recordInside, pairs };
+};
+const mergeCoverage = crossBoundaryPairs(
+  merges.filter((merge) => near(merge.epoch)),
+  events.filter((event) => event.category === "merge" && near(event._epoch)),
+  eventMatchesMerge,
+);
+let closedCoverage = null;
+if (Number(closedStatus) === 0) {
+  const closed = JSON.parse(require("node:fs").readFileSync(closedPath, "utf8"))
+    .map((bead) => ({ id: bead.id, epoch: Math.floor(Date.parse(bead.closed_at) / 1000) }))
+    .filter((bead) => bead.id && Number.isFinite(bead.epoch) && near(bead.epoch));
+  closedCoverage = crossBoundaryPairs(
+    closed,
+    events.filter((event) => event.category === "bead.closed" && near(event._epoch)),
+    (event, bead) => event.target === bead.id,
+  );
+}
+process.stdout.write(JSON.stringify({ mergeCoverage, closedCoverage }));
+NODE
+
+merge_commits="$(jq '.mergeCoverage.subjects' "$audit_coverage")"
+merge_events="$(jq '.mergeCoverage.records' "$audit_coverage")"
+merge_pairs="$(jq '.mergeCoverage.pairs' "$audit_coverage")"
+printf '  boundary tolerance: %ss; %s merge event%s matched by identity across a window edge\n' "$boundary_tolerance_seconds" "$merge_pairs" "$( [ "$merge_pairs" -eq 1 ] || printf s)"
 printf '  merge events: %s of %s commits\n' "$merge_events" "$merge_commits"
 if [ "$merge_events" -lt "$merge_commits" ]; then
   printf '  WARNING: %s merge commits in window, %s merge events — the stream is missing %s.\n' "$merge_commits" "$merge_events" "$((merge_commits - merge_events))"
@@ -161,19 +238,11 @@ elif [ "$merge_events" -gt "$merge_commits" ]; then
   printf '  WARNING: %s merge events in window, %s merge commits — the stream has %s unmatched event(s).\n' "$merge_events" "$merge_commits" "$((merge_events - merge_commits))"
 fi
 
-closed_window=0
-closed_status=0
-set +e
-bd -C "$main_root" list --status=closed --json >"$closed_beads"
-closed_status=$?
-set -e
-if [ "$closed_status" -eq 0 ] && ! jq -e 'type == "array"' "$closed_beads" >/dev/null 2>&1; then closed_status=1; fi
 if [ "$closed_status" -eq 0 ]; then
-  while IFS= read -r closed_at; do
-    closed_epoch="$(epoch "$closed_at")" || continue
-    if [ "$closed_epoch" -gt "$since_epoch" ] && [ "$closed_epoch" -le "$now_epoch" ]; then closed_window=$((closed_window + 1)); fi
-  done < <(jq -r '.[] | .closed_at // empty' "$closed_beads")
-  closed_events="$(jq -s '[.[] | select(.category == "bead.closed")] | length' "$window_events")"
+  closed_window="$(jq '.closedCoverage.subjects' "$audit_coverage")"
+  closed_events="$(jq '.closedCoverage.records' "$audit_coverage")"
+  closed_pairs="$(jq '.closedCoverage.pairs' "$audit_coverage")"
+  printf '  boundary tolerance: %ss; %s bead.closed event%s matched by identity across a window edge\n' "$boundary_tolerance_seconds" "$closed_pairs" "$( [ "$closed_pairs" -eq 1 ] || printf s)"
   printf '  bead.closed events: %s of %s closed beads\n' "$closed_events" "$closed_window"
   if [ "$closed_events" -lt "$closed_window" ]; then
     printf '  WARNING: %s closed beads in window, %s bead.closed events — the stream is missing %s.\n' "$closed_window" "$closed_events" "$((closed_window - closed_events))"
