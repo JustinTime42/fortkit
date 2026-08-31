@@ -14,10 +14,8 @@ if [ "$quiescence_status" -ne 0 ]; then
   exit 0
 fi
 
-set +e
 "$digest_script"
 digest_status=$?
-set -e
 if [ "$digest_status" -ne 0 ]; then
   printf 'digest-hook: digest could not be produced (exit %s)\n' "$digest_status"
 fi

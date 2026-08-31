@@ -19,7 +19,7 @@ mark_busy() {
 }
 
 check_forge_locks() {
-  local lock fd holder
+  local lock holder lock_status
   local -a locks
 
   shopt -s nullglob
@@ -28,19 +28,21 @@ check_forge_locks() {
   for lock in "${locks[@]}"; do
     # A shared lock conflicts with Forge's exclusive launcher lock, and needs
     # no write access to another worktree.  The sidecar is explanatory only.
-    exec {fd}<"$lock"
-    if ! flock -n -s "$fd"; then
+    set +e
+    flock -E 75 -n -s "$lock" -c true 2>/dev/null
+    lock_status=$?
+    set -e
+    if [ "$lock_status" -eq 75 ]; then
       holder="$(cat "${lock}.info" 2>/dev/null || printf 'holder info unavailable')"
       mark_busy "forge lock $lock ($holder)"
-    else
-      flock -u "$fd"
+    elif [ "$lock_status" -ne 0 ]; then
+      mark_busy "forge lock $lock is undetermined (flock exit $lock_status)"
     fi
-    exec {fd}>&-
   done
 }
 
 check_warden_and_verifier_processes() {
-  local proc pid exe arg index is_warden is_verifier
+  local proc pid arg index is_warden is_verifier argv0 cwd resolved_arg
   local warden_script warden_settings
   warden_script="$main_root/fort/scripts/warden.sh"
   warden_settings="$main_root/fort/profiles/warden-settings.json"
@@ -49,30 +51,50 @@ check_warden_and_verifier_processes() {
     pid="${proc##*/}"
     [ "$pid" = "$$" ] && continue
     [ -r "$proc/cmdline" ] || continue
-    exe="$(readlink -f "$proc/exe" 2>/dev/null || true)"
-    is_warden=0; is_verifier=0; index=0
+    argv0=""; cwd=""; is_warden=0; is_verifier=0; index=0
     while IFS= read -r -d '' arg; do
+      if [ "$index" -eq 0 ]; then
+        argv0="$arg"
+        index=$((index + 1))
+        continue
+      fi
+
       # warden.sh is only live when Bash is actually executing THIS fort's
-      # script as argv[1].  Do not search command text: editors, pagers, and
-      # shell commands that merely name another fort's warden.sh are not work.
-      if [ "$index" -eq 1 ] && [ "$exe" = "/usr/bin/bash" ] && [ "$arg" = "$warden_script" ]; then
-        is_warden=1
+      # script as argv[1]. Resolve a relative script from the process cwd:
+      # Mayor launches `cd $main_root; fort/scripts/warden.sh ...`. Do not
+      # search command text, since editors and other forts are not work.
+      if [ "$index" -eq 1 ] && { [ "$argv0" = "/bin/bash" ] || [ "$argv0" = "/usr/bin/bash" ] || [ "$argv0" = "bash" ]; } && [[ "$arg" = */warden.sh || "$arg" = warden.sh ]]; then
+        cwd="$(readlink -f "$proc/cwd" 2>/dev/null || true)"
+        if [ -z "$cwd" ]; then
+          mark_busy "warden process pid=$pid is undetermined (cannot resolve cwd)"
+        else
+          resolved_arg="$(realpath -m -- "$cwd/$arg")"
+          [[ "$arg" = /* ]] && resolved_arg="$(realpath -m -- "$arg")"
+          [ "$resolved_arg" != "$warden_script" ] || is_warden=1
+        fi
       fi
 
       # The Warden review itself is the bwrap child.  Scope its settings path
       # to this fort as well; a bwrap for another settlement is unrelated.
-      if [ "$exe" = "/usr/bin/bwrap" ] && [ "$arg" = "$warden_settings" ]; then
+      if { [ "$argv0" = "/usr/bin/bwrap" ] || [ "$argv0" = "/bin/bwrap" ] || [ "$argv0" = "bwrap" ]; } && [ "$arg" = "$warden_settings" ]; then
         is_warden=1
       fi
 
       # verify-impl remains a Bash parent while its individual gate commands
       # run.  Accept only this fort's main checkout or its own worktrees.
-      if [ "$index" -eq 1 ] && [ "$exe" = "/usr/bin/bash" ]; then
-        case "$arg" in
-          "$main_root/scripts/verify-impl.sh"|"$worktrees_root"/*/scripts/verify-impl.sh)
-            is_verifier=1
-            ;;
-        esac
+      if [ "$index" -eq 1 ] && { [ "$argv0" = "/bin/bash" ] || [ "$argv0" = "/usr/bin/bash" ] || [ "$argv0" = "bash" ]; } && [[ "$arg" = */verify-impl.sh || "$arg" = verify-impl.sh ]]; then
+        if [ -z "$cwd" ]; then
+          cwd="$(readlink -f "$proc/cwd" 2>/dev/null || true)"
+        fi
+        if [ -z "$cwd" ]; then
+          mark_busy "verifier process pid=$pid is undetermined (cannot resolve cwd)"
+        else
+          resolved_arg="$(realpath -m -- "$cwd/$arg")"
+          [[ "$arg" = /* ]] && resolved_arg="$(realpath -m -- "$arg")"
+          case "$resolved_arg" in
+            "$main_root/scripts/verify-impl.sh"|"$worktrees_root"/*/scripts/verify-impl.sh) is_verifier=1 ;;
+          esac
+        fi
       fi
       index=$((index + 1))
     done <"$proc/cmdline"
@@ -84,6 +106,7 @@ check_warden_and_verifier_processes() {
 check_session_events() {
   local now_epoch ts seat target category detail epoch key age closed_status has_unmatched
   local closed_beads
+  trap 'rm -f "${closed_beads:-}"' RETURN
   local -A starts=() start_ts=() start_detail=()
 
   [ -d "$events_dir" ] || return 0
@@ -113,7 +136,11 @@ check_session_events() {
     find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print 2>/dev/null |
       sort | xargs -r -n1 cat |
       jq -r 'select((.category == "session.start" or .category == "session.end") and (.ts | type == "string")) | [.ts, (.seat // "" | tostring), (.target // "" | tostring), .category, (.detail // "" | tostring)] | @tsv' |
-      sort
+      while IFS= read -r event; do
+        ts="${event%%$'\t'*}"
+        epoch="$(date -d "$ts" +%s 2>/dev/null || true)"
+        [ -n "$epoch" ] && printf '%s\t%s\n' "$epoch" "$event"
+      done | sort -n | cut -f2-
   )
 
   has_unmatched=0
@@ -152,6 +179,7 @@ check_session_events() {
     fi
   done
   rm -f "$closed_beads"
+  trap - RETURN
 }
 
 check_forge_locks

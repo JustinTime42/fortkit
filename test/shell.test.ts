@@ -528,7 +528,8 @@ while :; do sleep 1; done
 `,
     );
     await chmod(wardenScript, 0o755);
-    const child = execFile("bash", [wardenScript], { cwd: root });
+    // Mayor launches Wardens from the fort root with a relative script path.
+    const child = execFile("bash", ["fort/scripts/warden.sh"], { cwd: root });
 
     try {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -551,6 +552,48 @@ while :; do sleep 1; done
 
       expect(result).toMatchObject({ code: 1 });
       expect(result.stdout).toContain("busy: warden process");
+    } finally {
+      child.kill("SIGTERM");
+    }
+  });
+
+  test("reports Bash executing this fort's verifier by relative path as busy", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const verifierDirectory = join(root, "scripts");
+    const verifierScript = join(verifierDirectory, "verify-impl.sh");
+    const ready = join(root, "verifier-ready");
+    await writeFile(
+      verifierScript,
+      `#!/bin/bash
+touch "${ready}"
+while :; do sleep 1; done
+`,
+    );
+    await chmod(verifierScript, 0o755);
+    const child = execFile("bash", ["scripts/verify-impl.sh"], { cwd: root });
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          await access(ready);
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      await access(ready);
+
+      const result = await execFileAsync("bash", ["scripts/quiescent.sh"], {
+        cwd: root,
+        env: {
+          ...process.env,
+          FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+        },
+      }).catch((error: { code?: number; stdout?: string }) => error);
+
+      expect(result).toMatchObject({ code: 1 });
+      expect(result.stdout).toContain("busy: verifier process");
     } finally {
       child.kill("SIGTERM");
     }
