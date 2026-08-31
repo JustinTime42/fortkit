@@ -1,9 +1,11 @@
 import { execFile, execFileSync } from "node:child_process";
 import {
   access,
+  chmod,
   cp,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   rm,
   unlink,
@@ -67,6 +69,7 @@ afterEach(async () => {
       .flatMap((root) => [
         rm(root, { force: true, recursive: true }),
         rm(`${root}-worktrees`, { force: true, recursive: true }),
+        rm(`${root}-worktree`, { force: true, recursive: true }),
       ]),
   );
 });
@@ -155,6 +158,226 @@ describe.each(emitCopies)("%s emit.sh", (_copyName, emitPath) => {
         payload: null,
       })}\n`,
     );
+  });
+});
+
+describe("scripts/digest.sh", () => {
+  async function installDigest(root: string) {
+    await mkdir(join(root, "scripts"), { recursive: true });
+    await mkdir(join(root, "fort", "events"), { recursive: true });
+    await writeFile(
+      join(root, "scripts", "digest.sh"),
+      await readFile(join(repoRoot, "scripts", "digest.sh"), "utf8"),
+    );
+    await mkdir(join(root, "fort", "scripts"), { recursive: true });
+    await writeFile(
+      join(root, "fort", "scripts", "emit.sh"),
+      await readFile(join(repoRoot, "fort", "scripts", "emit.sh"), "utf8"),
+    );
+    await chmod(join(root, "fort", "scripts", "emit.sh"), 0o755);
+    await chmod(join(root, "scripts", "digest.sh"), 0o755);
+  }
+
+  async function installFakeBd(root: string) {
+    const bin = join(root, "bin");
+    await mkdir(bin);
+    await writeFile(
+      join(bin, "bd"),
+      `#!/bin/sh
+case "$*" in
+  *--status=closed*) printf '%s\\n' '[{"id":"fortkit-closed","status":"closed","title":"Already closed"}]' ;;
+  *--status=in_progress*--label=gate-1*) printf '%s\\n' '[{"id":"fortkit-gate-active","status":"in_progress","title":"Active decision","updated_at":"2026-08-08T00:00:00Z"}]' ;;
+  *--label=gate-1*) printf '%s\\n' '[
+    {"id":"fortkit-gate-old","status":"open","title":"Older decision","updated_at":"2026-08-01T00:00:00Z"},
+    {"id":"fortkit-gate-new","status":"open","title":"Newest decision","updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-gate-3","status":"open","title":"Decision 3","updated_at":"2026-08-03T00:00:00Z"},
+    {"id":"fortkit-gate-4","status":"open","title":"Decision 4","updated_at":"2026-08-04T00:00:00Z"},
+    {"id":"fortkit-gate-5","status":"open","title":"Decision 5","updated_at":"2026-08-05T00:00:00Z"},
+    {"id":"fortkit-gate-6","status":"open","title":"Decision 6","updated_at":"2026-08-06T00:00:00Z"}
+  ]' ;;
+  *) printf '%s\\n' '[]' ;;
+esac
+`,
+    );
+    await chmod(join(bin, "bd"), 0o755);
+    return bin;
+  }
+
+  test("announces an empty event window instead of succeeding silently", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", "2026-08-01T00:00:00Z"],
+      {
+        cwd: root,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+
+    expect(result.stdout).toContain("EMPTY WINDOW");
+    expect(result.stdout).toContain("GATE 2: no decisions waiting");
+    expect(result.stdout).toContain("showing 5 of 7, most recently updated");
+    expect(result.stdout).toContain("2 decision(s) elided; full count is 7");
+    expect(result.stdout).toContain(
+      "fortkit-gate-active [in_progress] Active decision",
+    );
+    expect(result.stdout).toContain("fortkit-gate-new [open] Newest decision");
+    expect(result.stdout).not.toContain(
+      "fortkit-gate-old [open] Older decision",
+    );
+    expect(result.stdout).toContain(
+      "no merge/close/file events in the selected window",
+    );
+    expect(result.stdout).toContain("no verifier event in the selected window");
+  });
+
+  test("uses the main event stream from a worktree and reports the blocking gate", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-01.jsonl"),
+      `${JSON.stringify({
+        ts: "2026-08-01T23:24:00-08:00",
+        actor: "harness",
+        seat: null,
+        category: "verify.pass",
+        target: "fortkit-gate",
+        detail: "Verifier passed",
+        payload: null,
+      })}\n`,
+    );
+    await execFileAsync("git", ["add", "scripts/digest.sh"], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "fixture",
+      ],
+      { cwd: root },
+    );
+    const worktree = `${root}-worktree`;
+    await execFileAsync(
+      "git",
+      ["worktree", "add", "--detach", "--quiet", worktree],
+      { cwd: root },
+    );
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", "2026-08-02T07:00:00Z"],
+      {
+        cwd: worktree,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+
+    expect(result.stdout).toContain("GATE 1: 7 decision(s) waiting");
+    expect(result.stdout).toContain("fortkit-gate-new [open] Newest decision");
+    expect(result.stdout).toContain("2026-08-01T23:24:00-08:00 verify.pass");
+  });
+
+  test("dates active sessions and omits unmatched starts for closed beads", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-01.jsonl"),
+      [
+        {
+          ts: "2026-08-01T01:00:00Z",
+          actor: "kethra",
+          seat: "forge",
+          category: "session.start",
+          target: "fortkit-closed",
+          detail: "Closed work began",
+          payload: null,
+        },
+        {
+          ts: "2026-08-01T02:00:00Z",
+          actor: "kethra",
+          seat: "forge",
+          category: "session.start",
+          target: "fortkit-active",
+          detail: "Active work began",
+          payload: null,
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n"),
+    );
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", "2026-08-01T00:00:00Z"],
+      {
+        cwd: root,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+
+    expect(result.stdout).toContain(
+      "SESSION forge|fortkit-active (1 unmatched start, started 2026-08-01T02:00:00Z)",
+    );
+    expect(result.stdout).not.toContain("SESSION forge|fortkit-closed");
+    expect(result.stdout).toContain(
+      "1 unmatched session start(s) omitted because the target bead is closed",
+    );
+  });
+
+  test("anchors a default window at its rendered upper boundary", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-01.jsonl"),
+      `${JSON.stringify({
+        ts: "2026-08-01T00:00:00Z",
+        actor: "harness",
+        seat: null,
+        category: "digest.emitted",
+        target: "digest.sh",
+        detail: "Previous digest",
+        payload: null,
+      })}\n`,
+    );
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync("bash", ["scripts/digest.sh"], {
+      cwd: root,
+      env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+    });
+    const upperBoundary = /\([^,]+, ([^)]+)\]/u.exec(result.stdout)?.[1];
+    expect(upperBoundary).toBeDefined();
+
+    const eventFiles = await readdir(join(root, "fort", "events"));
+    const events = (
+      await Promise.all(
+        eventFiles.map(async (file) =>
+          (
+            await readFile(join(root, "fort", "events", file), "utf8")
+          )
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map(
+              (line) => JSON.parse(line) as { category: string; ts: string },
+            ),
+        ),
+      )
+    ).flat();
+    const anchor = events.findLast(
+      (event) => event.category === "digest.emitted",
+    );
+    expect(anchor?.ts).toBe(upperBoundary);
   });
 });
 
