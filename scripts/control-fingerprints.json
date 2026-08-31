@@ -44,5 +44,6 @@
   "wall-fort-scripts": "44850536fbf30ec975baabbef8441ce87bd4eb94c7056c2b9c428dd376d68006",
   "wall-secret-file-mask": "f85b401372b187da093d3006f754c6630185ec9814a15720bc4f19f9d29daaf7",
   "wall-ssh-agent-socket": "b93c02f16202e6160281f31e5cdcb9a0b8821edff90478b973593dc0d9572271",
-  "falsifier-control-lint": "3eef4beb8a22509c37315d3418f74a6dfa0576e36cb1c05cfb7ac7032ac24fa5"
+  "falsifier-control-lint": "3eef4beb8a22509c37315d3418f74a6dfa0576e36cb1c05cfb7ac7032ac24fa5",
+  "fence-merge-event-audit": "3be25c3ad03744cc53ede6b5f53eaa1f431bb2de8eb3aab07484b3c5fda3ee57"
 }

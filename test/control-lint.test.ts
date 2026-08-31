@@ -24,7 +24,7 @@ async function controlFixture() {
     ),
     writeFile(
       join(root, "fort", "controls", "fence-example.md"),
-      "---\nkey: fence-example\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by: null\n---\n",
+      "---\nkey: fence-example\nstatus: active\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by: null\n---\n",
     ),
   ]);
   const subject = await readFile(join(root, "scripts", "subject.mjs"), "utf8");
@@ -118,7 +118,7 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
     const before = await readFile(fingerprintsPath, "utf8");
     await writeFile(
       join(root, "fort", "controls", "fence-example.md"),
-      "---\nkey: fence-example\nkind: fence\nimplements: scripts/subject.mjs:99\nfalsified-by: null\n---\n",
+      "---\nkey: fence-example\nstatus: active\nkind: fence\nimplements: scripts/subject.mjs:99\nfalsified-by: null\n---\n",
     );
     const recording = await lintFort(root, ["--record", "fence-example"]);
     expect(recording.code).toBe(1);
@@ -144,7 +144,7 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
     const root = await controlFixture();
     await writeFile(
       join(root, "fort", "controls", "fence-example.md"),
-      "---\nkey: fence-example\nkind: unknown\nimplements: scripts/subject.mjs:1\n---\n",
+      "---\nkey: fence-example\nstatus: active\nkind: unknown\nimplements: scripts/subject.mjs:1\n---\n",
     );
     const failure = await lintFort(root);
     expect(failure.code).toBe(1);
@@ -154,11 +154,22 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
     );
   });
 
+  test("refuses an unknown control status", async () => {
+    const root = await controlFixture();
+    await writeFile(
+      join(root, "fort", "controls", "fence-example.md"),
+      "---\nkey: fence-example\nstatus: pending\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by: null\n---\n",
+    );
+    const failure = await lintFort(root);
+    expect(failure.code).toBe(1);
+    expect(failure.stderr).toContain('unknown status "pending"');
+  });
+
   test("reports blank and whitespace-padded null falsifiers as null", async () => {
     const root = await controlFixture();
     await writeFile(
       join(root, "fort", "controls", "fence-example.md"),
-      "---\nkey: fence-example\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by: null \n---\n",
+      "---\nkey: fence-example\nstatus: active\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by: null \n---\n",
     );
     const paddedNull = await lintFort(root);
     expect(paddedNull.code).toBe(0);
@@ -168,7 +179,7 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
 
     await writeFile(
       join(root, "fort", "controls", "fence-example.md"),
-      "---\nkey: fence-example\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by:\n---\n",
+      "---\nkey: fence-example\nstatus: active\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by:\n---\n",
     );
     const blank = await lintFort(root);
     expect(blank.code).toBe(0);
@@ -181,7 +192,7 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
     const root = await controlFixture();
     await writeFile(
       join(root, "fort", "controls", "fence-example.md"),
-      "---\nkey: fence-example\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by: fence-verifer\n---\n",
+      "---\nkey: fence-example\nstatus: active\nkind: fence\nimplements: scripts/subject.mjs:1\nfalsified-by: fence-verifer\n---\n",
     );
     const failure = await lintFort(root);
     expect(failure.code).toBe(1);
@@ -209,7 +220,7 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
       const root = await controlFixture();
       await writeFile(
         join(root, "fort", "controls", "fence-example.md"),
-        `---\nkey: fence-example\nkind: fence\nimplements: ${implementation}\nfalsified-by: null\n---\n`,
+        `---\nkey: fence-example\nstatus: active\nkind: fence\nimplements: ${implementation}\nfalsified-by: null\n---\n`,
       );
       const failure = await lintFort(root);
       expect(failure.code).toBe(1);
