@@ -20,8 +20,9 @@ case "$git_common" in /*) ;; *) git_common="$repo_root/$git_common" ;; esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 events_dir="$main_root/fort/events"
 emitter="$main_root/fort/scripts/emit.sh"
-all_events="$(mktemp)"; window_events="$(mktemp)"
-trap 'rm -f "$all_events" "$window_events"' EXIT
+all_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"
+trap 'rm -f "$all_events" "$window_events" "$closed_beads"' EXIT
+max_decisions_per_gate=5
 
 epoch() { [ -n "$1" ] && date -d "$1" +%s 2>/dev/null; }
 
@@ -30,13 +31,12 @@ if [ ! -d "$events_dir" ]; then
   stream_state="unavailable"
 else
   while IFS= read -r -d '' event_file; do
-    while IFS= read -r line || [ -n "$line" ]; do
-      if jq -e 'type == "object"' >/dev/null 2>&1 <<<"$line"; then
-        printf '%s\n' "$line" >>"$all_events"
-      else
-        malformed=$((malformed + 1))
-      fi
-    done <"$event_file"
+    # Process a shard at once. Per-record jq invocations make a complete
+    # historical stream needlessly slow, while raw-input parsing keeps one bad
+    # JSONL line from preventing the digest from reporting the rest.
+    total_records="$(awk 'END { print NR }' "$event_file")"
+    valid_records="$(jq -Rc 'fromjson? | select(type == "object")' "$event_file" | tee -a "$all_events" | awk 'END { print NR }')"
+    malformed=$((malformed + total_records - valid_records))
   done < <(find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print0 2>/dev/null | sort -z)
 fi
 
@@ -103,16 +103,21 @@ for gate in gate-1 gate-2 gate-3; do
   elif [ "$(jq 'length' "$gate_file")" -eq 0 ]; then
     printf '  GATE %s: no decisions waiting\n' "$gate_number"
   else
-    printf '  GATE %s:\n' "$gate_number"
-    jq -r '.[] | [(.id // "UNKNOWN"), (.status // "open"), (.title // "untitled")] | @tsv' "$gate_file" |
+    gate_total="$(jq 'length' "$gate_file")"
+    gate_shown=$(( gate_total < max_decisions_per_gate ? gate_total : max_decisions_per_gate ))
+    printf '  GATE %s: %s decision(s) waiting (showing %s of %s, most recently updated)\n' "$gate_number" "$gate_total" "$gate_shown" "$gate_total"
+    jq -r --argjson limit "$max_decisions_per_gate" 'sort_by(.updated_at // .created_at // "") | reverse | .[:$limit][] | [(.id // "UNKNOWN"), (.status // "open"), (.title // "untitled")] | @tsv' "$gate_file" |
       while IFS=$'\t' read -r id status title; do printf '    %s [%s] %s\n' "$id" "$status" "$title"; done
+    if [ "$gate_total" -gt "$gate_shown" ]; then
+      printf '    %s decision(s) elided; full count is %s.\n' "$((gate_total - gate_shown))" "$gate_total"
+    fi
   fi
   rm -f "$gate_file"
 done
 
 printf 'SHIPPED\n'
 if [ "$(jq -s '[.[] | select(.category == "merge" or .category == "bead.closed" or .category == "bead.filed")] | length' "$window_events")" -eq 0 ]; then
-  printf '  none in the selected window\n'
+  printf '  no merge/close/file events in the selected window\n'
 else
   print_window_events 'select(.category == "merge" or .category == "bead.closed" or .category == "bead.filed")'
 fi
@@ -127,7 +132,7 @@ if [ -z "$latest_verifier" ]; then printf '  no verifier event in the selected w
 else IFS='|' read -r ts category target detail <<<"$latest_verifier"; printf '  %s %s%s %s\n' "$ts" "$category" "${target:+ [$target]}" "$detail"; fi
 
 printf 'IN FLIGHT\n'
-declare -A session_count session_detail
+declare -A session_count session_detail session_timestamp
 unmatchable=0
 while IFS= read -r line; do
   category="$(jq -r '.category // empty' <<<"$line")"
@@ -137,15 +142,29 @@ while IFS= read -r line; do
   if [ -z "$seat" ] || [ -z "$target" ]; then unmatchable=$((unmatchable + 1)); continue; fi
   key="$seat|$target"
   if [ "$category" = session.start ]; then
-    session_count["$key"]=$(( ${session_count[$key]:-0} + 1 )); session_detail["$key"]="$(jq -r '.detail // ""' <<<"$line")"
+    session_count["$key"]=$(( ${session_count[$key]:-0} + 1 )); session_detail["$key"]="$(jq -r '.detail // ""' <<<"$line")"; session_timestamp["$key"]="$(jq -r '.ts // ""' <<<"$line")"
   elif [ "${session_count[$key]:-0}" -gt 0 ]; then session_count["$key"]=$(( ${session_count[$key]} - 1 )); fi
 done <"$all_events"
+
+closed_status=0
+set +e
+bd -C "$main_root" list --status=closed --json >"$closed_beads"
+closed_status=$?
+set -e
+if [ "$closed_status" -eq 0 ] && ! jq -e 'type == "array"' "$closed_beads" >/dev/null 2>&1; then closed_status=1; fi
 active_sessions=0
+closed_sessions=0
 for key in "${!session_count[@]}"; do
   count="${session_count[$key]}"; [ "$count" -gt 0 ] || continue
-  active_sessions=$((active_sessions + count)); printf '  SESSION %s (%s unmatched start%s): %s\n' "$key" "$count" "$( [ "$count" -eq 1 ] || printf s)" "${session_detail[$key]}"
+  target="${key#*|}"
+  if [ "$closed_status" -eq 0 ] && jq -e --arg id "$target" 'any(.[]; .id == $id)' "$closed_beads" >/dev/null; then
+    closed_sessions=$((closed_sessions + count)); continue
+  fi
+  active_sessions=$((active_sessions + count)); printf '  SESSION %s (%s unmatched start%s, started %s): %s\n' "$key" "$count" "$( [ "$count" -eq 1 ] || printf s)" "${session_timestamp[$key]}" "${session_detail[$key]}"
 done
 [ "$active_sessions" -ne 0 ] || printf '  no non-Mayor sessions in flight\n'
+[ "$closed_sessions" -eq 0 ] || printf '  %s unmatched session start(s) omitted because the target bead is closed.\n' "$closed_sessions"
+[ "$closed_status" -eq 0 ] || printf '  UNDETERMINED: could not query closed beads (bd exit %s); unmatched sessions may target closed work.\n' "$closed_status"
 [ "$unmatchable" -eq 0 ] || printf '  UNDETERMINED: %s session event(s) lack seat or target\n' "$unmatchable"
 
 live_locks=0

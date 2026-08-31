@@ -177,7 +177,15 @@ describe("scripts/digest.sh", () => {
       join(bin, "bd"),
       `#!/bin/sh
 case "$*" in
-  *--label=gate-1*) printf '%s\\n' '[{"id":"fortkit-gate","status":"open","title":"Needs a constitution decision"}]' ;;
+  *--status=closed*) printf '%s\\n' '[{"id":"fortkit-closed","status":"closed","title":"Already closed"}]' ;;
+  *--label=gate-1*) printf '%s\\n' '[
+    {"id":"fortkit-gate-old","status":"open","title":"Older decision","updated_at":"2026-08-01T00:00:00Z"},
+    {"id":"fortkit-gate-new","status":"open","title":"Newest decision","updated_at":"2026-08-07T00:00:00Z"},
+    {"id":"fortkit-gate-3","status":"open","title":"Decision 3","updated_at":"2026-08-03T00:00:00Z"},
+    {"id":"fortkit-gate-4","status":"open","title":"Decision 4","updated_at":"2026-08-04T00:00:00Z"},
+    {"id":"fortkit-gate-5","status":"open","title":"Decision 5","updated_at":"2026-08-05T00:00:00Z"},
+    {"id":"fortkit-gate-6","status":"open","title":"Decision 6","updated_at":"2026-08-06T00:00:00Z"}
+  ]' ;;
   *) printf '%s\\n' '[]' ;;
 esac
 `,
@@ -202,6 +210,15 @@ esac
 
     expect(result.stdout).toContain("EMPTY WINDOW");
     expect(result.stdout).toContain("GATE 2: no decisions waiting");
+    expect(result.stdout).toContain("showing 5 of 6, most recently updated");
+    expect(result.stdout).toContain("1 decision(s) elided; full count is 6");
+    expect(result.stdout).toContain("fortkit-gate-new [open] Newest decision");
+    expect(result.stdout).not.toContain(
+      "fortkit-gate-old [open] Older decision",
+    );
+    expect(result.stdout).toContain(
+      "no merge/close/file events in the selected window",
+    );
     expect(result.stdout).toContain("no verifier event in the selected window");
   });
 
@@ -252,11 +269,57 @@ esac
       },
     );
 
-    expect(result.stdout).toContain("GATE 1:");
-    expect(result.stdout).toContain(
-      "fortkit-gate [open] Needs a constitution decision",
-    );
+    expect(result.stdout).toContain("GATE 1: 6 decision(s) waiting");
+    expect(result.stdout).toContain("fortkit-gate-new [open] Newest decision");
     expect(result.stdout).toContain("2026-08-01T23:24:00-08:00 verify.pass");
+  });
+
+  test("dates active sessions and omits unmatched starts for closed beads", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-01.jsonl"),
+      [
+        {
+          ts: "2026-08-01T01:00:00Z",
+          actor: "kethra",
+          seat: "forge",
+          category: "session.start",
+          target: "fortkit-closed",
+          detail: "Closed work began",
+          payload: null,
+        },
+        {
+          ts: "2026-08-01T02:00:00Z",
+          actor: "kethra",
+          seat: "forge",
+          category: "session.start",
+          target: "fortkit-active",
+          detail: "Active work began",
+          payload: null,
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n"),
+    );
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", "2026-08-01T00:00:00Z"],
+      {
+        cwd: root,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+
+    expect(result.stdout).toContain(
+      "SESSION forge|fortkit-active (1 unmatched start, started 2026-08-01T02:00:00Z)",
+    );
+    expect(result.stdout).not.toContain("SESSION forge|fortkit-closed");
+    expect(result.stdout).toContain(
+      "1 unmatched session start(s) omitted because the target bead is closed",
+    );
   });
 });
 
