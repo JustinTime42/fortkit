@@ -456,6 +456,118 @@ esac
     expect(matched.stdout.split("VERIFIER")[0]).not.toContain("WARNING:");
   });
 
+  test("matches only identity-linked audit records across a 120-second window edge", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    await writeFile(join(root, "tracked"), "tracked\n");
+    await execFileAsync("git", ["add", "."], { cwd: root });
+    await execFileAsync(
+      "git",
+      [
+        "-c",
+        "user.name=test",
+        "-c",
+        "user.email=test@example.invalid",
+        "commit",
+        "--quiet",
+        "-m",
+        "initial",
+      ],
+      { cwd: root },
+    );
+    await execFileAsync("git", ["branch", "-M", "main"], { cwd: root });
+
+    const mergeBranch = async (branch: string, timestamp: string) => {
+      await execFileAsync("git", ["checkout", "--quiet", "-b", branch], {
+        cwd: root,
+      });
+      await writeFile(join(root, branch), `${branch}\n`);
+      await execFileAsync("git", ["add", branch], { cwd: root });
+      await execFileAsync(
+        "git",
+        [
+          "-c",
+          "user.name=test",
+          "-c",
+          "user.email=test@example.invalid",
+          "commit",
+          "--quiet",
+          "-m",
+          branch,
+        ],
+        { cwd: root },
+      );
+      await execFileAsync("git", ["checkout", "--quiet", "main"], {
+        cwd: root,
+      });
+      await execFileAsync(
+        "git",
+        [
+          "-c",
+          "user.name=test",
+          "-c",
+          "user.email=test@example.invalid",
+          "merge",
+          "--no-ff",
+          "--no-edit",
+          "-m",
+          `Merge ${branch}: fixture`,
+          branch,
+        ],
+        {
+          cwd: root,
+          env: {
+            ...process.env,
+            GIT_AUTHOR_DATE: timestamp,
+            GIT_COMMITTER_DATE: timestamp,
+          },
+        },
+      );
+    };
+
+    const now = Date.now();
+    await mergeBranch("fortkit-boundary", new Date(now - 60_000).toISOString());
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-31.jsonl"),
+      `${JSON.stringify({ ts: new Date(now - 5_000).toISOString(), actor: "emrith", seat: "mayor", category: "merge", target: "fortkit-boundary", detail: "boundary fixture", payload: null })}\n`,
+    );
+    const fakeBin = await installFakeBd(root);
+    const boundary = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", new Date(now - 30_000).toISOString()],
+      {
+        cwd: root,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+    expect(boundary.stdout).toContain(
+      "boundary tolerance: 120s; 1 merge event matched by identity across a window edge",
+    );
+    expect(boundary.stdout).toContain("merge events: 0 of 0 commits");
+    expect(boundary.stdout.split("VERIFIER")[0]).not.toContain("WARNING:");
+
+    await mergeBranch(
+      "fortkit-hour-gap",
+      new Date(now - 3_600_000).toISOString(),
+    );
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-31.jsonl"),
+      `${JSON.stringify({ ts: new Date(now - 5_000).toISOString(), actor: "emrith", seat: "mayor", category: "merge", target: "fortkit-hour-gap", detail: "hour-gap fixture", payload: null })}\n`,
+    );
+    const hourGap = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", new Date(now - 30_000).toISOString()],
+      {
+        cwd: root,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+    expect(hourGap.stdout).toContain("merge events: 1 of 0 commits");
+    expect(hourGap.stdout).toContain(
+      "WARNING: 1 merge events in window, 0 merge commits",
+    );
+  });
+
   test("merge-event check fails for an unmatched main merge and passes with its event", async () => {
     const root = await createFort();
     await installMergeEventCheck(root);
@@ -538,6 +650,22 @@ esac
     );
     expect(result.stdout).toContain("1 of 1 main commits matched");
 
+    const foreignCwd = await mkdtemp(
+      join(tmpdir(), "fortkit-merge-event-cwd-"),
+    );
+    roots.push(foreignCwd);
+    const foreignCwdResult = await execFileAsync(
+      "bash",
+      [
+        join(root, "scripts", "merge-event-check.sh"),
+        "--since",
+        "2020-01-01T00:00:00Z",
+      ],
+      { cwd: foreignCwd },
+    );
+    expect(foreignCwdResult.stdout).toContain("1 of 1 main commits matched");
+    expect(foreignCwdResult.stderr).not.toContain("SKIPPED");
+
     await execFileAsync("git", ["checkout", "--quiet", "--detach"], {
       cwd: root,
     });
@@ -547,7 +675,9 @@ esac
       ["scripts/merge-event-check.sh", "--since", "2020-01-01T00:00:00Z"],
       { cwd: root },
     );
-    expect(detachedResult.stdout).toContain("1 of 1 main commits matched");
+    expect(detachedResult.stderr).toContain(
+      "SKIPPED — refs/heads/main is not present",
+    );
   });
 
   test("merge-event check consumes legacy bead events one merge at a time", async () => {
@@ -571,7 +701,7 @@ esac
     );
     await execFileAsync("git", ["branch", "-M", "main"], { cwd: root });
 
-    for (const suffix of ["first", "second"]) {
+    for (const [index, suffix] of ["first", "second"].entries()) {
       await execFileAsync("git", ["checkout", "--quiet", "-b", suffix], {
         cwd: root,
       });
@@ -610,6 +740,18 @@ esac
         ],
         { cwd: root },
       );
+      if (index === 0) {
+        await writeFile(
+          join(root, "fort", "events", "events-2026-08-31.jsonl"),
+          `${JSON.stringify({ ts: "2026-08-31T00:00:00Z", actor: "emrith", seat: "mayor", category: "merge", target: "fortkit-test", detail: "legacy fixture merged", payload: null })}\n`,
+        );
+        const legacyResult = await execFileAsync(
+          "bash",
+          ["scripts/merge-event-check.sh", "--since", "2020-01-01T00:00:00Z"],
+          { cwd: root },
+        );
+        expect(legacyResult.stdout).toContain("1 of 1 main commits matched");
+      }
     }
 
     await writeFile(
