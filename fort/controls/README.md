@@ -60,7 +60,8 @@ tool layer refuse writes?"). The ten verifier stages are TEN, because any one
 can break while the others pass. A `--ro-bind` loop is not a control; the set of
 paths it binds for a stated purpose is.
 
-Under this rule v1 registers **45 controls**. A different rule would give a
+Under this rule v1 registered **45 controls** on 2026-08-29 and **46** from
+2026-08-31, when `control-lint` was registered alongside the stages it checks. A different rule would give a
 different number, and the number is not the point: what the register buys is the
 ability to ask which KINDS the fort is short of, and to be told when a citation
 stops resolving.
@@ -108,16 +109,24 @@ Recorded as measurements, each with the command that produced it.
 5. **Two ratchets are made of prose** (`ratchet-append-only-records`,
    `ratchet-event-categories-add-only`): nothing mechanical prevents either
    reversal.
-6. **28 of the 45 controls have `falsified-by: null`**, including the entire
-   secret-masking path. `wall-secret-file-mask` states its own uncovered limit
+6. **28 of the 45 controls had `falsified-by: null` as of 2026-08-29**, and
+   **29 of 46 do as of 2026-08-31** — the register gained its own checker
+   (`falsifier-control-lint`, itself unfalsified). Both figures are dated
+   because item 6 previously carried none while item 7 did, in the document
+   whose argument is against claims outliving their subjects (Warden finding
+   9 on `fortkit-4ah3.9`).
+
+   **The unfalsified set includes the entire secret-masking path.**
+   `wall-secret-file-mask` states its own uncovered limit
    in `seat-sandbox.sh:140-148`: a directory named `environments~` or `.env.d`
    is not descended into, so secret files inside one are readable in every mask.
    That limit is recorded there and is now registered rather than buried in a
    comment.
-7. **The kind tally, measured over the register on 2026-08-29:** 13 falsifiers,
+7. **The kind tally. Measured 2026-08-29 at 45 controls:** 13 falsifiers,
    11 walls, 6 tripwires, 6 prose gates, 5 fences, 2 ratchets, 1 latch (borrowed),
    1 governor. The fort is rich in refusals and proofs and poor in bounds and
    held states, which is what A1 predicted from the vocabulary alone.
+   **Re-measured 2026-08-31 at 46: 14 falsifiers**, the rest unchanged.
 8. **`tripwire-constitution-watch` has no script of its own.** The fortkit-9sa
    watch lives inside `civ/scripts/herald.sh`, so the fort's constitutional
    alarm is a passenger on the publication seat and stops when the Herald does.

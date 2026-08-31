@@ -59,3 +59,4 @@
 {"ts":"2026-08-31T08:29:31-08:00","actor":"ilva","seat":"warden","category":"session.start","target":"fortkit-4ah3.9","detail":"Ilva begins review of fortkit-4ah3.9 (opus)","payload":{"model":"opus"}}
 {"ts":"2026-08-31T08:36:18-08:00","actor":"ilva","seat":"warden","category":"review.verdict","target":"fortkit-4ah3.9","detail":"Ilva on fortkit-4ah3.9: APPROVE-WITH-FINDINGS — F3-F7 all land, floor not a bumped literal; 10 non-blocking, incl. main's uncommitted 46th fingerprint","payload":null}
 {"ts":"2026-08-31T08:36:18-08:00","actor":"ilva","seat":"warden","category":"session.end","target":"fortkit-4ah3.9","detail":"Ilva's session on fortkit-4ah3.9 ended (exit 0)","payload":{"exit":0,"log":"/tmp/warden-4ah3.9.log","verdict_recorded":true}}
+{"ts":"2026-08-31T08:37:49-08:00","actor":"ilva","seat":"warden","category":"session.start","target":"fortkit-4ah3.2","detail":"Ilva begins review of fortkit-4ah3.2 (opus)","payload":{"model":"opus"}}
