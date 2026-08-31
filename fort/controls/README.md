@@ -9,6 +9,19 @@ Fingerprint recording is explicit and single-control:
 that control's cited line and refuses an unresolved citation; it never bulk
 accepts the register's current state.
 
+**WHEN NOT TO REACH FOR `--record`, and this sentence is the whole control.**
+Re-recording is for a citation that **legitimately moved** — the implementing
+line shifted because the file above it changed, and the citation was updated to
+follow it. It is **never** for a citation that went red. A red `control-lint` is
+the register telling you a claim no longer matches its subject; re-recording it
+makes the claim true by moving the goalposts, and the fort has `fortkit-x1n`
+open about a test defanged the same way. **If you did not first establish that
+the cited line is still the right line, you are not recording, you are
+silencing.** Raised as Warden round-2 finding 3 on `fortkit-4ah3.2`: the
+recorder's design already resists this — it is single-control, explicit, refuses
+an unresolved citation, and never bulk-accepts the register's current state —
+which is why this is one sentence of documentation rather than a hole.
+
 ## Corrections to v1 (appended 2026-08-31, not edited in silently)
 
 Warden round 1 on `fortkit-4ah3.2` returned REQUEST-CHANGES. What changed here,
@@ -43,7 +56,7 @@ for which a single falsification question can be posed.**
 
 That rule decides the cases that were ambiguous. The Warden's 37 deny entries
 are ONE control, because they fail together and share one question ("does the
-tool layer refuse writes?"). The nine verifier stages are NINE, because any one
+tool layer refuse writes?"). The ten verifier stages are TEN, because any one
 can break while the others pass. A `--ro-bind` loop is not a control; the set of
 paths it binds for a stated purpose is.
 
