@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -94,9 +94,33 @@ async function buildCivilization(
 }
 
 async function lintFort(root: string, registry: string) {
-  return await run(process.execPath, [lint, root], {
-    env: { ...process.env, FORT_REGISTRY: registry },
-  });
+  const outputDirectory = await mkdtemp(
+    join(tmpdir(), "fortkit-seat-lint-output-"),
+  );
+  const stdoutPath = join(outputDirectory, "stdout");
+  const stderrPath = join(outputDirectory, "stderr");
+  const result = await run(
+    "sh",
+    [
+      "-c",
+      'stdout="$1"; stderr="$2"; shift 2; "$@" > "$stdout" 2> "$stderr"',
+      "sh",
+      stdoutPath,
+      stderrPath,
+      process.execPath,
+      lint,
+      root,
+    ],
+    { env: { ...process.env, FORT_REGISTRY: registry } },
+  ).then(
+    () => ({ code: 0 }),
+    (error: { code?: number }) => ({ code: error.code }),
+  );
+  return {
+    ...result,
+    stdout: await readFile(stdoutPath, "utf8"),
+    stderr: await readFile(stderrPath, "utf8"),
+  };
 }
 
 describe("seat-file lint (fortkit-x508)", () => {
@@ -277,9 +301,7 @@ describe("seat-file lint (fortkit-x508)", () => {
         seats: { mayor: { name: "Yrsa Coldwater" } },
       },
     ]);
-    const orphan = await run(process.execPath, [lint, root], {
-      env: { ...process.env, FORT_REGISTRY: join(root, "absent.json") },
-    });
+    const orphan = await lintFort(root, join(root, "absent.json"));
     expect(orphan.stdout).toContain("rules 2 (foreign citizens) and 3");
     expect(orphan.stdout).toContain("SKIPPED");
   });

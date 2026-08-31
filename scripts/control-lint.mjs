@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
-const root = resolve(process.argv[2] ?? process.cwd());
+const [mode, recordKey, rootArgument] = process.argv.slice(2);
+const recording = mode === "--record";
+const root = resolve(
+  recording ? (rootArgument ?? process.cwd()) : (mode ?? process.cwd()),
+);
 const controlsDirectory = join(root, "fort", "controls");
 const fingerprintsPath = join(root, "scripts", "control-fingerprints.json");
 const kinds = new Set([
@@ -74,66 +78,123 @@ try {
   );
 }
 
-for (const file of files) {
-  const controlPath = join(controlsDirectory, file);
-  const control = parseFrontmatter(await readFile(controlPath, "utf8"));
-  if (control === null) {
-    failures.push(`${controlPath}: missing YAML frontmatter`);
-    continue;
+if (recording) {
+  if (recordKey === undefined) {
+    failures.push("--record requires exactly one control key");
+  } else {
+    const controlFile = files.find((file) => file === `${recordKey}.md`);
+    if (controlFile === undefined) {
+      failures.push(
+        `--record: control ${JSON.stringify(recordKey)} does not exist`,
+      );
+    } else {
+      const controlPath = join(controlsDirectory, controlFile);
+      const control = parseFrontmatter(await readFile(controlPath, "utf8"));
+      if (control === null) {
+        failures.push(`${controlPath}: missing YAML frontmatter`);
+      } else {
+        const citation = citationPath(root, control.implements);
+        if (citation === null) {
+          failures.push(
+            `${controlPath}: implements must be a repository-relative file:line citation`,
+          );
+        } else {
+          let source;
+          try {
+            source = await readFile(citation.path, "utf8");
+          } catch {
+            failures.push(
+              `${controlPath}: implements path ${control.implements} does not exist`,
+            );
+          }
+          if (source !== undefined) {
+            const citedLine = source.split(/\r?\n/u)[citation.line - 1];
+            if (citedLine === undefined) {
+              failures.push(
+                `${controlPath}: implements line ${control.implements} does not exist`,
+              );
+            } else if (failures.length === 0) {
+              fingerprints[recordKey] = fingerprint(citedLine);
+              await writeFile(
+                fingerprintsPath,
+                `${JSON.stringify(fingerprints, null, 2)}\n`,
+              );
+              console.log(
+                `control-lint: recorded ${recordKey} from ${control.implements}`,
+              );
+            }
+          }
+        }
+      }
+    }
   }
-  const key = file.replace(/\.md$/u, "");
-  if (control.kind === undefined)
-    failures.push(`${controlPath}: kind is required`);
-  else if (!kinds.has(control.kind))
-    failures.push(
-      `${controlPath}: unknown kind ${JSON.stringify(control.kind)}`,
-    );
-  if (!("falsified-by" in control))
-    failures.push(`${controlPath}: falsified-by must be declared explicitly`);
-  else if (control["falsified-by"] === null) missingFalsifiers.push(key);
-
-  const citation = citationPath(root, control.implements);
-  if (citation === null) {
-    failures.push(
-      `${controlPath}: implements must be a repository-relative file:line citation`,
-    );
-    continue;
-  }
-  let source;
-  try {
-    source = await readFile(citation.path, "utf8");
-  } catch {
-    failures.push(
-      `${controlPath}: implements path ${control.implements} does not exist`,
-    );
-    continue;
-  }
-  const citedLine = source.split(/\r?\n/u)[citation.line - 1];
-  if (citedLine === undefined) {
-    failures.push(
-      `${controlPath}: implements line ${control.implements} does not exist`,
-    );
-    continue;
-  }
-  const expectedFingerprint = fingerprints[key];
-  if (typeof expectedFingerprint !== "string") {
-    failures.push(
-      `${controlPath}: no recorded fingerprint for ${control.implements}`,
-    );
-    continue;
-  }
-  if (fingerprint(citedLine) !== expectedFingerprint)
-    failures.push(
-      `${controlPath}: cited line ${control.implements} no longer matches its recorded fingerprint`,
-    );
+  for (const failure of failures) console.error(`control-lint: ${failure}`);
+  if (failures.length > 0) process.exitCode = 1;
 }
 
-console.log(
-  `control-lint: ${files.length} control file(s) checked; ${missingFalsifiers.length} explicitly declare no falsifier`,
-);
-for (const key of missingFalsifiers)
+if (!recording)
+  for (const file of files) {
+    const controlPath = join(controlsDirectory, file);
+    const control = parseFrontmatter(await readFile(controlPath, "utf8"));
+    if (control === null) {
+      failures.push(`${controlPath}: missing YAML frontmatter`);
+      continue;
+    }
+    const key = file.replace(/\.md$/u, "");
+    if (control.kind === undefined)
+      failures.push(`${controlPath}: kind is required`);
+    else if (!kinds.has(control.kind))
+      failures.push(
+        `${controlPath}: unknown kind ${JSON.stringify(control.kind)}`,
+      );
+    if (!("falsified-by" in control))
+      failures.push(`${controlPath}: falsified-by must be declared explicitly`);
+    else if (control["falsified-by"] === null) missingFalsifiers.push(key);
+
+    const citation = citationPath(root, control.implements);
+    if (citation === null) {
+      failures.push(
+        `${controlPath}: implements must be a repository-relative file:line citation`,
+      );
+      continue;
+    }
+    let source;
+    try {
+      source = await readFile(citation.path, "utf8");
+    } catch {
+      failures.push(
+        `${controlPath}: implements path ${control.implements} does not exist`,
+      );
+      continue;
+    }
+    const citedLine = source.split(/\r?\n/u)[citation.line - 1];
+    if (citedLine === undefined) {
+      failures.push(
+        `${controlPath}: implements line ${control.implements} does not exist`,
+      );
+      continue;
+    }
+    const expectedFingerprint = fingerprints[key];
+    if (typeof expectedFingerprint !== "string") {
+      failures.push(
+        `${controlPath}: no recorded fingerprint for ${control.implements}`,
+      );
+      continue;
+    }
+    if (fingerprint(citedLine) !== expectedFingerprint)
+      failures.push(
+        `${controlPath}: cited line ${control.implements} no longer matches its recorded fingerprint`,
+      );
+  }
+
+if (!recording) {
   console.log(
-    `control-lint: ${key}: falsified-by is null (reported, not failed)`,
+    `control-lint: ${files.length} control file(s) checked; ${missingFalsifiers.length} explicitly declare no falsifier`,
   );
-for (const failure of failures) console.error(`control-lint: ${failure}`);
-if (failures.length > 0) process.exitCode = 1;
+  for (const key of missingFalsifiers)
+    console.log(
+      `control-lint: ${key}: falsified-by is null (reported, not failed)`,
+    );
+  for (const failure of failures) console.error(`control-lint: ${failure}`);
+  if (failures.length > 0) process.exitCode = 1;
+}
