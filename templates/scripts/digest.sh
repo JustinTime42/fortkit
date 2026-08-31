@@ -114,9 +114,9 @@ fi
 printf 'DECISIONS WAITING\n'
 # The template deliberately uses Beads' native human label, not the founding
 # fort's local gate vocabulary. A factory ships capabilities, never another
-# fort's charter; see templates/fort/seats/mayor.md for the matching protocol.
+# fort's charter; see fort/seats/mayor.md for the matching protocol.
 set +e
-bd -C "$main_root" human list --status=open --json >"$live_human_beads"; live_human_status=$?
+bd -C "$main_root" human list --status=open,in_progress --json >"$live_human_beads"; live_human_status=$?
 set -e
 if [ "$live_human_status" -ne 0 ]; then
   printf '  HUMAN QUEUE: UNAVAILABLE (bd exit %s)\n' "$live_human_status"
@@ -170,10 +170,6 @@ for (const bead of live) {
   if (!groups.has(root.id)) groups.set(root.id, { root, members: [] });
   groups.get(root.id).members.push(bead);
 }
-const tagFor = (bead) => {
-  const labels = bead.labels ?? [];
-  return labels.includes("human") ? "human" : "human label missing";
-};
 for (const { root, members } of [...groups.values()].sort((left, right) => String(left.root.title ?? "").localeCompare(String(right.root.title ?? "")))) {
   const descendants = all.filter((bead) => rootOf(bead).id === root.id && bead.id !== root.id);
   const hasChildren = descendants.length > 0;
@@ -186,7 +182,7 @@ for (const { root, members } of [...groups.values()].sort((left, right) => Strin
   const blockerText = blockerDataUnavailable ? "; blocker data unavailable" : blockers.length ? `; blocked by: ${[...new Set(blockers.map((blocker) => blocker.title ?? "untitled"))].join("; ")}` : "";
   if (!hasChildren) {
     for (const member of members.sort((left, right) => String(left.title ?? "").localeCompare(String(right.title ?? "")))) {
-      console.log(`  ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}; ${tagFor(member)}]${blockerText}`);
+      console.log(`  ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}]${blockerText}`);
     }
     continue;
   }
@@ -194,7 +190,7 @@ for (const { root, members } of [...groups.values()].sort((left, right) => Strin
   console.log(`  ${root.title ?? "untitled"} [${root.id ?? "UNKNOWN"}] — ${closed}/${descendants.length} done${blockerText}`);
   for (const member of members.sort((left, right) => String(left.title ?? "").localeCompare(String(right.title ?? "")))) {
     if (member.id === root.id) continue;
-    console.log(`    ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}; ${tagFor(member)}]`);
+    console.log(`    ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}]`);
   }
 }
 if (groups.size === 0) console.log("  no decisions waiting");

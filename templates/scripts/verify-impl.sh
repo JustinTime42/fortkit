@@ -107,5 +107,6 @@ run_step typecheck npm run typecheck
 run_step lint npm run lint
 run_step test npm run test
 # -x follows sourced files so fort/scripts/lib/* is linted too, not skipped.
-run_step shellcheck shellcheck -x fort/scripts/*.sh fort/scripts/lib/*.sh
+# scripts/* includes the factory artifacts this verifier receives at founding.
+run_step shellcheck shellcheck -x scripts/*.sh fort/scripts/*.sh fort/scripts/lib/*.sh
 emit verify.pass "Verifier passed" -p '{"steps":["seat-lint","merge-events","typecheck","lint","test","shellcheck"]}'

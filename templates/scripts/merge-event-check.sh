@@ -6,7 +6,7 @@ set -euo pipefail
 
 usage() { printf 'Usage: %s [--since ISO-8601-timestamp]\n' "${0##*/}"; }
 
-since="${MERGE_EVENT_SINCE:-1970-01-01T00:00:00Z}"
+since="${MERGE_EVENT_SINCE:-{{DATE}}}"
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --since) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; since="$2"; shift 2 ;;

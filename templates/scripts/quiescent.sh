@@ -7,8 +7,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 git_common="$(git -C "$repo_root" rev-parse --git-common-dir)"
 case "$git_common" in /*) ;; *) git_common="$repo_root/$git_common" ;; esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
-events_dir="${FORTKIT_EVENTS_DIR:-$main_root/fort/events}"
-worktrees_root="${FORT_WORKTREES_ROOT:-${FORTKIT_WORKTREES_ROOT:-$HOME/dev/$(basename "$repo_root")-worktrees}}"
+events_dir="${FORT_EVENTS_DIR:-$main_root/fort/events}"
+worktrees_root="${FORT_WORKTREES_ROOT:-${main_root}-worktrees}"
 stale_after_seconds="${QUIESCENT_STALE_AFTER_SECONDS:-$((2 * 60 * 60))}"
 
 busy=0
