@@ -42,6 +42,7 @@ the origin fort is the one most likely to record "we already knew" and skip the 
 | `ADV-0005` claim-subject drift | 2026-08-17 | **present** | Permanent. Six instances by this seat on the day it was raised, every one caught by a control independent of the author and none by care. Treated as a standing condition with controls, not a bug with a fix. | `fortkit-uj3q` |
 | `ADV-0006` seat-file lint | 2026-08-17 | **absent** | Origin fort; the lint runs here as verifier step 2 and is now installed into every founded fort. Offered to the elder forts, not pushed. | `fortkit-x508` |
 | `ADV-0007` check field briefly mandatory | 2026-08-17 | **present** | Resolved before it cost anything. Raised by Farlantern, transcribed here. SO7 correction appended to `fortkit-p5mr` and the child bead retitled, because a stale title is read before any correction inside a bead. | `fortkit-p5mr` |
+| `ADV-0008` session close buries the decision queue | 2026-08-31 | **present** | Present, and by a worse route than the origin fort's. Proofdelve's queue (`bd human`) shipped unused; **ours we built ourselves, fill diligently, and never read** — 29 open beads carry `gate-1`, the fort's own "waiting on the Overseer" signal since 2026-08-08, and nothing surfaces them at end of run. The filing half works; there is no reading half. Second evidence, same day: the Overseer asked two questions, the Mayor answered both, and he had to ask again because the answers were "hidden back in the scroll". `divergent-implementation` was considered and REJECTED: we do have a divergent queue, so the advisory's `bd human` check comes back clean here and proves nothing — but the property it describes holds regardless of which label carries it, and calling that clean is the error SO13 names. | `fortkit-zj8e` |
 
 ## Candidates this fort has raised
 
@@ -60,3 +61,4 @@ column is not mistaken for an empty obligation.
 |---|---|---|---|
 | Farlantern | `longburn-5mnw` | `fortkit-881h` | transcribed, origin attribution intact, closed |
 | Farlantern | `longburn-439f` | `ADV-0007` | transcribed 2026-08-17 |
+| Proofdelve | `ForgeOs-eng3.4` | `ADV-0008` | **transcribed 2026-08-31, two days late** — raised 2026-08-29 and found only because the Overseer asked directly whether we had picked it up. No watcher, no lint and no digest surfaced it, and the raising fort had no way to distinguish "declined" from "unread". The delay is recorded in the advisory's own preamble. |

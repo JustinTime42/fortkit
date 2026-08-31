@@ -1,0 +1,23 @@
+# Manyhalls nightly consolidation timer — drafted by the Mayor under
+# fortkit-iyj6.1; the Overseer installs (fortkit-iyj6.2).
+#
+# 03:00 local: two hours before the Herald's 05:00 run, so the morning digest
+# reads a freshly consolidated memory ledger rather than yesterday's.
+#
+# Persistent=true so a night missed while the machine was off or asleep catches
+# up at the next opportunity — the same choice herald.timer makes, and for the
+# same reason. fortkit-iyj6.2's acceptance requires that catch-up be
+# DEMONSTRATED once rather than assumed from this line, because a drafted unit
+# is not a running one and this fort has a measured habit of reading the draft
+# as the deployment: the charter has named four watchers since founding and none
+# of them exist (fortkit-5v82).
+
+[Unit]
+Description=Manyhalls nightly consolidation timer
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

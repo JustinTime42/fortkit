@@ -1,0 +1,58 @@
+# Manyhalls nightly consolidation — memory and laurels.
+# Drafted by the Mayor under fortkit-iyj6.1; the OVERSEER installs (fortkit-iyj6.2).
+# Same split as civ/systemd/herald.service, which says so in its own header.
+#
+# WHY THIS EXISTS. fort/memory/current.md is the distilled view every seat is
+# told to read at session start, and it is headed "do not edit" because
+# scripts/consolidate-memory.mjs is its authority. docs/specs/memory.md:61 and
+# :216 promise a nightly cron. It has never existed. On 2026-08-29 a Mayor ran
+# the generator to measure something else and THE FILE CHANGED — the shared
+# memory every seat trusts was stale, and nothing would have reported it.
+# docs/specs/memory.md:224 names that exact risk. fort/laurels/ joined at
+# fortkit-35uf.3 and has the same property.
+#
+# THIS UNIT RUNS UNMASKED AS THE USER AND COMMITS TO THE REPOSITORY UNATTENDED.
+# That is the whole reason it is gated on the Overseer rather than installed by
+# a seat. It does not push. Committed is not pushed is not deployed (SO6).
+#
+# TWO DEFECTS THE WARDEN FOUND IN THE DRAFT (fortkit-35uf.3 finding 9), both
+# fixed here and named so a reader can see they were addressed rather than
+# forgotten:
+#
+#   (a) The commit message read "chore(memory): nightly consolidation" after the
+#       unit had grown to commit fort/laurels as well. A commit message naming
+#       half of what it commits is this fort's worst failure class in its most
+#       permanent record.
+#
+#   (b) `git add fort/laurels` was a DIRECTORY add. Both generators write
+#       `<path>.tmp` beside their target and rename — correct for atomicity, but
+#       the temp lands INSIDE the tracked tree (consolidate-laurels.mjs:123-125,
+#       consolidate-memory.mjs:362/469). A crashed run therefore leaves a stray
+#       fort/laurels/<seat>.md.tmp that the NEXT night's directory add would
+#       commit. The add is now scoped to *.md. The deeper repair — temps written
+#       outside the tracked path — is Forge lane and is not done here, so this
+#       scoping is a guard and not a fix.
+#
+# CONCURRENCY, answered rather than assumed (fortkit-iyj6.1). This unit fires at
+# 03:00, when no seat runs. It does NOT take the quiescence check that
+# fortkit-zj8e.3 is building, because that check does not exist yet and this
+# should not wait on it. THE RESIDUAL IS STATED: if a seat is ever working at
+# 03:00, this unit will commit regenerated views underneath it. The tracked
+# views are generated artifacts and a regeneration is idempotent, so the worst
+# case is a surprising commit rather than lost work — but a session mid-commit
+# could still see an index change. When zj8e.3 lands, this unit should adopt its
+# quiescent.sh rather than growing a second notion of "busy".
+
+[Unit]
+Description=Manyhalls nightly consolidation — memory ledger and laurel views
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/justin/dev/fortkit
+# User units do not inherit the login shell PATH where nvm exposes Node.
+Environment=PATH=/home/justin/.nvm/versions/node/v24.14.0/bin:/usr/local/bin:/usr/bin:/bin
+# The tracked views must be committed after regeneration, or nightly runs leave
+# them dirty and never make the new truth available to other clones.
+# `git add` is path-scoped and *.md-scoped per SO4 and defect (b) above.
+ExecStart=/bin/bash -c 'set -euo pipefail; node scripts/consolidate-memory.mjs; node scripts/consolidate-laurels.mjs; git add fort/memory/current.md fort/laurels/*.md; if ! git diff --cached --quiet; then git commit -m "chore(fort): nightly consolidation of the memory ledger and the laurel views"; fi'
+TimeoutStartSec=10min
