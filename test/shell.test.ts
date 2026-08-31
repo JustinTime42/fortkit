@@ -606,6 +606,336 @@ esac
   });
 });
 
+describe("scripts/quiescent.sh and digest-hook.sh", () => {
+  async function installQuiescence(root: string) {
+    await mkdir(join(root, "scripts"), { recursive: true });
+    await mkdir(join(root, "fort", "events"), { recursive: true });
+    for (const script of ["quiescent.sh", "digest-hook.sh"]) {
+      await writeFile(
+        join(root, "scripts", script),
+        await readFile(join(repoRoot, "scripts", script), "utf8"),
+      );
+      await chmod(join(root, "scripts", script), 0o755);
+    }
+  }
+
+  test("ignores Mayor's unmatched session start but reports a live Forge lock", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const worktrees = join(root, "worktrees");
+    const forgeWorktree = join(worktrees, "zj8e3");
+    await mkdir(forgeWorktree, { recursive: true });
+    const lock = join(forgeWorktree, ".forge.lock");
+    await writeFile(lock, "");
+    await writeFile(join(forgeWorktree, ".forge.lock.info"), "fixture holder");
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-31.jsonl"),
+      `${JSON.stringify({
+        ts: new Date().toISOString(),
+        actor: "emrith",
+        seat: "mayor",
+        category: "session.start",
+        target: null,
+        detail: "Mayor start",
+        payload: null,
+      })}\n`,
+    );
+
+    const result = await execFileAsync(
+      "bash",
+      [
+        "-c",
+        'exec 9>"$1"; flock -n 9; "$2"',
+        "--",
+        lock,
+        join(root, "scripts", "quiescent.sh"),
+      ],
+      { cwd: root, env: { ...process.env, FORTKIT_WORKTREES_ROOT: worktrees } },
+    ).catch((error: { code?: number; stdout?: string }) => error);
+
+    expect(result).toMatchObject({ code: 1 });
+    expect(result.stdout).toContain("busy: forge lock");
+    expect(result.stdout).toContain("fixture holder");
+  });
+
+  test("reports a fresh non-Mayor session as busy", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-31.jsonl"),
+      `${JSON.stringify({
+        ts: new Date().toISOString(),
+        actor: "kethra",
+        seat: "forge",
+        category: "session.start",
+        target: "fortkit-live",
+        detail: "Forge starts work",
+        payload: null,
+      })}\n`,
+    );
+
+    const result = await execFileAsync("bash", ["scripts/quiescent.sh"], {
+      cwd: root,
+      env: {
+        ...process.env,
+        FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+      },
+    }).catch((error: { code?: number; stdout?: string }) => error);
+
+    expect(result).toMatchObject({ code: 1 });
+    expect(result.stdout).toContain("busy: session forge|fortkit-live");
+  });
+
+  test("ignores a Bash command that merely names another fort's Warden script", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const foreignWarden = join(
+      root,
+      "other-fort",
+      "fort",
+      "scripts",
+      "warden.sh",
+    );
+    await mkdir(join(root, "other-fort", "fort", "scripts"), {
+      recursive: true,
+    });
+    await writeFile(foreignWarden, "#!/bin/sh\n");
+    const ready = join(root, "foreign-warden-name-ready");
+    const child = execFile(
+      "bash",
+      [
+        "-c",
+        'touch "$1"; while :; do sleep 1; done',
+        "bash",
+        ready,
+        foreignWarden,
+      ],
+      { cwd: root },
+    );
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          await access(ready);
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      await access(ready);
+
+      const result = await execFileAsync("bash", ["scripts/quiescent.sh"], {
+        cwd: root,
+        env: {
+          ...process.env,
+          FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+        },
+      }).catch((error: { stdout?: string }) => error);
+
+      // The predicate observes /proc, so unrelated real seats may legitimately
+      // print their own busy reasons. The fixture's confounder must not.
+      expect(result.stdout).not.toContain(`pid=${child.pid}`);
+      expect(result.stdout).not.toContain(foreignWarden);
+    } finally {
+      child.kill("SIGTERM");
+    }
+  });
+
+  test("reports Bash executing this fort's Warden script as busy", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const wardenDirectory = join(root, "fort", "scripts");
+    const wardenScript = join(wardenDirectory, "warden.sh");
+    const ready = join(root, "warden-ready");
+    await mkdir(wardenDirectory, { recursive: true });
+    await writeFile(
+      wardenScript,
+      `#!/bin/bash
+touch "${ready}"
+while :; do sleep 1; done
+`,
+    );
+    await chmod(wardenScript, 0o755);
+    // Mayor launches Wardens from the fort root with a relative script path.
+    const child = execFile("bash", ["fort/scripts/warden.sh"], { cwd: root });
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          await access(ready);
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      await access(ready);
+
+      const result = await execFileAsync("bash", ["scripts/quiescent.sh"], {
+        cwd: root,
+        env: {
+          ...process.env,
+          FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+        },
+      }).catch((error: { code?: number; stdout?: string }) => error);
+
+      expect(result).toMatchObject({ code: 1 });
+      expect(result.stdout).toContain("busy: warden process");
+    } finally {
+      child.kill("SIGTERM");
+    }
+  });
+
+  test("reports Bash executing this fort's Warden script by absolute path as busy", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const wardenDirectory = join(root, "fort", "scripts");
+    const wardenScript = join(wardenDirectory, "warden.sh");
+    const ready = join(root, "absolute-warden-ready");
+    await mkdir(wardenDirectory, { recursive: true });
+    await writeFile(
+      wardenScript,
+      `#!/bin/bash
+touch "${ready}"
+while :; do sleep 1; done
+`,
+    );
+    await chmod(wardenScript, 0o755);
+    const child = execFile("bash", [wardenScript], { cwd: root });
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          await access(ready);
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      await access(ready);
+
+      const result = await execFileAsync("bash", ["scripts/quiescent.sh"], {
+        cwd: root,
+        env: {
+          ...process.env,
+          FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+        },
+      }).catch((error: { code?: number; stdout?: string }) => error);
+
+      expect(result).toMatchObject({ code: 1 });
+      expect(result.stdout).toContain(`busy: warden process pid=${child.pid}`);
+    } finally {
+      child.kill("SIGTERM");
+    }
+  });
+
+  test("reports Bash executing this fort's verifier by relative path as busy", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const verifierDirectory = join(root, "scripts");
+    const verifierScript = join(verifierDirectory, "verify-impl.sh");
+    const ready = join(root, "verifier-ready");
+    await writeFile(
+      verifierScript,
+      `#!/bin/bash
+touch "${ready}"
+while :; do sleep 1; done
+`,
+    );
+    await chmod(verifierScript, 0o755);
+    const child = execFile("bash", ["scripts/verify-impl.sh"], { cwd: root });
+
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          await access(ready);
+          break;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+      await access(ready);
+
+      const result = await execFileAsync("bash", ["scripts/quiescent.sh"], {
+        cwd: root,
+        env: {
+          ...process.env,
+          FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+        },
+      }).catch((error: { code?: number; stdout?: string }) => error);
+
+      expect(result).toMatchObject({ code: 1 });
+      expect(result.stdout).toContain("busy: verifier process");
+    } finally {
+      child.kill("SIGTERM");
+    }
+  });
+
+  test("declines the hook with the quiescence reason and does not run the digest", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    const worktrees = join(root, "worktrees");
+    const forgeWorktree = join(worktrees, "zj8e3");
+    await mkdir(forgeWorktree, { recursive: true });
+    const lock = join(forgeWorktree, ".forge.lock");
+    await writeFile(lock, "");
+    await writeFile(join(forgeWorktree, ".forge.lock.info"), "fixture holder");
+    const digest = join(root, "digest-fixture.sh");
+    await writeFile(digest, "#!/bin/sh\nprintf 'DIGEST RAN\\n'\n");
+    await chmod(digest, 0o755);
+
+    const result = await execFileAsync(
+      "bash",
+      [
+        "-c",
+        'exec 9>"$1"; flock -n 9; "$2"',
+        "--",
+        lock,
+        join(root, "scripts", "digest-hook.sh"),
+      ],
+      {
+        cwd: root,
+        env: {
+          ...process.env,
+          FORTKIT_WORKTREES_ROOT: worktrees,
+          DIGEST_SCRIPT: digest,
+        },
+      },
+    );
+
+    expect(result.stdout).toContain(
+      "digest-hook: declined; fort is not quiescent",
+    );
+    expect(result.stdout).toContain("busy: forge lock");
+    expect(result.stdout).not.toContain("DIGEST RAN");
+  });
+
+  test("runs the digest when the fort is quiet", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    // The full verifier is itself a live verifier process, so replace only
+    // this predicate fixture with its already-proven quiet result.
+    await writeFile(
+      join(root, "scripts", "quiescent.sh"),
+      "#!/bin/sh\nexit 0\n",
+    );
+    await chmod(join(root, "scripts", "quiescent.sh"), 0o755);
+    const digest = join(root, "digest-fixture.sh");
+    await writeFile(digest, "#!/bin/sh\nprintf 'DIGEST RAN\\n'\n");
+    await chmod(digest, 0o755);
+
+    const result = await execFileAsync("bash", ["scripts/digest-hook.sh"], {
+      cwd: root,
+      env: {
+        ...process.env,
+        FORTKIT_WORKTREES_ROOT: join(root, "worktrees"),
+        DIGEST_SCRIPT: digest,
+      },
+    });
+
+    expect(result.stdout).toBe("DIGEST RAN\n");
+  });
+});
+
 describe("fort-init", () => {
   test.skipIf(!foundingSmokeToolsAvailable)(
     "renders the Mayor's Codex deny with the founding home path",
