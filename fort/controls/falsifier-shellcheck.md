@@ -3,7 +3,7 @@ key: falsifier-shellcheck
 status: active
 kind: falsifier
 detects: "Shell defects across the shipped shell surface"
-implements: scripts/verify-impl.sh:337
+implements: scripts/verify-impl.sh:345
 falsified-by: fence-verifier
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

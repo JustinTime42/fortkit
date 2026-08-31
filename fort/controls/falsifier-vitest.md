@@ -3,7 +3,7 @@ key: falsifier-vitest
 status: active
 kind: falsifier
 detects: "Behavioural regressions"
-implements: scripts/verify-impl.sh:324
+implements: scripts/verify-impl.sh:332
 falsified-by: fence-verifier
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

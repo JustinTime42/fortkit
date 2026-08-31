@@ -307,7 +307,7 @@ template_render_lint() {
   return 0
 }
 
-emit verify.run "Verifier started" -p '{"steps":["memory-lint","seat-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
+emit verify.run "Verifier started" -p '{"steps":["memory-lint","seat-lint","control-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
 run_step memory-lint node scripts/memory-lint.mjs
 # fortkit-x508. The roster's three rules — no actor ids one keystroke apart, no
 # other settlement's citizen in a Held-by or Personality line, no surviving
@@ -317,6 +317,14 @@ run_step memory-lint node scripts/memory-lint.mjs
 # delivered. Rules 2 and 3 need the registry and announce a skip when they cannot
 # reach it; rule 1 and the charter cross-check run everywhere.
 run_step seat-lint node scripts/seat-lint.mjs
+# fortkit-4ah3.3, wired 2026-08-31 (Mayor lane: the Forge is kernel-refused on
+# this file by seat-sandbox.sh:241, so it built the lint and could not wire it).
+# Every fort/controls/ entry's `implements:` citation must resolve AND its cited
+# line must still match a recorded SHA-256. A citation that rots goes red here.
+# Missing falsifiers are REPORTED, never failed — a control with no falsifier is
+# a fact about the fort, not a defect to paper over. Zero control files is a
+# FAILURE: a checker that checks nothing must say so in the same breath it exits.
+run_step control-lint node scripts/control-lint.mjs
 run_step skills-install skills_install_check
 run_step typecheck npm run typecheck
 run_step browser-typecheck npm run typecheck:browser
@@ -336,4 +344,4 @@ run_step test npm run test
 # every future fort inherits, so it is exactly the copy that must not rot.
 run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh "${TEMPLATE_SH[@]}" civ/scripts/*.sh scripts/*.sh
 run_step template-render template_render_lint
-emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","seat-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
+emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","seat-lint","control-lint","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
