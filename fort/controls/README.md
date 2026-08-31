@@ -109,12 +109,19 @@ Recorded as measurements, each with the command that produced it.
 5. **Two ratchets are made of prose** (`ratchet-append-only-records`,
    `ratchet-event-categories-add-only`): nothing mechanical prevents either
    reversal.
-6. **28 of the 45 controls had `falsified-by: null` as of 2026-08-29**, and
-   **29 of 46 do as of 2026-08-31** — the register gained its own checker
-   (`falsifier-control-lint`, itself unfalsified). Both figures are dated
-   because item 6 previously carried none while item 7 did, in the document
-   whose argument is against claims outliving their subjects (Warden finding
-   9 on `fortkit-4ah3.9`).
+6. **26 of the 45 controls had `falsified-by: null` as of 2026-08-29**;
+   **28 of 45 after the round-1 repair on 2026-08-31**, which moved the two
+   Researcher fences off a falsifier that cannot run; **29 of 46** once the
+   register gained its own checker
+   (`falsifier-control-lint`, itself unfalsified). **All three figures carry
+   their date**, because this item previously carried none while item 7 did, in
+   the document whose argument is against claims outliving their subjects
+   (Warden finding 9 on `fortkit-4ah3.9`). The middle figure exists because the
+   first correction of this item attached the right number to the wrong date —
+   28 was the 08-31 value, not the 08-29 one — in the very commit written to
+   stop that (Warden round-3 finding 2 on `fortkit-4ah3.2`). `control-lint`
+   prints the live count on every verifier run; these are history, and history
+   is what drifts.
 
    **The unfalsified set includes the entire secret-masking path.**
    `wall-secret-file-mask` states its own uncovered limit

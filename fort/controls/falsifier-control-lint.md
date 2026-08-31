@@ -32,8 +32,11 @@ checker has the exact hole it was built to close.
 lint silently stops working. `test/control-lint.test.ts` proves the lint fails
 on a broken citation and refuses a vacuous run, so the CODE is covered; what is
 uncovered is the stage being removed from `verify-impl.sh` or the manifest being
-emptied. That is the same gap 27 other entries carry and it is reported on every
-run rather than hidden.
+emptied. That is the same gap 28 other entries carry (29 null, less this one)
+and it is reported on every run rather than hidden. *Read 27 until 2026-08-31,
+Warden round-3 finding 1: the author subtracted this entry from the README's
+PRE-round-2 base of 28 instead of from the current 29. `control-lint` prints
+the true figure on every verifier run.*
 
 MEASURED LIMIT, from the Warden's closing observation on `fortkit-4ah3.8`: a
 fingerprint distinguishes a MEASUREMENT from a hand-typed number, which is what

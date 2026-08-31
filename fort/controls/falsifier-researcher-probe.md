@@ -28,7 +28,13 @@ the 7 of 8 (`fortkit-vhk.5.2`) are historical one-off measurements recorded in
 that spec and in the session record. They are evidence the boundary held ONCE.
 They are not a standing control, and nothing re-runs them.
 
-CONSEQUENCE, stated because two other entries depend on it: this key is named as
-`falsified-by` by `fence-researcher-tool-whitelist` and `fence-researcher-deny-set`.
-Those two fences therefore currently name a falsifier that cannot run. That is
-worse than `null`, because it reads as covered. Repaired in the same pass.
+CONSEQUENCE, stated because two other entries depended on it and are now fixed:
+this key WAS named as `falsified-by` by `fence-researcher-tool-whitelist` and
+`fence-researcher-deny-set`. Those two fences named a falsifier that cannot run,
+which is worse than `null` because it reads as covered. **Both are `null` as of
+2026-08-31 and neither names this key any more.**
+
+*Written in the present tense until Warden round-3 finding 3, which is the same
+defect this entry is about: a condition described as live in one sentence and
+repaired in the next, so a reader stopping one sentence early is misled. Tense
+is a claim about time, and it drifts exactly as a number does.*
