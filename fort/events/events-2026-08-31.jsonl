@@ -265,3 +265,4 @@
 {"ts":"2026-08-31T15:19:03-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-08-31T15:16:30-08:00","payload":null}
 {"ts":"2026-08-31T15:23:00-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-08-31T15:19:03-08:00","payload":null}
 {"ts":"2026-08-31T15:24:28-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-08-31T15:23:00-08:00","payload":null}
+{"ts":"2026-08-31T15:26:30-08:00","actor":"emrith","seat":"mayor","category":"bead.closed","target":"fortkit-zj8e.10","detail":"fortkit-zj8e.10 closed: the factory ships the digest; day-zero smoke green in both branch postures","payload":null}
