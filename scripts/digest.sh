@@ -189,21 +189,25 @@ const tagFor = (bead) => {
   return `${action}; ${gate}`;
 };
 for (const { root, members } of [...groups.values()].sort((left, right) => String(left.root.title ?? "").localeCompare(String(right.root.title ?? "")))) {
-  const descendants = all.filter((bead) => rootOf(bead).id === root.id);
-  const hasChildren = descendants.some((bead) => bead.id !== root.id);
-  const closed = descendants.filter((bead) => bead.status === "closed").length;
-  const blockerIds = members.flatMap((member) => (member.dependencies ?? []).filter((dependency) => dependency.type === "blocks").map((dependency) => dependency.depends_on_id));
+  const descendants = all.filter((bead) => rootOf(bead).id === root.id && bead.id !== root.id);
+  const hasChildren = descendants.length > 0;
+  // The filtered gate query is intentionally lean. Dependencies must come from
+  // the all-status record, so blockers outside that query still render by title.
+  const resolvedMembers = members.map((member) => byId.get(member.id) ?? member);
+  const blockerIds = resolvedMembers.flatMap((member) => (member.dependencies ?? []).filter((dependency) => dependency.type === "blocks").map((dependency) => dependency.depends_on_id));
   const blockers = blockerIds.map((id) => byId.get(id)).filter(Boolean);
   const blockerDataUnavailable = blockerIds.some((id) => !byId.has(id));
   const blockerText = blockerDataUnavailable ? "; blocker data unavailable" : blockers.length ? `; blocked by: ${[...new Set(blockers.map((blocker) => blocker.title ?? "untitled"))].join("; ")}` : "";
   if (!hasChildren) {
-    const member = members[0];
-    console.log(`  ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}; ${tagFor(member)}]${blockerText}`);
+    for (const member of members.sort((left, right) => String(left.title ?? "").localeCompare(String(right.title ?? "")))) {
+      console.log(`  ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}; ${tagFor(member)}]${blockerText}`);
+    }
     continue;
   }
+  const closed = descendants.filter((bead) => bead.status === "closed").length;
   console.log(`  ${root.title ?? "untitled"} [${root.id ?? "UNKNOWN"}] — ${closed}/${descendants.length} done${blockerText}`);
   for (const member of members.sort((left, right) => String(left.title ?? "").localeCompare(String(right.title ?? "")))) {
-    if (member.id === root.id && root.issue_type === "epic") continue;
+    if (member.id === root.id) continue;
     console.log(`    ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}; ${tagFor(member)}]`);
   }
 }

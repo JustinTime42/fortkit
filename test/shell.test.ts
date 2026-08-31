@@ -353,7 +353,7 @@ esac
 
     expect(result.stdout).toContain("BY SUBJECT");
     expect(result.stdout).toContain(
-      "Session digest [fortkit-session] — 1/10 done; blocked by: Install the Stop hook",
+      "Session digest [fortkit-session] — 1/9 done; blocked by: Install the Stop hook",
     );
     expect(result.stdout).toContain(
       "Active decision [fortkit-gate-active; in_progress; act-decide; gate-1]",
