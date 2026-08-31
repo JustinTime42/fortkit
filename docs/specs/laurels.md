@@ -105,6 +105,25 @@ Category `laurel`; `target` is the seat; `payload` carries the citation and the
 conferring actor. Emitted through `fort/scripts/emit.sh` like every other event,
 and append-only under standing order 7 like every other record.
 
+**The payload keys are pinned, and this paragraph exists because leaving them
+unpinned cost a defect within hours.** `conferred_by` is the conferring actor.
+`citation` is the artifact — a bead, a commit, a verdict, an event. `seat` and
+`occupant` are the recipient, `seat` duplicating `target` so the payload stands
+alone. **`conferred_by` is required; a laurel event without it is malformed.**
+
+*Amendment of record, 2026-08-31, the day this spec was approved.* The paragraph
+above originally said only that the payload "carries the citation and the
+conferring actor" and named no key. The emitter chose `conferred_by`; the
+generator built the same afternoon read `conferring_actor`, a key that appears
+in zero events in this repository. The rendered output was correct anyway, but
+only because the generator's fallback to `event.actor` happened to equal
+`conferred_by` in all six real laurels — so the coincidence hid the mismatch,
+and it would have broken the first time an emitter differed from a conferrer.
+Found by the Warden in round 1 of `fortkit-35uf.3`. A prose spec that describes
+a field in words and never names it is an interface defined in prose, which the
+global instruction forbids for exactly this reason: two components agreed on the
+sentence and disagreed on the key. Generator half tracked in `fortkit-35uf.7`.
+
 **A laurel is a record of what happened, not a current-state fact.** It is
 therefore governed by SO7 in full and is not eligible for the ledger treatment
 that memory and law receive. A laurel is never corrected, superseded, or
