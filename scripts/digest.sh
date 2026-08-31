@@ -20,17 +20,18 @@ case "$git_common" in /*) ;; *) git_common="$repo_root/$git_common" ;; esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 events_dir="$main_root/fort/events"
 emitter="$main_root/fort/scripts/emit.sh"
-all_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"
-trap 'rm -f "$all_events" "$window_events" "$closed_beads"' EXIT
+all_events="$(mktemp)"; timestamped_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"; timestamp_report="$(mktemp)"
+trap 'rm -f "$all_events" "$timestamped_events" "$window_events" "$closed_beads" "$timestamp_report"' EXIT
 max_decisions_per_gate=5
 
 epoch() { [ -n "$1" ] && date -d "$1" +%s 2>/dev/null; }
 
-stream_state="ok"; malformed=0
+stream_state="ok"; malformed=0; shard_count=0; invalid_timestamps=0
 if [ ! -d "$events_dir" ]; then
   stream_state="unavailable"
 else
   while IFS= read -r -d '' event_file; do
+    shard_count=$((shard_count + 1))
     # Process a shard at once. Per-record jq invocations make a complete
     # historical stream needlessly slow, while raw-input parsing keeps one bad
     # JSONL line from preventing the digest from reporting the rest.
@@ -40,15 +41,31 @@ else
   done < <(find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print0 2>/dev/null | sort -z)
 fi
 
+# Parse timestamps once, after the JSONL stream has been validated. Date.parse
+# understands ISO-8601 offsets, so this keeps the schema's timestamp ordering
+# rule without treating event shard names as dates.
+if [ -s "$all_events" ]; then
+  node -e '
+    let invalid = 0;
+    let input = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => { input += chunk; });
+    process.stdin.on("end", () => {
+      for (const line of input.split("\n")) {
+        if (!line) continue;
+        const event = JSON.parse(line);
+        const instant = typeof event.ts === "string" ? Date.parse(event.ts) : NaN;
+        if (Number.isNaN(instant)) { invalid += 1; continue; }
+        process.stdout.write(JSON.stringify({ ...event, _epoch: Math.floor(instant / 1000) }) + "\n");
+      }
+      process.stderr.write(String(invalid));
+    });
+  ' <"$all_events" >"$timestamped_events" 2>"$timestamp_report"
+  invalid_timestamps="$(cat "$timestamp_report")"
+fi
+
 last_event_timestamp() {
-  local wanted="$1" line ts candidate_epoch latest="" latest_epoch=-1
-  while IFS= read -r line; do
-    [ "$(jq -r '.category // empty' <<<"$line")" = "$wanted" ] || continue
-    ts="$(jq -r '.ts // empty' <<<"$line")"
-    candidate_epoch="$(epoch "$ts")" || continue
-    if [ "$candidate_epoch" -ge "$latest_epoch" ]; then latest="$ts"; latest_epoch="$candidate_epoch"; fi
-  done <"$all_events"
-  printf '%s\n' "$latest"
+  jq -sr --arg wanted "$1" '[.[] | select(.category == $wanted)] | if length == 0 then "" else max_by(._epoch).ts end' "$timestamped_events"
 }
 
 fallback_note=""
@@ -66,11 +83,7 @@ else
 fi
 since_epoch="$(epoch "$since")" || { printf 'digest: invalid --since timestamp: %s\n' "$since" >&2; exit 2; }
 now="$(date -Is)"; now_epoch="$(epoch "$now")"
-while IFS= read -r line; do
-  ts="$(jq -r '.ts // empty' <<<"$line")"
-  event_epoch="$(epoch "$ts")" || continue
-  if [ "$event_epoch" -gt "$since_epoch" ] && [ "$event_epoch" -le "$now_epoch" ]; then printf '%s\n' "$line" >>"$window_events"; fi
-done <"$all_events"
+jq -c --argjson since "$since_epoch" --argjson now "$now_epoch" 'select(._epoch > $since and ._epoch <= $now)' "$timestamped_events" >"$window_events"
 
 event_count() { jq -s '[.[]] | length' "$window_events"; }
 print_window_events() {
@@ -85,17 +98,23 @@ printf 'WINDOW\n  (%s, %s]\n' "$since" "$now"
 [ -z "$fallback_note" ] || printf '  %s\n' "$fallback_note"
 if [ "$stream_state" = unavailable ]; then
   printf 'EVENT STREAM\n  UNAVAILABLE (directory missing: %s)\n' "$events_dir"
+elif [ "$shard_count" -eq 0 ]; then
+  printf 'EVENT STREAM\n  EMPTY WINDOW (0 event shards found in %s)\n' "$events_dir"
 elif [ "$(event_count)" -eq 0 ]; then
   printf 'EVENT STREAM\n  EMPTY WINDOW (no valid events in the selected window)\n'
 else
   printf 'EVENT STREAM\n  %s valid event(s) in the selected window\n' "$(event_count)"
 fi
 [ "$malformed" -eq 0 ] || printf '  WARNING: %s malformed stream record(s) were unreadable\n' "$malformed"
+[ "$invalid_timestamps" -eq 0 ] || printf '  WARNING: %s valid stream record(s) had unreadable timestamps\n' "$invalid_timestamps"
 
 printf 'DECISIONS WAITING\n'
 for gate in gate-1 gate-2 gate-3; do
-  gate_number="${gate#gate-}"; gate_file="$(mktemp)"
-  set +e; bd -C "$main_root" list --status=open --label="$gate" --json >"$gate_file"; gate_status=$?; set -e
+  gate_number="${gate#gate-}"; gate_file="$(mktemp)"; gate_open="$(mktemp)"; gate_in_progress="$(mktemp)"
+  set +e; bd -C "$main_root" list --status=open --label="$gate" --json >"$gate_open"; gate_open_status=$?
+  bd -C "$main_root" list --status=in_progress --label="$gate" --json >"$gate_in_progress"; gate_in_progress_status=$?; set -e
+  if [ "$gate_open_status" -eq 0 ] && [ "$gate_in_progress_status" -eq 0 ]; then jq -s 'add | unique_by(.id)' "$gate_open" "$gate_in_progress" >"$gate_file"; fi
+  gate_status=$((gate_open_status != 0 ? gate_open_status : gate_in_progress_status))
   if [ "$gate_status" -ne 0 ]; then
     printf '  GATE %s: UNAVAILABLE (bd exit %s)\n' "$gate_number" "$gate_status"
   elif ! jq -e 'type == "array"' "$gate_file" >/dev/null 2>&1; then
@@ -112,7 +131,7 @@ for gate in gate-1 gate-2 gate-3; do
       printf '    %s decision(s) elided; full count is %s.\n' "$((gate_total - gate_shown))" "$gate_total"
     fi
   fi
-  rm -f "$gate_file"
+  rm -f "$gate_file" "$gate_open" "$gate_in_progress"
 done
 
 printf 'SHIPPED\n'
@@ -123,28 +142,22 @@ else
 fi
 
 printf 'VERIFIER\n'
-latest_verifier=""; latest_epoch=-1
-while IFS=$'\t' read -r ts category target detail; do
-  candidate_epoch="$(epoch "$ts")" || continue
-  if [ "$candidate_epoch" -ge "$latest_epoch" ]; then latest_epoch="$candidate_epoch"; latest_verifier="$ts|$category|$target|$detail"; fi
-done < <(jq -r 'select(.category == "verify.pass" or .category == "verify.run" or .category == "verify.fail") | [.ts, .category, (.target // ""), (.detail // "")] | @tsv' "$window_events")
+latest_verifier="$(jq -sr '[.[] | select(.category == "verify.pass" or .category == "verify.run" or .category == "verify.fail")] | if length == 0 then "" else max_by(._epoch) | [.ts, .category, (.target // ""), (.detail // "")] | @tsv end' "$window_events")"
 if [ -z "$latest_verifier" ]; then printf '  no verifier event in the selected window\n'
-else IFS='|' read -r ts category target detail <<<"$latest_verifier"; printf '  %s %s%s %s\n' "$ts" "$category" "${target:+ [$target]}" "$detail"; fi
+else IFS=$'\t' read -r ts category target detail <<<"$latest_verifier"; printf '  %s %s%s %s\n' "$ts" "$category" "${target:+ [$target]}" "$detail"; fi
 
 printf 'IN FLIGHT\n'
 declare -A session_count session_detail session_timestamp
 unmatchable=0
 while IFS= read -r line; do
-  category="$(jq -r '.category // empty' <<<"$line")"
-  [ "$category" = session.start ] || [ "$category" = session.end ] || continue
-  seat="$(jq -r '.seat // empty' <<<"$line")"; [ "$seat" = mayor ] && continue
-  target="$(jq -r '.target // empty' <<<"$line")"
+  IFS=$'\t' read -r category seat target ts detail <<<"$line"
+  [ "$seat" = mayor ] && continue
   if [ -z "$seat" ] || [ -z "$target" ]; then unmatchable=$((unmatchable + 1)); continue; fi
   key="$seat|$target"
   if [ "$category" = session.start ]; then
-    session_count["$key"]=$(( ${session_count[$key]:-0} + 1 )); session_detail["$key"]="$(jq -r '.detail // ""' <<<"$line")"; session_timestamp["$key"]="$(jq -r '.ts // ""' <<<"$line")"
+    session_count["$key"]=$(( ${session_count[$key]:-0} + 1 )); session_detail["$key"]="$detail"; session_timestamp["$key"]="$ts"
   elif [ "${session_count[$key]:-0}" -gt 0 ]; then session_count["$key"]=$(( ${session_count[$key]} - 1 )); fi
-done <"$all_events"
+done < <(jq -rs 'sort_by(._epoch)[] | select(.category == "session.start" or .category == "session.end") | [.category, (.seat // ""), (.target // ""), .ts, (.detail // "")] | @tsv' "$timestamped_events")
 
 closed_status=0
 set +e
@@ -173,10 +186,10 @@ while IFS= read -r worktree; do
   # The Forge holds an exclusive lock. A non-blocking shared lock detects it
   # without opening another worktree's lock file for write.
   set +e
-  flock -n -s "$lock" -c true 2>/dev/null
+  flock -E 75 -n -s "$lock" -c true 2>/dev/null
   lock_status=$?
   set -e
-  if [ "$lock_status" -eq 1 ]; then
+  if [ "$lock_status" -eq 75 ]; then
     live_locks=$((live_locks + 1)); holder="$(cat "$worktree/.forge.lock.info" 2>/dev/null || printf 'holder metadata unavailable')"
     printf '  FORGE LOCK %s: %s\n' "$worktree" "$holder"
   elif [ "$lock_status" -ne 0 ]; then
@@ -185,4 +198,9 @@ while IFS= read -r worktree; do
 done < <(git -C "$main_root" worktree list --porcelain | sed -n 's/^worktree //p')
 [ "$live_locks" -ne 0 ] || printf '  no live Forge locks\n'
 
-if [ -z "$since_override" ]; then "$emitter" digest.emitted "Digest emitted for event window since $since" -a harness -t digest.sh; fi
+if [ -z "$since_override" ]; then
+  # This timestamp is the window boundary the anchor names, not a backfill of
+  # when emission happened. Anchoring at $now prevents an unreported gap while
+  # the digest itself is rendering.
+  "$emitter" digest.emitted "Digest emitted for event window since $since" -a harness -t digest.sh -T "$now"
+fi

@@ -5,6 +5,7 @@ import {
   cp,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   rm,
   unlink,
@@ -68,6 +69,7 @@ afterEach(async () => {
       .flatMap((root) => [
         rm(root, { force: true, recursive: true }),
         rm(`${root}-worktrees`, { force: true, recursive: true }),
+        rm(`${root}-worktree`, { force: true, recursive: true }),
       ]),
   );
 });
@@ -167,6 +169,12 @@ describe("scripts/digest.sh", () => {
       join(root, "scripts", "digest.sh"),
       await readFile(join(repoRoot, "scripts", "digest.sh"), "utf8"),
     );
+    await mkdir(join(root, "fort", "scripts"), { recursive: true });
+    await writeFile(
+      join(root, "fort", "scripts", "emit.sh"),
+      await readFile(join(repoRoot, "fort", "scripts", "emit.sh"), "utf8"),
+    );
+    await chmod(join(root, "fort", "scripts", "emit.sh"), 0o755);
     await chmod(join(root, "scripts", "digest.sh"), 0o755);
   }
 
@@ -178,6 +186,7 @@ describe("scripts/digest.sh", () => {
       `#!/bin/sh
 case "$*" in
   *--status=closed*) printf '%s\\n' '[{"id":"fortkit-closed","status":"closed","title":"Already closed"}]' ;;
+  *--status=in_progress*--label=gate-1*) printf '%s\\n' '[{"id":"fortkit-gate-active","status":"in_progress","title":"Active decision","updated_at":"2026-08-08T00:00:00Z"}]' ;;
   *--label=gate-1*) printf '%s\\n' '[
     {"id":"fortkit-gate-old","status":"open","title":"Older decision","updated_at":"2026-08-01T00:00:00Z"},
     {"id":"fortkit-gate-new","status":"open","title":"Newest decision","updated_at":"2026-08-07T00:00:00Z"},
@@ -210,8 +219,11 @@ esac
 
     expect(result.stdout).toContain("EMPTY WINDOW");
     expect(result.stdout).toContain("GATE 2: no decisions waiting");
-    expect(result.stdout).toContain("showing 5 of 6, most recently updated");
-    expect(result.stdout).toContain("1 decision(s) elided; full count is 6");
+    expect(result.stdout).toContain("showing 5 of 7, most recently updated");
+    expect(result.stdout).toContain("2 decision(s) elided; full count is 7");
+    expect(result.stdout).toContain(
+      "fortkit-gate-active [in_progress] Active decision",
+    );
     expect(result.stdout).toContain("fortkit-gate-new [open] Newest decision");
     expect(result.stdout).not.toContain(
       "fortkit-gate-old [open] Older decision",
@@ -269,7 +281,7 @@ esac
       },
     );
 
-    expect(result.stdout).toContain("GATE 1: 6 decision(s) waiting");
+    expect(result.stdout).toContain("GATE 1: 7 decision(s) waiting");
     expect(result.stdout).toContain("fortkit-gate-new [open] Newest decision");
     expect(result.stdout).toContain("2026-08-01T23:24:00-08:00 verify.pass");
   });
@@ -320,6 +332,52 @@ esac
     expect(result.stdout).toContain(
       "1 unmatched session start(s) omitted because the target bead is closed",
     );
+  });
+
+  test("anchors a default window at its rendered upper boundary", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-01.jsonl"),
+      `${JSON.stringify({
+        ts: "2026-08-01T00:00:00Z",
+        actor: "harness",
+        seat: null,
+        category: "digest.emitted",
+        target: "digest.sh",
+        detail: "Previous digest",
+        payload: null,
+      })}\n`,
+    );
+    const fakeBin = await installFakeBd(root);
+
+    const result = await execFileAsync("bash", ["scripts/digest.sh"], {
+      cwd: root,
+      env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+    });
+    const upperBoundary = /\([^,]+, ([^)]+)\]/u.exec(result.stdout)?.[1];
+    expect(upperBoundary).toBeDefined();
+
+    const eventFiles = await readdir(join(root, "fort", "events"));
+    const events = (
+      await Promise.all(
+        eventFiles.map(async (file) =>
+          (
+            await readFile(join(root, "fort", "events", file), "utf8")
+          )
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map(
+              (line) => JSON.parse(line) as { category: string; ts: string },
+            ),
+        ),
+      )
+    ).flat();
+    const anchor = events.findLast(
+      (event) => event.category === "digest.emitted",
+    );
+    expect(anchor?.ts).toBe(upperBoundary);
   });
 });
 
