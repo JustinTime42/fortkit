@@ -97,12 +97,21 @@ systemctl --user list-timers consolidate.timer
 #    consolidated tree — and leaves the working tree CLEAN either way
 systemctl --user start consolidate.service
 journalctl --user -u consolidate.service -e
-git -C ~/dev/fortkit status --short     # must be empty
+# SCOPE THIS TO THE FILES THE UNIT STAGES. A bare `git status` shows
+# .beads/*.jsonl and today's event shard dirty whenever a seat is running,
+# and NONE of that is the service's. A check that goes red for an unrelated
+# reason teaches its reader to ignore it.
+git -C ~/dev/fortkit status --short fort/memory/current.md fort/laurels/
 
 # 3. catch-up, which is what Persistent=true is for. Miss a scheduled run
 #    (machine off or asleep across 03:00) and confirm it fires at the next
 #    opportunity. THIS IS THE ONE THAT MUST BE OBSERVED RATHER THAN ASSUMED.
 ```
+
+**Corrected 2026-08-31 on first use.** The line above originally read `git
+status --short  # must be empty`. It did not and could not: the Overseer ran
+the install during a live Mayor session whose bead exports and event emissions
+dirty the tree continuously. The unit was fine; the check was wrong.
 
 **Why the third check is not optional.** A drafted unit is not a running one,
 and this fort has a measured habit of reading the draft as the deployment: the
