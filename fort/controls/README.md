@@ -2,10 +2,12 @@
 
 Status: v1, fortkit-4ah3.2. Author: Emrith Cairnwright (Mayor), 2026-08-29.
 Vocabulary: `docs/specs/enforcement-vocabulary.md` (Overseer-approved 2026-08-29).
-Lint that keeps this honest: `scripts/control-lint.mjs` (fortkit-4ah3.3, NOT YET
-BUILT — until it exists, every citation here is an unchecked claim, which is
-exactly the condition this register was created to end. Read that sentence as a
-warning label on v1.)
+Lint that keeps this honest: `scripts/control-lint.mjs` (fortkit-4ah3.3). It
+checks every citation against a recorded SHA-256 fingerprint of its cited line.
+Fingerprint recording is explicit and single-control:
+`node scripts/control-lint.mjs --record <control-key>`. The recorder re-reads
+that control's cited line and refuses an unresolved citation; it never bulk
+accepts the register's current state.
 
 ## Corrections to v1 (appended 2026-08-31, not edited in silently)
 

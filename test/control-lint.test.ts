@@ -15,10 +15,8 @@ const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 
 async function controlFixture() {
   const root = await mkdtemp(join(tmpdir(), "fortkit-control-lint-"));
-  await Promise.all([
-    mkdir(join(root, "fort", "controls"), { recursive: true }),
-    mkdir(join(root, "scripts"), { recursive: true }),
-  ]);
+  await mkdir(join(root, "fort", "controls"), { recursive: true });
+  await mkdir(join(root, "scripts"), { recursive: true });
   await Promise.all([
     writeFile(
       join(root, "scripts", "subject.mjs"),
@@ -46,7 +44,7 @@ async function controlFixture() {
   return root;
 }
 
-async function lintFort(root: string) {
+async function lintFort(root: string, arguments_: string[] = []) {
   const outputDirectory = await mkdtemp(
     join(tmpdir(), "fortkit-control-lint-output-"),
   );
@@ -54,16 +52,19 @@ async function lintFort(root: string) {
   const stderrPath = join(outputDirectory, "stderr");
   const result = await run("sh", [
     "-c",
-    '"$1" "$2" "$3" > "$4" 2> "$5"',
+    'stdout="$1"; stderr="$2"; shift 2; "$@" > "$stdout" 2> "$stderr"',
     "sh",
-    process.execPath,
-    lint,
-    root,
     stdoutPath,
     stderrPath,
+    process.execPath,
+    lint,
+    ...arguments_,
+    root,
   ]).then(
     () => ({ code: 0 }),
-    (error: { code?: number }) => ({ code: error.code }),
+    (error: { code?: number; stdout?: string; stderr?: string }) => ({
+      code: error.code,
+    }),
   );
   return {
     ...result,
@@ -93,11 +94,41 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
     );
   });
 
+  test("records one fingerprint by re-reading its cited line", async () => {
+    const root = await controlFixture();
+    await writeFile(
+      join(root, "scripts", "subject.mjs"),
+      "export const control = false;\n",
+    );
+    const recording = await lintFort(root, ["--record", "fence-example"]);
+    expect(recording.code).toBe(0);
+    expect(recording.stdout).toContain(
+      "recorded fence-example from scripts/subject.mjs:1",
+    );
+    expect((await lintFort(root)).code).toBe(0);
+  });
+
+  test("refuses to record when the cited line does not resolve", async () => {
+    const root = await controlFixture();
+    const fingerprintsPath = join(root, "scripts", "control-fingerprints.json");
+    const before = await readFile(fingerprintsPath, "utf8");
+    await writeFile(
+      join(root, "fort", "controls", "fence-example.md"),
+      "---\nkey: fence-example\nkind: fence\nimplements: scripts/subject.mjs:99\nfalsified-by: null\n---\n",
+    );
+    const recording = await lintFort(root, ["--record", "fence-example"]);
+    expect(recording.code).toBe(1);
+    expect(recording.stderr).toContain(
+      "implements line scripts/subject.mjs:99 does not exist",
+    );
+    expect(await readFile(fingerprintsPath, "utf8")).toBe(before);
+  });
+
   test("refuses a vacuous control register", async () => {
     const root = await mkdtemp(join(tmpdir(), "fortkit-control-lint-empty-"));
+    await mkdir(join(root, "fort", "controls"), { recursive: true });
+    await mkdir(join(root, "scripts"), { recursive: true });
     await Promise.all([
-      mkdir(join(root, "fort", "controls"), { recursive: true }),
-      mkdir(join(root, "scripts"), { recursive: true }),
       writeFile(join(root, "scripts", "control-fingerprints.json"), "{}\n"),
     ]);
     const failure = await lintFort(root);
