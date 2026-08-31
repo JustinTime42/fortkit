@@ -27,6 +27,7 @@ const kinds = new Set([
   "falsifier",
   "latch",
 ]);
+const statuses = new Set(["active", "inactive", "absent"]);
 const failures = [];
 const missingFalsifiers = [];
 
@@ -160,6 +161,12 @@ if (!recording)
     else if (!kinds.has(control.kind))
       failures.push(
         `${controlPath}: unknown kind ${JSON.stringify(control.kind)}`,
+      );
+    if (control.status === undefined)
+      failures.push(`${controlPath}: status is required`);
+    else if (!statuses.has(control.status))
+      failures.push(
+        `${controlPath}: unknown status ${JSON.stringify(control.status)}`,
       );
     if (!("falsified-by" in control))
       failures.push(`${controlPath}: falsified-by must be declared explicitly`);

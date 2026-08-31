@@ -74,8 +74,9 @@ stops resolving.
 - `falsified-by` — the control key that would go red if this one silently
   stopped working, or `null`. **A null is legal and reported, never failed.**
   A control with no falsifier is a fact about the fort.
-- `status` — `active` (this fort runs it today) or `absent` (something
-  authoritative claims it and the tree does not have it). Added 2026-08-31 on
+- `status` — `active` (this fort runs it today), `inactive` (the artifact exists
+  but this fort does not run it), or `absent` (something authoritative claims it
+  and the tree does not have it). Added 2026-08-31 on
   Warden round-1 finding 2: five entries carried `status: active` over bodies
   saying, in capitals, that the control was not built. The machine field and the
   human prose disagreed inside one file, and `status` is the field `control-lint`

@@ -417,6 +417,43 @@ esac
     expect(result.stdout).toContain(
       "WARNING: 1 closed beads in window, 0 bead.closed events",
     );
+
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-31.jsonl"),
+      [
+        {
+          ts: new Date().toISOString(),
+          actor: "emrith",
+          seat: "mayor",
+          category: "merge",
+          target: "fortkit-test",
+          detail: "fixture merged",
+          payload: null,
+        },
+        {
+          ts: new Date().toISOString(),
+          actor: "emrith",
+          seat: "mayor",
+          category: "bead.closed",
+          target: "fortkit-closed",
+          detail: "fixture closed",
+          payload: null,
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n"),
+    );
+    const matched = await execFileAsync(
+      "bash",
+      ["scripts/digest.sh", "--since", "2020-01-01T00:00:00Z"],
+      {
+        cwd: root,
+        env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+      },
+    );
+    expect(matched.stdout).toContain("merge events: 1 of 1 commits");
+    expect(matched.stdout).toContain("bead.closed events: 1 of 1 closed beads");
+    expect(matched.stdout.split("VERIFIER")[0]).not.toContain("WARNING:");
   });
 
   test("merge-event check fails for an unmatched main merge and passes with its event", async () => {
@@ -475,7 +512,7 @@ esac
       ],
       { cwd: root },
     );
-    const merge = (
+    const firstMerge = (
       await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: root })
     ).stdout.trim();
 
@@ -492,7 +529,7 @@ esac
 
     await writeFile(
       join(root, "fort", "events", "events-2026-08-31.jsonl"),
-      `${JSON.stringify({ ts: "2026-08-31T00:00:00Z", actor: "emrith", seat: "mayor", category: "merge", target: "fortkit-test", detail: "fixture merged", payload: { mergeCommit: merge } })}\n`,
+      `${JSON.stringify({ ts: "2026-08-31T00:00:00Z", actor: "emrith", seat: "mayor", category: "merge", target: "fortkit-test", detail: "fixture merged", payload: { mergeCommit: firstMerge } })}\n`,
     );
     const result = await execFileAsync(
       "bash",
@@ -500,6 +537,26 @@ esac
       { cwd: root },
     );
     expect(result.stdout).toContain("1 of 1 main commits matched");
+  });
+
+  test("merge-event check skips explicitly outside a git checkout", async () => {
+    const root = await mkdtemp(join(tmpdir(), "fortkit-merge-event-outside-"));
+    roots.push(root);
+    await mkdir(join(root, "scripts"));
+    await writeFile(
+      join(root, "scripts", "merge-event-check.sh"),
+      await readFile(join(repoRoot, "scripts", "merge-event-check.sh"), "utf8"),
+    );
+
+    const result = await execFileAsync(
+      "bash",
+      ["scripts/merge-event-check.sh"],
+      {
+        cwd: root,
+      },
+    );
+    expect(result.stderr).toContain("merge-event-check: SKIPPED");
+    expect(result.stderr).toContain("is not a git checkout");
   });
 
   test("anchors a default window at its rendered upper boundary", async () => {

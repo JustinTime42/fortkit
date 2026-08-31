@@ -16,7 +16,11 @@ while [ "$#" -gt 0 ]; do
 done
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-git_common="$(git -C "$repo_root" rev-parse --git-common-dir)"
+git_common="$(git -C "$repo_root" rev-parse --git-common-dir 2>/dev/null || true)"
+if [ -z "$git_common" ]; then
+  printf 'merge-event-check: SKIPPED — %s is not a git checkout, so main merge coverage is unavailable.\n' "$repo_root" >&2
+  exit 0
+fi
 case "$git_common" in /*) ;; *) git_common="$repo_root/$git_common" ;; esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 events_dir="$main_root/fort/events"
@@ -42,15 +46,27 @@ done < <(find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print0 |
 git -C "$main_root" log refs/heads/main --merges --since="$since" --format='%H%x09%s' >"$merges"
 commit_count=0
 missing=0
+declare -A legacy_matches
 while IFS=$'\t' read -r commit subject; do
   [ -n "$commit" ] || continue
   commit_count=$((commit_count + 1))
   if [[ "$subject" =~ ^Merge\ (fortkit-[[:alnum:].-]+): ]]; then
     target="${BASH_REMATCH[1]}"
-    if ! jq -e --arg target "$target" --arg commit "$commit" \
-      'select(.target == $target or .target == $commit or (.payload.mergeCommit? == $commit))' "$events" >/dev/null; then
-      printf 'merge-event-check: missing merge event for %s (%s)\n' "$commit" "$target" >&2
-      missing=$((missing + 1))
+    # A commit hash is an exact correspondence. Older events have only a bead
+    # target, so consume those one at a time rather than allowing one event to
+    # satisfy every later merge of the same bead.
+    if jq -e --arg commit "$commit" \
+      'select(.target == $commit or (.payload.mergeCommit? == $commit))' "$events" >/dev/null; then
+      :
+    else
+      used="${legacy_matches[$target]:-0}"
+      available="$(jq -s --arg target "$target" '[.[] | select(.target == $target and (.payload.mergeCommit? | not))] | length' "$events")"
+      if [ "$used" -lt "$available" ]; then
+        legacy_matches["$target"]=$((used + 1))
+      else
+        printf 'merge-event-check: missing merge event for %s (%s)\n' "$commit" "$target" >&2
+        missing=$((missing + 1))
+      fi
     fi
   else
     printf 'merge-event-check: cannot identify bead for merge %s: %s\n' "$commit" "$subject" >&2
