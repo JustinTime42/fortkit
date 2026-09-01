@@ -29,9 +29,11 @@ boundary_tolerance_seconds=120
 
 epoch() { [ -n "$1" ] && date -d "$1" +%s 2>/dev/null; }
 
-stream_state="ok"; malformed=0; shard_count=0; invalid_timestamps=0
+stream_state="ok"; malformed=0; shard_count=0; valid_records=0; invalid_timestamps=0
 if [ ! -d "$events_dir" ]; then
   stream_state="unavailable"
+elif [ ! -r "$events_dir" ] || [ ! -x "$events_dir" ]; then
+  stream_state="unreadable"
 else
   while IFS= read -r -d '' event_file; do
     shard_count=$((shard_count + 1))
@@ -39,9 +41,28 @@ else
     # historical stream needlessly slow, while raw-input parsing keeps one bad
     # JSONL line from preventing the digest from reporting the rest.
     total_records="$(awk 'END { print NR }' "$event_file")"
-    valid_records="$(jq -Rc 'fromjson? | select(type == "object")' "$event_file" | tee -a "$all_events" | awk 'END { print NR }')"
-    malformed=$((malformed + total_records - valid_records))
+    shard_valid_records="$(jq -Rc 'fromjson? | select(type == "object")' "$event_file" | tee -a "$all_events" | awk 'END { print NR }')"
+    valid_records=$((valid_records + shard_valid_records))
+    malformed=$((malformed + total_records - shard_valid_records))
   done < <(find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print0 2>/dev/null | sort -z)
+fi
+
+# The stream must be classified before deriving the window. A missing anchor is
+# ordinary at founding, while an absent, unreadable, or wholly malformed stream
+# is not evidence that there is simply nothing to report.
+if [ "$stream_state" = unavailable ]; then
+  printf 'EVENT STREAM\n  UNAVAILABLE (directory missing: %s)\n' "$events_dir" >&2
+  exit 1
+elif [ "$stream_state" = unreadable ]; then
+  printf 'EVENT STREAM\n  UNAVAILABLE (could not read directory: %s)\n' "$events_dir" >&2
+  exit 1
+elif [ "$shard_count" -eq 0 ] && [ -z "$since_override" ]; then
+  printf 'EVENT STREAM\n  EMPTY WINDOW (0 event shards found in %s)\n' "$events_dir"
+  exit 0
+elif [ "$shard_count" -gt 0 ] && [ "$valid_records" -eq 0 ]; then
+  printf 'EVENT STREAM\n  UNAVAILABLE (no valid records in %s event shard(s))\n' "$shard_count" >&2
+  [ "$malformed" -eq 0 ] || printf '  WARNING: %s malformed stream record(s) were unreadable\n' "$malformed" >&2
+  exit 1
 fi
 
 # Parse timestamps once, after the JSONL stream has been validated. Date.parse
@@ -79,7 +100,10 @@ else
   if [ -z "$since" ]; then
     since="$(last_event_timestamp session.start)"
     if [ -z "$since" ]; then
-      printf 'digest: no digest.emitted or session.start event exists. Supply --since.\n' >&2; exit 1
+      printf 'EVENT STREAM\n  %s valid event(s) present; no session history exists yet\n' "$valid_records"
+      [ "$malformed" -eq 0 ] || printf '  WARNING: %s malformed stream record(s) were unreadable\n' "$malformed"
+      [ "$invalid_timestamps" -eq 0 ] || printf '  WARNING: %s valid stream record(s) had unreadable timestamps\n' "$invalid_timestamps"
+      exit 0
     fi
     fallback_note="first run; using last session.start"
   fi

@@ -283,6 +283,77 @@ esac
     expect(result.stdout).toContain("no verifier event in the selected window");
   });
 
+  test("distinguishes stream health from the absence of a session-history anchor", async () => {
+    const root = await createFort();
+    await installDigest(root);
+    const eventsDirectory = join(root, "fort", "events");
+
+    await writeFile(
+      join(eventsDirectory, "events-2026-08-31.jsonl"),
+      [
+        {
+          ts: "2026-08-31T00:00:00Z",
+          actor: "founder",
+          seat: null,
+          category: "fort.founded",
+          target: null,
+          detail: "Fort founded",
+          payload: null,
+        },
+        {
+          ts: "2026-08-31T00:00:01Z",
+          actor: "founder",
+          seat: null,
+          category: "seat.founded",
+          target: "forge",
+          detail: "Forge founded",
+          payload: null,
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n"),
+    );
+
+    const dayZero = await execFileAsync("bash", ["scripts/digest.sh"], {
+      cwd: root,
+    });
+    expect(dayZero.stdout).toContain("2 valid event(s) present");
+    expect(dayZero.stdout).toContain("no session history exists yet");
+
+    await unlink(join(eventsDirectory, "events-2026-08-31.jsonl"));
+    const empty = await execFileAsync("bash", ["scripts/digest.sh"], {
+      cwd: root,
+    });
+    expect(empty.stdout).toContain("EMPTY WINDOW (0 event shards found");
+
+    await writeFile(
+      join(eventsDirectory, "events-2026-08-31.jsonl"),
+      "not json\n",
+    );
+    const malformed = await execFileAsync("bash", ["scripts/digest.sh"], {
+      cwd: root,
+    }).catch((error: { code?: number; stderr?: string }) => error);
+    expect(malformed).toMatchObject({ code: 1 });
+    expect(malformed.stderr).toContain("no valid records");
+    expect(malformed.stderr).toContain("malformed stream record");
+
+    await chmod(eventsDirectory, 0o000);
+    const unreadable = await execFileAsync("bash", ["scripts/digest.sh"], {
+      cwd: root,
+    }).catch((error: { code?: number; stderr?: string }) => error);
+    await chmod(eventsDirectory, 0o755);
+    expect(unreadable).toMatchObject({ code: 1 });
+    expect(unreadable.stderr).toContain("could not read directory");
+
+    await unlink(join(eventsDirectory, "events-2026-08-31.jsonl"));
+    await rm(eventsDirectory, { recursive: true });
+    const absent = await execFileAsync("bash", ["scripts/digest.sh"], {
+      cwd: root,
+    }).catch((error: { code?: number; stderr?: string }) => error);
+    expect(absent).toMatchObject({ code: 1 });
+    expect(absent.stderr).toContain("directory missing");
+  });
+
   test("uses the main event stream from a worktree and reports the blocking gate", async () => {
     const root = await createFort();
     await installDigest(root);
@@ -914,7 +985,7 @@ describe("scripts/quiescent.sh and digest-hook.sh", () => {
   async function installQuiescence(root: string) {
     await mkdir(join(root, "scripts"), { recursive: true });
     await mkdir(join(root, "fort", "events"), { recursive: true });
-    for (const script of ["quiescent.sh", "digest-hook.sh"]) {
+    for (const script of ["quiescent.sh", "digest-hook.sh", "digest.sh"]) {
       await writeFile(
         join(root, "scripts", script),
         await readFile(join(repoRoot, "scripts", script), "utf8"),
@@ -1237,6 +1308,35 @@ while :; do sleep 1; done
     });
 
     expect(result.stdout).toBe("DIGEST RAN\n");
+  });
+
+  test("does not report a digest failure when day-zero history has no anchor", async () => {
+    const root = await createFort();
+    await installQuiescence(root);
+    await writeFile(
+      join(root, "scripts", "quiescent.sh"),
+      "#!/bin/sh\nexit 0\n",
+    );
+    await chmod(join(root, "scripts", "quiescent.sh"), 0o755);
+    await writeFile(
+      join(root, "fort", "events", "events-2026-08-31.jsonl"),
+      `${JSON.stringify({
+        ts: "2026-08-31T00:00:00Z",
+        actor: "founder",
+        seat: null,
+        category: "fort.founded",
+        target: null,
+        detail: "Fort founded",
+        payload: null,
+      })}\n`,
+    );
+
+    const result = await execFileAsync("bash", ["scripts/digest-hook.sh"], {
+      cwd: root,
+    });
+    expect(result.stdout).toContain("1 valid event(s) present");
+    expect(result.stdout).toContain("no session history exists yet");
+    expect(result.stdout).not.toContain("digest could not be produced");
   });
 });
 
