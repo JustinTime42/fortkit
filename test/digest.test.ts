@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -292,6 +292,7 @@ describe("civilization digest", () => {
         addFort("missing-events", "amend (missing-events-bead)", null),
         addFort("malformed-events", "amend (malformed-events-bead)", [
           "not json",
+          "also not json",
           JSON.stringify({
             ts: "2026-08-04T00:00:00Z",
             actor: "kethra",
@@ -302,7 +303,17 @@ describe("civilization digest", () => {
         addFort("malformed-unannounced", "amend (malformed-unannounced-bead)", [
           "not json",
         ]),
-        addFort("historical-malformed", "amend (historical-bead)", []),
+        addFort(
+          "historical-malformed",
+          "amend (historical-malformed-bead)",
+          [],
+        ),
+        addFort("unreadable-events", "amend (unreadable-events-bead)", []),
+        addFort(
+          "historical-unreadable",
+          "amend (historical-unreadable-bead)",
+          [],
+        ),
       ]);
       const registry = join(directory, "civilization.json");
       await writeFile(
@@ -318,6 +329,8 @@ describe("civilization digest", () => {
               "Malformed events",
               "Malformed unannounced",
               "Historical malformed",
+              "Unreadable events",
+              "Historical unreadable",
             ][index],
             repo: path,
           })),
@@ -330,6 +343,21 @@ describe("civilization digest", () => {
         join(forts[7] as string, "fort", "events", "events-2026-07-01.jsonl"),
         "not json\n",
       );
+      await chmod(
+        join(forts[8] as string, "fort", "events", "events-2026-08-04.jsonl"),
+        0o000,
+      );
+      await mkdir(join(forts[9] as string, "fort", "events"), {
+        recursive: true,
+      });
+      const historicalUnreadableShard = join(
+        forts[9] as string,
+        "fort",
+        "events",
+        "events-2026-07-01.jsonl",
+      );
+      await writeFile(historicalUnreadableShard, "{}\n");
+      await chmod(historicalUnreadableShard, 0o000);
 
       const digest = await readCivilizationDigest(
         registry,
@@ -358,11 +386,17 @@ describe("civilization digest", () => {
         },
         { announced: "indeterminate", announcedBeadRef: null },
         { announced: "unannounced", announcedBeadRef: null },
+        { announced: "indeterminate", announcedBeadRef: null },
+        { announced: "unannounced", announcedBeadRef: null },
       ]);
+      expect(digest.forts[5]?.eventsMalformed).toBe(2);
       expect(digest.forts[7]?.eventsMalformed).toBe(0);
+      expect(digest.forts[8]?.eventsUnreadable).toBe(1);
+      expect(digest.forts[9]?.eventsUnreadable).toBe(0);
       expect(formatDigest(digest)).toContain("announced: multi-amendment");
       expect(formatDigest(digest)).toContain("NO BEAD REF");
       expect(formatDigest(digest)).toContain("indeterminate");
+      expect(formatDigest(digest)).toContain("unreadable 1");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

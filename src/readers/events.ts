@@ -27,7 +27,7 @@ export async function readEventFeed(
 
   const events: Array<{ instant: number; event: EventDetail }> = [];
   let malformed = 0;
-  const malformedFiles = new Set<string>();
+  const shards: EventFeed["shards"] = {};
   for (const file of files
     .filter((name) => /^events-\d{4}-\d{2}-\d{2}\.jsonl$/.test(name))
     .sort()) {
@@ -35,8 +35,10 @@ export async function readEventFeed(
     try {
       contents = await readFile(join(eventsDirectory, file), "utf8");
     } catch {
+      shards[file] = { malformed: 0, unreadable: true };
       continue;
     }
+    let shardMalformed = 0;
     for (const line of contents.split(/\r?\n/)) {
       if (line.trim() === "") {
         continue;
@@ -45,13 +47,13 @@ export async function readEventFeed(
         const record = JSON.parse(line) as EventRecord;
         if (typeof record.ts !== "string" || typeof record.actor !== "string") {
           malformed += 1;
-          malformedFiles.add(file);
+          shardMalformed += 1;
           continue;
         }
         const instant = Date.parse(record.ts);
         if (Number.isNaN(instant)) {
           malformed += 1;
-          malformedFiles.add(file);
+          shardMalformed += 1;
           continue;
         }
         const event: EventDetail = {
@@ -68,14 +70,15 @@ export async function readEventFeed(
       } catch {
         // An event shard is append-only and may contain a damaged line.
         malformed += 1;
-        malformedFiles.add(file);
+        shardMalformed += 1;
       }
     }
+    shards[file] = { malformed: shardMalformed, unreadable: false };
   }
   events.sort((left, right) => right.instant - left.instant);
   return {
     events: events.map(({ event }) => event),
     malformed,
-    malformedFiles: [...malformedFiles],
+    shards,
   };
 }

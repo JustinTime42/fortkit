@@ -10,7 +10,11 @@ import { readHandoffSections } from "./readers/handoffs.ts";
 import { readRegistryEntries } from "./readers/registry.ts";
 import type { TelemetryCounts } from "./readers/telemetry.ts";
 import { readTelemetryCounts } from "./readers/telemetry.ts";
-import type { ConstitutionDiff, EventDetail } from "./types.ts";
+import type {
+  ConstitutionDiff,
+  EventDetail,
+  EventShardHealth,
+} from "./types.ts";
 
 const maxEventsPerFort = 50;
 const maxHandoffSectionsPerFort = 50;
@@ -21,6 +25,7 @@ type DigestFort = {
   present: boolean;
   events: EventDetail[] | null;
   eventsMalformed: number | null;
+  eventsUnreadable: number | null;
   closedBeads: ClosedBeadSource | null;
   handoffSections: HandoffSection[] | null;
   handoffSectionsTruncated: number | null;
@@ -50,31 +55,53 @@ function inWindow(ts: string, since: number, until: number): boolean {
   return !Number.isNaN(instant) && instant >= since && instant < until;
 }
 
-function malformedEventsInWindow(
-  malformedFiles: string[],
+function shardHealthInWindow(
+  shards: Record<string, EventShardHealth>,
   since: number,
   until: number,
-): number {
-  return malformedFiles.filter((file) => {
-    const date = /^events-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(file)?.[1];
-    if (date === undefined) return true;
-    const dayStart = Date.parse(`${date}T00:00:00.000Z`);
-    if (Number.isNaN(dayStart)) return true;
-    // Filenames use the writer's local date, not UTC. Retain a malformed
-    // shard unless its possible UTC span is wholly outside the digest window.
-    const earliest = dayStart - 14 * 60 * 60 * 1000;
-    const latest = dayStart + 36 * 60 * 60 * 1000;
-    return earliest < until && latest > since;
-  }).length;
+): { malformed: number; unreadable: number } {
+  return Object.entries(shards).reduce(
+    (total, [file, shard]) => {
+      const date = /^events-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(file)?.[1];
+      if (date === undefined) {
+        return {
+          malformed: total.malformed + shard.malformed,
+          unreadable: total.unreadable + Number(shard.unreadable),
+        };
+      }
+      const dayStart = Date.parse(`${date}T00:00:00.000Z`);
+      if (Number.isNaN(dayStart)) {
+        return {
+          malformed: total.malformed + shard.malformed,
+          unreadable: total.unreadable + Number(shard.unreadable),
+        };
+      }
+      // Filenames use the writer's local date, not UTC. Retain a malformed
+      // shard unless its possible UTC span is wholly outside the digest window.
+      const earliest = dayStart - 14 * 60 * 60 * 1000;
+      const latest = dayStart + 36 * 60 * 60 * 1000;
+      if (earliest >= until || latest <= since) return total;
+      return {
+        malformed: total.malformed + shard.malformed,
+        unreadable: total.unreadable + Number(shard.unreadable),
+      };
+    },
+    { malformed: 0, unreadable: 0 },
+  );
 }
 
 function correlateConstitutionDiffs(
   diffs: UncorrelatedConstitutionDiff[] | null,
   events: EventDetail[] | null,
   eventsMalformed: number | null,
+  eventsUnreadable: number | null,
 ): ConstitutionDiff[] | null {
   if (diffs === null) return null;
-  if (events === null || eventsMalformed === null) {
+  if (
+    events === null ||
+    eventsMalformed === null ||
+    eventsUnreadable === null
+  ) {
     return diffs.map((diff) => ({
       ...diff,
       announced: "indeterminate",
@@ -101,7 +128,10 @@ function correlateConstitutionDiffs(
     }
     return {
       ...diff,
-      announced: eventsMalformed > 0 ? "indeterminate" : "unannounced",
+      announced:
+        eventsMalformed > 0 || eventsUnreadable > 0
+          ? "indeterminate"
+          : "unannounced",
       announcedBeadRef: null,
     };
   });
@@ -120,6 +150,7 @@ async function readDigestFort(
       present: false,
       events: null,
       eventsMalformed: null,
+      eventsUnreadable: null,
       closedBeads: null,
       handoffSections: null,
       handoffSectionsTruncated: null,
@@ -160,14 +191,12 @@ async function readDigestFort(
           return dayStart < untilInstant && dayEnd > sinceInstant;
         });
   const fullWindowEvents = events === undefined ? null : events;
-  const eventsMalformed =
+  const eventHealth =
     eventFeed === null
       ? null
-      : malformedEventsInWindow(
-          eventFeed.malformedFiles,
-          sinceInstant,
-          untilInstant,
-        );
+      : shardHealthInWindow(eventFeed.shards, sinceInstant, untilInstant);
+  const eventsMalformed = eventHealth?.malformed ?? null;
+  const eventsUnreadable = eventHealth?.unreadable ?? null;
   return {
     name,
     path,
@@ -177,6 +206,7 @@ async function readDigestFort(
         ? null
         : fullWindowEvents.slice(0, maxEventsPerFort),
     eventsMalformed,
+    eventsUnreadable,
     eventsTruncated:
       events === undefined
         ? null
@@ -198,6 +228,7 @@ async function readDigestFort(
       constitutionDiffs,
       fullWindowEvents,
       eventsMalformed,
+      eventsUnreadable,
     ),
     telemetry,
   };
@@ -234,7 +265,7 @@ export function formatDigest(digest: CivilizationDigest): string {
     ...digest.forts.flatMap((fort) => [
       "",
       `# ${fort.name} — ${fort.present ? "present" : "ABSENT"}`,
-      `events: ${fort.events === null ? "ABSENT" : `${fort.events.length} (malformed ${fort.eventsMalformed}; truncated ${fort.eventsTruncated})`}`,
+      `events: ${fort.events === null ? "ABSENT" : `${fort.events.length} (malformed ${fort.eventsMalformed}; unreadable ${fort.eventsUnreadable}; truncated ${fort.eventsTruncated})`}`,
       `closed beads: ${formatClosedBeads(fort.closedBeads)}`,
       `handoff sections: ${fort.handoffSections === null ? "ABSENT" : `${fort.handoffSections.length} (truncated ${fort.handoffSectionsTruncated})`}`,
       `git log: ${fort.gitLog === null ? "ABSENT" : fort.gitLog.length}`,
