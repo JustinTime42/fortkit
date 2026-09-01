@@ -17,7 +17,13 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+
+import {
+  nestedShellSpawnSkipReason,
+  shellSpawnSkipReason,
+  spawnPermissionSkipReason,
+} from "./spawn-permission.js";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -88,6 +94,34 @@ afterEach(async () => {
         rm(`${root}-worktree`, { force: true, recursive: true }),
       ]),
   );
+});
+
+test("only classifies spawn permission failures as shell-test skips", () => {
+  expect(spawnPermissionSkipReason({ code: "EPERM" })).toContain("EPERM");
+  expect(spawnPermissionSkipReason({ code: "EACCES" })).toContain("EACCES");
+  expect(spawnPermissionSkipReason({ code: "ENOENT" })).toBeNull();
+  expect(spawnPermissionSkipReason({ code: 1 })).toBeNull();
+});
+
+// The Forge mask denies every shell spawn with EPERM. Check immediately before
+// each test because a one-time probe is not evidence that a later spawn works.
+// In a normal posture this hook is inactive and all existing positive controls
+// and deliberate-failure tests still run.
+let announcedShellSpawnSkip = false;
+beforeEach(async (context) => {
+  if (
+    context.task.name ===
+    "only classifies spawn permission failures as shell-test skips"
+  ) {
+    return;
+  }
+  const reason = shellSpawnSkipReason() ?? (await nestedShellSpawnSkipReason());
+  if (reason === null) return;
+  if (!announcedShellSpawnSkip) {
+    console.warn(`shell-spawning tests: SKIPPED - ${reason}`);
+    announcedShellSpawnSkip = true;
+  }
+  context.skip(reason);
 });
 
 describe.each(emitCopies)("%s emit.sh", (_copyName, emitPath) => {
@@ -569,7 +603,9 @@ esac
       ],
       { cwd: root },
     );
-    await execFileAsync("git", ["checkout", "--quiet", "main"], { cwd: root });
+    await execFileAsync("git", ["checkout", "--quiet", "main"], {
+      cwd: root,
+    });
     await execFileAsync(
       "git",
       [
@@ -793,7 +829,9 @@ esac
       ],
       { cwd: root },
     );
-    await execFileAsync("git", ["checkout", "--quiet", "main"], { cwd: root });
+    await execFileAsync("git", ["checkout", "--quiet", "main"], {
+      cwd: root,
+    });
     await execFileAsync(
       "git",
       [
@@ -1067,7 +1105,10 @@ describe("scripts/quiescent.sh and digest-hook.sh", () => {
         lock,
         join(root, "scripts", "quiescent.sh"),
       ],
-      { cwd: root, env: { ...process.env, FORTKIT_WORKTREES_ROOT: worktrees } },
+      {
+        cwd: root,
+        env: { ...process.env, FORTKIT_WORKTREES_ROOT: worktrees },
+      },
     ).catch((error: { code?: number; stdout?: string }) => error);
 
     expect(result).toMatchObject({ code: 1 });
@@ -1174,7 +1215,9 @@ while :; do sleep 1; done
     );
     await chmod(wardenScript, 0o755);
     // Mayor launches Wardens from the fort root with a relative script path.
-    const child = execFile("bash", ["fort/scripts/warden.sh"], { cwd: root });
+    const child = execFile("bash", ["fort/scripts/warden.sh"], {
+      cwd: root,
+    });
 
     try {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -1259,7 +1302,9 @@ while :; do sleep 1; done
 `,
     );
     await chmod(verifierScript, 0o755);
-    const child = execFile("bash", ["scripts/verify-impl.sh"], { cwd: root });
+    const child = execFile("bash", ["scripts/verify-impl.sh"], {
+      cwd: root,
+    });
 
     try {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -1507,7 +1552,9 @@ describe("fort-init", () => {
       const registryDirectory = join(root, "registry");
       const kit = join(root, "kit");
       await mkdir(registryDirectory);
-      await cp(join(repoRoot, "bin"), join(kit, "bin"), { recursive: true });
+      await cp(join(repoRoot, "bin"), join(kit, "bin"), {
+        recursive: true,
+      });
       await cp(join(repoRoot, "templates"), join(kit, "templates"), {
         recursive: true,
       });
@@ -1688,9 +1735,11 @@ env FORT_MASKED="$marker" MAYOR_NO_MASK=1 "$FAKE_BWRAP_ROOT/fort/scripts/mayor.s
       await symlink(join("/usr/bin", entry), join(shim, entry));
     }
     for (const tool of ["bd", "jq", "git"]) {
-      const resolved = execFileSync("sh", ["-c", `command -v ${tool}`], {
-        encoding: "utf8",
-      }).trim();
+      const { stdout } = await execFileAsync("sh", [
+        "-c",
+        `command -v ${tool}`,
+      ]);
+      const resolved = stdout.trim();
       await rm(join(shim, tool), { force: true });
       await symlink(resolved, join(shim, tool));
     }
@@ -1744,16 +1793,18 @@ env FORT_MASKED="$marker" MAYOR_NO_MASK=1 "$FAKE_BWRAP_ROOT/fort/scripts/mayor.s
       // are equally satisfied by a shim that simply broke the script.
       const second = await createFort();
       const secondRegistry = await stagedRegistry(second);
-      await symlink(
-        execFileSync("sh", ["-c", "command -v node"], {
-          encoding: "utf8",
-        }).trim(),
-        join(shim, "node"),
-      );
+      const { stdout } = await execFileAsync("sh", ["-c", "command -v node"]);
+      await symlink(stdout.trim(), join(shim, "node"));
       await execFileAsync(
         "bash",
         [join(repoRoot, "bin/fort-init"), second, "nodeful", "Node restored."],
-        { env: { ...process.env, PATH: shim, FORT_REGISTRY: secondRegistry } },
+        {
+          env: {
+            ...process.env,
+            PATH: shim,
+            FORT_REGISTRY: secondRegistry,
+          },
+        },
       );
       expect(
         JSON.parse(await readFile(secondRegistry, "utf8")).forts,

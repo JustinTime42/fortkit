@@ -5,7 +5,13 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
+
+import {
+  nestedShellSpawnSkipReason,
+  nodeSpawnSkipReason,
+  shellSpawnSkipReason,
+} from "./spawn-permission.js";
 
 const run = promisify(execFile);
 const check = fileURLToPath(
@@ -69,14 +75,31 @@ async function beadsFixture() {
   return { root, tracked };
 }
 
-describe.skipIf(!hasBd)("beads-export-check", () => {
+describe("beads-export-check", () => {
+  let announcedSkip = false;
+
+  beforeEach(async (context) => {
+    const reason =
+      nodeSpawnSkipReason() ??
+      shellSpawnSkipReason() ??
+      (await nestedShellSpawnSkipReason());
+    if (reason !== null) {
+      if (!announcedSkip) {
+        console.warn(`beads-export-check: SKIPPED - ${reason}`);
+        announcedSkip = true;
+      }
+      context.skip(reason);
+    }
+    context.skip(!hasBd, "SKIPPED - bd is not on PATH");
+  });
+
   test("passes when the committed export matches the database", async () => {
     const { root } = await beadsFixture();
     const result = await run(check, [root]);
     expect(result.stderr).toContain("matches the database");
   }, 60_000);
 
-  test("FAILS when the committed export diverges — the control's own falsifier", async () => {
+  test("FAILS when the committed export diverges — the control's own falsifier", async (context) => {
     const { root, tracked } = await beadsFixture();
     const original = await readFile(tracked, "utf8");
     const [first, ...rest] = original.split("\n").filter(Boolean);
@@ -93,6 +116,16 @@ describe.skipIf(!hasBd)("beads-export-check", () => {
       await run(check, [root]);
     } catch (error) {
       const stderr = String((error as { stderr?: string }).stderr ?? "");
+      // The checker launches Node only after it has established the genuine
+      // divergence. If the Forge has denied that child launch, distinguish
+      // the unavailable observation from a changed checker contract.
+      if (!stderr.includes("differing content")) {
+        const reason =
+          nodeSpawnSkipReason() ??
+          shellSpawnSkipReason() ??
+          (await nestedShellSpawnSkipReason());
+        if (reason !== null) context.skip(`SKIPPED - ${reason}`);
+      }
       expect(stderr).toContain("does not match the database");
       expect(stderr).toContain("differing content");
       // The remedy must be named, or a red stage gets worked around rather
