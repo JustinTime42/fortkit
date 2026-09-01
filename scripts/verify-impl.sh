@@ -307,7 +307,7 @@ template_render_lint() {
   return 0
 }
 
-emit verify.run "Verifier started" -p '{"steps":["memory-lint","seat-lint","control-lint","merge-events","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
+emit verify.run "Verifier started" -p '{"steps":["memory-lint","seat-lint","control-lint","beads-export","merge-events","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
 run_step memory-lint node scripts/memory-lint.mjs
 # fortkit-x508. The roster's three rules — no actor ids one keystroke apart, no
 # other settlement's citizen in a Held-by or Personality line, no surviving
@@ -325,6 +325,7 @@ run_step seat-lint node scripts/seat-lint.mjs
 # a fact about the fort, not a defect to paper over. Zero control files is a
 # FAILURE: a checker that checks nothing must say so in the same breath it exits.
 run_step control-lint node scripts/control-lint.mjs
+run_step beads-export scripts/beads-export-check.sh
 # fortkit-zj8e.7, wired 2026-08-31 (Mayor lane: seat-sandbox.sh:241 kernel-refuses
 # the Forge on this file). Every merge commit on refs/heads/main must have a
 # corresponding `merge` event in the stream. Filed because the Mayor emitted NONE
@@ -353,4 +354,4 @@ run_step test npm run test
 # every future fort inherits, so it is exactly the copy that must not rot.
 run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh "${TEMPLATE_SH[@]}" civ/scripts/*.sh scripts/*.sh
 run_step template-render template_render_lint
-emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","seat-lint","control-lint","merge-events","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'
+emit verify.pass "Verifier passed" -p '{"steps":["memory-lint","seat-lint","control-lint","beads-export","merge-events","skills-install","typecheck","browser-typecheck","lint","test","shellcheck","template-render"]}'

@@ -3,7 +3,7 @@ key: falsifier-template-render
 status: active
 kind: falsifier
 detects: "Template scripts that no longer render or lint clean"
-implements: scripts/verify-impl.sh:355
+implements: scripts/verify-impl.sh:356
 falsified-by: null
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

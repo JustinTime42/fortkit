@@ -41,6 +41,25 @@ which number is wrong:
 - **`falsifier-researcher-probe` had no implementing artifact at all** and is
   now `status: absent`. The probe exists in the factory only.
 - **`status` is now a defined field** with legal values, per finding 2.
+- **The census in this file was 46 while the tree held 47, and is now 48**
+  (appended 2026-08-31 by the Mayor at `fortkit-v7us.2`). `falsifier-beads-export`
+  was registered in the same change that wired the `beads-export` stage, on the
+  `falsifier-control-lint` precedent that an unregistered verifier stage is a hole
+  in the register's own census. Measured by `control-lint` at the moment of
+  writing: **48 control file(s) checked; 30 explicitly declare no falsifier.**
+  THIS IS THE FOURTH HAND-TYPED CENSUS IN THIS FILE IN FOUR DAYS AND IT WILL ROT
+  LIKE THE OTHERS. It is written here only so the record is not knowingly left
+  wrong; it is not a fix, and it must not be cited as one. `control-lint` prints
+  the true figures on every verifier run, and `fortkit-4ah3.12` is the open bead
+  to assert this file against them so that no future reader has to trust a number
+  a human typed. `falsifier-beads-export` does not add to the null tally: it
+  declares `falsifier-vitest`, because `test/verify-beads-export.test.ts` runs
+  under the verifier's `test` stage, and that suite was proven to go red by
+  sabotaging the check and observing the failure. (The field first read
+  `test/verify-beads-export.test.ts`; `control-lint` rejected it, because
+  `falsified-by` names a registered CONTROL KEY and not a file. Recorded rather
+  than quietly fixed: the lint caught the author, which is the whole argument
+  of this register.)
 
 **A defect this repair exposed and did not fix:** eight entries cite line `:1`,
 and seven of those are a shebang or an opening brace. A shebang never changes,
