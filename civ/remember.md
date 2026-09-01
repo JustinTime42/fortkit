@@ -1702,3 +1702,49 @@ should name the seat if it matters who learned it.
   commit message and here, and the Warden is the one who judges it. **Before
   taking a lane a bead assigns elsewhere, write down why a dispatch would have
   produced a worse artifact — and if you cannot, dispatch.**
+
+- 2026-08-31 (edict 24, round two on Ilva Trueglass's review): **A CLAIM READ OUT
+  OF ONE ARM OF `case "$seat"` IS A CLAIM ABOUT ONE SEAT TYPE, AND THE SHARED MASK
+  LIBRARY HAS TWO.** I wrote — into a script comment, a commit message and a
+  handoff — that `~/.claude/civilization.json` is a read-only bind mount in EVERY
+  seat mask, citing `seat-sandbox.sh:276`. That line is inside the `claude)` arm.
+  The `codex)` arm at `:216` does `MASK_DIRS+=("$HOME/.claude")`, rendered as
+  `--tmpfs` at `:481`. **Measured inside a real codex mask: the directory is an
+  empty writable tmpfs, so every registry precheck passes, `bin/fort-init` MINTS a
+  registry there, registers the fort, EXITS 0 — and the entry dies with the
+  namespace.** A founding reporting success it has not earned, in the one posture
+  the repair against exactly that class did not reach. Found by the Warden reading
+  the arms from source in a review of the sitting that wrote the claim; she stated
+  she could not execute a bwrap probe, and the Regent measured it within the hour.
+  **When you cite a line inside `seat-sandbox.sh`, say which arm it is in.**
+
+- 2026-08-31: **AN ABSENT REGISTRY IS INDISTINGUISHABLE FROM A FIRST-EVER
+  FOUNDING, so the Forge-tmpfs case above is ANNOUNCED and not refused.** Refusing
+  on "no registry here" would break both the genuine first founding and every
+  `FORT_REGISTRY` throwaway the factory's own verification depends on — the
+  pattern a Regent sitting uses a dozen times an evening. `bin/fort-init` now
+  prints a stderr NOTE when it is about to mint a registry from nothing, naming
+  the tmpfs case. **Where a check cannot tell the bad case from the good one,
+  narrate the event rather than blocking it**; minting the civilization registry
+  is a once-ever act and a silent one from inside a mask is the whole defect.
+
+- 2026-08-31: **AN ASSERTION THAT NEVER ESTABLISHED THE CODE REACHED THE BRANCH IS
+  NOT EVIDENCE ABOUT THE BRANCH.** My hand-check of the new mint notice ran the
+  candidate `fort-init` directly from the scratchpad instead of from a KIT, so it
+  resolved `$(dirname $0)/../templates` to a directory that does not exist and
+  died at exit 2 long before the branch — and my `grep -c` scored that as the
+  notice firing when it must not have. The check was not asserting the exit code,
+  so it could not have discriminated the property it was labelled with. Caught by
+  looking at the status. `bin/fort-init` ALWAYS runs from a kit
+  (`bin/fort-init` + a sibling `templates/`, which may be a symlink); running the
+  bare file measures nothing.
+
+- 2026-08-31: **I WROTE A COMMIT HASH INTO A RECORD BEFORE THE COMMIT EXISTED.**
+  The handoff's round-two paragraph cited `5cbf4b8`, which is not a commit; the
+  real one is `186ef6f`. This is the 2026-08-04 scar — *file the bead first, then
+  reference it* — in its other form, and the same remedy applies to hashes:
+  **commit, read the hash back, then write it down.** Corrected by appending.
+  Corollary from the same hour: **Manyhalls' Mayor merged two beads onto `main`
+  during the sitting**, so the edict's three commits are not contiguous and a
+  `HEAD~3..HEAD` diff picks up another seat's work. Name the shas; never describe
+  an edict's diff by a count of commits back from HEAD.
