@@ -42,7 +42,12 @@ export type EventDetail = {
 export type EventFeed = {
   events: EventDetail[];
   malformed: number;
-  malformedFiles: string[];
+  shards: Record<string, EventShardHealth>;
+};
+
+export type EventShardHealth = {
+  malformed: number;
+  unreadable: boolean;
 };
 
 export type ConstitutionDiffAnnouncement =
