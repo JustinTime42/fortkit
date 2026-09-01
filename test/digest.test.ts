@@ -254,12 +254,18 @@ describe("civilization digest", () => {
     try {
       const multiEvents = [
         JSON.stringify({
+          ts: "2026-08-04T00:00:01Z",
+          actor: "kethra",
+          category: "work.ended",
+          target: "multi-amendment",
+        }),
+        JSON.stringify({
           ts: "2026-08-04T00:00:00Z",
           actor: "kethra",
           category: "charter.amended",
           target: "multi-amendment",
         }),
-        ...Array.from({ length: 50 }, (_, index) =>
+        ...Array.from({ length: 49 }, (_, index) =>
           JSON.stringify({
             ts: `2026-08-04T01:${String(index).padStart(2, "0")}:00Z`,
             actor: "kethra",
@@ -274,11 +280,29 @@ describe("civilization digest", () => {
           multiEvents,
         ),
         addFort("unannounced", "amend (unannounced-bead)", []),
+        addFort("wrong-category", "amend (wrong-category-bead)", [
+          JSON.stringify({
+            ts: "2026-08-04T00:00:00Z",
+            actor: "kethra",
+            category: "work.ended",
+            target: "wrong-category-bead",
+          }),
+        ]),
         addFort("no-ref", "amend without a bead", []),
         addFort("missing-events", "amend (missing-events-bead)", null),
         addFort("malformed-events", "amend (malformed-events-bead)", [
           "not json",
+          JSON.stringify({
+            ts: "2026-08-04T00:00:00Z",
+            actor: "kethra",
+            category: "charter.amended",
+            target: "malformed-events-bead",
+          }),
         ]),
+        addFort("malformed-unannounced", "amend (malformed-unannounced-bead)", [
+          "not json",
+        ]),
+        addFort("historical-malformed", "amend (historical-bead)", []),
       ]);
       const registry = join(directory, "civilization.json");
       await writeFile(
@@ -288,13 +312,23 @@ describe("civilization digest", () => {
             fort_name: [
               "Multi",
               "Unannounced",
+              "Wrong category",
               "No ref",
               "Missing events",
               "Malformed events",
+              "Malformed unannounced",
+              "Historical malformed",
             ][index],
             repo: path,
           })),
         }),
+      );
+      await mkdir(join(forts[7] as string, "fort", "events"), {
+        recursive: true,
+      });
+      await writeFile(
+        join(forts[7] as string, "fort", "events", "events-2026-07-01.jsonl"),
+        "not json\n",
       );
 
       const digest = await readCivilizationDigest(
@@ -315,10 +349,17 @@ describe("civilization digest", () => {
           announcedBeadRef: "multi-amendment",
         },
         { announced: "unannounced", announcedBeadRef: null },
+        { announced: "unannounced", announcedBeadRef: null },
         { beadRefs: [], announced: "unannounced", announcedBeadRef: null },
         { announced: "indeterminate", announcedBeadRef: null },
+        {
+          announced: "announced",
+          announcedBeadRef: "malformed-events-bead",
+        },
         { announced: "indeterminate", announcedBeadRef: null },
+        { announced: "unannounced", announcedBeadRef: null },
       ]);
+      expect(digest.forts[7]?.eventsMalformed).toBe(0);
       expect(formatDigest(digest)).toContain("announced: multi-amendment");
       expect(formatDigest(digest)).toContain("NO BEAD REF");
       expect(formatDigest(digest)).toContain("indeterminate");

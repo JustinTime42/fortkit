@@ -50,13 +50,31 @@ function inWindow(ts: string, since: number, until: number): boolean {
   return !Number.isNaN(instant) && instant >= since && instant < until;
 }
 
+function malformedEventsInWindow(
+  malformedFiles: string[],
+  since: number,
+  until: number,
+): number {
+  return malformedFiles.filter((file) => {
+    const date = /^events-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(file)?.[1];
+    if (date === undefined) return true;
+    const dayStart = Date.parse(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(dayStart)) return true;
+    // Filenames use the writer's local date, not UTC. Retain a malformed
+    // shard unless its possible UTC span is wholly outside the digest window.
+    const earliest = dayStart - 14 * 60 * 60 * 1000;
+    const latest = dayStart + 36 * 60 * 60 * 1000;
+    return earliest < until && latest > since;
+  }).length;
+}
+
 function correlateConstitutionDiffs(
   diffs: UncorrelatedConstitutionDiff[] | null,
   events: EventDetail[] | null,
   eventsMalformed: number | null,
 ): ConstitutionDiff[] | null {
   if (diffs === null) return null;
-  if (events === null || eventsMalformed === null || eventsMalformed > 0) {
+  if (events === null || eventsMalformed === null) {
     return diffs.map((diff) => ({
       ...diff,
       announced: "indeterminate",
@@ -74,10 +92,17 @@ function correlateConstitutionDiffs(
     const announcedBeadRef = diff.beadRefs.find((beadRef) =>
       announcedBeads.has(beadRef),
     );
+    if (announcedBeadRef !== undefined) {
+      return {
+        ...diff,
+        announced: "announced",
+        announcedBeadRef,
+      };
+    }
     return {
       ...diff,
-      announced: announcedBeadRef === undefined ? "unannounced" : "announced",
-      announcedBeadRef: announcedBeadRef ?? null,
+      announced: eventsMalformed > 0 ? "indeterminate" : "unannounced",
+      announcedBeadRef: null,
     };
   });
 }
@@ -135,7 +160,14 @@ async function readDigestFort(
           return dayStart < untilInstant && dayEnd > sinceInstant;
         });
   const fullWindowEvents = events === undefined ? null : events;
-  const eventsMalformed = eventFeed?.malformed ?? null;
+  const eventsMalformed =
+    eventFeed === null
+      ? null
+      : malformedEventsInWindow(
+          eventFeed.malformedFiles,
+          sinceInstant,
+          untilInstant,
+        );
   return {
     name,
     path,

@@ -42,6 +42,7 @@ export type EventDetail = {
 export type EventFeed = {
   events: EventDetail[];
   malformed: number;
+  malformedFiles: string[];
 };
 
 export type ConstitutionDiffAnnouncement =
