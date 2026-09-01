@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { basename } from "node:path";
 import { promisify } from "node:util";
 
-import type { GitState } from "../types.ts";
+import type { ConstitutionDiff, GitState } from "../types.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -46,13 +46,10 @@ export async function readGitLog(
     });
 }
 
-export type ConstitutionDiff = {
-  ts: string;
-  hash: string;
-  subject: string;
-  files: string[];
-  beadRef: string | null;
-};
+export type UncorrelatedConstitutionDiff = Omit<
+  ConstitutionDiff,
+  "announced" | "announcedBeadRef"
+>;
 
 // Paths whose history the digest surfaces as constitution changes
 // (fortkit-9sa, the cycle-7 prose-gate safeguard). The civ paths exist only in
@@ -69,7 +66,7 @@ export async function readConstitutionDiffs(
   path: string,
   since: number,
   until: number,
-): Promise<ConstitutionDiff[] | null> {
+): Promise<UncorrelatedConstitutionDiff[] | null> {
   // Same one-second early query + half-open re-filter as readGitLog above.
   const querySince = new Date(since - 1000).toISOString();
   const queryUntil = new Date(until).toISOString();
@@ -89,7 +86,7 @@ export async function readConstitutionDiffs(
   // subject with no `<repo>-<id>` token is an amendment with no bead on record.
   const beadRefPattern = new RegExp(
     `\\b${basename(path).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-[a-z0-9]+(?:\\.[a-z0-9]+)*\\b`,
-    "i",
+    "gi",
   );
   return output.split("\x1e").flatMap((record) => {
     const lines = record.split("\n").filter((line) => line !== "");
@@ -109,7 +106,10 @@ export async function readConstitutionDiffs(
         hash,
         subject,
         files,
-        beadRef: beadRefPattern.exec(subject)?.[0] ?? null,
+        beadRefs: Array.from(
+          subject.matchAll(beadRefPattern),
+          (match) => match[0],
+        ),
       },
     ];
   });

@@ -162,12 +162,12 @@ describe("git reader", () => {
         expect.objectContaining({
           subject: "quiet seat edit with no bead",
           files: ["fort/seats/mayor.md"],
-          beadRef: null,
+          beadRefs: [],
         }),
         expect.objectContaining({
           subject: `${beadPrefix}-x1y: amend the charter`,
           files: ["fort/charter.md"],
-          beadRef: `${beadPrefix}-x1y`,
+          beadRefs: [`${beadPrefix}-x1y`],
         }),
       ]);
     } finally {
