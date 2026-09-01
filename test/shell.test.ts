@@ -8,6 +8,7 @@ import {
   readdir,
   readFile,
   rm,
+  symlink,
   unlink,
   writeFile,
 } from "node:fs/promises";
@@ -1418,6 +1419,43 @@ describe("fort-init", () => {
           cwd: root,
         }),
       ).resolves.toMatchObject({ stdout: expect.any(String) });
+
+      // The clean founding beside the three deliberate failures below
+      // (fortkit-2twy). A refusal control set proves only that the script says
+      // no; this is the half that proves it still says yes correctly.
+      // current.md is the distilled view injected into every seat at session
+      // start, and 200 bytes is the same threshold bin/fort-init asserts on
+      // itself — a fort born without it starts every session blind.
+      const distilled = await readFile(
+        join(root, "fort", "memory", "current.md"),
+        "utf8",
+      );
+      expect(distilled.length).toBeGreaterThanOrEqual(200);
+
+      const stream = await readdir(join(root, "fort", "events"));
+      const emitted = (
+        await Promise.all(
+          stream
+            .filter((name) => name.endsWith(".jsonl"))
+            .map((name) =>
+              readFile(join(root, "fort", "events", name), "utf8"),
+            ),
+        )
+      )
+        .flatMap((text) => text.split("\n"))
+        .filter((line) => line.trim() !== "")
+        .map((line) => JSON.parse(line) as { category: string });
+      expect(
+        emitted.filter((event) => event.category === "fort.founded"),
+      ).toHaveLength(1);
+      expect(
+        emitted.filter((event) => event.category === "seat.founded"),
+      ).toHaveLength(4);
+      expect(
+        JSON.parse(
+          await readFile(join(registryDirectory, "civilization.json"), "utf8"),
+        ).forts,
+      ).toHaveLength(1);
     },
   );
 
@@ -1573,6 +1611,204 @@ env FORT_MASKED="$marker" MAYOR_NO_MASK=1 "$FAKE_BWRAP_ROOT/fort/scripts/mayor.s
           { cwd: root, env: runtimeEnvironment },
         ),
       ).rejects.toMatchObject({ code: 65, stdout: refusal("warden") });
+    },
+  );
+
+  // ==================================================================
+  // FOUNDING INTEGRITY (fortkit-2twy, closing fortkit-9ahr and fortkit-fg7s
+  // and guarding the ordering half of fortkit-byhp).
+  //
+  // bin/fort-init used to discover fatal conditions AFTER it had built the
+  // tree, initialised bd, emitted the founding events and written the
+  // civilization registry; `set -euo pipefail` then aborted mid-founding and
+  // left a fort that LOOKS founded. fortkit-fg7s records one of those wrecks
+  // reproducing an unrelated bug's symptom for the wrong reason and nearly
+  // confirming a false hypothesis.
+  //
+  // THESE ARE POSITIVE CONTROLS. Each names the state the world must be in
+  // after a deliberate failure rather than merely asserting that a command
+  // failed, because without that this is one ordering claim replacing
+  // another — which is what fortkit-9ahr's own acceptance criterion says.
+  // ==================================================================
+
+  // THE PATH SHIM IS NOT DECORATION. /usr/bin/node is a distinct binary from
+  // the nvm one, so dropping the nvm directory from PATH does NOT hide node,
+  // and a control built that way founds a fort successfully while reporting
+  // that it measured a node-less host (recorded 2026-08-17). Symlink all of
+  // /usr/bin except the node family, then re-add the tools that live
+  // elsewhere. Pass `fakeNode` to put a node on PATH that always fails, which
+  // is how the consolidate-memory crash is provoked: it is the only node
+  // invocation in the whole factory.
+  async function shimPath(root: string, name: string, fakeNode?: string) {
+    const shim = join(root, name);
+    await mkdir(shim, { recursive: true });
+    for (const entry of await readdir("/usr/bin")) {
+      if (["node", "nodejs", "npm", "npx"].includes(entry)) continue;
+      await symlink(join("/usr/bin", entry), join(shim, entry));
+    }
+    for (const tool of ["bd", "jq", "git"]) {
+      const resolved = execFileSync("sh", ["-c", `command -v ${tool}`], {
+        encoding: "utf8",
+      }).trim();
+      await rm(join(shim, tool), { force: true });
+      await symlink(resolved, join(shim, tool));
+    }
+    if (fakeNode !== undefined) {
+      await writeFile(join(shim, "node"), fakeNode, { mode: 0o755 });
+    }
+    return shim;
+  }
+
+  const emptyRegistry = '{"civilization":"Justin","forts":[]}';
+
+  async function stagedRegistry(root: string) {
+    const registryDirectory = join(root, "registry");
+    await mkdir(registryDirectory, { recursive: true });
+    const registry = join(registryDirectory, "civilization.json");
+    await writeFile(registry, emptyRegistry);
+    return registry;
+  }
+
+  async function absent(path: string) {
+    await expect(access(path)).rejects.toMatchObject({ code: "ENOENT" });
+  }
+
+  test.skipIf(!foundingSmokeToolsAvailable)(
+    "refuses a node-less host before it has touched anything (fortkit-9ahr)",
+    async () => {
+      const root = await createFort();
+      const registry = await stagedRegistry(root);
+      const shim = await shimPath(root, "shim-bin");
+
+      await expect(
+        execFileAsync(
+          "bash",
+          [join(repoRoot, "bin/fort-init"), root, "nodeless", "No node here."],
+          { env: { ...process.env, PATH: shim, FORT_REGISTRY: registry } },
+        ),
+      ).rejects.toMatchObject({
+        code: 1,
+        stderr: expect.stringContaining("node not found"),
+      });
+
+      // The world, unchanged. Before the repair this founding left all four.
+      await absent(join(root, "fort"));
+      await absent(join(root, ".beads"));
+      await absent(join(root, "scripts"));
+      await absent(join(root, ".claude", "settings.json"));
+      expect(await readFile(registry, "utf8")).toBe(emptyRegistry);
+
+      // VACUITY CONTROL, and it is the load-bearing half: the same shim PATH
+      // with node restored must found a fort. Without it the assertions above
+      // are equally satisfied by a shim that simply broke the script.
+      const second = await createFort();
+      const secondRegistry = await stagedRegistry(second);
+      await symlink(
+        execFileSync("sh", ["-c", "command -v node"], {
+          encoding: "utf8",
+        }).trim(),
+        join(shim, "node"),
+      );
+      await execFileAsync(
+        "bash",
+        [join(repoRoot, "bin/fort-init"), second, "nodeful", "Node restored."],
+        { env: { ...process.env, PATH: shim, FORT_REGISTRY: secondRegistry } },
+      );
+      expect(
+        JSON.parse(await readFile(secondRegistry, "utf8")).forts,
+      ).toHaveLength(1);
+    },
+  );
+
+  test.skipIf(!foundingSmokeToolsAvailable)(
+    "refuses an unwritable civilization registry before building the tree, and names FORT_REGISTRY (fortkit-fg7s)",
+    async () => {
+      const root = await createFort();
+      const registry = await stagedRegistry(root);
+      // A read-only registry FILE inside a writable directory: that is the
+      // discriminator the preflight uses, so this control exercises the branch
+      // without needing a sandbox.
+      //
+      // SAY WHAT IT IS NOT. chmod does not reproduce the FAILURE, only the
+      // precondition — rename over a read-only file in a writable directory is
+      // permitted, so the pre-repair factory SUCCEEDS here rather than dying at
+      // the mv. What this test discriminates is therefore the ORDERING (refuse
+      // before the tree exists), which is the property under repair. The real
+      // posture is a read-only single-file bind mount of
+      // ~/.claude/civilization.json in every seat mask
+      // (fort/scripts/lib/seat-sandbox.sh), where the rename fails EBUSY
+      // because it cannot replace a mount point; that was measured under bwrap
+      // during the fortkit-2twy sitting, and `test -w` reads NO on the bound
+      // file while its parent directory reads YES.
+      await chmod(registry, 0o444);
+      try {
+        await expect(
+          execFileAsync(
+            "bash",
+            [join(repoRoot, "bin/fort-init"), root, "noreg", "No registry."],
+            { env: { ...process.env, FORT_REGISTRY: registry } },
+          ),
+        ).rejects.toMatchObject({
+          code: 1,
+          stderr: expect.stringContaining("FORT_REGISTRY"),
+        });
+
+        await absent(join(root, "fort"));
+        await absent(join(root, ".beads"));
+        await absent(join(root, "scripts"));
+        // The abort used to land BETWEEN the registry write and the founding
+        // emissions, so the wreckage was a complete tree with an empty
+        // fort/events/ and a stray .new file beside the registry.
+        await absent(`${registry}.new`);
+        expect(await readFile(registry, "utf8")).toBe(emptyRegistry);
+      } finally {
+        await chmod(registry, 0o644);
+      }
+    },
+  );
+
+  test.skipIf(!foundingSmokeToolsAvailable)(
+    "refuses to report a founding whose distilled view failed to generate (fortkit-byhp)",
+    async () => {
+      const root = await createFort();
+      const registry = await stagedRegistry(root);
+      const shim = await shimPath(
+        root,
+        "shim-crash",
+        "#!/bin/bash\necho 'this node always fails' >&2\nexit 3\n",
+      );
+
+      let failure: { code?: number; stderr?: string } | undefined;
+      try {
+        await execFileAsync(
+          "bash",
+          [join(repoRoot, "bin/fort-init"), root, "noview", "No view."],
+          { env: { ...process.env, PATH: shim, FORT_REGISTRY: registry } },
+        );
+      } catch (error) {
+        failure = error as { code?: number; stderr?: string };
+      }
+
+      // toBeDefined first: without it the two assertions below pass vacuously
+      // on a founding that reported success.
+      expect(failure).toBeDefined();
+      expect(failure?.code).not.toBe(0);
+      expect(failure?.stderr).toContain("current.md");
+
+      // THE DELIBERATE ORDERING, pinned so a later reader does not "repair" it
+      // back. This step is last, after the emissions and the registry append,
+      // because it is the one failure that cannot be decided without mutating.
+      // Placed earlier it would leave the fortkit-fg7s wreckage — a complete
+      // tree with an EMPTY fort/events/. Placed here it leaves a fort that
+      // announced itself, is registered, is missing only its distilled view,
+      // refuses to claim success, and is repaired by re-running one command.
+      const events = await readdir(join(root, "fort", "events"));
+      expect(events.filter((name) => name.endsWith(".jsonl"))).not.toHaveLength(
+        0,
+      );
+      expect(JSON.parse(await readFile(registry, "utf8")).forts).toHaveLength(
+        1,
+      );
     },
   );
 });

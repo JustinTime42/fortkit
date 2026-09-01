@@ -8,8 +8,90 @@ KIT="$(cd "$(dirname "$0")/.." && pwd)"
 T="$KIT/templates"
 DATE=$(date +%F)
 cd "$REPO"
+# ===========================================================================
+# PRECONDITIONS FIRST, MUTATIONS AFTER (fortkit-2twy, closing fortkit-9ahr and
+# fortkit-fg7s and the ordering half of fortkit-byhp).
+#
+# THE DEFECT THIS BLOCK REPAIRS was one defect wearing three faces: fort-init
+# discovered fatal conditions LATE — node absent, an unwritable civilization
+# registry, a pre-existing artifact it refuses to overwrite — long after the
+# tree, the bd database, the founding events and the registry entry existed.
+# `set -euo pipefail` (:5) then aborted mid-founding, and the wreckage is a
+# fort that LOOKS founded. That is strictly worse than a refusal: fortkit-fg7s
+# records a half-founded fort (complete tree, EMPTY fort/events/) reproducing
+# an unrelated bug's symptom for the wrong reason, which nearly shipped a fix
+# written against a state no correctly-founded fort is ever in.
+#
+# THE RULE FOR ANYONE ADDING A CHECK: if it can be decided WITHOUT WRITING
+# ANYTHING, it belongs in this block. If it cannot, it belongs after the
+# founding emissions and the registry append at the foot of this script, which
+# are adjacent and late so that no failure can land between them.
+# ===========================================================================
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "fort-init: $REPO is not a git repo" >&2; exit 1; }
 [ -d fort ] && { echo "fort-init: $REPO already has a fort/" >&2; exit 1; }
+# node, checked here rather than at the consolidate step it serves
+# (fortkit-9ahr, Ilva Trueglass finding 5 on the fortkit-p5mr.10 review). The
+# refusal itself is right and stays; only its POSITION was the defect. It used
+# to run after the fort was written into the civilization registry and after
+# the seat events were emitted, so a node-less host produced a LOUD PARTIAL
+# founding where the older swallowed-failure version had produced a silent bad
+# one. The message travels unchanged.
+if ! command -v node >/dev/null 2>&1; then
+  echo "fort-init: node not found, and it is required to found a fort — fort/memory/current.md is the distilled view injected into every seat at session start, and this fort would be born without it" >&2
+  exit 1
+fi
+# The other two hard dependencies, same class, same reasoning. bd is used at the
+# first mutation below; jq merges the permission profile two thirds of the way
+# through and appends the registry at the very end. A missing jq used to abort a
+# founding that had already built the whole tree.
+for tool in bd jq; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "fort-init: $tool not found, and it is required to found a fort" >&2
+    exit 1
+  fi
+done
+# Artifacts this script refuses to overwrite. Each of these refusals used to
+# fire from where the file is rendered — after bd init and after most of the
+# tree existed — so a repo that already carried one of them was left holding a
+# partial fort. `if` rather than `&&`: a false test as the last command of a
+# loop body makes the loop return 1 and `set -e` aborts the founding, which is
+# the trap already recorded at the seat-roster loop below.
+for f in scripts/verify-impl.sh scripts/seat-lint.mjs \
+         scripts/digest.sh scripts/quiescent.sh scripts/digest-hook.sh scripts/merge-event-check.sh; do
+  if [ -e "$f" ]; then
+    echo "fort-init: $REPO/$f already exists - refusing to overwrite it" >&2
+    exit 1
+  fi
+done
+# THE CIVILIZATION REGISTRY, RESOLVED AND PROBED BEFORE ANYTHING IS BUILT
+# (fortkit-fg7s, measured 2026-08-31 from a masked Mayor session).
+# $HOME/.claude/civilization.json is a read-only single-file BIND MOUNT in every
+# seat mask (fort/scripts/lib/seat-sandbox.sh:276), so the append at the foot of
+# this script fails EBUSY rather than EROFS — a rename cannot replace a mount
+# point. Re-measured under bwrap 2026-08-31 in the same posture: `test -w` on
+# the bound file reads NO while its parent directory reads YES, which is exactly
+# what this probe discriminates, and the naive `test -w` on the directory alone
+# would have passed.
+#
+# FORT_REGISTRY IS NAMED IN EVERY REFUSAL BELOW because founding from a masked
+# seat is the DEFAULT path and not the exotic one — the founding smoke is a
+# Mayor's instrument and the Mayor is always masked. The override existed and
+# was documented only in seat-sandbox.sh, which is not where a founder looks.
+REG="${FORT_REGISTRY:-$HOME/.claude/civilization.json}"
+REG_DIR="$(dirname "$REG")"
+if [ -e "$REG" ] && [ ! -f "$REG" ]; then
+  echo "fort-init: the civilization registry $REG exists and is not a regular file — set FORT_REGISTRY to a writable path" >&2
+  exit 1
+fi
+if [ -f "$REG" ] && [ ! -w "$REG" ]; then
+  echo "fort-init: the civilization registry $REG is not writable — founding from a masked seat hits the read-only bind mount on it. Set FORT_REGISTRY to a writable path (that is what the factory's own verification does) and register the fort by hand afterwards if it belongs in the real civilization." >&2
+  exit 1
+fi
+if [ ! -d "$REG_DIR" ] || [ ! -w "$REG_DIR" ]; then
+  echo "fort-init: the civilization registry directory $REG_DIR is missing or not writable, and the registry is written by rename through it. Set FORT_REGISTRY to a writable path." >&2
+  exit 1
+fi
+# ------------------------------- end of the no-mutation block; writes begin here
 [ -d .beads ] || bd init
 
 # The colony projection reads this passive export.  Use Beads' built-in
@@ -104,7 +186,8 @@ render "$T/fort/scripts/lib/seat-sandbox.sh" fort/scripts/lib/seat-sandbox.sh
 # where the Mayor can still rewrite it. Founding a fort without this file leaves
 # a shim that exits 70 and verifies nothing — which is exactly how the founding
 # smoke test caught the omission when Shape B first landed.
-[ -e scripts/verify-impl.sh ] && { echo "fort-init: $REPO/scripts/verify-impl.sh already exists - refusing to overwrite it" >&2; exit 1; }
+# (the refusal on a pre-existing scripts/verify-impl.sh now runs in the
+# no-mutation preflight at the head of this script — fortkit-2twy)
 mkdir -p scripts
 render "$T/scripts/verify-impl.sh" scripts/verify-impl.sh
 chmod +x scripts/verify-impl.sh
@@ -117,7 +200,7 @@ chmod +x scripts/verify-impl.sh
 # SEPARATED. This line without the file is a cp of nothing; the file and the
 # template's verifier step without this line kills every founded fort's verifier at
 # its first step. Neither is a state a settlement should be founded in.
-[ -e scripts/seat-lint.mjs ] && { echo "fort-init: $REPO/scripts/seat-lint.mjs already exists - refusing to overwrite it" >&2; exit 1; }
+# (its pre-existence refusal is in the preflight — fortkit-2twy)
 cp "$T/scripts/seat-lint.mjs" scripts/seat-lint.mjs
 # The session digest and its gates (fortkit-zj8e.10, adopting ADV-0008 from
 # Proofdelve). THE SAME COUPLING THE seat-lint COMMENT ABOVE RECORDS:
@@ -127,8 +210,8 @@ cp "$T/scripts/seat-lint.mjs" scripts/seat-lint.mjs
 # rather than broken - but it does not get the control until they exist.
 # RENDER, not cp: merge-event-check.sh carries {{DATE}} (its audit lower bound,
 # so a new fort audits from its founding rather than the epoch) and {{PROJECT}}.
+# (these four pre-existence refusals are in the preflight — fortkit-2twy)
 for sc in digest quiescent digest-hook merge-event-check; do
-  [ -e "scripts/$sc.sh" ] && { echo "fort-init: $REPO/scripts/$sc.sh already exists - refusing to overwrite it" >&2; exit 1; }
   render "$T/scripts/$sc.sh" "scripts/$sc.sh"
   chmod +x "scripts/$sc.sh"
 done
@@ -271,14 +354,36 @@ done
 # tamper-evident and rides the offsite backup.
 grep -q "^\.env\*" .gitignore 2>/dev/null || printf ".env*\n" >> .gitignore
 
-# Register in the civilization
-REG="${FORT_REGISTRY:-$HOME/.claude/civilization.json}"
-[ -f "$REG" ] || echo '{"civilization":"Justin","forts":[]}' > "$REG"
-jq --arg p "$PROJECT" --arg r "$REPO" --arg d "$DATE" \
-  '.forts += [{"project":$p,"repo":$r,"founded":$d,"fort_name":null}]' "$REG" > "$REG.new" && mv "$REG.new" "$REG"
-
+# THE FOUNDING IS ANNOUNCED FIRST AND REGISTERED SECOND, ADJACENT, WITH NOTHING
+# BETWEEN THEM (fortkit-fg7s / fortkit-2twy). These two steps used to sit the
+# other way round with the registry write able to fail between them, and the
+# order is not arbitrary: A FORT THAT EXISTS IN fort/events/ BUT NOT IN THE
+# REGISTRY IS RECOVERABLE BY ONE jq APPEND; a fort in the registry that never
+# announced itself is silently half-built, and every consumer that reads the
+# registry — the Herald's digest, bin/civ-index, any cross-fort sweep — sees a
+# settlement that was never finished. So the cheap-to-repair failure is the one
+# placed downstream.
 fort/scripts/emit.sh fort.founded "The $PROJECT fort is founded via fort-init" -a overseer
 for s in "${SEATS[@]}"; do fort/scripts/emit.sh seat.founded "The ${s^} seat stands empty, awaiting the moot" -s "$s"; done
+
+# Register in the civilization. $REG and $REG_DIR were probed in the preflight,
+# so the ordinary masked-seat failure never reaches here. This catch covers the
+# residual that probe cannot establish without mutating: a WRITABLE file over
+# which rename still fails, which is what a read-write single-file bind mount
+# produces. It says which step failed and how to finish by hand, because `set -e`
+# on a 340-line founding script otherwise reports nothing about how far it got.
+[ -f "$REG" ] || echo '{"civilization":"Justin","forts":[]}' > "$REG"
+if ! jq --arg p "$PROJECT" --arg r "$REPO" --arg d "$DATE" \
+     '.forts += [{"project":$p,"repo":$r,"founded":$d,"fort_name":null}]' "$REG" > "$REG.new"; then
+  rm -f "$REG.new"
+  echo "fort-init: could not read or rewrite the civilization registry $REG. The fort tree is built and its founding events are emitted; it is NOT registered. Set FORT_REGISTRY to a writable path, or append the entry by hand." >&2
+  exit 1
+fi
+if ! mv "$REG.new" "$REG"; then
+  rm -f "$REG.new"
+  echo "fort-init: could not replace the civilization registry $REG (a read-only or single-file bind mount refuses the rename). The fort tree is built and its founding events are emitted; it is NOT registered. Set FORT_REGISTRY to a writable path, or append {\"project\":\"$PROJECT\",\"repo\":\"$REPO\",\"founded\":\"$DATE\",\"fort_name\":null} to .forts by hand." >&2
+  exit 1
+fi
 
 # Generate the distilled view from the seed ledger (docs/specs/memory.md 6.1).
 # A fort born with a ledger but no current.md is a fort born broken; run it after
@@ -303,10 +408,21 @@ for s in "${SEATS[@]}"; do fort/scripts/emit.sh seat.founded "The ${s^} seat sta
 # with its last line of output an unrelated `bd` message, and nothing saying why.
 # That is not an improvement on the defect. Capture the status, say what happened,
 # then assert the artifact, then exit.
-if ! command -v node >/dev/null 2>&1; then
-  echo "fort-init: node not found, and it is required to found a fort — fort/memory/current.md is the distilled view injected into every seat at session start, and this fort would be born without it" >&2
-  exit 1
-fi
+#
+# `command -v node` USED TO LIVE HERE and now runs in the preflight (fortkit-9ahr).
+#
+# WHY THIS STEP IS STILL LAST, after the emissions and the registry append, when
+# fortkit-2twy asks for those two to be last (a deliberate departure, recorded
+# where the next reader hits it): this is the one remaining failure that CANNOT be
+# decided without mutating, because it is the outcome of running a generator over
+# the tree this founding just built. Somewhere it must sit, and its two candidate
+# positions are not symmetric. Before the emissions, a failed consolidate leaves a
+# complete tree with an EMPTY fort/events/ and no registry entry — the exact
+# fortkit-fg7s wreckage that reproduces other bugs' symptoms for the wrong reason.
+# After them, it leaves a fort that announced itself, is registered, is missing
+# only its distilled view, refuses to report success, and is repaired by re-running
+# one command. The invariant fortkit-2twy actually asks for — that no failure lands
+# BETWEEN the announcement and the registration — holds either way.
 CONSOLIDATE_STATUS=0
 node fort/memory/consolidate-memory.mjs "$REPO" || CONSOLIDATE_STATUS=$?
 if [ "$CONSOLIDATE_STATUS" -ne 0 ]; then
