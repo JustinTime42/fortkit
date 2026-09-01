@@ -1624,3 +1624,81 @@ should name the seat if it matters who learned it.
   env file — is the gate-4 secret duplication the design exists to prevent.
   Measured with `test -f` and never by reading the file. Expect this shape for
   every airlock operation in every fort.
+
+- 2026-08-31 (edict 24, fort-init founding integrity — fortkit-2twy): **A SCRIPT
+  THAT MUTATES BEFORE IT HAS FINISHED DECIDING WILL, UNDER `set -e`, MANUFACTURE
+  A STATE NOTHING IN THE SYSTEM EVER PRODUCES ON PURPOSE.** `bin/fort-init` ran
+  its `command -v node` refusal, its registry write and six pre-existing-artifact
+  refusals AFTER the tree, the bd database, the founding events and the
+  civilization registry entry existed. The wreckage is a fort that LOOKS founded,
+  and its real cost is not the lost founding: a half-founded fort with a complete
+  tree and an EMPTY `fort/events/` REPRODUCES OTHER BUGS' SYMPTOMS FOR THE WRONG
+  REASON, and `fortkit-fg7s` records a day nearly spent writing a fix against a
+  state no correctly-founded fort is ever in. **Every check that can be decided
+  without writing anything belongs above the first write.** What cannot be — here,
+  the outcome of running a generator over the tree just built — goes last, and
+  then the question is which failure state you would rather be left holding.
+
+- 2026-08-31: **WHEN A FAILURE MUST LAND SOMEWHERE, RANK THE WRECKAGE AND PUT THE
+  CHEAP-TO-REPAIR ONE DOWNSTREAM.** The founding emissions and the registry append
+  are now adjacent with nothing between them, emissions FIRST, because a fort in
+  `fort/events/` but not in the registry is recoverable by one `jq` append while a
+  fort in the registry that never announced itself is silently half-built and every
+  registry consumer sees a settlement that was never finished. The same reasoning
+  keeps the `current.md` assertion LAST rather than before the emissions, which is
+  a deliberate departure from the brief's "adjacent and last" and is written into
+  the file at the step so the next reader hits the reasoning rather than the rule.
+  **A precheck is not a substitute for the step's own catch**: a precheck cannot
+  establish that a rename will succeed without performing one, so the late catch
+  stays and names `FORT_REGISTRY`, prints the entry to append by hand, and removes
+  its own `.new` file.
+
+- 2026-08-31: **`chmod 0444` DOES NOT REPRODUCE AN UNWRITABLE-REGISTRY FAILURE. It
+  reproduces the PRECONDITION and nothing else** — rename over a read-only file in
+  a writable directory is permitted, so the PRE-REPAIR factory SUCCEEDS under
+  chmod and dies only under the real posture. The real posture is a read-only
+  single-file BIND MOUNT (`seat-sandbox.sh:276`), measured this sitting under
+  `bwrap --bind / / --ro-bind <reg> <reg>`: **`test -w` on the bound file reads NO,
+  its parent directory reads YES, `mv` fails EBUSY.** A directory-only writability
+  check passes that, so the probe must test the FILE and the DIRECTORY separately.
+  And the residual is real and was measured too: a read-**write** single-file bind
+  gives `test -w` YES with `mv` still EBUSY, which is exactly the case no precheck
+  can reach. Where a durable test uses the cheap stand-in, its comment must say
+  which half it is standing in for; ours does.
+
+- 2026-08-31: **A REFUSAL CONTROL SET NEEDS ITS VACUITY CONTROL IN THE SAME TEST,
+  and for a node-less host that means a shim over ALL of `/usr/bin`.**
+  `/usr/bin/node` is a distinct binary from the nvm one, so dropping the nvm
+  directory from PATH hides nothing (recorded 2026-08-17, and this is the first
+  sitting to build the control it implies): symlink every `/usr/bin` entry except
+  `node`/`nodejs`/`npm`/`npx`, re-add the tools that live elsewhere, and then prove
+  the shim is not simply broken by founding a fort successfully with `node`
+  symlinked back into the SAME shim. Without that half, "no tree, no bd database,
+  no events, no registry entry" is equally satisfied by a PATH that broke the
+  script on line one.
+
+- 2026-08-31: **`await expect(access(p)).rejects` RESOLVING `undefined` IS THE
+  ASSERTION SAYING THE PATH EXISTS**, and vitest renders it as `promise resolved
+  "undefined" instead of rejecting`, which reads like a broken test rather than a
+  found defect. Worth knowing before spending time on the wrong hypothesis: when a
+  positive-control run against the OLD file fails, read WHICH `expect` failed
+  before concluding the harness is at fault. Mine was correct and I doubted it.
+
+- 2026-08-31: **EVERY LINE CITATION IN ALL FOUR BEADS OF THIS SITTING WAS STALE BY
+  20-40 LINES**, and one premise built on them was false: `fortkit-2twy` sequences
+  its items around consolidate-memory running at `:255`, before the registry write
+  — it has been at the FOOT of the script since 2026-08-17. The conclusion (one
+  sitting, ordering first) survived on other grounds, but **a brief's ordering
+  argument is a claim about a file, and the file is the authority.** Fourth
+  sighting of the class in this seat's record; read the artifact, then decide
+  whether the brief's reasoning still holds without its premise.
+
+- 2026-08-31: **`test/` IS NOT GATE-LISTED AND NOT KERNEL READ-ONLY, so a Regent
+  writing there is a LANE CHOICE and must be argued as one.** `fortkit-byhp`
+  assigns the test half to the Forge. I took it because the assertions and the
+  reordering are one artifact and a Forge dispatched afterwards would be writing
+  controls against an ordering it did not make and could not re-derive from the
+  diff. That is a reason, not an entitlement: it is recorded on the bead, in the
+  commit message and here, and the Warden is the one who judges it. **Before
+  taking a lane a bead assigns elsewhere, write down why a dispatch would have
+  produced a worse artifact — and if you cannot, dispatch.**
