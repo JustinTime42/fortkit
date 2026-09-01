@@ -2,6 +2,15 @@
 # fort-init — found a new fort in an existing git repo.
 # Extracted 2026-08-04 from the diff of Proofdelve (~/dev/ForgeOs) and Farlantern (~/dev/longburn).
 # Usage: fort-init <repo-path> <project-name> "<purpose sentence>" [founding-spec-path]
+# Env:   FORT_REGISTRY  path to the civilization registry, default
+#                       $HOME/.claude/civilization.json. Set it at a writable
+#                       path to found a throwaway fort without touching the
+#                       real civilization, which is what the factory's own
+#                       verification does — and what a masked seat must do,
+#                       since the default path is read-only in a claude mask.
+#                       Named here for whoever is PLANNING a founding; the
+#                       refusals below name it for whoever has already tripped
+#                       (Ilva Trueglass, finding 5b on the fortkit-2twy review).
 set -euo pipefail
 REPO="$(cd "$1" && pwd)"; PROJECT="$2"; PURPOSE="$3"; SPEC="${4:-"(none yet — the Mayor's first work)"}"
 KIT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -27,6 +36,18 @@ cd "$REPO"
 # founding emissions and the registry append at the foot of this script, which
 # are adjacent and late so that no failure can land between them.
 # ===========================================================================
+# The hard dependencies, declared. git comes FIRST because the not-a-git-repo
+# test below is `git rev-parse` and reports a MISSING GIT as a repo that is not a
+# repo — the wrong diagnosis, and cheap to remove (Ilva Trueglass, finding 5a on
+# the fortkit-2twy review). bd is used at the first mutation; jq merges the
+# permission profile two thirds of the way through and appends the registry at the
+# very end, so a missing jq used to abort a founding that had built the whole tree.
+for tool in git bd jq; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "fort-init: $tool not found, and it is required to found a fort" >&2
+    exit 1
+  fi
+done
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "fort-init: $REPO is not a git repo" >&2; exit 1; }
 [ -d fort ] && { echo "fort-init: $REPO already has a fort/" >&2; exit 1; }
 # node, checked here rather than at the consolidate step it serves
@@ -40,16 +61,6 @@ if ! command -v node >/dev/null 2>&1; then
   echo "fort-init: node not found, and it is required to found a fort — fort/memory/current.md is the distilled view injected into every seat at session start, and this fort would be born without it" >&2
   exit 1
 fi
-# The other two hard dependencies, same class, same reasoning. bd is used at the
-# first mutation below; jq merges the permission profile two thirds of the way
-# through and appends the registry at the very end. A missing jq used to abort a
-# founding that had already built the whole tree.
-for tool in bd jq; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "fort-init: $tool not found, and it is required to found a fort" >&2
-    exit 1
-  fi
-done
 # Artifacts this script refuses to overwrite. Each of these refusals used to
 # fire from where the file is rendered — after bd init and after most of the
 # tree existed — so a repo that already carried one of them was left holding a
@@ -65,13 +76,27 @@ for f in scripts/verify-impl.sh scripts/seat-lint.mjs \
 done
 # THE CIVILIZATION REGISTRY, RESOLVED AND PROBED BEFORE ANYTHING IS BUILT
 # (fortkit-fg7s, measured 2026-08-31 from a masked Mayor session).
-# $HOME/.claude/civilization.json is a read-only single-file BIND MOUNT in every
-# seat mask (fort/scripts/lib/seat-sandbox.sh:276), so the append at the foot of
-# this script fails EBUSY rather than EROFS — a rename cannot replace a mount
-# point. Re-measured under bwrap 2026-08-31 in the same posture: `test -w` on
-# the bound file reads NO while its parent directory reads YES, which is exactly
-# what this probe discriminates, and the naive `test -w` on the directory alone
-# would have passed.
+# $HOME/.claude/civilization.json is a read-only single-file BIND MOUNT in a
+# masked CLAUDE seat (fort/scripts/lib/seat-sandbox.sh:276, inside the `claude)`
+# arm), so the append at the foot of this script fails EBUSY rather than EROFS —
+# a rename cannot replace a mount point. Re-measured under bwrap 2026-08-31 in
+# the same posture: `test -w` on the bound file reads NO while its parent
+# directory reads YES, which is exactly what this probe discriminates, and the
+# naive `test -w` on the directory alone would have passed.
+#
+# NOT "EVERY SEAT MASK", AND THE SEAT IT MISSES IS THE SILENT ONE (Ilva
+# Trueglass, finding 1 on the fortkit-2twy review; she read it from source and
+# could not execute it, so the Regent measured it the same hour). The `codex)`
+# arm masks $HOME/.claude as a TMPFS instead, so in a Forge mask the registry is
+# ABSENT, its parent IS writable, and every probe below passes cleanly. Measured
+# inside a real codex mask: listing empty, registry NO, directory writable YES,
+# fort-init exit 0, the fort registered — into a tmpfs that dies with the
+# namespace, leaving nothing behind. That is a founding reporting success it has
+# not earned, which is this script's own subject, in the one posture the
+# preflight cannot detect: an absent registry is indistinguishable from a first
+# founding, and REFUSING would break both the first-ever founding and every
+# FORT_REGISTRY throwaway the factory's verification depends on. So it is
+# announced rather than refused, immediately below.
 #
 # FORT_REGISTRY IS NAMED IN EVERY REFUSAL BELOW because founding from a masked
 # seat is the DEFAULT path and not the exotic one — the founding smoke is a
@@ -90,6 +115,9 @@ fi
 if [ ! -d "$REG_DIR" ] || [ ! -w "$REG_DIR" ]; then
   echo "fort-init: the civilization registry directory $REG_DIR is missing or not writable, and the registry is written by rename through it. Set FORT_REGISTRY to a writable path." >&2
   exit 1
+fi
+if [ ! -f "$REG" ]; then
+  echo "fort-init: NOTE — there is no civilization registry at $REG, so this founding will mint one. For a real civilization that is a once-ever event. If you did not expect it: check FORT_REGISTRY, and check whether you are inside a Forge seat mask, where \$HOME/.claude is a tmpfs and a registry written there dies with the session." >&2
 fi
 # ------------------------------- end of the no-mutation block; writes begin here
 [ -d .beads ] || bd init

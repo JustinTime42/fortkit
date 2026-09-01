@@ -43,6 +43,21 @@ const foundingSmokeToolsAvailable = (() => {
   }
 })();
 
+// The late registry catch can only be provoked with a real bind mount, so its
+// control is gated on bwrap the way the founding smoke is gated on bd+jq. It
+// skips with a named reason rather than silently (Ilva Trueglass, finding 2 on
+// the fortkit-2twy review).
+const bwrapSkipReason =
+  "the late registry catch needs bwrap to build a bind mount";
+const bwrapAvailable = (() => {
+  try {
+    execFileSync("sh", ["-c", "command -v bwrap"], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 async function createFort() {
   const root = await mkdtemp(join(tmpdir(), "fortkit-shell-"));
   roots.push(root);
@@ -1776,6 +1791,20 @@ env FORT_MASKED="$marker" MAYOR_NO_MASK=1 "$FAKE_BWRAP_ROOT/fort/scripts/mayor.s
           ),
         ).rejects.toMatchObject({
           code: 1,
+          // BOTH sentences, because every registry refusal names FORT_REGISTRY
+          // by design — the not-a-regular-file branch and the missing-directory
+          // branch satisfy that string just as well as this one does, so on its
+          // own it is a control that passes for the wrong reason (Ilva
+          // Trueglass, finding 4 on the fortkit-2twy review).
+          stderr: expect.stringContaining("is not writable"),
+        });
+        await expect(
+          execFileAsync(
+            "bash",
+            [join(repoRoot, "bin/fort-init"), root, "noreg", "No registry."],
+            { env: { ...process.env, FORT_REGISTRY: registry } },
+          ),
+        ).rejects.toMatchObject({
           stderr: expect.stringContaining("FORT_REGISTRY"),
         });
 
@@ -1790,6 +1819,63 @@ env FORT_MASKED="$marker" MAYOR_NO_MASK=1 "$FAKE_BWRAP_ROOT/fort/scripts/mayor.s
       } finally {
         await chmod(registry, 0o644);
       }
+    },
+  );
+
+  test.skipIf(!foundingSmokeToolsAvailable || !bwrapAvailable)(
+    `names the failing step when the registry rename is refused after the tree is built (${bwrapSkipReason})`,
+    async () => {
+      const root = await createFort();
+      const registry = await stagedRegistry(root);
+
+      // THE ONE FAILURE A PRECHECK CANNOT REACH, and therefore the one that most
+      // needs a control. A precheck cannot establish that a rename will succeed
+      // without performing one, so a WRITABLE registry file over which rename
+      // still fails slips past the preflight entirely. That posture is real: a
+      // read-WRITE single-file bind mount gives `test -w` YES and `mv` EBUSY,
+      // because the rename cannot replace a mount point. Measured under bwrap
+      // during the fortkit-2twy sitting and pinned here, because otherwise the
+      // two `if !` blocks at the registry append are executed by nothing.
+      let failure: { code?: number; stderr?: string } | undefined;
+      try {
+        await execFileAsync("bwrap", [
+          "--bind",
+          "/",
+          "/",
+          "--dev",
+          "/dev",
+          "--bind",
+          registry,
+          registry,
+          "--",
+          "env",
+          `FORT_REGISTRY=${registry}`,
+          "bash",
+          join(repoRoot, "bin/fort-init"),
+          root,
+          "pinned",
+          "Pinned registry.",
+        ]);
+      } catch (error) {
+        failure = error as { code?: number; stderr?: string };
+      }
+
+      expect(failure).toBeDefined();
+      expect(failure?.code).not.toBe(0);
+      // The catch must say WHICH step failed and how to finish by hand: `set -e`
+      // on a 350-line founding script otherwise reports nothing about how far it
+      // got, which is fortkit-fg7s's second request.
+      expect(failure?.stderr).toContain("NOT registered");
+      expect(failure?.stderr).toContain("FORT_REGISTRY");
+
+      // The fort announced itself before the registry was attempted, which is the
+      // recoverable half of the ordering. And the catch cleans up after itself.
+      const stream = await readdir(join(root, "fort", "events"));
+      expect(stream.filter((name) => name.endsWith(".jsonl"))).not.toHaveLength(
+        0,
+      );
+      await absent(`${registry}.new`);
+      expect(await readFile(registry, "utf8")).toBe(emptyRegistry);
     },
   );
 
