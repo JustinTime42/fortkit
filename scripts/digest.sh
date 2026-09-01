@@ -29,7 +29,7 @@ boundary_tolerance_seconds=120
 
 epoch() { [ -n "$1" ] && date -d "$1" +%s 2>/dev/null; }
 
-stream_state="ok"; malformed=0; shard_count=0; valid_records=0; invalid_timestamps=0
+stream_state="ok"; unreadable_shard=""; malformed=0; shard_count=0; valid_records=0; invalid_timestamps=0
 if [ ! -d "$events_dir" ]; then
   stream_state="unavailable"
 elif [ ! -r "$events_dir" ] || [ ! -x "$events_dir" ]; then
@@ -40,8 +40,14 @@ else
     # Process a shard at once. Per-record jq invocations make a complete
     # historical stream needlessly slow, while raw-input parsing keeps one bad
     # JSONL line from preventing the digest from reporting the rest.
-    total_records="$(awk 'END { print NR }' "$event_file")"
-    shard_valid_records="$(jq -Rc 'fromjson? | select(type == "object")' "$event_file" | tee -a "$all_events" | awk 'END { print NR }')"
+    if ! total_records="$(awk 'END { print NR }' "$event_file" 2>/dev/null)"; then
+      stream_state="unreadable"; unreadable_shard="$event_file"
+      break
+    fi
+    if ! shard_valid_records="$(jq -Rc 'fromjson? | select(type == "object")' "$event_file" 2>/dev/null | tee -a "$all_events" | awk 'END { print NR }')"; then
+      stream_state="unreadable"; unreadable_shard="$event_file"
+      break
+    fi
     valid_records=$((valid_records + shard_valid_records))
     malformed=$((malformed + total_records - shard_valid_records))
   done < <(find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print0 2>/dev/null | sort -z)
@@ -54,7 +60,11 @@ if [ "$stream_state" = unavailable ]; then
   printf 'EVENT STREAM\n  UNAVAILABLE (directory missing: %s)\n' "$events_dir" >&2
   exit 1
 elif [ "$stream_state" = unreadable ]; then
-  printf 'EVENT STREAM\n  UNAVAILABLE (could not read directory: %s)\n' "$events_dir" >&2
+  if [ -n "$unreadable_shard" ]; then
+    printf 'EVENT STREAM\n  UNAVAILABLE (could not read event shard: %s)\n' "$unreadable_shard" >&2
+  else
+    printf 'EVENT STREAM\n  UNAVAILABLE (could not read directory: %s)\n' "$events_dir" >&2
+  fi
   exit 1
 elif [ "$shard_count" -eq 0 ] && [ -z "$since_override" ]; then
   printf 'EVENT STREAM\n  EMPTY WINDOW (0 event shards found in %s)\n' "$events_dir"
@@ -123,9 +133,7 @@ print_window_events() {
 
 printf 'WINDOW\n  (%s, %s]\n' "$since" "$now"
 [ -z "$fallback_note" ] || printf '  %s\n' "$fallback_note"
-if [ "$stream_state" = unavailable ]; then
-  printf 'EVENT STREAM\n  UNAVAILABLE (directory missing: %s)\n' "$events_dir"
-elif [ "$shard_count" -eq 0 ]; then
+if [ "$shard_count" -eq 0 ]; then
   printf 'EVENT STREAM\n  EMPTY WINDOW (0 event shards found in %s)\n' "$events_dir"
 elif [ "$(event_count)" -eq 0 ]; then
   printf 'EVENT STREAM\n  EMPTY WINDOW (no valid events in the selected window)\n'
