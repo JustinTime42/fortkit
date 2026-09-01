@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,6 +73,64 @@ async function lintFort(root: string, arguments_: string[] = []) {
   };
 }
 
+type ControlCensus = {
+  controls: number;
+  nulls: number;
+};
+
+function liveCensusFromLint(output: string): ControlCensus {
+  const match =
+    /control-lint: (?<controls>\d+) control file\(s\) checked; (?<nulls>\d+) explicitly declare no falsifier/u.exec(
+      output,
+    );
+  if (match?.groups === undefined)
+    throw new Error("control-lint did not report its live census");
+  return {
+    controls: Number(match.groups.controls),
+    nulls: Number(match.groups.nulls),
+  };
+}
+
+function assertCensusDeclaration(declaration: string, actual: ControlCensus) {
+  const match =
+    /^controls=(?<controls>\d+); nulls=(?<nulls>\d+)(?:; nulls-offset=(?<nullsOffset>-?\d+))?$/u.exec(
+      declaration,
+    );
+  if (match?.groups === undefined)
+    throw new Error(`invalid control census declaration: ${declaration}`);
+
+  expect(Number(match.groups.controls)).toBe(actual.controls);
+  expect(
+    Number(match.groups.nulls) + Number(match.groups.nullsOffset ?? 0),
+  ).toBe(actual.nulls);
+}
+
+async function assertLiveControlCensuses(root: string, output: string) {
+  const controlsDirectory = join(root, "fort", "controls");
+  const files = (await readdir(controlsDirectory)).filter((file) =>
+    file.endsWith(".md"),
+  );
+  const declarations = await Promise.all(
+    files.map(async (file) => ({
+      file,
+      declarations: [
+        ...(await readFile(join(controlsDirectory, file), "utf8")).matchAll(
+          /<!-- control-census: (?<declaration>[^>]+) -->/gu,
+        ),
+      ],
+    })),
+  );
+  const actual = liveCensusFromLint(output);
+  for (const { file, declarations: fileDeclarations } of declarations)
+    for (const declaration of fileDeclarations) {
+      expect(declaration.groups?.declaration, file).toBeDefined();
+      assertCensusDeclaration(declaration.groups?.declaration ?? "", actual);
+    }
+  return declarations.flatMap(({ file, declarations: fileDeclarations }) =>
+    fileDeclarations.map(() => file),
+  );
+}
+
 describe("control-register lint (fortkit-4ah3.3)", () => {
   test("the live register passes and reports controls without falsifiers", async () => {
     const result = await lintFort(repositoryRoot);
@@ -83,6 +141,29 @@ describe("control-register lint (fortkit-4ah3.3)", () => {
     expect(count).not.toBeNull();
     expect(Number(count?.[1])).toBeGreaterThanOrEqual(45);
     expect(result.stdout).toContain("reported, not failed");
+  });
+
+  test("every declared live census in the register agrees with control-lint", async () => {
+    const result = await lintFort(repositoryRoot);
+    expect(result.code).toBe(0);
+    await expect(
+      assertLiveControlCensuses(repositoryRoot, result.stdout),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        "README.md",
+        "falsifier-beads-export.md",
+        "falsifier-control-lint.md",
+      ]),
+    );
+  });
+
+  test("a deliberately mismatched live census goes red", () => {
+    expect(() =>
+      assertCensusDeclaration("controls=999; nulls=999", {
+        controls: 48,
+        nulls: 30,
+      }),
+    ).toThrow();
   });
 
   test("refuses a citation whose cited line changed", async () => {

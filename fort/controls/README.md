@@ -46,7 +46,10 @@ which number is wrong:
   was registered in the same change that wired the `beads-export` stage, on the
   `falsifier-control-lint` precedent that an unregistered verifier stage is a hole
   in the register's own census. Measured by `control-lint` at the moment of
-  writing: **48 control file(s) checked; 30 explicitly declare no falsifier.**
+  writing: <!-- control-census: controls=48; nulls=30 -->**48 control file(s)
+  checked; 30 explicitly declare no falsifier.** The declaration is asserted
+  against `control-lint` by `test/control-lint.test.ts`; it covers this live
+  census without changing the dated history below.
   THIS IS THE FOURTH HAND-TYPED CENSUS IN THIS FILE IN FOUR DAYS AND IT WILL ROT
   LIKE THE OTHERS. It is written here only so the record is not knowingly left
   wrong; it is not a fix, and it must not be cited as one. `control-lint` prints
