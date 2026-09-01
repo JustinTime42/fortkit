@@ -3,14 +3,14 @@ import { join } from "node:path";
 import type { ClosedBeadSource } from "./readers/beads.ts";
 import { readClosedBeads } from "./readers/beads.ts";
 import { readEventFeed } from "./readers/events.ts";
-import type { ConstitutionDiff } from "./readers/git.ts";
+import type { UncorrelatedConstitutionDiff } from "./readers/git.ts";
 import { readConstitutionDiffs, readGitLog } from "./readers/git.ts";
 import type { HandoffSection } from "./readers/handoffs.ts";
 import { readHandoffSections } from "./readers/handoffs.ts";
 import { readRegistryEntries } from "./readers/registry.ts";
 import type { TelemetryCounts } from "./readers/telemetry.ts";
 import { readTelemetryCounts } from "./readers/telemetry.ts";
-import type { EventDetail } from "./types.ts";
+import type { ConstitutionDiff, EventDetail } from "./types.ts";
 
 const maxEventsPerFort = 50;
 const maxHandoffSectionsPerFort = 50;
@@ -48,6 +48,63 @@ async function exists(path: string): Promise<boolean> {
 function inWindow(ts: string, since: number, until: number): boolean {
   const instant = Date.parse(ts);
   return !Number.isNaN(instant) && instant >= since && instant < until;
+}
+
+function malformedEventsInWindow(
+  malformedFiles: string[],
+  since: number,
+  until: number,
+): number {
+  return malformedFiles.filter((file) => {
+    const date = /^events-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(file)?.[1];
+    if (date === undefined) return true;
+    const dayStart = Date.parse(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(dayStart)) return true;
+    // Filenames use the writer's local date, not UTC. Retain a malformed
+    // shard unless its possible UTC span is wholly outside the digest window.
+    const earliest = dayStart - 14 * 60 * 60 * 1000;
+    const latest = dayStart + 36 * 60 * 60 * 1000;
+    return earliest < until && latest > since;
+  }).length;
+}
+
+function correlateConstitutionDiffs(
+  diffs: UncorrelatedConstitutionDiff[] | null,
+  events: EventDetail[] | null,
+  eventsMalformed: number | null,
+): ConstitutionDiff[] | null {
+  if (diffs === null) return null;
+  if (events === null || eventsMalformed === null) {
+    return diffs.map((diff) => ({
+      ...diff,
+      announced: "indeterminate",
+      announcedBeadRef: null,
+    }));
+  }
+  const announcedBeads = new Set(
+    events.flatMap((event) =>
+      event.category === "charter.amended" && event.target !== null
+        ? [event.target]
+        : [],
+    ),
+  );
+  return diffs.map((diff) => {
+    const announcedBeadRef = diff.beadRefs.find((beadRef) =>
+      announcedBeads.has(beadRef),
+    );
+    if (announcedBeadRef !== undefined) {
+      return {
+        ...diff,
+        announced: "announced",
+        announcedBeadRef,
+      };
+    }
+    return {
+      ...diff,
+      announced: eventsMalformed > 0 ? "indeterminate" : "unannounced",
+      announcedBeadRef: null,
+    };
+  });
 }
 
 async function readDigestFort(
@@ -102,12 +159,24 @@ async function readDigestFort(
           const dayEnd = dayStart + 24 * 60 * 60 * 1000;
           return dayStart < untilInstant && dayEnd > sinceInstant;
         });
+  const fullWindowEvents = events === undefined ? null : events;
+  const eventsMalformed =
+    eventFeed === null
+      ? null
+      : malformedEventsInWindow(
+          eventFeed.malformedFiles,
+          sinceInstant,
+          untilInstant,
+        );
   return {
     name,
     path,
     present: true,
-    events: events === undefined ? null : events.slice(0, maxEventsPerFort),
-    eventsMalformed: eventFeed?.malformed ?? null,
+    events:
+      fullWindowEvents === null
+        ? null
+        : fullWindowEvents.slice(0, maxEventsPerFort),
+    eventsMalformed,
     eventsTruncated:
       events === undefined
         ? null
@@ -125,7 +194,11 @@ async function readDigestFort(
             filteredHandoffSections.length - maxHandoffSectionsPerFort,
           ),
     gitLog,
-    constitutionDiffs,
+    constitutionDiffs: correlateConstitutionDiffs(
+      constitutionDiffs,
+      fullWindowEvents,
+      eventsMalformed,
+    ),
     telemetry,
   };
 }
@@ -168,7 +241,7 @@ export function formatDigest(digest: CivilizationDigest): string {
       `constitution diffs: ${fort.constitutionDiffs === null ? "ABSENT" : fort.constitutionDiffs.length}`,
       ...(fort.constitutionDiffs ?? []).map(
         (diff) =>
-          `  ! ${diff.ts} ${diff.hash} ${diff.subject} [${diff.beadRef ?? "NO BEAD REF"}] (${diff.files.join(", ")})`,
+          `  ! ${diff.ts} ${diff.hash} ${diff.subject} [${diff.beadRefs.join(", ") || "NO BEAD REF"}] (${diff.announced}${diff.announcedBeadRef === null ? "" : `: ${diff.announcedBeadRef}`}; ${diff.files.join(", ")})`,
       ),
       `telemetry: ${fort.telemetry === null ? "ABSENT" : `${fort.telemetry.records} records, ${fort.telemetry.files} files, ${fort.telemetry.malformed} malformed`}`,
     ]),

@@ -42,6 +42,22 @@ export type EventDetail = {
 export type EventFeed = {
   events: EventDetail[];
   malformed: number;
+  malformedFiles: string[];
+};
+
+export type ConstitutionDiffAnnouncement =
+  | "announced"
+  | "unannounced"
+  | "indeterminate";
+
+export type ConstitutionDiff = {
+  ts: string;
+  hash: string;
+  subject: string;
+  files: string[];
+  beadRefs: string[];
+  announced: ConstitutionDiffAnnouncement;
+  announcedBeadRef: string | null;
 };
 
 export type FortSummary = {

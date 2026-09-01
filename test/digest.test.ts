@@ -1,7 +1,9 @@
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import { describe, expect, test } from "vitest";
 
@@ -11,6 +13,7 @@ import { readClosedBeads } from "../src/readers/beads.js";
 const registryPath = fileURLToPath(
   new URL("./fixtures/digest-civilization.json", import.meta.url),
 );
+const execFileAsync = promisify(execFile);
 
 describe("civilization digest", () => {
   test("uses an inclusive since and exclusive until window with a stable JSON shape", async () => {
@@ -203,6 +206,163 @@ describe("civilization digest", () => {
       });
       expect(formatDigest(digest)).toContain("closed beads: ERROR");
       expect(formatDigest(digest)).toContain("truncated 1");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("correlates constitution diffs against the complete clean event window", async () => {
+    const directory = await mkdtemp(
+      join(tmpdir(), "fortkit-digest-constitution-"),
+    );
+    const addFort = async (
+      name: string,
+      subject: string,
+      events: string[] | null,
+    ) => {
+      const fort = join(directory, name);
+      await mkdir(join(fort, "fort"), { recursive: true });
+      await writeFile(join(fort, "fort", "charter.md"), `${subject}\n`);
+      await execFileAsync("git", ["init", "--quiet", fort]);
+      for (const [key, value] of [
+        ["user.email", "test@example.test"],
+        ["user.name", "Test"],
+      ] as const) {
+        await execFileAsync("git", ["-C", fort, "config", key, value]);
+      }
+      await execFileAsync("git", ["-C", fort, "add", "fort/charter.md"]);
+      await execFileAsync(
+        "git",
+        ["-C", fort, "commit", "--quiet", "-m", subject],
+        {
+          env: {
+            ...process.env,
+            GIT_AUTHOR_DATE: "2026-08-04T12:00:00Z",
+            GIT_COMMITTER_DATE: "2026-08-04T12:00:00Z",
+          },
+        },
+      );
+      if (events !== null) {
+        await mkdir(join(fort, "fort", "events"), { recursive: true });
+        await writeFile(
+          join(fort, "fort", "events", "events-2026-08-04.jsonl"),
+          events.join("\n"),
+        );
+      }
+      return fort;
+    };
+    try {
+      const multiEvents = [
+        JSON.stringify({
+          ts: "2026-08-04T00:00:01Z",
+          actor: "kethra",
+          category: "work.ended",
+          target: "multi-amendment",
+        }),
+        JSON.stringify({
+          ts: "2026-08-04T00:00:00Z",
+          actor: "kethra",
+          category: "charter.amended",
+          target: "multi-amendment",
+        }),
+        ...Array.from({ length: 49 }, (_, index) =>
+          JSON.stringify({
+            ts: `2026-08-04T01:${String(index).padStart(2, "0")}:00Z`,
+            actor: "kethra",
+            category: "work.progress",
+          }),
+        ),
+      ];
+      const forts = await Promise.all([
+        addFort(
+          "multi",
+          "amend constitution (multi-first, multi-second, multi-amendment)",
+          multiEvents,
+        ),
+        addFort("unannounced", "amend (unannounced-bead)", []),
+        addFort("wrong-category", "amend (wrong-category-bead)", [
+          JSON.stringify({
+            ts: "2026-08-04T00:00:00Z",
+            actor: "kethra",
+            category: "work.ended",
+            target: "wrong-category-bead",
+          }),
+        ]),
+        addFort("no-ref", "amend without a bead", []),
+        addFort("missing-events", "amend (missing-events-bead)", null),
+        addFort("malformed-events", "amend (malformed-events-bead)", [
+          "not json",
+          JSON.stringify({
+            ts: "2026-08-04T00:00:00Z",
+            actor: "kethra",
+            category: "charter.amended",
+            target: "malformed-events-bead",
+          }),
+        ]),
+        addFort("malformed-unannounced", "amend (malformed-unannounced-bead)", [
+          "not json",
+        ]),
+        addFort("historical-malformed", "amend (historical-bead)", []),
+      ]);
+      const registry = join(directory, "civilization.json");
+      await writeFile(
+        registry,
+        JSON.stringify({
+          forts: forts.map((path, index) => ({
+            fort_name: [
+              "Multi",
+              "Unannounced",
+              "Wrong category",
+              "No ref",
+              "Missing events",
+              "Malformed events",
+              "Malformed unannounced",
+              "Historical malformed",
+            ][index],
+            repo: path,
+          })),
+        }),
+      );
+      await mkdir(join(forts[7] as string, "fort", "events"), {
+        recursive: true,
+      });
+      await writeFile(
+        join(forts[7] as string, "fort", "events", "events-2026-07-01.jsonl"),
+        "not json\n",
+      );
+
+      const digest = await readCivilizationDigest(
+        registry,
+        "2026-08-04T00:00:00Z",
+        "2026-08-05T00:00:00Z",
+      );
+      const diffs = digest.forts.map((fort) => fort.constitutionDiffs?.[0]);
+      expect(digest.forts[0]?.eventsTruncated).toBe(1);
+      expect(digest.forts[0]?.events).toHaveLength(50);
+      expect(digest.forts[0]?.events).not.toContainEqual(
+        expect.objectContaining({ category: "charter.amended" }),
+      );
+      expect(diffs).toMatchObject([
+        {
+          beadRefs: ["multi-first", "multi-second", "multi-amendment"],
+          announced: "announced",
+          announcedBeadRef: "multi-amendment",
+        },
+        { announced: "unannounced", announcedBeadRef: null },
+        { announced: "unannounced", announcedBeadRef: null },
+        { beadRefs: [], announced: "unannounced", announcedBeadRef: null },
+        { announced: "indeterminate", announcedBeadRef: null },
+        {
+          announced: "announced",
+          announcedBeadRef: "malformed-events-bead",
+        },
+        { announced: "indeterminate", announcedBeadRef: null },
+        { announced: "unannounced", announcedBeadRef: null },
+      ]);
+      expect(digest.forts[7]?.eventsMalformed).toBe(0);
+      expect(formatDigest(digest)).toContain("announced: multi-amendment");
+      expect(formatDigest(digest)).toContain("NO BEAD REF");
+      expect(formatDigest(digest)).toContain("indeterminate");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
