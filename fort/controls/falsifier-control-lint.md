@@ -32,8 +32,9 @@ checker has the exact hole it was built to close.
 lint silently stops working. `test/control-lint.test.ts` proves the lint fails
 on a broken citation and refuses a vacuous run, so the CODE is covered; what is
 uncovered is the stage being removed from `verify-impl.sh` or the manifest being
-emptied. That is the same gap 28 other entries carry (29 null, less this one)
-and it is reported on every run rather than hidden. *Read 27 until 2026-08-31,
+emptied. That is the same gap <!-- control-census: controls=48; nulls=29; nulls-offset=1 -->29 other entries carry (30 null, less this one), and it is
+reported on every run rather than hidden. `test/control-lint.test.ts` asserts
+this live census declaration against `control-lint`. *Read 27 until 2026-08-31,
 Warden round-3 finding 1: the author subtracted this entry from the README's
 PRE-round-2 base of 28 instead of from the current 29. `control-lint` prints
 the true figure on every verifier run.*

@@ -42,8 +42,8 @@ mechanism by which that key fires.
 
 PROVEN, NOT ASSERTED. The check was sabotaged (`cmp -s` replaced with `true`,
 so it always reported a match), the suite was run, and the divergence test went
-red; restoring the line returned all five to green. Thirty of this register's
-entries carry a null here. This one does not, because a freshness check never
+red; restoring the line returned all five to green. <!-- control-census: controls=48; nulls=30 -->Thirty of this register's entries carry a null here.
+This one does not, because a freshness check never
 observed to fail is indistinguishable from one wired to nothing — the defect
 this fort shipped at `fortkit-52vf.12` finding 4 and `fortkit-vhk.5.1`
 finding 8.
