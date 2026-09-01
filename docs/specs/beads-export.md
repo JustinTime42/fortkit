@@ -18,13 +18,32 @@ edited as ordinary workflow.
 **`bd` is authoritative. The export is a convenience for readers who cannot
 reach the database.**
 
-Its audience is real but narrower than it looks: a fresh clone, another fort's
-Mayor, and any posture where `bd` will not run. Whether this fort's Warden is
-in that set is an OPEN QUESTION and deliberately not asserted here — her
-profile permits `bd -C * show/list/search/memories`
-(`fort/profiles/warden-settings.json:17-20`) while five of her reviews have
-said `bd` cannot run in her posture. That contradiction is `fortkit-v7us.3` and
-is unmeasured; do not cite either side of it as settled.
+Its audience is a fresh clone, another fort's Mayor, and any posture where `bd`
+will not run — **and this fort's Warden is in that set.** MEASURED 2026-08-31
+(`fortkit-v7us.3`) by Ilva Trueglass inside a live review, reported verbatim:
+
+```
+$ bd -C /home/justin/dev/fortkit show fortkit-v7us
+Error: failed to open database: embeddeddolt: init schema: embeddeddolt:
+open db: failed to load database "fortkit": openat LOCK: read-only file system
+```
+
+**It ERRORED; it was NOT DENIED.** Her profile does permit
+`bd -C * show/list/search/memories` (`fort/profiles/warden-settings.json:17-20`)
+and the permission layer passed the call through; `bd --version` succeeded in the
+same session. It failed underneath, at storage: embedded Dolt opens the database
+READ-WRITE even to serve a read, and `.beads` is bound read-only in her sandbox,
+so creating `LOCK` fails.
+
+So four earlier reviews reached the right conclusion by the wrong reason — they
+said the permission layer refused it, and nothing did. **The property belongs to
+the MASK, not the profile.** If a launcher ever bound `.beads` read-write, her
+`bd show` would work and would take a LOCK write on the fort under review, which
+is the side effect a fifth review declined on. Declined and cannot both hold; the
+cannot is operative.
+
+The consequence for the export is that its freshness is **load-bearing for this
+fort's only review seat**, which is why `fortkit-v7us.2` exists.
 
 **Any count or bead state quoted into a durable record — a bead, a handoff, a
 commit message, a seat file, an advisory answer — comes from `bd`, never from

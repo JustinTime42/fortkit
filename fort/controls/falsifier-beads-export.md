@@ -3,7 +3,7 @@ key: falsifier-beads-export
 status: active
 kind: falsifier
 detects: "A committed .beads/issues.jsonl that no longer matches the Beads database — a stale projection about to reach git, where readers who cannot run bd will take it as current"
-implements: scripts/verify-impl.sh:328
+implements: scripts/verify-impl.sh:364
 falsified-by: falsifier-vitest
 provenance:
   source: "built and wired 2026-08-31 under fortkit-v7us.2, after the regeneration rule was measured by three timing probes on this fort; registered in the same change that wired it, per the falsifier-control-lint precedent"

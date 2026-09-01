@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,14 +18,24 @@ const check = fileURLToPath(
 // does not, and the claim is only worth making if these assertions would go red
 // when the check stops working.
 
-async function hasBd(): Promise<boolean> {
+// fortkit-v7us.2, Warden finding 1. This was a bare `if (!(await hasBd())) return;`
+// inside each test, which vitest renders as PASSED having executed no assertion —
+// and .github/workflows/ci.yml installs node and ShellCheck but never bd, so on
+// every push this suite reported five green while asserting nothing, WHILE the
+// register entry it falsifies claimed otherwise. That is the vacuity defect the
+// control file names two paragraphs from the claim it invalidated
+// (fortkit-52vf.12 finding 4). `describe.skipIf` renders as SKIPPED instead, so a
+// posture without bd is visible in the summary rather than counted as proof.
+function bdAvailable(): boolean {
   try {
-    await run("bd", ["--version"]);
+    execFileSync("bd", ["--version"], { stdio: "ignore" });
     return true;
   } catch {
     return false;
   }
 }
+
+const hasBd = bdAvailable();
 
 /** A git checkout with a real Beads workspace and a single bead in it. */
 async function beadsFixture() {
@@ -59,16 +69,14 @@ async function beadsFixture() {
   return { root, tracked };
 }
 
-describe("beads-export-check", () => {
+describe.skipIf(!hasBd)("beads-export-check", () => {
   test("passes when the committed export matches the database", async () => {
-    if (!(await hasBd())) return;
     const { root } = await beadsFixture();
     const result = await run(check, [root]);
     expect(result.stderr).toContain("matches the database");
   }, 60_000);
 
   test("FAILS when the committed export diverges — the control's own falsifier", async () => {
-    if (!(await hasBd())) return;
     const { root, tracked } = await beadsFixture();
     const original = await readFile(tracked, "utf8");
     const [first, ...rest] = original.split("\n").filter(Boolean);
@@ -94,7 +102,6 @@ describe("beads-export-check", () => {
   }, 60_000);
 
   test("announces a SKIP, never a silent pass, when there is no committed export", async () => {
-    if (!(await hasBd())) return;
     const { root, tracked } = await beadsFixture();
     await run("rm", [tracked]);
     const result = await run(check, [root]);
@@ -103,7 +110,6 @@ describe("beads-export-check", () => {
   }, 60_000);
 
   test("announces a SKIP in a worktree, whose export is a branch snapshot", async () => {
-    if (!(await hasBd())) return;
     const { root } = await beadsFixture();
     await writeFile(join(root, "README.md"), "fixture\n");
     await run("git", ["-C", root, "add", "README.md"]);
@@ -125,7 +131,6 @@ describe("beads-export-check", () => {
   }, 60_000);
 
   test("announces a SKIP outside a git checkout", async () => {
-    if (!(await hasBd())) return;
     const bare = await mkdtemp(join(tmpdir(), "fortkit-beads-export-nogit-"));
     const result = await run(check, [bare]);
     expect(result.stderr).toContain("SKIPPED");

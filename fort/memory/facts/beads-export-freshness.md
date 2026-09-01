@@ -46,6 +46,13 @@ from an absent one. See [[read-the-artifact-remember-the-why]]: this is that
 class, arrived at from the third direction — not a proxy measured, not a subject
 edited, but A RECORD NEVER OPENED.
 
-Full mechanism, audience, and the open question of whether the Warden can read
-`bd` directly (`fortkit-v7us.3`, unmeasured — do not cite either side as
-settled): `docs/specs/beads-export.md`.
+THE WARDEN CANNOT READ `bd`, AND THE REASON IS THE MASK RATHER THAN HER PROFILE
+(measured 2026-08-31, `fortkit-v7us.3`, inside a live review). Her profile permits
+`bd -C * show/list/search/memories` and the permission layer passes the call
+through; it dies at storage with `openat LOCK: read-only file system`, because
+embedded Dolt opens the database read-write even to serve a read and `.beads` is
+bound read-only in her sandbox. IT ERRORS, IT IS NOT DENIED — four earlier reviews
+were right that it cannot run and wrong about why. So the export's freshness is
+load-bearing for this fort's only review seat.
+
+Full mechanism and audience: `docs/specs/beads-export.md`.
