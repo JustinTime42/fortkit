@@ -338,6 +338,32 @@ esac
     expect(malformed.stderr).toContain("no valid records");
     expect(malformed.stderr).toContain("malformed stream record");
 
+    await writeFile(
+      join(eventsDirectory, "events-2026-08-31.jsonl"),
+      `${JSON.stringify({
+        ts: "2026-08-31T00:00:00Z",
+        actor: "founder",
+        seat: null,
+        category: "fort.founded",
+        target: null,
+        detail: "Fort founded",
+        payload: null,
+      })}\n`,
+    );
+    const unreadableShardPath = join(
+      eventsDirectory,
+      "events-2026-08-31.jsonl",
+    );
+    await chmod(unreadableShardPath, 0o000);
+    const unreadableShard = await execFileAsync("bash", ["scripts/digest.sh"], {
+      cwd: root,
+    }).catch((error: { code?: number; stderr?: string }) => error);
+    await chmod(unreadableShardPath, 0o644);
+    expect(unreadableShard).toMatchObject({ code: 1 });
+    expect(unreadableShard.stderr).toContain("EVENT STREAM");
+    expect(unreadableShard.stderr).toContain("could not read event shard");
+    expect(unreadableShard.stderr).not.toContain("awk:");
+
     await chmod(eventsDirectory, 0o000);
     const unreadable = await execFileAsync("bash", ["scripts/digest.sh"], {
       cwd: root,
