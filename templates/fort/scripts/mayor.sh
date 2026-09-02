@@ -43,10 +43,15 @@ if [ "${MAYOR_NO_MASK:-0}" = "1" ]; then
 fi
 require_bwrap || exit $?
 # PROMPT-FREE, BECAUSE THE KERNEL IS THE BOUNDARY (cycle 5, layer 3).
-# --dangerously-skip-permissions bypasses ALL permission checks including the
-# deny lists, so the mask is the only thing standing between this session and
-# the disk. That is exactly why it is passed AFTER require_bwrap succeeds and
-# never on the MAYOR_NO_MASK path above: no kernel boundary, no flag. With the
+# --dangerously-skip-permissions suppresses interactive approval prompts. The
+# 2026-08-17 Claude Code 2.1.233 seven-probe table established that deny rules
+# still bind for Edit and for Bash command patterns; its same-path probes showed
+# rm refused while a shell redirect and find -delete were allowed, so Bash
+# enforcement is verb-pattern matching, not path matching (ADV-0004). A
+# 2026-09-01 Claude Code 2.1.258 probe re-confirmed the Edit path-glob result
+# with an allowed Edit positive control. The mask remains essential defence in
+# depth. That is why the flag is passed AFTER require_bwrap succeeds and never
+# on the MAYOR_NO_MASK path above: no kernel boundary, no flag. With the
 # filesystem scoped (layer 1) what remains reachable is this repo, its
 # worktrees, ~/.claude, /tmp and the toolchain caches — all under git or
 # disposable. Unmasked sessions keep the full prompt-and-deny behaviour.

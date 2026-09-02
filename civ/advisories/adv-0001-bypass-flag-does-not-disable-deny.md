@@ -137,3 +137,19 @@ a decision not to build something.
 Consider also **not converging your copy to agree with the others**. Three of
 the four agree and are wrong, which is exactly how a wrong sentence wins a
 vote.
+
+> **RE-CONFIRMATION, 2026-09-01 (Claude Code 2.1.258; `fortkit-6xjy.1`).**
+> The 2026-08-17 Claude Code 2.1.233 seven-probe table on `fortkit-6xjy`
+> remains unchanged and unnarrowed: with positive controls and falsification
+> tests, it established the Edit result and the Bash results. In particular,
+> the same denied path produced a refused `rm`, an allowed shell redirect, and
+> an allowed `find -delete`. Deny therefore binds for Bash command patterns,
+> but Bash enforcement is verb-pattern matching rather than path matching; an
+> `Edit(...)` deny does not make that path write-proof against Bash (see
+> ADV-0004).
+>
+> The 2026-09-01 Claude Code 2.1.258 probe remains useful as a narrower
+> re-confirmation: fifteen days and one harness version later, an Edit
+> path-glob deny still bound with `--dangerously-skip-permissions` in effect,
+> while an allowed Edit positive control reached its own replacement failure.
+> It was not a new discovery and does not narrow the older table.
