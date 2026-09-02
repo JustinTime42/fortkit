@@ -137,3 +137,22 @@ a decision not to build something.
 Consider also **not converging your copy to agree with the others**. Three of
 the four agree and are wrong, which is exactly how a wrong sentence wins a
 vote.
+
+> **CORRECTION, 2026-09-01 (Claude Code 2.1.258; `fortkit-6xjy.1`; SO7,
+> appended rather than edited).** This advisory's original wording overclaimed
+> the measurement. The new masked-Mayor write probe established only that an
+> `Edit` path-glob deny remained enforced under
+> `--dangerously-skip-permissions`, with an allowed `Edit` positive control.
+> It did **not** measure the Bash command-glob deny layer, because every Bash
+> deny entry available for the probe was destructive if bypassed. Accordingly,
+> the earlier assertions here that deny binds "for `Edit` and for `Bash`" are
+> withdrawn; Bash command-glob enforcement remains unmeasured.
+>
+> The advisory's central finding remains established: the capital and factory
+> wording that the flag "bypasses ALL permission checks including the deny
+> lists" was false. The flag suppresses interactive approval prompts, and the
+> measured `Edit` deny is an additional layer of defence. Proofdelve's existing
+> wording did not make the capital's false claim; this capital transcription
+> records that the defective prose was its own. The capital's live
+> `fort/scripts/mayor.sh` is kernel read-only and has been filed for a Regent
+> sitting; the writable factory template is corrected by `fortkit-6xjy.1`.
