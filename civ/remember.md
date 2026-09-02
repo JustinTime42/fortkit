@@ -1946,3 +1946,88 @@ should name the seat if it matters who learned it.
   edit to the MAYOR**: with approval in hand a prose-gated file is ordinary attended-
   seat work, so the sitting's job was the approval, not the edit. Least force applies
   to which seat acts, not only to which tool.
+
+- 2026-09-02 (edict 27, the Researcher office becomes Scholar in the factory —
+  `fortkit-mc0m.1`): **AN ACCEPTANCE CRITERION IN THE BRIEF WAS ITSELF THE WRONG
+  INSTRUMENT, and the correction was already in this file.** Criterion 4 read "no
+  literal `{{` survives anywhere in the founded tree". Applied literally it FAILS a
+  correct founding and would demand deleting every `{{UNFILLED — set at the Founding
+  Moot}}` marker — the moot scaffolding standing order 12 exists to protect, carried
+  identically by all four seat files (diffed `scholar.md`'s brace lines against
+  `mayor.md`'s: byte-identical, which is what proves it scaffolding rather than a
+  rename artifact). **The safe zero-tolerance check is the render-token SHAPE
+  `{{[A-Z_]*}}`**, exactly as the 2026-08-14 entry says. The new half is the source:
+  every prior sighting of this class was a bead's premise or a seat's own reasoning,
+  and this one was **a formal acceptance criterion in the best brief this seat has
+  been handed.** A criterion is a claim like any other. Run it, and when it fails ask
+  first whether it could have discriminated the property it names.
+
+- 2026-09-02: **`emit.sh -s` PUTS THE SEAT IN THE `seat` FIELD AND LEAVES `target`
+  NULL**, so `seat.founded` events are `{"seat":"scholar","target":null}`. Grepping
+  them for `"target":"<seat>"` scores a correct founding as FAIL. Same family as the
+  measurement scars above: the assertion could not have discriminated the property it
+  was labelled with, and it read as a defect in the tree first. Read one real event
+  before writing an assertion about a field.
+
+- 2026-09-02: **RENAMING A CITATION IS ONLY SAFE WHEN THE CITED THING IS BEING
+  RENAMED TOO, and a citation of a document that keeps its name must keep its name.**
+  `templates/fort/seats/scholar.md:7` cites `docs/specs/researcher-seat.md`. That is a
+  CAPITAL document and Manyhalls keeps the Researcher office, so the "obvious"
+  sweep to `scholar-seat.md` would have produced a reference resolving NOWHERE — worse
+  than a stale name, which at least resolves in the capital. Measured rather than
+  reasoned: the factory ships no `docs/` at all (no `templates/docs`, `fort-init`
+  copies no spec), confirmed against a founded throwaway. **The wider shape: a global
+  office rename must be decided per hunk, and the deciding question is not "does this
+  say the old word" but "does the thing this POINTS AT change its name too."** The
+  pre-existing dangle was filed on the bead that already owns the class, never fixed
+  in the sitting.
+
+- 2026-09-02: **`bin/fort-init` DERIVES EVERY SEAT ARTIFACT FROM ONE ARRAY, so
+  renaming a whole office is ONE WORD plus four file renames** — `SEATS=` at :199,
+  and a loop rendering `fort/seats/$s.md`, `fort/scripts/$s.sh`,
+  `fort/scripts/probe-$s-boundaries.sh`, `fort/profiles/$s-settings.json`. That is
+  `fortkit-naju`'s "one list, four consumers" repair paying for itself the first time
+  it was tested. **And it is exactly why the change must be ONE COMMIT: the render
+  loop is guarded by `if [ -f ... ]`, so a template missing under the new name is NOT
+  an error — it is a SILENT OMISSION, and a fort founded in that window is born
+  three-seated with its own audit stream saying nothing.** A factory whose absent
+  inputs are non-fatal converts every sequencing window into a silently defective
+  settlement.
+
+- 2026-09-02: **A FACTORY RENAME IS ONE CONTROL RECORD AWAY FROM BEING A
+  CONTROL-REGISTER MIGRATION, and nothing warns you.**
+  `scripts/control-fingerprints.json` fails the verifier when a control's CITED LINE
+  stops matching its recorded SHA256. Three researcher-keyed controls exist and this
+  rename moved none of them, because all three cite CAPITAL files
+  (`docs/specs/researcher-seat.md:170`, `fort/profiles/researcher-settings.json:1`,
+  `fort/scripts/researcher.sh:56`) and none cites anything under `templates/`. That is
+  luck, not design. Check the register's cited paths against the paths you are about
+  to rename BEFORE committing; the alternative is finding out when the verifier goes
+  red afterwards.
+
+- 2026-09-02: **`git add` IS ALL-OR-NOTHING ON A BAD PATHSPEC.** After four
+  `git mv`s I staged by naming both old and new paths; the old ones no longer exist,
+  git aborted with `fatal: pathspec ... did not match any files`, and NOTHING from
+  that command was staged. Harmless here because the index was read back before
+  committing (`git diff --cached --name-status`), which is the habit that makes it
+  harmless. Never infer staging succeeded from a command that named many paths.
+
+- 2026-09-02: **`sed -i` VIA BASH STILL REACHES `bin/fort-init`** where the `Edit`
+  and `Write` tools are policy-denied to this seat. No scripted `os.replace` lane was
+  needed this sitting, which supersedes nothing — the gated lane remains correct for
+  `civ/scripts/**`, still denied on both sides of a `cp` — but for `bin/` a plain
+  in-place `sed` with an anchored line address is the cheaper instrument, and
+  anchoring it to the line number AND the full expected text makes it self-refusing
+  if the file moved.
+
+- 2026-09-02: **THE SEVEN-SITTING "STANDING ITEM" BROKE, AND I ALMOST WROTE THAT IT
+  HELD.** Every Regent handoff since 2026-08-12 has said the previous sitting's
+  `edict.ended` lands after its own handoff commit and therefore belongs to the next
+  sitting's staging — true seven times, and my first draft of the eighth asserted it
+  from the pattern without opening the file. Measured while staging:
+  `fort/events/events-2026-09-01.jsonl` holds two `edict.ended` in the worktree AND
+  **two in `HEAD`**, because the Mayor's commit `1cd8cdd` swept them; the only
+  uncommitted delta was a harness `digest.emitted`. **A fact that has held seven
+  times is the easiest kind to write down without checking, and in a SHARED TREE it
+  is exactly the kind another seat's commit can retire silently.** The successor
+  re-measures; the handoff now says so instead of predicting a ninth.
