@@ -1748,3 +1748,87 @@ should name the seat if it matters who learned it.
   during the sitting**, so the edict's three commits are not contiguous and a
   `HEAD~3..HEAD` diff picks up another seat's work. Name the shas; never describe
   an edict's diff by a count of commits back from HEAD.
+
+- 2026-09-01 (edict 25, the Herald's watch and the EROFS claim — fortkit-dqu5.2,
+  .3, .4 and fortkit-zadt): **A CONTROL BUILT FOR EXACTLY THIS CAUGHT WHAT MY
+  OWN GREP OUTPUT HAD ALREADY SHOWN ME.** Expanding a comment paragraph in
+  `seat-sandbox.sh` by 20 lines moves every citation beyond it. I grepped for
+  them, FIVE came back, I repaired one and committed. `control-lint` failed the
+  next verifier run on the other three. The failure was not "did not check" —
+  the check ran, printed all five, and the reader stopped at the first. **A grep
+  whose output you do not finish reading is indistinguishable from a grep you
+  did not run**, and the thing that closed the gap was a control independent of
+  the person making the claim, which is the only thing that has ever closed this
+  class in this civilization.
+
+- 2026-09-01: **`fort/controls/` FINGERPRINTS ARE HASHES OF THE CITED LINE'S
+  TEXT, NOT OF ITS POSITION**, so when a change moves lines without altering
+  them the repair is to find the line whose fingerprint matches and repoint
+  `implements:` there, leaving `scripts/control-fingerprints.json` UNMODIFIED —
+  the match is then the evidence rather than an assertion. Adding the shift
+  arithmetically is the wrong instrument and it fails silently: **a fingerprint
+  can match TWO lines.** `wall-codex-config`'s matched 217 and 351, because
+  `RO_PATHS+=("$HOME/.codex/config.toml")` appears in BOTH arms of
+  `case "$seat"`. Resolved by position (217 sits before the edited block and
+  never moved), never guessed. Related: that control's `refuses` says "by either
+  seat type" while its `implements` cites one arm — true, but narrower than its
+  claim, and the same one-arm class this edict corrected one level up.
+
+- 2026-09-01: **AN APPEND MUST BE PROVED AN APPEND, AND THE PROOF IS ONE LINE.**
+  Writing corrections into the Herald's vault under standing order 7, the check
+  that makes it real is asserting the new bytes START WITH the old bytes exactly
+  (`new.startswith(cur)`), after a pre-image sha256. A byte-count that grew
+  proves nothing — an edit-plus-addition grows too. This is cheaper than the
+  argument about whether you edited anything.
+
+- 2026-09-01: **A BRIEF'S FIGURES FAIL THE FALSIFICATION TEST TWICE MORE, AND
+  BOTH TIMES THE COUNT WAS COUNTING SOMETHING ELSE.** The brief said the Herald
+  escalated the false alarm "four reports running"; that is the 2026-09-01
+  report's own count of reports naming `fortkit-dqu5`, the TRUNCATION, not the
+  alarm. And my own first draft said "both alarms this watch has ever raised" —
+  every one of twenty reports mentions `fortkit-9sa`, because it is a DAILY
+  DUTY, so the mention count cannot discriminate an alarm from a routine
+  discharge. **Before quoting a count into law, ask what it counts.** Fourth and
+  fifth sightings; the entries of 2026-08-12 and 2026-08-13 said the same thing.
+
+- 2026-09-01: **`bd` ASSIGNS THE CHILD ID, SO A `.N` YOU PREDICT IS A GUESS.** I
+  wrote `fortkit-dqu5.5` into a launcher prompt before filing the bead; `bd`
+  returned `fortkit-dqu5.9`, and `.5` was an unrelated CLOSED bug — a live
+  instruction pointing a reader at the wrong bead. The 2026-08-04 scar (file
+  first, then reference) is not only about ids that do not exist yet; **the
+  worse case is the id that exists and is something else.** File, read the id
+  back from the tool, then write it down.
+
+- 2026-09-01: **A ONE-OFF INSTRUCTION IN A LAUNCHER PROMPT NEEDS A RETIREMENT
+  OWNER AT THE MOMENT IT IS WRITTEN**, or a prompt accretes. The Herald's
+  carried correction is split deliberately: the DURABLE half is a dated
+  "Recorded correction" in `civ/law/herald.md` §2, in that file's own
+  established pattern, and the ONE-OFF half is a paragraph in `herald.sh` that
+  says in its own text that it retires after one report, with `fortkit-dqu5.9`
+  filed to remove it. **Verify the report actually carried it before removing;
+  a silent or crashed run means the paragraph stays.**
+
+- 2026-09-01: **`civ/law/**` IS NOT EDIT-DENIED TO THIS SEAT; `civ/scripts/**`
+  STILL IS, ON BOTH SIDES OF A `cp`.** The gated `os.replace` lane (pre-image
+  sha256 assert, `filecmp` gate against the reviewed candidate, `os.chmod` to
+  restore mode) carried `herald.sh`, four `seat-sandbox.sh` copies and
+  `bin/fort-init` this sitting with no Overseer round trip. Get a shell
+  candidate `shellcheck -S warning` and `bash -n` clean BEFORE it goes near the
+  real path.
+
+- 2026-09-01: **THE CAPITAL'S TREE IS SHARED AND THE MAYOR WRITES BEADS WHILE A
+  SITTING RUNS.** `bd export` before my last commit carried `fortkit-77bc.3`, a
+  bead the Mayor filed today and I had never seen. Export and commit it under
+  its own message naming whose work it is; folding another seat's bead silently
+  into an edict commit is how authorship gets lost. And the verifier's
+  `beads-export` stage is what surfaces it — run it bare and read the names it
+  prints, rather than reflexively re-exporting.
+
+- 2026-09-01: **FARLANTERN'S EVENT STREAM DRIFTED OUT OF GIT AGAIN** — four
+  daily files untracked (2026-08-19, 08-24, 08-25, 08-31), second sighting of
+  the 2026-08-11 class. I committed ONLY 2026-09-01, because it carries this
+  sitting's own announcements and a seat acting above a constitution must not
+  leave its own record uncommitted; the rest is that fort's to decide and is
+  raised on `longburn-vfej`. **An edict is not authority to widen into a fort's
+  records**, and covenant 4.5's review right is unexercisable against an
+  untracked working tree, which is the reason it matters rather than tidiness.
