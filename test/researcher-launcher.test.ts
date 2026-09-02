@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const launcher = `${root}templates/fort/scripts/researcher.sh`;
-const profile = `${root}templates/fort/profiles/researcher-settings.json`;
-const probe = `${root}templates/fort/scripts/probe-researcher-boundaries.sh`;
+const launcher = `${root}templates/fort/scripts/scholar.sh`;
+const profile = `${root}templates/fort/profiles/scholar-settings.json`;
+const probe = `${root}templates/fort/scripts/probe-scholar-boundaries.sh`;
 
 function shell(source: string) {
   return new Promise<{ stdout: string }>((resolve, reject) => {
@@ -20,13 +20,13 @@ function shell(source: string) {
   });
 }
 
-describe("Researcher template boundary", () => {
+describe("Scholar template boundary", () => {
   test("uses only the read/search tools and its isolated settings profile", async () => {
     const source = await readFile(launcher, "utf8");
 
     expect(source).toContain('--tools "WebSearch,WebFetch,Read,Grep,Glob"');
     expect(source).toContain('--setting-sources ""');
-    expect(source).toContain("researcher-settings.json");
+    expect(source).toContain("scholar-settings.json");
     // Memory-surface coupling guard (fortkit-xgul.3, restoring fortkit-vhk.14
     // finding 1 in its end-state form). The template prompt must name the
     // facts-ledger surface, never the retired flat pointer. This couples the
@@ -39,10 +39,10 @@ describe("Researcher template boundary", () => {
       'build_mask claude "$root" --env-root "$root-worktrees" "$root"',
     );
     expect(source).toContain("RESEARCH-COMPLETE");
-    expect(source).toContain("-a researcher -s researcher");
-    expect(source).toContain("--actor researcher");
-    expect(source).not.toMatch(/-a (?!researcher\b)/);
-    expect(source).not.toMatch(/--actor (?!researcher\b)/);
+    expect(source).toContain("-a scholar -s scholar");
+    expect(source).toContain("--actor scholar");
+    expect(source).not.toMatch(/-a (?!scholar\b)/);
+    expect(source).not.toMatch(/--actor (?!scholar\b)/);
     expect(source).toContain('[ "$rc" -eq 0 ]');
     expect(source).toContain(
       "grep -qE '^[[:space:]]*RESEARCH-COMPLETE[[:space:]]*$' \"$log\"",
@@ -83,7 +83,7 @@ describe("Researcher template boundary", () => {
   });
 });
 
-describe("Researcher boundary probe parsing helpers", () => {
+describe("Scholar boundary probe parsing helpers", () => {
   test("extracts only an exact launcher --tools value", async () => {
     const { stdout } = await shell(
       `source ${JSON.stringify(probe)}; launcher_tools ${JSON.stringify(launcher)}`,
@@ -134,7 +134,7 @@ describe("Researcher boundary probe parsing helpers", () => {
   });
 
   test("rejects unsafe launcher variants", async () => {
-    const fixture = await mkdtemp(join(tmpdir(), "researcher-launcher-"));
+    const fixture = await mkdtemp(join(tmpdir(), "scholar-launcher-"));
     try {
       const badTools = join(fixture, "bad-tools.sh");
       const missingSources = join(fixture, "missing-sources.sh");
@@ -162,7 +162,7 @@ describe("Researcher boundary probe parsing helpers", () => {
   });
 
   test("rejects unsafe profile variants", async () => {
-    const fixture = await mkdtemp(join(tmpdir(), "researcher-profile-"));
+    const fixture = await mkdtemp(join(tmpdir(), "scholar-profile-"));
     try {
       const bypass = join(fixture, "bypass.json");
       const extraAllow = join(fixture, "extra-allow.json");

@@ -8,7 +8,7 @@ Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `for
 {"ts":"2026-08-03T17:30:00-08:00","actor":"forge-worker","seat":"forge","category":"bead.claimed","target":"bead-example","detail":"Forge worker claims a CI bead","payload":null}
 ```
 
-- **ts**: ISO-8601 with offset. **actor**: who did it (for example, `forge-worker`, `overseer`, `harness`, or `watcher:<name>`). **seat**: office if applicable (`mayor|forge|warden|researcher`). **category**: dotted event type (below). **target**: bead ID, commit hash, seat, or path. **detail**: one human-readable line (this becomes the DF announcement text). **payload**: optional JSON (model used, tokens, verdicts, tallies).
+- **ts**: ISO-8601 with offset. **actor**: who did it (for example, `forge-worker`, `overseer`, `harness`, or `watcher:<name>`). **seat**: office if applicable (`mayor|forge|warden|scholar`). **category**: dotted event type (below). **target**: bead ID, commit hash, seat, or path. **detail**: one human-readable line (this becomes the DF announcement text). **payload**: optional JSON (model used, tokens, verdicts, tallies).
 
 ## Categories (extend freely; never rename existing ones)
 

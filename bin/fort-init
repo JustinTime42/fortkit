@@ -196,7 +196,7 @@ render "$T/fort/charter.md" fort/charter.md
 # Each artifact is rendered IF ITS TEMPLATE EXISTS — a seat with no boundary
 # probe or no profile of its own is normal, and an `if` rather than a `&&` chain
 # because a trailing false test under `set -e` would abort the founding.
-SEATS=(mayor forge warden researcher)
+SEATS=(mayor forge warden scholar)
 SEAT_OFFICES=$(IFS=/; echo "${SEATS[*]}")
 for s in "${SEATS[@]}"; do
   if [ -f "$T/fort/seats/$s.md" ]; then render "$T/fort/seats/$s.md" "fort/seats/$s.md"; fi

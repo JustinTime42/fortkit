@@ -1,13 +1,13 @@
 #!/bin/bash
-# Static Researcher boundary probe (fortkit-vhk.5.1).  A HAND installation
+# Static Scholar boundary probe (fortkit-vhk.5.1).  A HAND installation
 # must chmod 755 this file; fort-init applies that mode to shipped scripts.
 #
 # This probe writes a temporary $root/.env.probe-canary and removes it on a
 # normal exit. SIGKILL prevents that cleanup. If a write-denial assertion
-# fails, its .researcher-boundary-canary target can likewise remain in src/,
+# fails, its .scholar-boundary-canary target can likewise remain in src/,
 # fort/seats/, fort/profiles/, fort/scripts/, or .git/hooks/.
 #
-# Usage: fort/scripts/probe-researcher-boundaries.sh <repo-root> [--strict]
+# Usage: fort/scripts/probe-scholar-boundaries.sh <repo-root> [--strict]
 # In the fortkit factory checkout this examines templates/fort; in a founded
 # fort it examines fort/. Every assertion prints a named PASS/FAIL/SKIP line.
 # --strict exits non-zero when any assertion was skipped.
@@ -69,7 +69,7 @@ no_forbidden_tool() { # no_forbidden_tool <launcher>
 }
 
 settings_profile_selected() { # settings_profile_selected <launcher>
-  [ "$(launcher_flag_value "$1" --settings)" = "\$root/fort/profiles/researcher-settings.json" ]
+  [ "$(launcher_flag_value "$1" --settings)" = "\$root/fort/profiles/scholar-settings.json" ]
 }
 
 no_dangerous_skip() { # no_dangerous_skip <launcher>
@@ -125,13 +125,13 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
     --strict) strict=1 ;;
     *) echo "Usage: $0 <repo-root> [--strict]" >&2; exit 64 ;;
   esac
-  if [ -f "$root/templates/fort/scripts/researcher.sh" ]; then
+  if [ -f "$root/templates/fort/scripts/scholar.sh" ]; then
     fort_root="$root/templates/fort"
   else
     fort_root="$root/fort"
   fi
-  launcher="$fort_root/scripts/researcher.sh"
-  profile="$fort_root/profiles/researcher-settings.json"
+  launcher="$fort_root/scripts/scholar.sh"
+  profile="$fort_root/profiles/scholar-settings.json"
   pass=0; fail=0; skip=0
 
   report() { # report <description> <command...>
@@ -149,12 +149,12 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
     skip=$((skip + 1))
   }
 
-  echo "== Researcher static boundary: $root =="
+  echo "== Scholar static boundary: $root =="
   report "launcher exact tool set" exact_tools "$launcher"
   report "launcher omits dangerously-skip-permissions" no_dangerous_skip "$launcher"
   report "launcher isolates settings sources" empty_setting_sources "$launcher"
   report "launcher enables strict MCP config" launcher_has_flag "$launcher" --strict-mcp-config
-  report "launcher selects researcher profile" settings_profile_selected "$launcher"
+  report "launcher selects scholar profile" settings_profile_selected "$launcher"
   report "launcher has no forbidden allow tool" no_forbidden_tool "$launcher"
 
   report "profile default mode is non-bypass" profile_check "$profile" default-safe
@@ -165,7 +165,7 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   secret_canary="$root/.env.probe-canary"
   canary_created=0
   if (set -C; : > "$secret_canary") 2>/dev/null; then
-    printf 'researcher-boundary-canary\n' >> "$secret_canary"
+    printf 'scholar-boundary-canary\n' >> "$secret_canary"
     canary_created=1
     trap 'rm -f -- "$secret_canary"' EXIT
   fi
@@ -178,13 +178,13 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   build_mask claude "$root" --env-root "$root-worktrees" "$root" "$root-worktrees"
   mask_env claude
 
-  report_write_denial "mask denies product-code writes (src/)" "$root/src/.researcher-boundary-canary"
+  report_write_denial "mask denies product-code writes (src/)" "$root/src/.scholar-boundary-canary"
   report_write_denial "mask denies constitution charter write" "$root/fort/charter.md"
-  report_write_denial "mask denies constitution seats write" "$root/fort/seats/.researcher-boundary-canary"
-  report_write_denial "mask denies constitution profiles write" "$root/fort/profiles/.researcher-boundary-canary"
-  report_write_denial "mask denies constitution scripts write" "$root/fort/scripts/.researcher-boundary-canary"
+  report_write_denial "mask denies constitution seats write" "$root/fort/seats/.scholar-boundary-canary"
+  report_write_denial "mask denies constitution profiles write" "$root/fort/profiles/.scholar-boundary-canary"
+  report_write_denial "mask denies constitution scripts write" "$root/fort/scripts/.scholar-boundary-canary"
   report_write_denial "mask denies .git/config write" "$root/.git/config"
-  report_write_denial "mask denies .git/hooks write" "$root/.git/hooks/researcher-boundary-canary"
+  report_write_denial "mask denies .git/hooks write" "$root/.git/hooks/scholar-boundary-canary"
   if [ "$canary_created" -eq 1 ]; then
     report "mask inode-masks .env* bytes" secret_inode_masked "$secret_canary"
   else
@@ -193,6 +193,6 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   report "mask permits ordinary repository reads" ordinary_readable
   report "mask permits git status" git_status_works
 
-  echo "== Researcher static boundary: $pass pass, $fail fail, $skip skip =="
+  echo "== Scholar static boundary: $pass pass, $fail fail, $skip skip =="
   probe_exit_status
 fi
