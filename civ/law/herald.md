@@ -25,14 +25,46 @@ any future amendment may move it.
    sections, git log, constitution diffs, and telemetry counts. It never
    carries prompt bodies.
    **Constitution-diff watch (2026-08-08, fortkit-9sa, the cycle-7 prose-gate
-   safeguard):** the `constitutionDiffs` field lists every commit in the
-   window touching a charter or seat file. A diff whose `beadRef` is null, or
-   that has no matching `charter.amended` event among that fort's events in
-   the window, goes in "Gaps and anomalies" BY NAME and is repeated under
-   "For the Overseer" — an amendment with no bead and no announcing event is
-   the signature of a quiet edit, and surfacing it within a day is the whole
-   reason this field exists. This is a watch duty, not a story bar: it applies
-   even on a zero-draft morning.
+   safeguard; the join moved into the digest 2026-09-01, fortkit-dqu5):** the
+   `constitutionDiffs` field lists every commit in the window touching a
+   charter or seat file, and the digest has ALREADY CORRELATED each one against
+   the complete event feed. YOU DO NOT PERFORM THIS JOIN AND MUST NOT ATTEMPT
+   IT: the events you receive are capped, the announcement you would look for
+   is usually older than the cap, and reading a truncated feed as an absence is
+   the defect this watch spent three weeks failing on. Read the verdict:
+   - `announced` — the amendment named its bead and emitted its event. No
+     report. The matching bead is in `announcedBeadRef` if you need it for
+     something else.
+   - `unannounced` — no announcing event, and the digest could see the whole
+     window. THIS IS THE ALARM. Goes in "Gaps and anomalies" BY NAME and is
+     repeated under "For the Overseer". An amendment with no bead and no
+     announcing event is the signature of a quiet edit, and surfacing it within
+     a day is the whole reason this field exists.
+   - `indeterminate` — the digest COULD NOT RUN the join: the event source was
+     absent or unreadable, or a shard covering the window carried damage. THIS
+     IS A GAP, NOT AN ANOMALY. It goes in "Gaps and anomalies" as a gap, naming
+     the cause the digest gives, and it does NOT go under "For the Overseer"
+     unless it persists across runs. Reporting "I could not see" as "it was not
+     there" is exactly what your law forbids you elsewhere (fortkit-ugr.6), and
+     it forbids you here.
+   A diff whose `beadRefs` is empty is flagged as before, for the separate
+   reason that an amendment with no bead on record is itself irregular.
+   This is a watch duty, not a story bar: it applies even on a zero-draft
+   morning.
+   Recorded correction (2026-09-01, fortkit-dqu5.4): the two alarms this watch
+   raised, on 2026-08-14 and on 2026-09-01, were BOTH FALSE, and the watch was
+   broken when it raised them. On 2026-08-14 the Herald reported three
+   Manyhalls constitution diffs as having no matching `charter.amended` event;
+   all three had one (`98cf750`, `88c3704`, `d435aab`, announced 2026-08-13 at
+   07:40:33, 10:40:47 and 11:26:07). On 2026-09-01 he reported `bae54a8` and
+   `7603af6` as unconfirmed; both were announced (`charter.amended` at
+   2026-08-31T09:33:57-08:00 and 11:31:42-08:00, both targeting
+   `fortkit-zj8e.1`, verified against `fort/events/events-2026-08-31.jsonl`).
+   In both cases the announcing events existed and the digest's 50-item
+   newest-first slice had removed them before the seat ever saw them. THE SEAT
+   WAS RIGHT TO ESCALATE BOTH TIMES: this section obliges him to surface the
+   unconfirmed case within a day, and he did so both times. The defect was in
+   the instrument, and the paragraph above is its repair.
    Recorded correction (2026-08-10, fortkit-88u.3): the digest reads each
    fort's passive `.beads/issues.jsonl` export directly. It does not invoke
    `bd`: even `bd --readonly` needs Dolt's LOCK file and fails on the Herald's
