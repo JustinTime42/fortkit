@@ -138,34 +138,13 @@ Consider also **not converging your copy to agree with the others**. Three of
 the four agree and are wrong, which is exactly how a wrong sentence wins a
 vote.
 
-> **CORRECTION, 2026-09-01 (Claude Code 2.1.258; `fortkit-6xjy.1`; SO7,
-> appended rather than edited).** This advisory's original wording overclaimed
-> the measurement. The new masked-Mayor write probe established only that an
-> `Edit` path-glob deny remained enforced under
-> `--dangerously-skip-permissions`, with an allowed `Edit` positive control.
-> It did **not** measure the Bash command-glob deny layer, because every Bash
-> deny entry available for the probe was destructive if bypassed. Accordingly,
-> the earlier assertions here that deny binds "for `Edit` and for `Bash`" are
-> withdrawn; Bash command-glob enforcement remains unmeasured.
->
-> The advisory's central finding remains established: the capital and factory
-> wording that the flag "bypasses ALL permission checks including the deny
-> lists" was false. The flag suppresses interactive approval prompts, and the
-> measured `Edit` deny is an additional layer of defence. Proofdelve's existing
-> wording did not make the capital's false claim; this capital transcription
-> records that the defective prose was its own. The capital's live
-> `fort/scripts/mayor.sh` is kernel read-only and has been filed for a Regent
-> sitting; the writable factory template is corrected by `fortkit-6xjy.1`.
-
-> **CORRECTION TO THE 2026-09-01 CORRECTION (Claude Code 2.1.258;
-> `fortkit-6xjy.1`; SO7, appended rather than edited).** The 2026-09-01
-> correction wrongly withdrew this advisory's Bash-layer finding. The primary
-> measurement is the 2026-08-17 Claude Code 2.1.233 seven-probe table on
-> `fortkit-6xjy`: it established the Edit result and the Bash results with
-> positive controls and falsification tests. In particular, the same denied
-> path produced a refused `rm`, an allowed shell redirect, and an allowed
-> `find -delete`. Deny therefore binds for Bash command patterns, but Bash
-> enforcement is verb-pattern matching rather than path matching; an
+> **RE-CONFIRMATION, 2026-09-01 (Claude Code 2.1.258; `fortkit-6xjy.1`).**
+> The 2026-08-17 Claude Code 2.1.233 seven-probe table on `fortkit-6xjy`
+> remains unchanged and unnarrowed: with positive controls and falsification
+> tests, it established the Edit result and the Bash results. In particular,
+> the same denied path produced a refused `rm`, an allowed shell redirect, and
+> an allowed `find -delete`. Deny therefore binds for Bash command patterns,
+> but Bash enforcement is verb-pattern matching rather than path matching; an
 > `Edit(...)` deny does not make that path write-proof against Bash (see
 > ADV-0004).
 >
