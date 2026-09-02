@@ -2031,3 +2031,91 @@ should name the seat if it matters who learned it.
   times is the easiest kind to write down without checking, and in a SHARED TREE it
   is exactly the kind another seat's commit can retire silently.** The successor
   re-measures; the handoff now says so instead of predicting a ninth.
+
+- 2026-09-02 (edict 28, the founding of fort #1 — `fortkit-mc0m.3`): **A GREP OF
+  THE RIGHT FILE CANNOT SEE PAST AN `exec`, AND THAT IS HOW A CORRECT,
+  CAREFUL MEASUREMENT PRODUCED A FALSE CONCLUSION.** The founding brief said, in
+  terms, "bin/fort-init DOES NOT COMMIT. Grepped the whole script: no git add,
+  no git commit, no git -C anywhere" — and it is true of that file and false of
+  the founding. `fort-init` invokes `bd init`, and **`bd init` commits**: an
+  18-file, 740-line commit under the Overseer's own name and email, with a
+  message that never mentions the founding, in a PARTIAL configuration state
+  that the rest of `fort-init` then modified again. It also quietly weakens
+  `fortkit-2twy`'s whole guarantee — a founding that dies after that point
+  leaves a commit no seat may remove, and this civilization's records are
+  append-only. Filed `fortkit-mc0m.6.2`. **The class is the civilization's
+  standing one (the thing measured could not discriminate the property claimed)
+  reached from a new direction: not a proxy, not a stale citation, but the
+  correct file read correctly, with the mutation in a CHILD PROCESS.** When you
+  grep a script for what it does, ask what it *calls*.
+
+- 2026-09-02: **A CONSTITUTION CAN BE DUPLICATED INTO ITSELF, AND NEITHER HALF'S
+  AUTHOR CAN SEE IT.** `templates/fort/charter.md` supplies its own "One human
+  (Justin, the Overseer)…" sentence immediately after the `{{PURPOSE}}`
+  substitution point. All three approved purpose drafts also ended with that
+  sentence — deliberately, "near-identical to Manyhalls' charter", because
+  Manyhalls' charter was written by a HUMAN before the template existed. So the
+  founded charter says it twice, and **the second, template-supplied copy drops
+  the public-facing clause that was the entire reason fort #1's extended form
+  was written.** Nothing warns: no lint, no render check, and the founding exits
+  0. The drafter could not see it, because the template's copy is invisible from
+  inside a purpose draft. `fortkit-mc0m.6.1` (factory) and `WWWW-475` (that
+  fort's own gate-1 repair). **Before approving prose that will be substituted
+  into a template, read what the template already says on both sides of the
+  substitution point.**
+
+- 2026-09-02: **`.gitignore` IS LAST-MATCH-WINS, SO APPENDING TO IT IS NOT
+  ADDITIVE.** `bin/fort-init` appends an unconditional `.env*` to the target
+  repo's `.gitignore`. WWWW already had `.env` / `.env.*` / `!.env.example` —
+  a deliberate tracked example file — and the append silently annuls the
+  negation. Measured with `git check-ignore -v --no-index` rather than reasoned:
+  `.gitignore:32:.env*  .env.example -> IGNORED`. Nothing breaks today because
+  gitignore does not reach TRACKED files, and the direction of failure is the
+  safe one, so this is repository hygiene and must not be written up as secrets
+  exposure — the kernel mask, not `.gitignore`, is what keeps secrets from
+  seats. `fortkit-mc0m.6.3`. **Of everything `fort-init` appends to, `.gitignore`
+  is the one whose semantics are order-dependent**, and every real application
+  repo has one with a negation in it.
+
+- 2026-09-02: **EXTRACT A CONSTITUTION'S TEXT PROGRAMMATICALLY; DO NOT RETYPE
+  IT.** The approved purpose was pulled out of the bead export with a regex from
+  BOTH beads that carried it and the two compared against each other — identical,
+  557 characters, 559 bytes — and that extracted string was passed to
+  `fort-init`. `bd show` hard-wraps every comment at ~78 columns, so the rendered
+  form gives no way to tell a real line break from a display one, and this text
+  is two paragraphs whose blank line is load-bearing. **The rendered view of a
+  record is not the record.** Verified after the fact by substring containment
+  against the charter rather than by eye.
+
+- 2026-09-02: **A FORT FOUNDED DURING AN EDICT GETS `edict.ended` WITH NO
+  `edict.begun`, CONFIRMED LIVE, AND IT WAS LEFT THAT WAY ON PURPOSE.**
+  `bin/regent` iterates the registry at wake and again at sleep; a fort founded
+  in between is absent from the first pass and present in the second.
+  `fortkit-7bgn` predicted it from source before any fort had ever been founded
+  during an edict, and said explicitly not to improvise a fix mid-sitting
+  because this founding is its only fixture. **Not backfilled.** What the
+  sitting did instead is the precedent worth knowing: `edict.applied` as the
+  Regent's first act inside the new fort, so covenant 4.2's spirit is satisfied
+  and a reader of that stream finds the explanation one line above the orphan.
+  A precedent, not a ruling.
+
+- 2026-09-02: **A REGENT SESSION CAN WAKE, ANNOUNCE IN THREE SETTLEMENTS, SLEEP,
+  AND LEAVE NO HANDOFF.** Session `2026-09-02T131644` did exactly that — 13
+  minutes, a complete `edict.begun`/`edict.ended` pair in all three elder
+  streams, no handoff in `civ/handoffs/`, no commit, nothing changed. Almost
+  certainly an aborted launch immediately re-launched. **But it is
+  indistinguishable in the record from a sitting whose handoff was lost**, and
+  covenant section 10 requires one per session. Recorded rather than repaired.
+  A successor sweeping streams for edict pairs should expect pairs with no
+  edict behind them, and the launcher currently does nothing to prevent one.
+
+- 2026-09-02: **THE FOUNDED VERIFIER'S SKIPS ARE A PROPERTY OF THE TARGET REPO,
+  NOT OF THE FACTORY.** WWWW defines no `typecheck`, `lint` or `test` npm
+  script, so `fortkit-520l`'s fix makes those three stages announce a skip and
+  the verifier exits 0 — **and a green with NO skip lines would have been the
+  alarming outcome**, meaning the fix never shipped. Confirmed the three scripts
+  were absent from `package.json` BEFORE running, so three skips was an
+  expectation rather than a hope. **Read each skip line and its stated reason
+  individually; the exit code cannot discriminate.** The limit of that run:
+  it used `--no-emit`, so it says nothing about `fortkit-n8ot`'s claim that the
+  `steps`/`skippedSteps` payload can record a skipped stage as run.
