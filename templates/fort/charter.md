@@ -78,7 +78,7 @@ Some seats of this civilization are not seats of any settlement. They work acros
 forts, or above what a fort may do to itself, or point outward at the world, and
 they are governed by their own law: `civ/covenant.md`, in the fortkit repository,
 which is the civilization's capital. They reside there; they are not ruled by
-Manyhalls, and this charter does not bind them. Their seats and access schedules are in `fortkit/civ/seats/`,
+this settlement, and this charter does not bind them. Their seats and access schedules are in `fortkit/civ/seats/`,
 readable by anyone. **Every `civ/` path in this section is relative to the
 fortkit repository, not to this one; no settlement but the capital has a `civ/`
 directory at all.**
