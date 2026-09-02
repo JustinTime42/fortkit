@@ -257,7 +257,11 @@ async function readDigestFort(
     handoffSectionIndex:
       filteredHandoffSections === null
         ? null
-        : indexHandoffSections(name, filteredHandoffSections),
+        : indexHandoffSections(
+            name,
+            filteredHandoffSections,
+            maxHandoffSectionsPerFort,
+          ),
     handoffSectionsTruncated:
       filteredHandoffSections === null
         ? null
@@ -318,13 +322,19 @@ export async function fetchHandoffSections(
   until: string,
   ids: string[],
 ): Promise<(HandoffSectionIndex & { body: string })[]> {
-  const digest = await readCivilizationDigest(registryPath, since, until);
-  const wanted = new Set(ids);
-  const found = new Map<string, HandoffSectionIndex & { body: string }>();
   const sinceInstant = Date.parse(since);
   const untilInstant = Date.parse(until);
-  for (const fort of digest.forts) {
-    if (fort.path === null || fort.handoffSectionIndex === null) continue;
+  if (Number.isNaN(sinceInstant) || Number.isNaN(untilInstant)) {
+    throw new Error("Digest window timestamps must be valid dates");
+  }
+  if (sinceInstant >= untilInstant) {
+    throw new Error("Digest window must have since before until");
+  }
+  const wanted = new Set(ids);
+  const found = new Map<string, HandoffSectionIndex & { body: string }>();
+  const forts = await readRegistryEntries(registryPath);
+  for (const fort of forts) {
+    if (fort.path === null) continue;
     const sections = await readHandoffSections(
       join(fort.path, "fort", "handoffs"),
     );
@@ -364,7 +374,7 @@ export function formatDigest(digest: CivilizationDigest): string {
       fort.eventsTruncatedComposition === null
         ? []
         : [
-            `event truncation composition: ${fort.eventsTruncatedComposition.map((entry) => `${entry.count} ${entry.category ?? "uncategorized"} on ${entry.day}`).join("; ")}`,
+            `event truncation composition (event timestamp local date): ${fort.eventsTruncatedComposition.map((entry) => `${entry.count} ${entry.category ?? "uncategorized"} on ${entry.day}`).join("; ")}`,
           ]),
       `closed beads: ${formatClosedBeads(fort.closedBeads)}`,
       `handoff sections: ${fort.handoffSections === null ? "ABSENT" : `${fort.handoffSections.length} (truncated ${fort.handoffSectionsTruncated})`}`,

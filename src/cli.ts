@@ -124,16 +124,6 @@ if (command === "ambient") {
   } else {
     try {
       const windowUntil = until ?? new Date().toISOString();
-      const digest = await readCivilizationDigest(
-        registryPath,
-        since,
-        windowUntil,
-        {
-          ...(eventCap === undefined
-            ? {}
-            : { maxEventsPerFort: Number(eventCap) }),
-        },
-      );
       if (fetch !== undefined) {
         const handoffSections = await fetchHandoffSections(
           registryPath,
@@ -143,6 +133,16 @@ if (command === "ambient") {
         );
         console.log(JSON.stringify({ handoffSections }, null, 2));
       } else {
+        const digest = await readCivilizationDigest(
+          registryPath,
+          since,
+          windowUntil,
+          {
+            ...(eventCap === undefined
+              ? {}
+              : { maxEventsPerFort: Number(eventCap) }),
+          },
+        );
         console.log(
           args.includes("--json")
             ? JSON.stringify(digest, null, 2)
@@ -231,7 +231,7 @@ if (command === "ambient") {
   args.some((argument) => argument !== "--json")
 ) {
   console.error(
-    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--json]\n       fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]\n       fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>]",
+    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--max-events-per-fort <positive integer>] [--fetch <id>[,<id>...]] [--json]\n       fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]\n       fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>]",
   );
   process.exitCode = 2;
 } else {
