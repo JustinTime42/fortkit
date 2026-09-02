@@ -7,7 +7,11 @@ import { promisify } from "node:util";
 
 import { describe, expect, test } from "vitest";
 
-import { formatDigest, readCivilizationDigest } from "../src/digest.js";
+import {
+  fetchHandoffSections,
+  formatDigest,
+  readCivilizationDigest,
+} from "../src/digest.js";
 import { readClosedBeads } from "../src/readers/beads.js";
 
 const registryPath = fileURLToPath(
@@ -148,7 +152,7 @@ describe("civilization digest", () => {
     }
   });
 
-  test("reports a broken export as an error, preserves an empty export, and discloses caps", async () => {
+  test("keeps the complete handoff index when bodies are capped, and discloses event truncation composition", async () => {
     const directory = await mkdtemp(join(tmpdir(), "fortkit-digest-gaps-"));
     try {
       const empty = join(directory, "empty");
@@ -201,11 +205,28 @@ describe("civilization digest", () => {
       });
       expect(digest.forts[1]?.closedBeads).toMatchObject({ status: "error" });
       expect(digest.forts[2]).toMatchObject({
-        eventsTruncated: 1,
+        eventsTruncated: 0,
         handoffSectionsTruncated: 1,
       });
+      expect(digest.forts[2]?.events).toHaveLength(51);
+      expect(digest.forts[2]?.handoffSections).toHaveLength(50);
+      expect(digest.forts[2]?.handoffSectionIndex).toHaveLength(51);
       expect(formatDigest(digest)).toContain("closed beads: ERROR");
       expect(formatDigest(digest)).toContain("truncated 1");
+
+      const capped = await readCivilizationDigest(
+        registry,
+        "2026-08-04T00:00:00Z",
+        "2026-08-05T00:00:00Z",
+        { maxEventsPerFort: 50 },
+      );
+      expect(capped.forts[2]).toMatchObject({ eventsTruncated: 1 });
+      expect(capped.forts[2]?.eventsTruncatedComposition).toEqual([
+        { category: null, day: "2026-08-04", count: 1 },
+      ]);
+      expect(formatDigest(capped)).toContain(
+        "event truncation composition: 1 uncategorized on 2026-08-04",
+      );
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
@@ -363,6 +384,7 @@ describe("civilization digest", () => {
         registry,
         "2026-08-04T00:00:00Z",
         "2026-08-05T00:00:00Z",
+        { maxEventsPerFort: 50 },
       );
       const diffs = digest.forts.map((fort) => fort.constitutionDiffs?.[0]);
       expect(digest.forts[0]?.eventsTruncated).toBe(1);
@@ -397,6 +419,127 @@ describe("civilization digest", () => {
       expect(formatDigest(digest)).toContain("NO BEAD REF");
       expect(formatDigest(digest)).toContain("indeterminate");
       expect(formatDigest(digest)).toContain("unreadable 1");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("raises the event default, preserves legacy fields, and fetches indexed handoff bodies", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "fortkit-digest-fetch-"));
+    try {
+      const forts = await Promise.all(
+        ["alpha", "beta", "gamma"].map(async (name, fortIndex) => {
+          const fort = join(directory, name);
+          await mkdir(join(fort, ".beads"), { recursive: true });
+          await writeFile(join(fort, ".beads", "issues.jsonl"), "");
+          await mkdir(join(fort, "fort", "events"), { recursive: true });
+          await mkdir(join(fort, "fort", "handoffs"), { recursive: true });
+          const events = Array.from(
+            { length: [251, 250, 250][fortIndex] as number },
+            (_, index) =>
+              JSON.stringify({
+                ts: new Date(
+                  Date.parse("2026-08-04T00:00:00Z") + index * 1_000,
+                ).toISOString(),
+                actor: "kethra",
+                category: index % 2 === 0 ? "work.progress" : "work.ended",
+              }),
+          );
+          await writeFile(
+            join(fort, "fort", "events", "events-2026-08-04.jsonl"),
+            events.join("\n"),
+          );
+          await writeFile(
+            join(
+              fort,
+              "fort",
+              "handoffs",
+              `forge-2026-08-04-77bc.${fortIndex}.md`,
+            ),
+            Array.from(
+              { length: 51 },
+              (_, index) => `## Section ${index}\n\nBody ${name}-${index}`,
+            ).join("\n\n"),
+          );
+          return fort;
+        }),
+      );
+      const registry = join(directory, "civilization.json");
+      await writeFile(
+        registry,
+        JSON.stringify({
+          forts: forts.map((repo, index) => ({
+            fort_name: ["Alpha", "Beta", "Gamma"][index],
+            repo,
+          })),
+        }),
+      );
+      const digest = await readCivilizationDigest(
+        registry,
+        "2026-08-04T00:00:00Z",
+        "2026-08-05T00:00:00Z",
+      );
+      expect(digest.forts.map((fort) => fort.events?.length)).toEqual([
+        251, 250, 250,
+      ]);
+      expect(digest.forts.map((fort) => fort.eventsTruncated)).toEqual([
+        0, 0, 0,
+      ]);
+      expect(
+        digest.forts.map((fort) => fort.handoffSectionIndex?.length),
+      ).toEqual([51, 51, 51]);
+      const index = digest.forts[0]?.handoffSectionIndex?.[50];
+      expect(index).toMatchObject({
+        fort: "Alpha",
+        date: "2026-08-04",
+        seat: "forge",
+        bead: "fortkit-77bc.0",
+        section: "Section 50",
+      });
+      const [fetched] = await fetchHandoffSections(
+        registry,
+        "2026-08-04T00:00:00Z",
+        "2026-08-05T00:00:00Z",
+        [index?.id as string],
+      );
+      expect(fetched).toMatchObject({ ...index, body: "Body alpha-50" });
+      await expect(
+        fetchHandoffSections(
+          registry,
+          "2026-08-04T00:00:00Z",
+          "2026-08-05T00:00:00Z",
+          ["not-an-id"],
+        ),
+      ).rejects.toThrow("Handoff section id not in digest window: not-an-id");
+      const legacy = digest.forts[0];
+      const capped = await readCivilizationDigest(
+        registry,
+        "2026-08-04T00:00:00Z",
+        "2026-08-05T00:00:00Z",
+        { maxEventsPerFort: 50 },
+      );
+      expect(
+        JSON.stringify({
+          ...legacy,
+          events: undefined,
+          eventsTruncated: undefined,
+          eventsTruncatedComposition: undefined,
+          handoffSectionIndex: undefined,
+        }),
+      ).toBe(
+        JSON.stringify({
+          ...capped.forts[0],
+          events: undefined,
+          eventsTruncated: undefined,
+          eventsTruncatedComposition: undefined,
+          handoffSectionIndex: undefined,
+        }),
+      );
+      expect(legacy).toMatchObject({
+        events: expect.any(Array),
+        handoffSections: expect.any(Array),
+        handoffSectionsTruncated: 1,
+      });
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
