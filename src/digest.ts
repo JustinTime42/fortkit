@@ -5,8 +5,14 @@ import { readClosedBeads } from "./readers/beads.ts";
 import { readEventFeed } from "./readers/events.ts";
 import type { UncorrelatedConstitutionDiff } from "./readers/git.ts";
 import { readConstitutionDiffs, readGitLog } from "./readers/git.ts";
-import type { HandoffSection } from "./readers/handoffs.ts";
-import { readHandoffSections } from "./readers/handoffs.ts";
+import type {
+  HandoffSection,
+  HandoffSectionIndex,
+} from "./readers/handoffs.ts";
+import {
+  indexHandoffSections,
+  readHandoffSections,
+} from "./readers/handoffs.ts";
 import { readRegistryEntries } from "./readers/registry.ts";
 import type { TelemetryCounts } from "./readers/telemetry.ts";
 import { readTelemetryCounts } from "./readers/telemetry.ts";
@@ -16,8 +22,18 @@ import type {
   EventShardHealth,
 } from "./types.ts";
 
-const maxEventsPerFort = 50;
+const defaultMaxEventsPerFort = 1_000;
 const maxHandoffSectionsPerFort = 50;
+
+export type EventTruncationComposition = {
+  category: string | null;
+  day: string;
+  count: number;
+};
+
+export type DigestOptions = {
+  maxEventsPerFort?: number;
+};
 
 type DigestFort = {
   name: string;
@@ -28,11 +44,13 @@ type DigestFort = {
   eventsUnreadable: number | null;
   closedBeads: ClosedBeadSource | null;
   handoffSections: HandoffSection[] | null;
+  handoffSectionIndex: HandoffSectionIndex[] | null;
   handoffSectionsTruncated: number | null;
   gitLog: string[] | null;
   constitutionDiffs: ConstitutionDiff[] | null;
   telemetry: TelemetryCounts | null;
   eventsTruncated: number | null;
+  eventsTruncatedComposition: EventTruncationComposition[] | null;
 };
 
 export type CivilizationDigest = {
@@ -142,6 +160,7 @@ async function readDigestFort(
   path: string | null,
   sinceInstant: number,
   untilInstant: number,
+  maxEventsPerFort: number,
 ): Promise<DigestFort> {
   if (path === null || !(await exists(path))) {
     return {
@@ -153,11 +172,13 @@ async function readDigestFort(
       eventsUnreadable: null,
       closedBeads: null,
       handoffSections: null,
+      handoffSectionIndex: null,
       handoffSectionsTruncated: null,
       gitLog: null,
       constitutionDiffs: null,
       telemetry: null,
       eventsTruncated: null,
+      eventsTruncatedComposition: null,
     };
   }
   const [
@@ -191,6 +212,7 @@ async function readDigestFort(
           return dayStart < untilInstant && dayEnd > sinceInstant;
         });
   const fullWindowEvents = events === undefined ? null : events;
+  const truncatedEvents = fullWindowEvents?.slice(maxEventsPerFort) ?? null;
   const eventHealth =
     eventFeed === null
       ? null
@@ -211,11 +233,35 @@ async function readDigestFort(
       events === undefined
         ? null
         : Math.max(0, events.length - maxEventsPerFort),
+    eventsTruncatedComposition:
+      truncatedEvents === null
+        ? null
+        : [
+            ...truncatedEvents
+              .reduce((counts, event) => {
+                const category = event.category;
+                const day = event.ts.slice(0, 10);
+                const key = `${category ?? ""}\u0000${day}`;
+                const current = counts.get(key) ?? { category, day, count: 0 };
+                current.count += 1;
+                counts.set(key, current);
+                return counts;
+              }, new Map<string, EventTruncationComposition>())
+              .values(),
+          ],
     closedBeads,
     handoffSections:
       filteredHandoffSections === null
         ? null
         : filteredHandoffSections.slice(0, maxHandoffSectionsPerFort),
+    handoffSectionIndex:
+      filteredHandoffSections === null
+        ? null
+        : indexHandoffSections(
+            name,
+            filteredHandoffSections,
+            maxHandoffSectionsPerFort,
+          ),
     handoffSectionsTruncated:
       filteredHandoffSections === null
         ? null
@@ -238,6 +284,7 @@ export async function readCivilizationDigest(
   registryPath: string,
   since: string,
   until: string,
+  options: DigestOptions = {},
 ): Promise<CivilizationDigest> {
   const sinceInstant = Date.parse(since);
   const untilInstant = Date.parse(until);
@@ -247,16 +294,73 @@ export async function readCivilizationDigest(
   if (sinceInstant >= untilInstant) {
     throw new Error("Digest window must have since before until");
   }
+  const maxEventsPerFort = options.maxEventsPerFort ?? defaultMaxEventsPerFort;
+  if (!Number.isSafeInteger(maxEventsPerFort) || maxEventsPerFort < 1) {
+    throw new Error("Digest event cap must be a positive integer");
+  }
   const forts = await readRegistryEntries(registryPath);
   return {
     since: new Date(sinceInstant).toISOString(),
     until: new Date(untilInstant).toISOString(),
     forts: await Promise.all(
       forts.map((fort) =>
-        readDigestFort(fort.name, fort.path, sinceInstant, untilInstant),
+        readDigestFort(
+          fort.name,
+          fort.path,
+          sinceInstant,
+          untilInstant,
+          maxEventsPerFort,
+        ),
       ),
     ),
   };
+}
+
+export async function fetchHandoffSections(
+  registryPath: string,
+  since: string,
+  until: string,
+  ids: string[],
+): Promise<(HandoffSectionIndex & { body: string })[]> {
+  const sinceInstant = Date.parse(since);
+  const untilInstant = Date.parse(until);
+  if (Number.isNaN(sinceInstant) || Number.isNaN(untilInstant)) {
+    throw new Error("Digest window timestamps must be valid dates");
+  }
+  if (sinceInstant >= untilInstant) {
+    throw new Error("Digest window must have since before until");
+  }
+  const wanted = new Set(ids);
+  const found = new Map<string, HandoffSectionIndex & { body: string }>();
+  const forts = await readRegistryEntries(registryPath);
+  for (const fort of forts) {
+    if (fort.path === null) continue;
+    const sections = await readHandoffSections(
+      join(fort.path, "fort", "handoffs"),
+    );
+    if (sections === null) continue;
+    const windowed = sections.filter((section) => {
+      const dayStart = Date.parse(`${section.date}T00:00:00.000Z`);
+      return (
+        dayStart < untilInstant && dayStart + 24 * 60 * 60 * 1000 > sinceInstant
+      );
+    });
+    const index = indexHandoffSections(fort.name, windowed);
+    for (const [position, entry] of index.entries()) {
+      if (wanted.has(entry.id)) {
+        found.set(entry.id, { ...entry, body: windowed[position]?.body ?? "" });
+      }
+    }
+  }
+  const missing = ids.filter((id) => !found.has(id));
+  if (missing.length > 0) {
+    throw new Error(
+      `Handoff section id not in digest window: ${missing.join(", ")}`,
+    );
+  }
+  return ids.map(
+    (id) => found.get(id) as HandoffSectionIndex & { body: string },
+  );
 }
 
 export function formatDigest(digest: CivilizationDigest): string {
@@ -266,6 +370,12 @@ export function formatDigest(digest: CivilizationDigest): string {
       "",
       `# ${fort.name} — ${fort.present ? "present" : "ABSENT"}`,
       `events: ${fort.events === null ? "ABSENT" : `${fort.events.length} (malformed ${fort.eventsMalformed}; unreadable ${fort.eventsUnreadable}; truncated ${fort.eventsTruncated})`}`,
+      ...(fort.eventsTruncatedComposition?.length === 0 ||
+      fort.eventsTruncatedComposition === null
+        ? []
+        : [
+            `event truncation composition (event timestamp local date): ${fort.eventsTruncatedComposition.map((entry) => `${entry.count} ${entry.category ?? "uncategorized"} on ${entry.day}`).join("; ")}`,
+          ]),
       `closed beads: ${formatClosedBeads(fort.closedBeads)}`,
       `handoff sections: ${fort.handoffSections === null ? "ABSENT" : `${fort.handoffSections.length} (truncated ${fort.handoffSectionsTruncated})`}`,
       `git log: ${fort.gitLog === null ? "ABSENT" : fort.gitLog.length}`,

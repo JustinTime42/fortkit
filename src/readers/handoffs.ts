@@ -11,6 +11,17 @@ export type HandoffSection = {
   body: string;
 };
 
+export type HandoffSectionIndex = {
+  id: string;
+  fort: string;
+  file: string;
+  date: string;
+  seat: string;
+  bead: string | null;
+  section: string;
+  bodyIncluded: boolean;
+};
+
 export type HandoffCandidate = Pick<HandoffSection, "file" | "seat" | "date">;
 
 type ReadHandoffCandidate = HandoffCandidate & {
@@ -180,4 +191,55 @@ export async function readHandoffSections(
     }
   }
   return sections;
+}
+
+function beadFromHandoffFile(
+  file: string,
+  seat: string,
+  date: string,
+): string | null {
+  const suffix = file
+    .replace(new RegExp(`^${seat}-${date}(?:-|\\.md$)`, "i"), "")
+    .replace(/\.md$/i, "")
+    .replace(/-(?:r|round)\d+$/i, "");
+  const bead = suffix.replace(/^fortkit-/i, "");
+  return /^(?=.{3,}$)(?=.*[a-z])(?=.*\d)[a-z0-9]+(?:\.[a-z0-9]+)*$/i.test(bead)
+    ? `fortkit-${suffix.replace(/^fortkit-/i, "")}`
+    : null;
+}
+
+/** Produces stable, body-free references for every section in a handoff window. */
+export function indexHandoffSections(
+  fort: string,
+  sections: HandoffSection[],
+  bodyCount = 0,
+): HandoffSectionIndex[] {
+  const occurrences = new Map<string, number>();
+  return sections.map((section, index) => {
+    const bead = beadFromHandoffFile(section.file, section.seat, section.date);
+    const key = `${section.file}\u0000${section.heading}`;
+    const occurrence = occurrences.get(key) ?? 0;
+    occurrences.set(key, occurrence + 1);
+    const id = [
+      fort,
+      section.file,
+      section.date,
+      section.seat,
+      bead ?? "",
+      section.heading,
+      occurrence,
+    ]
+      .map(encodeURIComponent)
+      .join(":");
+    return {
+      id,
+      fort,
+      file: section.file,
+      date: section.date,
+      seat: section.seat,
+      bead,
+      section: section.heading,
+      bodyIncluded: index < bodyCount,
+    };
+  });
 }
