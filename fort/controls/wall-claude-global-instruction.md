@@ -3,7 +3,7 @@ key: wall-claude-global-instruction
 status: active
 kind: wall
 refuses: "Writes to civilization.json, skills, commands and plugins under ~/.claude"
-implements: fort/scripts/lib/seat-sandbox.sh:276
+implements: fort/scripts/lib/seat-sandbox.sh:296
 falsified-by: null
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

@@ -3,7 +3,7 @@ key: wall-fort-scripts
 status: active
 kind: wall
 refuses: "Writes to fort/scripts, WHOLE, for every seat type"
-implements: fort/scripts/lib/seat-sandbox.sh:386
+implements: fort/scripts/lib/seat-sandbox.sh:406
 falsified-by: falsifier-mask-harness
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

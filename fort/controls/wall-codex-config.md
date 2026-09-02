@@ -3,7 +3,7 @@ key: wall-codex-config
 status: active
 kind: wall
 refuses: "Writes to ~/.codex/config.toml by either seat type"
-implements: fort/scripts/lib/seat-sandbox.sh:331
+implements: fort/scripts/lib/seat-sandbox.sh:351
 falsified-by: null
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

@@ -263,12 +263,32 @@ build_mask() {
       #   commands/ plugins/ slash commands and plugin payloads, both executed
       # SECOND STRANDED LANE, disclosed here because the skills one was and this
       # one was not (fortkit-faka finding 4): bin/fort-init writes the settlement
-      # registry at ${FORT_REGISTRY:-$HOME/.claude/civilization.json}, and that
-      # path is now kernel-RO — FOUNDING A SETTLEMENT FROM INSIDE A MASKED SEAT
-      # FAILS EROFS. Founding is already Overseer or Regent work, so the decision
-      # stands; the gap was in its record, and that kind of gap costs someone an
-      # afternoon. Pass FORT_REGISTRY at a writable path to found a throwaway
-      # fort for testing, which is what the factory's own verification does.
+      # registry at ${FORT_REGISTRY:-$HOME/.claude/civilization.json}, and in
+      # THIS arm that path is kernel-RO, so FOUNDING A SETTLEMENT FROM INSIDE A
+      # MASKED CLAUDE SEAT FAILS EBUSY AT THE RENAME — not EROFS at the write.
+      # The bound file EXISTS, so fort-init's > redirect never fails; what fails
+      # is the mv, because a rename cannot replace a mount point. The founder
+      # sees:
+      #   mv: cannot move '.../civilization.json.new' to
+      #       '.../civilization.json': Device or resource busy
+      # That matters beyond pedantry: grepping the terminal for EROFS or
+      # "Read-only file system" after a failed founding finds NOTHING, and reads
+      # as "the mask is not the cause". This comment said EROFS from cycle 7
+      # until 2026-09-01 and contradicted bin/fort-init's own comment, which has
+      # been right since fortkit-fg7s (fortkit-zadt; Ilva Trueglass, finding 3
+      # on the covenant-4.5 review of the fortkit-2twy sitting, referred to the
+      # Overseer during it and deferred by him to a bead).
+      # AND IT IS SCOPED TO THIS ARM, WHICH IS THE HALF THAT BITES SILENTLY: the
+      # codex) arm masks $HOME/.claude as a TMPFS, so a Forge founding does not
+      # fail at all. It mints a registry inside the tmpfs, registers the fort,
+      # exits 0, and the entry dies with the namespace — a founding reporting a
+      # success it has not earned, which is bin/fort-init's own subject, in the
+      # one posture its preflight cannot detect. Measured inside a real codex
+      # mask 2026-08-31.
+      # Founding is already Overseer or Regent work, so the decision stands; the
+      # gap was in its record, and that kind of gap costs someone an afternoon.
+      # Pass FORT_REGISTRY at a writable path to found a throwaway fort for
+      # testing, which is what the factory's own verification does.
       # NOT MASKED, deliberately: ~/.claude/teams. It is harness session state,
       # not an instruction surface — Claude Code writes teams/session-<id>/
       # config.json at EVERY session start, so a read-only bind there would

@@ -77,7 +77,7 @@ done
 # THE CIVILIZATION REGISTRY, RESOLVED AND PROBED BEFORE ANYTHING IS BUILT
 # (fortkit-fg7s, measured 2026-08-31 from a masked Mayor session).
 # $HOME/.claude/civilization.json is a read-only single-file BIND MOUNT in a
-# masked CLAUDE seat (fort/scripts/lib/seat-sandbox.sh:276, inside the `claude)`
+# masked CLAUDE seat (fort/scripts/lib/seat-sandbox.sh:296, inside the `claude)`
 # arm), so the append at the foot of this script fails EBUSY rather than EROFS —
 # a rename cannot replace a mount point. Re-measured under bwrap 2026-08-31 in
 # the same posture: `test -w` on the bound file reads NO while its parent

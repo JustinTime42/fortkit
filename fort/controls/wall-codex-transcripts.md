@@ -3,7 +3,7 @@ key: wall-codex-transcripts
 status: active
 kind: wall
 refuses: "Reads of ~/.codex sessions, log and history.jsonl"
-implements: fort/scripts/lib/seat-sandbox.sh:343
+implements: fort/scripts/lib/seat-sandbox.sh:363
 falsified-by: null
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"
