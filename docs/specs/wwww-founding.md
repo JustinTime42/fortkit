@@ -15,11 +15,19 @@ fort cannot follow.
 
 ## What this fort is for
 
-**Who Want Where When** (working title) brings the free and cheap social life of a
-place into one searchable, scrollable feed. It scrapes the calendars that community
-centers, local clubs, pubs, libraries and similar venues already publish, and turns
-them into an index of activities people can actually go to: clubs, classes, sports,
-support groups, meetups.
+**Who Want Where When** (working title) makes the free and cheap social life of a
+place findable. It scrapes the calendars that community centers, local clubs, pubs,
+libraries and similar venues already publish, and turns them into an index of
+activities people can actually go to: clubs, classes, sports, support groups,
+meetups.
+
+**THE FIRST VERSION IS ONE TOWN, PRESENTED AND FILTERED.** Overseer scoping,
+2026-09-02, and it is stated this early because it is the single most likely thing
+for a reader to get wrong: *"for starters it'll just present and filter the options
+for one town, just as a proof of concept."* A scrollable feed and a recommendation
+engine are the direction, **not the first deliverable.** Anyone decomposing work
+against this spec should treat them as a later stage that the ingestion foundation
+has to earn.
 
 **The problem is not scarcity. It is findability.** These activities already exist,
 in quantity, and most of them are free or nearly free. They are hard to find because
@@ -60,11 +68,21 @@ page:
    product's foundation and its most brittle part. Venues change their site, their
    calendar plugin, their schedule format. Coverage that silently decays is worse than
    coverage that fails loudly.
-2. **A feed and a searchable index.** Scrollable discovery for people who do not know
-   what they are looking for; search for people who do.
-3. **A recommendation engine**, judged against getting people to attend things, not
-   against engagement.
+2. **Present and filter, for one town. THIS IS THE PROOF OF CONCEPT AND THE NEAR
+   TERM.** Show what is there and let a person narrow it. Nothing here requires a
+   recommendation engine, personalisation, or an infinite feed, and building any of
+   those before this holds would be building on ingestion nobody has proven yet.
+3. **Then a feed and a recommendation engine** — the direction, explicitly staged
+   AFTER 1 and 2 rather than beside them. When the recommender is built it is judged
+   against getting people to attend things, not against engagement.
 4. **Ship it.** This is the civilization's first fort with anything public-facing.
+
+**THE STAGING IN 2 AND 3 IS THE OVERSEER'S AND IS NOT THE MAYOR'S TO COLLAPSE.** An
+earlier draft of this spec listed the feed and the recommender as near-term items
+beside ingestion; that was corrected on 2026-09-02 before the founding. A fort whose
+constitution describes a product nobody is building yet ranks the wrong work first,
+and the correction is recorded here rather than silently applied so the next reader
+knows the ordering was decided rather than assumed.
 
 ## Day-zero facts this fort should not have to rediscover
 
@@ -131,6 +149,14 @@ moment. It will be wrong about something. Amending it is ordinary work; followin
 past the point where it is visibly wrong is not.
 
 ## Provenance
+
+Overseer scoping correction, 2026-09-02, in his words, given after the first draft
+of this spec and of the purpose sentence had both written the feed and the
+recommender as near-term: *"Right now it's hard to know what to search for, where to
+look, etc, so this will help people in that way. eventually we want to add a
+recommendation engine and feed, but for starters it'll just present and filter the
+options for one town, just as a proof of concept."* The staging in "What 'bring it to
+market' means" is that correction applied.
 
 Overseer intent, 2026-09-02, in his words: *"It scrapes info from calendars of
 community centers, local clubs, pubs, etc, to find out all the free and cheap social
