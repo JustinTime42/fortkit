@@ -2135,3 +2135,108 @@ should name the seat if it matters who learned it.
   the likeliest window**, because that is when the sitting's own output reaches
   the seat that consumes it. Re-read `git log` and the beads you filed AFTER
   writing the handoff, and append what moved.
+
+- 2026-09-02 (edict 29, the Founding Moot of Kithmason — `fortkit-mc0m.5`): **THE
+  TRANSPORT BETWEEN A CONVENER AND A READ-ONLY PARTICIPANT HAS A SIZE CAP AND IT
+  TRUNCATES SILENTLY.** 16,000 characters per drain here. Three of four round-one
+  declarations arrived cut mid-sentence and one arrived not at all; in round two a ballot
+  was lost twice, whole. **For a ceremony whose entire product is verbatim text this is
+  the dominant failure mode**, and it is worse than it looks: recovering a tail means
+  re-contacting a session that has already spoken, which is `fortkit-zud.9`'s fourth rule
+  and the thing that once produced a second declaration under a different name and cost
+  the layer its Herald for a day. **Ask for declarations in numbered parts UP FRONT**, and
+  when you must re-request, say in terms that the declaration stands, is not reopened, and
+  that a reconstruction must be labelled as one. All four participants here re-sent
+  verbatim and two flagged their own join points unasked — but that was their discipline,
+  not the method's.
+
+- 2026-09-02: **PARALLEL BLIND DECLARATION COLLIDES, AND TWO OF FIVE MOOTS HAVE NOW HIT
+  IT.** The Forge and the Mayor independently chose the same given name at **zero** edit
+  distance; Manyhalls hit the same class at its founding (`kestra`/`kethra`, one edit).
+  It resolved cleanly only because BOTH founders had pre-committed in writing, before
+  either could see the other, to being the one who moved — and then raced to give way.
+  **A safety property that depends on someone volunteering is not a safety property**,
+  which is covenant 8.3's own reasoning one level down. Filed on `fortkit-0iwy` with the
+  options; note that a fixed declaration order would buy collision-safety by destroying
+  the blind independence that is the entire value of the instrument. Circulating declared
+  ids before founders finalise is the cheap fix.
+
+- 2026-09-02: **AN ACCEPTANCE CRITERION THAT IS AN INVERSION MUST BE MEASURED ON BOTH
+  SIDES, AND THE PRINTED STRING IS NOT THE GATE.** `seat-lint` prints `rule 3 enforced`
+  once a registry `fort_name` is set. That sentence is not evidence that a placeholder
+  would fail. **Baseline captured before touching anything** (`0 occupied of 4`, `rule 3
+  EXEMPT`), and a **positive control run after**: a scratch copy of `fort/seats` +
+  `fort/charter.md` under a synthetic `FORT_REGISTRY` naming the fort returns exit 0
+  unmodified and **exit 1** with one placeholder reintroduced. `seat-lint.mjs` takes a
+  root argument, so this costs one `cp` and one JSON file and never touches the live tree.
+  Note what the control does NOT prove: rule 2 reports 0 foreign citizens there, because
+  the synthetic registry holds one fort.
+
+- 2026-09-02: **`seat-lint` RULE 2 SCANS THE Held-by AND Personality *LINES*, NOT THE
+  FILE**, so a personality transcribed across several paragraphs leaves everything after
+  its first line unscanned for a foreign citizen's name. Transcribe the personality onto a
+  SINGLE line in `fort/seats/`, and keep the paragraphed form in the annal as its
+  canonical copy. Also load-bearing and easy to miss: **the charter cross-check hard-fails
+  when a seat file names an occupant the charter does not**, so seating citizens is a
+  charter edit as well as a seat-file edit — and that makes it a gate-1 prose amendment
+  needing the Overseer's approval recorded on the bead BEFORE the edit.
+
+- 2026-09-02: **A MOOT IS THE MOMENT TO GREP THE LAUNCHERS FOR THE FORT'S OWN NAME.**
+  Two of the four launchers were still telling their own seats they served
+  `(unnamed — moot pending)` inside the `--append-system-prompt` string
+  (`scholar.sh:34`, `warden.sh:113`). That was in no bead and nothing would have caught
+  it: the fort's name reaches a seat through prose the verifier does not read. The bead's
+  own warning pointed at a DIFFERENT launcher defect (`fortkit-9l7z`, already closed and
+  already correct). **Check the artifact for the class, not just for the instance the
+  bead names.**
+
+- 2026-09-02: **A CONVENER'S RULING BELONGS BEFORE THE VOTE OR NOWHERE.** A participant
+  asked, at the close of round one, whether a pool in which one name had been proposed by
+  everyone needed a ruling — and asked *before* round two rather than during it, which is
+  the only moment moot law permits ("a discount rule may be adopted before a vote and
+  never during one"). Ruled: **Borda scores NAMES, not proposals**, so a name proposed
+  four times gains no mechanical advantage; convergence is information about the founders,
+  not weight. **And the mirror of Manyhalls' precedent binds the convener**: their convener
+  refused a rule that would have crowned her own coinage, so a convener who adopts a rule
+  that takes the fort AWAY from the name every founder independently reached has
+  discovered nothing except a different temptation. Publish the reasoning in the brief;
+  never apply it quietly.
+
+- 2026-09-02: **PUBLISH THE CHECK THAT CUTS AGAINST THE WINNER, AND SAY WHEN IT IS AN
+  ARTIFACT.** Striking every self-vote here put the winner LAST at zero — because it was
+  proposed by all four founders, so every vote for it is a self-vote by construction and
+  the check zeroes any unanimously-proposed name automatically, whatever its merits. It
+  was published in full anyway (Manyhalls' precedent), together with the reason it
+  establishes nothing, and the note that it is the *second rung of a tie-break ladder* and
+  there was no tie. **A record that prints only the flattering check is worth less than
+  one that prints none.**
+
+- 2026-09-02: **THE TIE-BREAK LADDER'S THIRD RUNG HAS NO SUBJECT WHEN THE CONVENER CASTS
+  NO BALLOT.** Manyhalls' ladder runs: most-ballots-placed; most disinterested points;
+  *the convener's ballot struck and the remaining two decide*; then the Overseer. A moot
+  convened from outside the fort has no convener's ballot to strike. Declared in every
+  round-two brief BEFORE any ballot was cast rather than discovered afterwards. Unreached.
+
+- 2026-09-02: **DISCLOSING THE STANDING COUNT TO THE LAST PARTICIPANT IS THE LESSER
+  EVIL, AND IT IS STILL A DEPARTURE.** A twice-lost ballot forced a re-request, and
+  withholding the tally would have given the last founder a thinner brief than the other
+  three — the exact `fortkit-zud.9` defect. Disclosed, with an explicit instruction to
+  read it as information and not instruction, and that a founder who ranks tactically has
+  cast a worse ballot than an honest one. **What cannot be verified must be labelled**:
+  her claim that her ballot predated the disclosure is testimony, the convener could not
+  check it, and the annal separates "verified" from "taken on faith" in those words.
+
+- 2026-09-02: **THE RETIREMENT RULE PAID, FOR THE FIRST TIME.** Every moot rules its
+  unchosen names retired to the annals and drawable by successor settlements; nobody had
+  ever drawn one. Kithmason came out of Manyhalls' pool, where it lost at five of
+  eighteen, and carried here at eleven of twenty-four. **Twenty-nine names now stand
+  retired** (24 from the three elder moots, minus Kithmason drawn, plus this moot's six).
+  Offer the retired pool to founders explicitly in the brief; three of the four reached
+  into it.
+
+- 2026-09-02: **I MIXED TWO BEADS IN ONE COMMIT AND A COMMIT MESSAGE CANNOT BE
+  CORRECTED.** WWWW-475's charter repair landed inside the moot commit, whose message
+  never mentions it; its own `charter.amended` event and its own recorded approval are
+  separate and correct, so the gate held, but a reader searching commit messages for that
+  repair will not find it. Append-only remedy on the bead. **Two edits adjacent in time
+  and in the same file are still two beads**; stage and commit them apart.
