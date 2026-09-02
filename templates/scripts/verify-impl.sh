@@ -70,6 +70,58 @@ run_step() {
   fi
 }
 
+completed_steps=()
+skipped_steps=()
+
+record_completed_step() {
+  completed_steps+=("$1")
+}
+
+npm_step() {
+  local step="$1"
+  local availability
+
+  if [ ! -f package.json ]; then
+    printf '%s: SKIPPED — no package.json.\n' "$step" >&2
+    skipped_steps+=("$step")
+    return 0
+  fi
+
+  if availability="$(node -e '
+    const fs = require("node:fs");
+    const stage = process.argv[1];
+    const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+    process.stdout.write(typeof packageJson.scripts?.[stage] === "string" ? "present" : "absent");
+  ' "$step")"; then
+    :
+  else
+    local status=$?
+    local payload="{\"step\":\"${step}-script-discovery\",\"exitCode\":${status}}"
+    emit verify.fail "Verifier failed at ${step}-script-discovery" -p "$payload"
+    exit "$status"
+  fi
+
+  if [ "$availability" = "absent" ]; then
+    printf '%s: SKIPPED — no %s script in package.json.\n' "$step" "$step" >&2
+    skipped_steps+=("$step")
+    return 0
+  fi
+
+  run_step "$step" npm run "$step"
+  record_completed_step "$step"
+}
+
+json_steps() {
+  local -n steps="$1"
+  local result="["
+  local step
+
+  for step in "${steps[@]}"; do
+    result+="\"${step}\","
+  done
+  printf '%s]' "${result%,}"
+}
+
 merge_event_check() {
   # The Forge ports the checker before the Regent can add fort-init's explicit
   # copy line. A fort founded in that narrow interval must not inherit a
@@ -99,14 +151,17 @@ emit verify.run "Verifier started" -p '{"steps":["seat-lint","merge-events","typ
 # placeholders are legal; rules 2 and 3 then announce a SKIP and exit 0. That skip is
 # correct behaviour, and a founding smoke that reads it as a failure would be wrong.
 run_step seat-lint node scripts/seat-lint.mjs
+record_completed_step seat-lint
 # Every merge after the factory's audit checkpoint must have an append-only
 # merge event. This travels with the template so a new fort has the fence from
 # its first merge, rather than discovering the omission in a later digest.
 run_step merge-events merge_event_check
-run_step typecheck npm run typecheck
-run_step lint npm run lint
-run_step test npm run test
+record_completed_step merge-events
+npm_step typecheck
+npm_step lint
+npm_step test
 # -x follows sourced files so fort/scripts/lib/* is linted too, not skipped.
 # scripts/* includes the factory artifacts this verifier receives at founding.
 run_step shellcheck shellcheck -x scripts/*.sh fort/scripts/*.sh fort/scripts/lib/*.sh
-emit verify.pass "Verifier passed" -p '{"steps":["seat-lint","merge-events","typecheck","lint","test","shellcheck"]}'
+record_completed_step shellcheck
+emit verify.pass "Verifier passed" -p "{\"steps\":$(json_steps completed_steps),\"skippedSteps\":$(json_steps skipped_steps)}"
