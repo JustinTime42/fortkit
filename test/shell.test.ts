@@ -1546,6 +1546,164 @@ describe("fort-init", () => {
   );
 
   test.skipIf(!foundingSmokeToolsAvailable)(
+    `skips npm stages when the founded repository has no package.json (${foundingSmokeSkipReason})`,
+    async () => {
+      const root = await createFort();
+      const registryDirectory = join(root, "registry");
+      await mkdir(registryDirectory);
+
+      await execFileAsync(
+        "bash",
+        [
+          join(repoRoot, "bin/fort-init"),
+          root,
+          "no-package",
+          "Smoke test fort.",
+        ],
+        {
+          env: {
+            ...process.env,
+            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
+          },
+        },
+      );
+
+      const result = await execFileAsync(
+        "bash",
+        ["fort/scripts/verify.sh", "--no-emit"],
+        { cwd: root },
+      );
+      expect(result.stderr).toContain("typecheck: SKIPPED — no package.json.");
+      expect(result.stderr).toContain("lint: SKIPPED — no package.json.");
+      expect(result.stderr).toContain("test: SKIPPED — no package.json.");
+    },
+  );
+
+  test.skipIf(!foundingSmokeToolsAvailable)(
+    `skips absent npm scripts and records them in verify.pass (${foundingSmokeSkipReason})`,
+    async () => {
+      const root = await createFort();
+      const registryDirectory = join(root, "registry");
+      await mkdir(registryDirectory);
+      await writeFile(
+        join(root, "package.json"),
+        JSON.stringify({ private: true, scripts: { build: "node -e '0'" } }),
+      );
+
+      await execFileAsync(
+        "bash",
+        [
+          join(repoRoot, "bin/fort-init"),
+          root,
+          "missing-scripts",
+          "Smoke test fort.",
+        ],
+        {
+          env: {
+            ...process.env,
+            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
+          },
+        },
+      );
+
+      const result = await execFileAsync("bash", ["fort/scripts/verify.sh"], {
+        cwd: root,
+      });
+      expect(result.stderr).toContain(
+        "typecheck: SKIPPED — no typecheck script in package.json.",
+      );
+      expect(result.stderr).toContain(
+        "lint: SKIPPED — no lint script in package.json.",
+      );
+      expect(result.stderr).toContain(
+        "test: SKIPPED — no test script in package.json.",
+      );
+
+      const emitted = (
+        await Promise.all(
+          (
+            await readdir(join(root, "fort", "events"))
+          )
+            .filter((name) => name.endsWith(".jsonl"))
+            .map(async (name) =>
+              (
+                await readFile(join(root, "fort", "events", name), "utf8")
+              )
+                .trim()
+                .split("\n")
+                .map(
+                  (line) =>
+                    JSON.parse(line) as { category: string; payload: unknown },
+                ),
+            ),
+        )
+      ).flat();
+      const pass = emitted.find((event) => event.category === "verify.pass");
+      expect(pass).toMatchObject({
+        payload: {
+          steps: ["seat-lint", "merge-events", "shellcheck"],
+          skippedSteps: ["typecheck", "lint", "test"],
+        },
+      });
+    },
+  );
+
+  test.skipIf(!foundingSmokeToolsAvailable)(
+    `fails a founded verifier when an existing npm script fails (${foundingSmokeSkipReason})`,
+    async () => {
+      const root = await createFort();
+      const registryDirectory = join(root, "registry");
+      await mkdir(registryDirectory);
+      await writeFile(
+        join(root, "package.json"),
+        JSON.stringify({
+          private: true,
+          scripts: { typecheck: "node -e 'process.exit(23)'" },
+        }),
+      );
+
+      await execFileAsync(
+        "bash",
+        [
+          join(repoRoot, "bin/fort-init"),
+          root,
+          "failing-script",
+          "Smoke test fort.",
+        ],
+        {
+          env: {
+            ...process.env,
+            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
+          },
+        },
+      );
+
+      await expect(
+        execFileAsync("bash", ["fort/scripts/verify.sh"], { cwd: root }),
+      ).rejects.toMatchObject({ code: 23 });
+
+      const events = await Promise.all(
+        (await readdir(join(root, "fort", "events")))
+          .filter((name) => name.endsWith(".jsonl"))
+          .map(async (name) =>
+            (await readFile(join(root, "fort", "events", name), "utf8"))
+              .trim()
+              .split("\n")
+              .map(
+                (line) =>
+                  JSON.parse(line) as { category: string; payload: unknown },
+              ),
+          ),
+      );
+      expect(
+        events.flat().find((event) => event.category === "verify.fail"),
+      ).toMatchObject({
+        payload: { step: "typecheck", exitCode: 23 },
+      });
+    },
+  );
+
+  test.skipIf(!foundingSmokeToolsAvailable)(
     `fails when a rendered status template is broken (${foundingSmokeSkipReason})`,
     async () => {
       const root = await createFort();
