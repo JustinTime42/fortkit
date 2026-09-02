@@ -1,7 +1,7 @@
 import { access } from "node:fs/promises";
 import { join } from "node:path";
 import type { ClosedBeadSource } from "./readers/beads.ts";
-import { readClosedBeads } from "./readers/beads.ts";
+import { readBeadIds, readClosedBeads } from "./readers/beads.ts";
 import { readEventFeed } from "./readers/events.ts";
 import type { UncorrelatedConstitutionDiff } from "./readers/git.ts";
 import { readConstitutionDiffs, readGitLog } from "./readers/git.ts";
@@ -184,6 +184,7 @@ async function readDigestFort(
   const [
     eventFeed,
     closedBeads,
+    beadIds,
     handoffSections,
     gitLog,
     constitutionDiffs,
@@ -191,6 +192,7 @@ async function readDigestFort(
   ] = await Promise.all([
     readEventFeed(join(path, "fort", "events")),
     readClosedBeads(path, sinceInstant, untilInstant),
+    readBeadIds(path),
     readHandoffSections(join(path, "fort", "handoffs")),
     readGitLog(path, sinceInstant, untilInstant),
     readConstitutionDiffs(path, sinceInstant, untilInstant),
@@ -261,6 +263,7 @@ async function readDigestFort(
             name,
             filteredHandoffSections,
             maxHandoffSectionsPerFort,
+            beadIds ?? new Set(),
           ),
     handoffSectionsTruncated:
       filteredHandoffSections === null
@@ -345,7 +348,8 @@ export async function fetchHandoffSections(
         dayStart < untilInstant && dayStart + 24 * 60 * 60 * 1000 > sinceInstant
       );
     });
-    const index = indexHandoffSections(fort.name, windowed);
+    const beadIds = (await readBeadIds(fort.path)) ?? new Set<string>();
+    const index = indexHandoffSections(fort.name, windowed, 0, beadIds);
     for (const [position, entry] of index.entries()) {
       if (wanted.has(entry.id)) {
         found.set(entry.id, { ...entry, body: windowed[position]?.body ?? "" });

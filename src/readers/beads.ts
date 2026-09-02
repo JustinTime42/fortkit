@@ -94,6 +94,37 @@ export async function readBeadRecords(
   return { counts, beads, inProgress };
 }
 
+/**
+ * Reads every exported bead identity, regardless of its current status.
+ *
+ * The digest's closed-bead view is window-scoped, but a handoff can refer to
+ * a bead that remains open long after its handoff date. Identity resolution
+ * therefore uses the whole export. An unreadable or malformed export proves
+ * no identity, so callers must leave filename candidates unresolved.
+ */
+export async function readBeadIds(path: string): Promise<Set<string> | null> {
+  let contents: string;
+  try {
+    contents = await readFile(join(path, ".beads", "issues.jsonl"), "utf8");
+  } catch {
+    return null;
+  }
+
+  const ids = new Set<string>();
+  try {
+    for (const line of contents.split(/\r?\n/)) {
+      if (line.trim() === "") continue;
+      const record = JSON.parse(line) as unknown;
+      if (typeof record !== "object" || record === null) continue;
+      const id = (record as Record<string, unknown>).id;
+      if (typeof id === "string") ids.add(id);
+    }
+  } catch {
+    return null;
+  }
+  return ids;
+}
+
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
