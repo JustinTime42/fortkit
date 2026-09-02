@@ -1,7 +1,7 @@
 #!/bin/bash
 # TEMPLATE — rendered by fort-init.
 # shellcheck disable=SC1083
-# ForgeOS city status — fast, read-only. Usage: fort/scripts/status.sh
+# Fort status — fast, read-only. Usage: fort/scripts/status.sh
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo {{REPO_PATH}})" || exit 1
 
 echo "══════════════════ {{FORT_BANNER}} ══════════════════"
