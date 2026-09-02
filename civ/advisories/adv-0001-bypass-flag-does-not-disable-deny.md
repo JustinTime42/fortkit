@@ -156,3 +156,21 @@ vote.
 > records that the defective prose was its own. The capital's live
 > `fort/scripts/mayor.sh` is kernel read-only and has been filed for a Regent
 > sitting; the writable factory template is corrected by `fortkit-6xjy.1`.
+
+> **CORRECTION TO THE 2026-09-01 CORRECTION (Claude Code 2.1.258;
+> `fortkit-6xjy.1`; SO7, appended rather than edited).** The 2026-09-01
+> correction wrongly withdrew this advisory's Bash-layer finding. The primary
+> measurement is the 2026-08-17 Claude Code 2.1.233 seven-probe table on
+> `fortkit-6xjy`: it established the Edit result and the Bash results with
+> positive controls and falsification tests. In particular, the same denied
+> path produced a refused `rm`, an allowed shell redirect, and an allowed
+> `find -delete`. Deny therefore binds for Bash command patterns, but Bash
+> enforcement is verb-pattern matching rather than path matching; an
+> `Edit(...)` deny does not make that path write-proof against Bash (see
+> ADV-0004).
+>
+> The 2026-09-01 Claude Code 2.1.258 probe remains useful as a narrower
+> re-confirmation: fifteen days and one harness version later, an Edit
+> path-glob deny still bound with `--dangerously-skip-permissions` in effect,
+> while an allowed Edit positive control reached its own replacement failure.
+> It was not a new discovery and does not narrow the older table.
