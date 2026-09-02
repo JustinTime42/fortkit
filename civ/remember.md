@@ -2119,3 +2119,19 @@ should name the seat if it matters who learned it.
   individually; the exit code cannot discriminate.** The limit of that run:
   it used `--no-emit`, so it says nothing about `fortkit-n8ot`'s claim that the
   `steps`/`skippedSteps` payload can record a skipped stage as run.
+
+- 2026-09-02 (close-out of edict 28): **THE SHARED TREE MOVES DURING CLOSE-OUT,
+  AND A HANDOFF'S OWN BEAD TABLE CAN BE STALE BEFORE ANYONE READS IT.** Within
+  twenty-five minutes of committing this sitting's handoff, the Mayor triaged
+  every finding it filed and re-priced one from P2 to P1 with a chosen
+  implementation shape and an `act-regent` label. The capital HEAD was no
+  longer the sitting's commit. **Nothing was wrong and nothing needed
+  repairing** — that is the fort's machinery working exactly as intended, and a
+  Regent's filed priority is a proposal that the seat owning the board is
+  entitled to overrule. But the handoff table said P2, and it is an append-only
+  record, so the fix is an APPENDED closing section rather than an edit. Second
+  sighting of the class after 2026-08-17 (the tree pushed under me mid-sitting,
+  making a committed-ahead count false); the new half is that **close-out is
+  the likeliest window**, because that is when the sitting's own output reaches
+  the seat that consumes it. Re-read `git log` and the beads you filed AFTER
+  writing the handoff, and append what moved.
