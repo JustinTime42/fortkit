@@ -67,3 +67,8 @@
 {"ts":"2026-09-02T15:09:06-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-02T15:01:41-08:00","payload":null}
 {"ts":"2026-09-02T15:09:05-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-02T15:01:41-08:00","payload":null}
 {"ts":"2026-09-02T15:16:34-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-02T15:09:06-08:00","payload":null}
+{"ts":"2026-09-02T15:22:46-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-02T15:16:34-08:00","payload":null}
+{"ts":"2026-09-02T15:27:16-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-02T15:22:46-08:00","payload":null}
+{"ts":"2026-09-02T15:31:38-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-02T15:27:16-08:00","payload":null}
+{"ts":"2026-09-02T15:38:14-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-02T15:31:38-08:00","payload":null}
+{"ts":"2026-09-02T15:45:31-08:00","actor":"emrith","seat":"mayor","category":"handoff.written","target":null,"detail":"Emrith's afternoon handoff: Kithmason founded, named and seated; the Overseer opens an evaluation of the civilization construct itself","payload":null}
