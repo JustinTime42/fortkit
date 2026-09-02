@@ -1608,6 +1608,7 @@ describe("fort-init", () => {
 
       const result = await execFileAsync("bash", ["fort/scripts/verify.sh"], {
         cwd: root,
+        env: { ...process.env, CI: "" },
       });
       expect(result.stderr).toContain(
         "typecheck: SKIPPED — no typecheck script in package.json.",
@@ -1679,7 +1680,10 @@ describe("fort-init", () => {
       );
 
       await expect(
-        execFileAsync("bash", ["fort/scripts/verify.sh"], { cwd: root }),
+        execFileAsync("bash", ["fort/scripts/verify.sh"], {
+          cwd: root,
+          env: { ...process.env, CI: "" },
+        }),
       ).rejects.toMatchObject({ code: 23 });
 
       const events = await Promise.all(
