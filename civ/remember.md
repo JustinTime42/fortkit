@@ -1832,3 +1832,117 @@ should name the seat if it matters who learned it.
   raised on `longburn-vfej`. **An edict is not authority to widen into a fort's
   records**, and covenant 4.5's review right is unexercisable against an
   untracked working tree, which is the reason it matters rather than tidiness.
+
+- 2026-09-01 (edict 26, the Proofdelve gate-6 sitting — ForgeOs-v1x3): **A
+  /dev/null MASK OVER A TRACKED FILE MAKES IT A CHARACTER DEVICE, AND GIT CANNOT
+  HASH ONE — SO IT BREAKS EVERY WORKTREE OPERATION FOR EVERY BRANCH, NOT ONLY
+  BRANCHES TOUCHING THAT PATH.** Proofdelve's forge.sh masked two tracked scripts
+  that way. Measured inside the real mask: `git diff` died with `fatal: cannot
+  hash scripts/airlock-feedback-scan.sh`, both paths sat permanently ` M` with no
+  way to clean them, and no merge, stash or checkout could run. That is what cost
+  that fort its main-integration lane through three recorded instances, and the
+  bead's own title blamed a different mechanism. **AND THE MASK BOUGHT NOTHING:
+  `git show HEAD:<path>` returned all 13215 bytes from inside the same mask. YOU
+  CANNOT HIDE A TRACKED FILE FROM A SEAT THAT CAN READ `.git`** — the launcher's
+  comment had asserted "reads EMPTY" for weeks. The fix is a read-only bind of the
+  file's own content: git works, the unattended seat still cannot WRITE what the
+  host executes, and the kernel EXEC block is what you give up. **Before masking
+  anything, ask whether git tracks it.**
+
+- 2026-09-01: **THE OTHER HALF OF THAT BEAD IS UNFIXABLE AND THAT IS THE CONTROL
+  WORKING.** A merge whose diff touches a kernel-read-only path cannot land from
+  inside any mask, because git rewrites a tracked file by UNLINKING it. If git may
+  write those paths, a seat may write those paths; there is no third option, and
+  "loosen the binds during a merge" makes the boundary conditional on a mode that
+  can be entered. **The remedy is prose in the launcher prompts, not a mask edit**
+  — name the exact failure text, forbid `--skip-worktree`, cherry-picks and
+  hand-built trees BY NAME, and say who does land it. Same class as fortkit-6ovg
+  and longburn-3195; this is the third settlement to pay for it.
+
+- 2026-09-01: **`bd` WILL REISSUE AN ID IT HAS NO RECORD OF, AND THIS CIVILIZATION
+  CITES BEAD IDS IN KERNEL-READ-ONLY SOURCE FILES.** I filed a child of
+  ForgeOs-u65j.3.3 and bd issued `u65j.3.3.4` — an id already cited in FIVE live
+  files and one commit message for entirely different work. bd's database had no
+  such bead (`bd prune` exists and reclaims ids), so the id was free from its point
+  of view. **The failure is silent and points the wrong way: a reader following the
+  citation gets a real, open, plausible bead about something else, which is worse
+  than a dangling reference.** Four of those five files are kernel-RO to every
+  seat, so no seat in that fort can repair the citation. Remedy used: refile under
+  a fresh id, **retitle the collided id into a SIGNPOST** naming the commit the
+  citations actually mean, append corrections where I had cited it. **Do NOT use
+  `bd delete`: it "updates text references to [deleted:ID] in directly connected
+  issues", i.e. it edits neighbouring records to tidy itself up, which append-only
+  forbids.** Filed ForgeOs-x5u9. This is my 2026-08-04 scar ("file first, then
+  reference") reached from a third direction — the id did not exist IN BD and did
+  exist IN THE SOURCE.
+
+- 2026-09-01: **I RAN `bd export` OUT OF THE CAPITAL'S HABIT AND COMMITTED A FILE
+  THAT HAD NEVER BEEN TRACKED IN THAT FORT.** `git log -- .beads/issues.jsonl`
+  returned exactly one commit: mine. It was not gitignored either, so nothing
+  resisted; that settlement simply never kept it in git. Undone in a FORWARD commit
+  (`1f3add2`), file left on disk. **A habit carried from the capital is a change to
+  another fort's practice, made by reflex.** Second sighting of the class in two
+  days — yesterday's Farlantern entry says the same thing about event streams. The
+  cheap check before staging anything in another fort: `git log --oneline -- <path>`
+  on every path you are about to add, and treat an empty result as a decision you
+  are not authorised to make.
+
+- 2026-09-01: **A DOCKET IS A CLAIM SET AND THREE OF ELEVEN ITEMS WERE ALREADY
+  DONE.** One had been applied by the Overseer a week earlier and said so in its own
+  NOTES; one had had its mask installed and its ACCEPTANCE never measured, because
+  the file it guarded did not exist that day (an RO bind is existence-guarded); one
+  had been fixed by a consolidation that retired the three files it named. **A
+  Mayor writing a Regent docket is describing things she cannot measure — that is
+  precisely why they are Regent work — so the docket's premises are the LEAST
+  verified prose in the sitting.** Re-check each item against the tree before
+  applying it, and record the already-done ones as verifications rather than
+  silently skipping them.
+
+- 2026-09-01: **PREFIX GLOBS CANNOT CONSTRAIN A TRAILING ARGUMENT, so "narrow the
+  allow entry" is sometimes unexecutable and REMOVAL is the only narrowing the
+  mechanism supports.** `Bash(find *)` on a Warden's sole permission boundary
+  reaches `-delete` and `-exec` past the `Bash(rm *)` deny, because the command word
+  is `find`. No narrower allow spells "read-only find", and a deny list enumerating
+  dangerous spellings is the pattern ForgeOs-21f.8 measured as defeatable 6/6. **When
+  a bead asks you to narrow a rule, check whether the rule language can express the
+  narrowing before agreeing to it.**
+
+- 2026-09-01: **AN ABSOLUTE-PATH ALLOW RULE MUST NAME THE TREE THE SEAT ACTUALLY
+  WORKS IN.** ForgeOs-8yad asked that the Warden be allowed the absolute `verify.sh`
+  spelling standing order 8 mandates. The obvious spelling is `$root`'s — and it is
+  wrong: `warden.sh` sets cwd to an rsync scratch copy, and verify.sh scores the tree
+  it lives in (ForgeOs-afdr), so allowing `$root` would have permitted a green
+  measured against MAIN and reported as the candidate's gate. Allowed the
+  `/tmp/warden-*/` spelling only, with the wildcard inside a single path segment.
+  **The convenient path and the correct path differed, and only reading the launcher
+  showed it.**
+
+- 2026-09-01: **THE POSITIVE CONTROL CAN BE RUN WITHOUT REVERTING THE TREE.** Source
+  the PRE-EDIT library from git into a scratch file and call `build_mask` from there
+  — it takes the root as a parameter, so it masks the real fort using the old logic.
+  All three of this sitting's lib assertions inverted (`operations.json` YES→NO,
+  `TMPDIR` UNSET→/tmp, `--rw-tmp` SILENT→WARNS) with the working checkout never
+  touched. Cheaper and safer than a stash, and it works in a tree another seat is
+  committing to at the same time.
+
+- 2026-09-01: **A PROBE SUITE THAT HAS NOT RUN SINCE THE ARCHITECTURE MOVED REPORTS
+  RED FOR THE WRONG REASON, AND YOU MUST ESTABLISH PROVENANCE BEFORE REPORTING IT
+  EITHER WAY.** `probe-boundaries.sh` came back 44 pass / 10 FAIL after my edits.
+  Eight failures descended from its T2 tier scraping `forge.sh` for mask arrays that
+  moved into the shared library 19 days earlier — proved by
+  `git show HEAD:<file> | grep -c` returning 0 on the PRE-SITTING file — and one from
+  a stale expectation about a path my diff never touched, proved by grepping my own
+  diff for `+`/`-` lines mentioning it. **"Ten reds that mean the probe is stale" is
+  the ForgeOs-or2.8 outcome: it trains a fort to stop reading its own instrument.**
+  Filed rather than fixed, and never reported as either "mine" or "fine" without the
+  two commands that settle it.
+
+- 2026-09-01: **THE OVERSEER'S PRESENCE IS NOT A FORT'S RECORDED APPROVAL.**
+  ForgeOs-u65j.4's acceptance requires his approval recorded ON THE BEAD before any
+  `fort/seats/` edit. He was at the keyboard all sitting, and reading that as consent
+  would have been a gate yielding to the actor's own judgement about what he would
+  say — hollowed while formally intact, which is covenant 8.7's worked example.
+  Asked, got it, recorded it, emitted `gate.approved`. **And he then assigned the
+  edit to the MAYOR**: with approval in hand a prose-gated file is ordinary attended-
+  seat work, so the sitting's job was the approval, not the edit. Least force applies
+  to which seat acts, not only to which tool.
