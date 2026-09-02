@@ -38,3 +38,4 @@
 {"ts":"2026-09-02T10:48:42-08:00","actor":"ilva","seat":"warden","category":"review.verdict","target":"fortkit-520l","detail":"Ilva on fortkit-520l: APPROVE-WITH-FINDINGS: round-one CI blocker fixed, CI=1 gate exit 0 with all three rows executing; 6 findings to bead.","payload":null}
 {"ts":"2026-09-02T10:48:42-08:00","actor":"ilva","seat":"warden","category":"session.end","target":"fortkit-520l","detail":"Ilva's session on fortkit-520l ended (exit 0)","payload":{"exit":0,"log":"/tmp/warden-520l.log","verdict_recorded":true}}
 {"ts":"2026-09-02T10:51:48-08:00","actor":"harness","seat":"mayor","category":"merge","target":"fortkit-520l","detail":"Merged fortkit-520l: a founded fort's verifier survives an npm script the repo does not define","payload":null}
+{"ts":"2026-09-02T10:54:32-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-02T08:38:40-08:00","payload":null}
