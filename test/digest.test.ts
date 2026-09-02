@@ -454,7 +454,10 @@ describe("civilization digest", () => {
         ["alpha", "beta", "gamma"].map(async (name, fortIndex) => {
           const fort = join(directory, name);
           await mkdir(join(fort, ".beads"), { recursive: true });
-          await writeFile(join(fort, ".beads", "issues.jsonl"), "");
+          await writeFile(
+            join(fort, ".beads", "issues.jsonl"),
+            `${JSON.stringify({ id: `fortkit-77bc.${fortIndex}` })}\n`,
+          );
           await mkdir(join(fort, "fort", "events"), { recursive: true });
           await mkdir(join(fort, "fort", "handoffs"), { recursive: true });
           const events = Array.from(
@@ -575,7 +578,19 @@ describe("civilization digest", () => {
       const fort = join(directory, "alpha");
       await mkdir(join(fort, ".beads"), { recursive: true });
       await mkdir(join(fort, "fort", "handoffs"), { recursive: true });
-      await writeFile(join(fort, ".beads", "issues.jsonl"), "");
+      await writeFile(
+        join(fort, ".beads", "issues.jsonl"),
+        [
+          "fortkit-dqu5.1",
+          "fortkit-fci.1",
+          "fortkit-jmn",
+          "fortkit-lqb",
+          "fortkit-ouu",
+          "fortkit-wkf",
+        ]
+          .map((id) => JSON.stringify({ id }))
+          .join("\n"),
+      );
       await writeFile(
         join(fort, "fort", "handoffs", "forge-2026-08-04-dqu5.1.md"),
         "## State of work\n\nFirst-round body",
@@ -592,6 +607,16 @@ describe("civilization digest", () => {
         join(fort, "fort", "handoffs", "mayor-2026-08-04-b.md"),
         "## State of work\n\nDisambiguator body",
       );
+      for (const id of ["jmn", "lqb", "ouu", "wkf"]) {
+        await writeFile(
+          join(fort, "fort", "handoffs", `forge-2026-08-04-${id}.md`),
+          "## State of work\n\nLetter-only bead body",
+        );
+      }
+      await writeFile(
+        join(fort, "fort", "handoffs", "forge-2026-08-04-notreal.md"),
+        "## State of work\n\nUnknown bead-shaped suffix",
+      );
       const registry = join(directory, "civilization.json");
       await writeFile(
         registry,
@@ -603,14 +628,25 @@ describe("civilization digest", () => {
         "2026-08-05T00:00:00Z",
       );
       const entries = digest.forts[0]?.handoffSectionIndex ?? [];
-      expect(entries).toHaveLength(4);
-      expect(new Set(entries.map((entry) => entry.id)).size).toBe(4);
-      expect(entries.map((entry) => entry.bead)).toEqual([
-        "fortkit-dqu5.1",
-        "fortkit-dqu5.1",
-        "fortkit-fci.1",
-        null,
-      ]);
+      expect(entries).toHaveLength(9);
+      expect(new Set(entries.map((entry) => entry.id)).size).toBe(9);
+      expect(
+        entries
+          .filter((entry) =>
+            /(?:dqu5\.1(?:-r2)?|fci\.1-round2|mayor-2026-08-04-b)\.md$/.test(
+              entry.file,
+            ),
+          )
+          .map((entry) => entry.bead),
+      ).toEqual(["fortkit-dqu5.1", "fortkit-dqu5.1", "fortkit-fci.1", null]);
+      expect(
+        entries
+          .filter((entry) => /-(?:jmn|lqb|ouu|wkf)\.md$/.test(entry.file))
+          .map((entry) => entry.bead),
+      ).toEqual(["fortkit-jmn", "fortkit-lqb", "fortkit-ouu", "fortkit-wkf"]);
+      expect(
+        entries.find((entry) => entry.file.endsWith("notreal.md"))?.bead,
+      ).toBeNull();
       const firstRound = entries.find((entry) =>
         entry.file.endsWith("dqu5.1.md"),
       );
