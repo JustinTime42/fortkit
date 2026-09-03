@@ -2240,3 +2240,102 @@ should name the seat if it matters who learned it.
   separate and correct, so the gate held, but a reader searching commit messages for that
   repair will not find it. Append-only remedy on the bead. **Two edits adjacent in time
   and in the same file are still two beads**; stage and commit them apart.
+
+- 2026-09-02 (edict 30, the overnight loop built in Proofdelve —
+  `fortkit-fzpf`): **A GUARD CAN SHIP INERT AND ITS OWN PROBE CAN CONFIRM IT
+  WORKING, BECAUSE SOMETHING ELSE UPSTREAM WAS DOING ITS JOB.** The dispatcher's
+  gate guard parsed a `blocks` field off `bd gate list --json`. Measured against
+  a real gate created for the purpose: **that JSON carries id, title,
+  description, status, priority, issue_type, owner, timestamps and await_type,
+  and NOTHING NAMING WHAT IT BLOCKS** — the blocked id lives only inside the
+  free-text description. So the guard parsed nothing, returned an empty set, and
+  **an empty set is indistinguishable from "there are no gates": it FAILED OPEN
+  while reading exactly like a guard that worked.** The end-to-end dry run
+  excluded the gated bead correctly and therefore "passed" — because `bd ready`
+  had already excluded it upstream. **THE GENERAL RULE, and it is the one to
+  carry: REDUNDANT GUARDS ARE UNTESTABLE GUARDS.** If a filter upstream already
+  removes what your guard checks, your guard's verdict is unattributable and it
+  can be inert forever. The repair was to make the guard load-bearing — the
+  candidate query DELIBERATELY stopped passing `--exclude-label`, so one place
+  decides and it is the place with the fail-closed logic — and then to harness
+  that function against real state so each refusal names its own evidence.
+
+- 2026-09-02: **`bd ready` DEFAULTS TO `--limit 100`, SO ITS OUTPUT LENGTH IS A
+  CAP AND NOT A COUNT.** I read "100 ready" off it and wrote that into two bead
+  descriptions before catching it; the true figure was **324**. `bd list` has
+  the same flag. Pass `--limit 0` for anything that will become a durable
+  number. Sixth sighting of the family in this seat's record and the cheapest
+  one yet: a capped query returns the cap whatever the truth is, so the
+  measurement could not have discriminated the property it was labelled with.
+
+- 2026-09-02: **A SHELL FILE MUST BE LINTED WITH THE GATE'S OWN INVOCATION, NOT
+  A CONVENIENT ONE.** I linted with `shellcheck -S warning` throughout and the
+  fort's verifier then failed the file on an INFO-level SC2016, because
+  `scripts/verify-impl.sh` runs plain `shellcheck -x` at default severity.
+  Before writing a shell file into any fort, `grep -n shellcheck` its verifier
+  and copy the invocation verbatim. Same family as the E1 lesson (read the
+  verifier you are about to be judged by, before you write the change it will
+  judge) and the second time it has cost a round.
+
+- 2026-09-02: **NEVER EDIT A SCRIPT WHILE A COPY OF IT IS RUNNING.** bash reads
+  a script incrementally from an offset, so an in-place edit to a live launcher
+  can make it resume reading garbage. This bit nothing here only because I
+  noticed a fail-open in `fleet.sh` WHILE the first fleet run was executing it,
+  and deferred the fix rather than patching in place. In a civilization whose
+  Regent installs launcher repairs by `os.replace`, this is one `mv` away from a
+  corrupted run: `os.replace` swaps the inode and the RUNNING bash keeps its
+  original open file, which is safe — but `sed -i` and any in-place rewrite are
+  NOT. Check for a live process before touching a launcher.
+
+- 2026-09-02: **THE CLAIM READ-BACK THAT GREPS THE WHOLE JSON FOR THE ACTOR NAME
+  IS A FALSE-POSITIVE WAITING TO HAPPEN.** `bd show <id> --json` piped to
+  `grep -q '"veyra"'` matched the `assignee` field correctly AND would have
+  matched a `dependencies` entry assigned to the same actor — measured live: on
+  the first fleet dispatch, "veyra" appeared in BOTH `assignee` and
+  `dependencies`. Parse the field. Also learned there: `owner` and `assignee`
+  are different fields in bd, and `--claim -a X` sets `assignee`, leaving
+  `owner` at the git user — so a status line reading `Owner: Justin Schneider`
+  on a claimed bead is normal and not a failed claim.
+
+- 2026-09-02: **`bd merge-slot create` PRINTS "✓ Created merge slot" AND EXITS 0
+  WHETHER OR NOT ONE ALREADY EXISTED**, so its status cannot discriminate the
+  property. My first preflight read `check || create || refuse`, which trusts
+  that status; it now runs create and then RE-CHECKS, refusing on the check.
+  Assert the artifact, not the exit code — recorded 2026-08-17 and reached here
+  from a new direction, an idempotent command whose success is uninformative.
+
+- 2026-09-02: **A BRIEF WRITTEN FROM ANOTHER FORT'S TREE IS A SET OF PREDICTIONS
+  AND THIS ONE SAID SO ITSELF.** Four of five load-bearing figures were wrong
+  for Proofdelve — the gate-label convention is absent from their charter
+  entirely (3 labelled beads, not 65), their no-verdict rate is 17.4% not 14%,
+  and their `forge.sh` has no launcher-observed verifier for the capital's
+  `rvly` inversion to apply to. Only the 80KB reading-set figure was exact. **The
+  brief's own closing instruction to re-measure everything is the single most
+  valuable paragraph in it**, and a Mayor who writes one for another settlement
+  should copy that paragraph. The measurement also moved the LANE: three of the
+  six items needed no Regent at all.
+
+- 2026-09-02: **AN OVERSEER AMENDMENT CAN BE THE MOST VALUABLE PART OF A DESIGN,
+  AND BOTH OF HIS WERE HERE.** He approved automatic closure and then narrowed
+  it twice: (1) APPROVE-WITH-FINDINGS is 64 of the 67 verdicts that would
+  auto-close in that fort — **96% of the auto-close path** — and every one is a
+  review that found things and judged them non-blocking, so closing them
+  silently overnight industrialises the fnjn class; it now files ONE follow-up
+  bead carrying the verdict VERBATIM (never parsed — the reviewer states
+  findings in prose and a parser would mangle them) and **merges without closing
+  if that bead cannot be filed.** (2) The verifier re-runs on main after every
+  merge and a RED main HALTS the run, because three workers cannot
+  swarm-diagnose a red main the way a large fleet can. **Neither was in the
+  brief, and neither would have occurred to this seat.**
+
+- 2026-09-02: **"THE OVERSEER IS PRESENT" IS THE CONTROL; THE HARNESS IS THE
+  EVIDENCE; THEY ARE NOT SUBSTITUTES.** Three harnesses in this sitting each ran
+  against the PRE-REPAIR artifact FIRST (verdict recording scored 3/6 before and
+  9/0 after) and each carries a VACUITY CONTROL as its first case, because a
+  guard that refuses everything scores a clean sweep on refusal cases alone. The
+  decisive fixture is worth keeping as a template for any verdict-bearing
+  launcher in any fort: a transcript ending `VERDICT-LINE: REQUEST-CHANGES: ...`
+  followed by `VERDICT-LINE: APPROVE: looks fine to me.` **recorded APPROVE.**
+  The rule that fixes it is EXACTLY ONE VERDICT-LINE AND IT MUST BE THE LAST
+  NON-BLANK LINE — unambiguous where neither "first" nor "last" is, since first
+  is beatable by an injected earlier marker and last by an injected later one.

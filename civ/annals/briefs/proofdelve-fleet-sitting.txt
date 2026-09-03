@@ -1,0 +1,333 @@
+REGENT SITTING BRIEF — THE OVERNIGHT LOOP, BUILT IN PROOFDELVE
+Prepared by Emrith Cairnwright, Mayor of Manyhalls, 2026-09-02.
+Target fort: ForgeOs / Proofdelve. NOT the capital, NOT the factory.
+Overseer present throughout. Two approval points are flagged inline as [ASK].
+
+================================================================================
+0. WHY THIS SITTING EXISTS
+================================================================================
+
+The Overseer asked whether the civilization construct is paying for itself. It
+was measured on 2026-09-02 from the forts' own event streams, git, and bd,
+across fortkit, ForgeOs, longburn and WWWW over 2026-08-03 to 09-02. The
+findings that drive this sitting:
+
+  - Forge sessions: 167 paired in the capital, MEDIAN 3.8 MINUTES, p90 7.0,
+    longest ever 14.6. Same shape in all three active forts (Proofdelve median
+    4.3, longburn 3.7). Total Forge wall-clock across the whole civilization
+    for the month: 43.1 hours. Total Warden wall-clock: 64.5 hours.
+    THE CIVILIZATION SPENDS 1.5x MORE TIME REVIEWING WORK THAN DOING IT.
+
+  - Activity by hour, three forts, 31 days: 03:00-06:00 is EXACTLY ZERO, every
+    day. The overnight capability has never once been exercised.
+
+  - 325 beads ready, 2 in progress. `assignee` is set on 2 of 355 beads.
+    Atomic claiming exists in the tool and is decorative: forge.sh claims a
+    bead AFTER the Mayor has already chosen it by hand.
+
+  - There is no dispatcher, no queue consumer, no fleet. `forge.sh <bead-id>`
+    takes one bead and is invoked by hand. The architecture has producers and
+    no consumers.
+
+The diagnosis: the governance layer was built to an unusual standard and the
+production layer was never built at all. This sitting builds the production
+layer, in the fort where the product work actually is.
+
+================================================================================
+1. LANE, AND WHY IT IS YOURS
+================================================================================
+
+Five of the six beads touch fort/scripts/, which is kernel read-only to every
+masked seat including Proofdelve's own Mayor. Marrek Splitstone (they/them) can
+do P1 and nothing else. Splitting P1 from P2 would separate coupled work (the
+dispatcher reads the queue P1 repairs) across two sessions and a briefing, and
+coupled work split across sessions is exactly what produced the measured 1.58
+Forge rework multiplier.
+
+Both approval points need the Overseer in the room. A Regent sitting has him in
+the room by definition. Routing through Marrek would queue both gates and then
+need this sitting regardless.
+
+COVENANT SECTION 4 OBLIGATIONS, unchanged: announce yourself in Proofdelve's own
+event stream at start and end; never emit as one of Proofdelve's citizens; honour
+Proofdelve's human gates; your changes are reviewable by Tova against
+Proofdelve's standards of evidence. Coming from above is not an exemption from
+being wrong.
+
+================================================================================
+2. SCOPE FENCE — WHAT THIS SITTING DOES NOT DO
+================================================================================
+
+  - DO NOT port any of this to the capital or to templates/ in this sitting.
+    It is deliberately Proofdelve-local. If it works, Kithmason PULLS it under
+    standing order 13. The capital's infra ratio is already the Overseer's
+    complaint; do not add to it here.
+
+  - DO NOT touch Proofdelve's identity. Marrek Splitstone (they/them) is their
+    Mayor, Tova their Warden. Read their Forge's actor id from their own
+    charter and launchers; do not carry Manyhalls' names across. Their standing
+    order 16 is our 12; cite it by name, never by number.
+
+  - DO NOT turn the fleet on. It lands OFF. See section 5.
+
+  - DO NOT touch the mask posture or attempt to reduce the act-regent class.
+    That is programme two (the per-fort posture register) and it is not
+    designed yet. Deliberately out of scope.
+
+  - DO NOT run any moot or naming machinery. No new seats are created here.
+
+================================================================================
+3. THE SIX BEADS
+================================================================================
+
+File all six in PROOFDELVE'S tracker before working them. Not ceremony: it is
+what lets Marrek pick up the thread afterward, and what makes this auditable if
+something lands wrong at 3am.
+
+--------------------------------------------------------------------------------
+P1 — HONEST READY QUEUE: migrate human and Regent gates to `bd gate`
+--------------------------------------------------------------------------------
+WHY: `bd ready` currently offers beads that are blocked on the Overseer. A
+naive dispatcher would hand a Regent-lane bead to a Forge that cannot possibly
+do it. `bd gate create --blocks <id>` creates a real blocking issue and the
+blocked bead LEAVES `bd ready` outright. Our `gate-N` labels do not.
+
+SCOPE MEASUREMENT WAS TAKEN IN THE CAPITAL, NOT IN PROOFDELVE. In fortkit:
+65 open beads carry a human/Regent gate label, and 21 OF THOSE ARE STILL
+OFFERED BY `bd ready` AS WORKABLE. RE-MEASURE IN PROOFDELVE BEFORE ACTING.
+The gate-label convention was a Manyhalls adoption (fortkit-fci.1, 2026-08-08)
+and may not have propagated. If Proofdelve labels differently, migrate what is
+actually there, not what this brief predicts. Do not report the capital's
+number as Proofdelve's.
+
+DO:
+  - Measure Proofdelve's actual gate labelling and the label/ready overlap.
+  - For each open bead genuinely blocked on the Overseer or on a Regent lane,
+    create a `bd gate` of type `human` with a reason naming what is awaited.
+  - Keep the labels in place for one cycle as a cross-check. Do not delete
+    them in this sitting.
+
+[ASK] APPROVAL POINT A — CHARTER AMENDMENT. The gate-label convention is
+written into Proofdelve's law. Changing the mechanism is a constitutional
+edit, prose-gated for attended seats: the Overseer's approval must be recorded
+on the bead BEFORE the edit, and `charter.amended` must be emitted. Ask him in
+the moment. If he declines, P1 stops and P2 must then carry its own
+gate-exclusion filter, which is worse but workable. Say so if it happens.
+
+ACCEPTANCE:
+  - `bd ready` in Proofdelve returns zero beads that are blocked on a human or
+    on the Regent lane. Verified by re-running the overlap measurement and
+    getting 0.
+  - Every gate created names what it waits for in its reason string.
+  - `charter.amended` emitted, approval recorded on the bead beforehand.
+
+--------------------------------------------------------------------------------
+P2 — THE DISPATCHER: the consumer side
+--------------------------------------------------------------------------------
+WHY: this is the missing half of the architecture. Deterministic, no model, no
+tokens. Crons watch, models act.
+
+DO:
+  - A loop that pulls `bd ready` filtered to an OPT-IN label (propose
+    `fleet-safe`; let Marrek own its semantics afterward). NO BEAD IS
+    FLEET-SAFE UNTIL A MAYOR LABELS IT. Opt-in, never opt-out. This is what
+    makes the first run small and deliberate.
+  - Atomic claim via `bd update <id> --claim -a <proofdelve forge actor>`
+    BEFORE launch, so a second dispatcher instance cannot double-book. Read
+    the actor id from Proofdelve's own launchers.
+  - Launch their forge.sh per claimed bead in its own worktree. Respect the
+    existing flock; do not remove it. It guards a different concern (one
+    launcher per worktree) from bd's claim (one worker per bead).
+  - LAUNCH CONTEXT: the dispatcher writes outside the repo and spawns
+    launchers, so it CANNOT be started from a masked seat. Same mechanism as
+    herald.sh, measured 2026-08-06: seat-sandbox.sh binds $HOME read-only with
+    only the repo rw and every spawned process inherits it. It must run from
+    the Overseer's terminal or a systemd user timer. Install it the way H7 was
+    installed.
+  - FOLD IN, same file, same sitting: trim what forge.sh makes the Forge read
+    at session start. It currently instructs a read of AGENTS.md, the charter,
+    memory/current.md and the seat file before implementing. In the capital
+    that is ~80KB, on the order of 20,000 tokens, at the head of a session
+    whose median total length is 3.8 minutes. A Forge does not need the
+    covenant or the full charter to implement one bead. Measure Proofdelve's
+    equivalent sizes and cut to what the seat actually needs.
+
+ACCEPTANCE:
+  - Dispatcher run with 3 pre-labelled beads launches 3 Forges, each in its own
+    worktree, each with the bead claimed to the Forge actor before launch.
+  - Dispatcher run with 0 fleet-safe beads exits cleanly and quietly.
+  - A bead already claimed or already in a live worktree is never double-launched.
+  - Measured before/after byte count of the Forge's mandatory reading set,
+    recorded on the bead.
+
+--------------------------------------------------------------------------------
+P3 — THE PORTCULLIS: work lands while the Overseer sleeps
+--------------------------------------------------------------------------------
+WHY: closure currently requires an attended Mayor session. That is the single
+reason nothing can complete overnight.
+
+DEPENDS ON P5. DO NOT ENABLE BEFORE P5 IS GREEN. See section 4.
+
+DO:
+  - On Forge exit 0 AND launcher-observed verifier green: route the bead to
+    review. Note the known inversion (rvly in the capital: forge.sh has exited
+    0 and printed the review recipe when its own observed verify exited 1).
+    Check Proofdelve's forge.sh for the same shape and fail closed if found.
+  - On Warden verdict PASS **and** verdict_recorded true: acquire the merge
+    slot, merge, release, close the bead.
+  - On BLOCK: return the bead to ready, append the verdict to the bead's
+    COMMENTS (standing order 7: corrections go to comments, notes carry working
+    state only), increment a retry counter, and after 2 returns escalate to the
+    Mayor's queue instead of retrying. Never retry indefinitely.
+  - FOLD IN: use `bd merge-slot` for merge serialization rather than inventing
+    one. It is an exclusive primitive built for exactly this race, and we
+    already solved this once by hand with flock after the 2026-08-04
+    double-launch incident.
+
+[ASK] APPROVAL POINT B — CLOSURE AUTHORITY. Proofdelve's forge.sh prompt says
+"the Mayor closes it after review and merge". Automatic closure moves that
+authority to a mechanism. Standing order 9 (no bead closes without verifiers
+green plus review) is SATISFIED by this design, not weakened: what changes is
+who presses the button. Get the Overseer's explicit yes, record it on the bead,
+and emit `charter.amended` if their law names the Mayor as closer.
+
+ACCEPTANCE:
+  - A bead that passes verifier and review is merged and closed with no
+    attended session, and the closing actor is identifiable in the record as
+    the mechanism, not as a citizen.
+  - A bead whose review returns BLOCK is returned to ready with the verdict in
+    its comments, and is escalated rather than retried on the third return.
+  - A bead whose review recorded NO verdict is NEVER closed. Fail closed.
+
+--------------------------------------------------------------------------------
+P4 — THE BUDGET GOVERNOR
+--------------------------------------------------------------------------------
+WHY: the Overseer runs 1 Claude Max ($200 tier) and 1 Codex Pro, total. The
+Forge runs on Codex; the Warden and both Mayors run on Claude. An ungoverned
+fleet can burn a month's plan in a night, and the Claude side is shared with
+review and with every Mayor session.
+
+DO NOT HARDCODE A CONCURRENCY NUMBER. Neither the Mayor nor this brief has a
+reliable figure for sustainable concurrent sessions on either plan, and a
+guessed constant would be a false measurement of exactly the class this fort
+keeps filing beads about.
+
+DO:
+  - Forge concurrency: START AT 3, adaptive. Treat rate-limit responses as
+    back-pressure and step down. Step back up only after a sustained clean
+    period. LOG WHAT IT ACTUALLY SUSTAINED, so the ceiling is measured after
+    one night instead of assumed.
+  - Warden concurrency: 1. Fixed. The Claude plan funds review, Marrek, and
+    Emrith simultaneously; review concurrency is the thing most likely to
+    starve everything else.
+  - A hard stop: maximum total launches per run, so a runaway cannot empty the
+    plan before anyone wakes up. Propose 40; let the Overseer set it.
+
+ACCEPTANCE:
+  - Simulated rate-limit response causes a measured step-down, not a crash and
+    not a hot retry loop.
+  - Hard stop halts the run and emits an incident naming the cap it hit.
+  - The sustained-ceiling log exists and is readable.
+
+--------------------------------------------------------------------------------
+P5 — VERDICT RECORDING REPAIR  (HARD PRECONDITION FOR P3)
+--------------------------------------------------------------------------------
+WHY: across the three forts, 76 Warden sessions recorded NO verdict at all,
+roughly 14% of all reviews. Today that costs a relaunch. Under P3 it would mean
+the fort closes beads on reviews that never happened, silently, overnight. This
+is the worst failure this programme could produce and it is already latent.
+
+RELATED CAPITAL BEADS, for the shape only, not for porting: fortkit-5mw (a
+complete verdict produced but the transcript file parsed empty), fortkit-7kzi
+(researcher.sh has the same shape, and the bound can still be beaten by an
+earlier verdict-line). Check whether Proofdelve's warden.sh carries the same
+defects. It very likely does; the architecture is shared. Verify, do not assume.
+
+DO:
+  - A Warden session that produces no parseable verdict must emit an explicit
+    incident AND leave the bead in a state that P3 refuses to close.
+  - The verdict must be taken from a bounded, unambiguous position, not from
+    trailing bytes. The capital repaired this once (iist) after trailing
+    content in a transcript could override a recorded review gate; a later
+    session found an injected instruction sitting in a posted transcript.
+  - Absence of a verdict must be distinguishable in the record from a verdict
+    of PASS. Today it is not, reliably.
+
+ACCEPTANCE:
+  - A Warden session killed mid-review produces an incident and no verdict, and
+    P3 refuses that bead.
+  - A transcript with content after the verdict line cannot change the recorded
+    verdict. Prove it with a crafted fixture.
+  - Re-measure the no-verdict rate after the fix and record the number.
+
+--------------------------------------------------------------------------------
+P6 — BATCHED REVIEW   (DEFERRABLE — drop this first if the sitting runs long)
+--------------------------------------------------------------------------------
+WHY: review is 1.66 launches per bead, each paying the full session-start
+context load, out of the shared Claude plan. Raising Forge throughput makes
+review the choke point immediately.
+
+DO:
+  - One Warden session takes N landed beads and emits ONE VERDICT LINE PER
+    BEAD. A block on one bead must not block the other N-1.
+  - If per-bead verdicts inside a batch prove fiddly, STOP AND LEAVE IT. The
+    loop works at 1:1 review, just more expensively. Do not risk P5's
+    guarantees to save tokens.
+
+ACCEPTANCE:
+  - A batch of 3 where the middle bead blocks results in 2 merged and 1
+    returned, with three distinguishable verdicts in the record.
+
+================================================================================
+4. SEQUENCING — THE ONE ORDER THAT IS NOT NEGOTIABLE
+================================================================================
+
+  P1  →  P2  →  P5  →  P3  →  P4  →  P6 (optional)
+
+P5 BEFORE P3 IS SWITCHED ON. Everything else may be reordered for convenience.
+If the sitting runs long, land P1, P2, P5 and stop: that is a fort with an
+honest queue, a working dispatcher, and trustworthy verdicts, which is a real
+improvement even with closure still manual.
+
+================================================================================
+5. IT LANDS OFF
+================================================================================
+
+The fleet ships disabled. Then, in this order:
+
+  1. One deliberate daylight run: 3 or 4 fleet-safe beads, Overseer watching.
+  2. Read the record. Confirm claims, verdicts, merges and closures all landed
+     as the acceptance criteria describe.
+  3. Only then, one overnight run with the hard stop set low.
+
+DO NOT LET THE FIRST UNATTENDED RUN BE THE FIRST TEST.
+
+================================================================================
+6. ON FINISHING
+================================================================================
+
+  - Write the sitting handoff to civ/handoffs/ in the usual form.
+  - Leave all six beads in Proofdelve's tracker with their real state, so
+    Marrek can pick up the thread without reconstructing it.
+  - `bd export` before the handoff, per the export-staleness rule: bd is
+    authoritative, the JSONL is a throttled projection that can sit stale
+    indefinitely, and any count quoted into a durable record comes from bd.
+  - Record what you measured, including anything in this brief that turned out
+    to be WRONG about Proofdelve. This brief was written from the capital's
+    tree by a Mayor who cannot read Proofdelve's beads database. Treat every
+    number in it as a prediction about Proofdelve until you have re-measured
+    it there.
+
+================================================================================
+7. WHAT THIS SITTING DOES NOT FIX, STATED SO NOBODY CLAIMS OTHERWISE
+================================================================================
+
+  - The 47 act-regent beads. Unchanged. Those need the per-fort posture
+    register, which is programme two and not yet designed.
+  - The capital's ~81% machinery ratio. Unchanged, and structurally unfixable:
+    Manyhalls' product IS forts.
+  - longburn / Farlantern. Deliberately untouched; the Overseer has confirmed
+    it is a dormant hobby project, not a stalled one.
+  - The security fort's threat model. That is fortkit-cerj, already open, and
+    it correctly says the charter's four threats do not cover a fort whose work
+    is executing hostile code.
