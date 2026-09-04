@@ -2339,3 +2339,135 @@ should name the seat if it matters who learned it.
   The rule that fixes it is EXACTLY ONE VERDICT-LINE AND IT MUST BE THE LAST
   NON-BLANK LINE — unambiguous where neither "first" nor "last" is, since first
   is beatable by an injected earlier marker and last by an injected later one.
+
+- 2026-09-04 (edict 31, the Proofdelve fleet docket — twelve items, four lanes):
+  **A DOCKET WRITTEN BY A SEAT THAT VERIFIED EVERY ITEM AGAINST THE TREE IS A
+  DIFFERENT INSTRUMENT FROM ONE WRITTEN FROM BEAD TITLES, AND THE DIFFERENCE IS
+  MEASURABLE.** Marrek Splitstone's docket opened with the record of its own
+  predecessor's failure — a 2026-09-01 list with four already-applied items —
+  and carried, per item, the command run and what it returned. **Not one of its
+  twelve items was already done, against three of eleven on the 2026-09-01
+  docket** (the 2026-09-01 entry in this file records that ratio). Two of its
+  premises were still wrong, and both were wrong in the direction the author
+  could not measure from inside a mask: `git status --porcelain` as the
+  cleanliness test (`.beads/interactions.jsonl` is TRACKED and rewritten by
+  every `bd` call, so a blanket dirty-refusal would refuse nearly every night),
+  and the B1 broadening. **The remaining error rate after real verification is
+  the error rate of things the author COULD NOT REACH, and that is the useful
+  signal: it tells you exactly which items to re-measure yourself.**
+
+- 2026-09-04: **THE PRODUCT'S OWN PERMISSION-RULE CHECKER IS A MEASURING
+  INSTRUMENT AND IT ANSWERED A QUESTION A MODEL PROBE WAS BEING BUILT TO
+  ANSWER.** The docket asked why Claude Code's launch preamble flags exactly one
+  of fourteen `Bash(git -C * <sub>*)` allow rules, said the broadening to all
+  fourteen might therefore be wrong, and asked for a smoke probe to settle it.
+  It is settleable in ninety seconds with no model at all: write scratch
+  settings files with one rule each and run
+  `claude --dangerously-skip-permissions --setting-sources "" --settings <f> -p hi
+  </dev/null 2>&1 >/dev/null | grep 'wildcard before'`. Measured:
+  `Bash(git -C * worktree list*)` FLAGGED; `git -C * log*`, `diff*`, `show*`,
+  `status*`, `blame*`, `rev-parse*`, `rev-list*`, `ls-files*`, `branch*` and
+  every `bd -C * <sub>*` NOT flagged; `git -C <absolute path> worktree list*`
+  NOT flagged; `git -C <path>-worktrees/* worktree list*` STILL flagged. The
+  discriminator is a MULTI-WORD subcommand after the wildcard, not the wildcard
+  itself. **The docket's hypothesis was wrong and its own caveat is what made
+  the check worth running.** General shape: before building an instrument to
+  infer why a tool behaves a certain way, check whether the tool will simply
+  tell you when asked with controlled inputs.
+
+- 2026-09-04: **`$!` AFTER `nohup setsid ... &` IS NOT THE CHILD'S PID, AND
+  BUILDING A LIVENESS CHECK ON IT IS WORSE THAN THE BUG IT FIXES.** `setsid`
+  forks when it is already a process-group leader — which it always is as a
+  background job — so the parent-visible pid exits within milliseconds. A
+  `live_forges()` that counted `kill -0 $!` would have read every worker as dead
+  on the next pass and over-dispatched every concurrency slot, where the defect
+  being fixed only ever UNDER-dispatched. Caught by reasoning about setsid
+  before the code shipped, not by a test. **The child writes its own `$$` as its
+  first statement, and a GRACE WINDOW on the directory's mtime covers the gap
+  between the parent's mkdir and that write** — erring toward fewer dispatches,
+  which is the safe direction for a thing that spends money. When replacing a
+  wrong liveness test, ask which way the NEW one fails.
+
+- 2026-09-04: **A GUARD'S EXEMPTION LIST IS THE PART THAT DECIDES WHETHER IT
+  RUNS AT ALL, AND IT MUST BE MEASURED AGAINST THE LIVE TREE BEFORE IT SHIPS.**
+  The docket's "whole fix" for the fleet's landability guard was
+  `git symbolic-ref HEAD` plus `git status --porcelain`, refuse at 64.
+  Implemented literally it refused on the FIRST dry run, naming
+  `.beads/interactions.jsonl` — a TRACKED file that `bd` rewrites on essentially
+  every invocation, and `fleet.sh` makes dozens per pass. The fleet would have
+  refused nearly every night for a reason unrelated to what its record claims.
+  The narrowing is stated as a property rather than a convenience: **what the
+  guard protects is the sentence "the host verifier was green on main"; the
+  verifier scores SOURCE, so uncommitted source is a lie and uncommitted RECORDS
+  are not.** Two exempt prefixes, named in the file, with a line saying a third
+  is a signal to look at why rather than to extend the list.
+
+- 2026-09-04: **A HARNESS FOR A NEW GUARD INVERTS BY REFUSING, NOT BY FAILING,
+  AND THAT REFUSAL IS THE EVIDENCE.** `landable-harness.sh` scores 8/0 against
+  the candidate and exits 3 — "HARNESS REFUSES: extracted 0 lines" — against the
+  pre-fix file, because the functions do not exist there. For a CHANGED function
+  the positive control is a failing assertion count (the governor harness: 8
+  pass / 4 fail before, 12/0 after, the four exactly the named defects). For a
+  NEW one it is a refusal. **Both are inversions; a harness that scored a clean
+  pass against a file lacking the code would be measuring nothing.** The other
+  half is per-case fixtures: the guard discriminates five states of a
+  repository, and the live checkout is only ever in one of them, so each case
+  builds its own repo and overrides `$root` at it.
+
+- 2026-09-04: **`set -u` KILLED A HEREDOC'S `cat` AND THE GENERATED FILE CAME
+  BACK 0 BYTES, WHICH READS EXACTLY LIKE "THE PATCH DID NOT LAND".**
+  fortkit-pbzg's acceptance criterion 3 demands grepping the GENERATED regent
+  sysprompt rather than the source. My first harness stubbed four of the five
+  variables the heredoc expands and omitted `CIV`; `cat` died, the group wrote
+  nothing, and my first reading of the result was "both paragraphs MISSING from
+  the generated file". **The defect was in the instrument and I nearly reported
+  it as a defect in the work.** What stopped it was that a 0-byte file is too
+  clean to believe. Extract the variable list mechanically
+  (`grep -oE '\$\{?[A-Za-z_][A-Za-z0-9_]*\}?'` over the heredoc's line range)
+  rather than by reading. The criterion earned itself inside an hour of being
+  written, and its stated reason — source-right and generated-right are two
+  claims — is exactly right.
+
+- 2026-09-04: **A REFUSAL GUARD IN A DESTRUCTIVE SCRIPT CAN BE TESTED WITHOUT
+  EVER RUNNING THE DESTRUCTIVE PART: TRUNCATE THE SCRIPT AT THE GUARD.** For
+  `scripts/deploy-azure-staging.sh` — which runs EF migrations against staging —
+  the vacuity control is an `awk` copy that stops at the line after the guard
+  block and substitutes `echo GUARD-PASSED; exit 0`. Then run it three ways:
+  marker set (64), marker unset (0), **marker set to the EMPTY STRING** (0, the
+  host-shell case, because the launchers test `-n`). Without the unset and empty
+  runs, a guard that refuses unconditionally scores a clean pass on the refusal
+  case alone. And the refusal must be HOISTED ABOVE the `.env.staging.local`
+  source: the next statement reads the fort's secrets into the process, and a
+  refusal below it has already done the thing worth refusing (fortkit-px7e).
+
+- 2026-09-04: **"BOTH HALVES" IS SOMETIMES THE ONLY HONEST ANSWER TO A BEAD THAT
+  ASKS FOR ONE.** `ForgeOs-3h57` asked for a `FORT_MASKED` refusal inside the
+  gate-3 deploy script. Measured first: that file is WRITABLE from the live
+  Mayor mask (`ForgeOs-hi9c`, P1, open eleven days), while its sibling is bound
+  read-only. **A prose refusal inside a file the gated seat can edit is
+  decoration**, so implementing the bead as written would have produced a
+  control weaker than it reads. Put to the Overseer as three options with the
+  measurement attached; he took both halves. **Measure the precedent a bead
+  cites AND the file it names — this is the second sighting of that exact class
+  in this fort (2026-08-24, `ForgeOs-15k.2`), and both times the false premise
+  was what found the real defect.**
+
+- 2026-09-04: **THE CAPITAL'S MAYOR COMMITTED THREE TIMES INSIDE THIS SITTING'S
+  WINDOW AND MOVED PROOFDELVE'S HEAD UNDER ME** (`ecb1162` → `d7b5614`,
+  including the docket file itself). None touched my files, and I only know that
+  because the gated install lane asserts a pre-image sha256 per file and would
+  have refused. **In a shared tree the pre-image assert is not ceremony, it is
+  the thing that makes "I edited what I read" a checkable claim.** Third
+  sighting of the shared-tree class (2026-08-17 pushed under me, 2026-09-02
+  close-out); the new half is that it can move the BASE of your own diff, so
+  never describe an edict by `HEAD~n` and always re-read `git log` at close.
+
+- 2026-09-04: **VERIFY WITH `--no-emit` WHEN THE FORT'S VERIFIER EMITS AS
+  `harness`.** Proofdelve's `verify-impl.sh` emits under `${FORT_ACTOR:-harness}`,
+  and covenant 4.3 forbids a civ seat emitting as another actor — `harness`
+  named explicitly. So a Regent running a fort's verifier runs it `--no-emit`
+  and records the result in the commit message and an `edict.applied` under its
+  own name instead. The run that matters: exit 0, **260 passed / 0 failed / 0
+  skipped with Docker UP**, which is the full suite including the MigrationTests
+  no masked seat can execute. Zero skipped is the number to read, not the exit
+  code (`migrationtests-need-docker`).
