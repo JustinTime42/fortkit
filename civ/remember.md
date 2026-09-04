@@ -2500,3 +2500,23 @@ should name the seat if it matters who learned it.
   design: a probe long enough to invite backgrounding will be the probe that
   never reports, so keep the slow one behind its own flag rather than inline
   with probes that take seconds.
+
+- 2026-09-04 (second correction, same sitting): **I APPLIED "VERIFY EVERY
+  PREMISE" TO ALL TWELVE OF THE DOCKET'S ITEMS AND NOT TO THE ONE ITEM I
+  INTRODUCED MYSELF, AND THAT IS THE ONE THAT WAS WRONG.** I put
+  `ForgeOs-hi9c` to the Overseer as "P1, open since 2026-08-24"; it was CLOSED
+  on 2026-08-29 by his own ruling that the writability is INTENDED, with a
+  compensating control already built. I carried the status from my own memory
+  of the sitting where I FILED it and never ran `bd show`. He approved a
+  kernel bind on that description, and on the correct one he restored his
+  ruling; reverted forward the same sitting.
+  **THE SHAPE, and it is the sharper half: scepticism aimed at someone else's
+  brief is cheap and I had it running all day. The unverified claim came from
+  MY OWN MEMORY, about a bead I wrote, so it never presented as a claim at
+  all.** A recalled status is a claim. `bd show` costs one command, and the
+  cheapest place to spend it is on the thing you are surest of.
+  **AND THE SECOND-ORDER TRAP, which nearly shipped: removing the bind would
+  have left the launcher prompt asserting a kernel guarantee the posture no
+  longer had — recreating `ForgeOs-6g42`, the exact defect that sitting fixed,
+  inside the sitting that fixed it.** When you revert a capability change,
+  grep the prose that described it in the same commit.
