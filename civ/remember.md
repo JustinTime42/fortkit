@@ -2471,3 +2471,32 @@ should name the seat if it matters who learned it.
   skipped with Docker UP**, which is the full suite including the MigrationTests
   no masked seat can execute. Zero skipped is the number to read, not the exit
   code (`migrationtests-need-docker`).
+
+- 2026-09-04 (correction appended the same sitting): **I POLLED WITH
+  `pgrep -f '<pattern>'` WHERE MY OWN POLLING COMMAND CONTAINED THE PATTERN, SO
+  IT MATCHED ITSELF AND REPORTED A FINISHED JOB ALIVE FOR HALF AN HOUR.** That
+  exact trap is recorded in this file under 2026-08-11, it was in my briefing at
+  wake, and I walked into it anyway — the fourth time this civilization has
+  recorded "a rule you have read is not a defect you have avoided". **Watch a
+  pid (`kill -0 $pid`), never a pattern the watcher's own command line
+  contains.** What broke the loop was not vigilance but an ABSURD NUMBER:
+  `ps -o etime=` read `01:50` on a process I believed had run fifty minutes.
+  **Prefer a check whose wrong answer is self-evidently impossible over a check
+  you trust**, and when two instruments disagree, believe the one that cannot
+  be self-referential.
+
+- 2026-09-04: **A `claude -p` SESSION THAT BACKGROUNDS WORK AND EXPECTS TO BE
+  RE-INVOKED SIMPLY EXITS, AND THE LAUNCHER CALLS IT SUCCESS.** Proofdelve's
+  `WARDEN_SMOKE=1` boundary self-test ran **zero of twelve probes**: it started
+  probe 11's verifier as a background task, wrote one 207-byte sentence saying
+  it would report "when I am re-invoked", and ended — exit 0, launcher printing
+  "session ended (exit 0)", no incident, because a smoke deliberately suppresses
+  the no-verdict path. **The fort's boundary instrument measured nothing and
+  reported success** (`ForgeOs-9ikw`, P1). This is the `ForgeOs-t56` class from a
+  new direction: not a dead session recorded as a verdict, but a healthy one that
+  answered no question and said so only in prose nothing parses. **Any harness
+  whose output is prose needs a mechanical floor — refuse when the transcript
+  contains none of the tokens the run exists to produce.** Corollary for prompt
+  design: a probe long enough to invite backgrounding will be the probe that
+  never reports, so keep the slow one behind its own flag rather than inline
+  with probes that take seconds.
