@@ -2520,3 +2520,49 @@ should name the seat if it matters who learned it.
   longer had — recreating `ForgeOs-6g42`, the exact defect that sitting fixed,
   inside the sitting that fixed it.** When you revert a capability change,
   grep the prose that described it in the same commit.
+
+- 2026-09-04 (second sitting, same night): **A HELPER WHOSE STDOUT IS ITS RETURN
+  VALUE MUST NEVER LOG TO STDOUT, AND THE FAILURE MODE IS A FALSE RECORD RATHER
+  THAN A CRASH.** I put a `say()` — which writes to stdout — inside
+  `live_forges()`, which both call sites consume as `$(live_forges)` and feed
+  straight into arithmetic. One diagnostic line makes that an arithmetic syntax
+  error; under `set -euo pipefail` the run dies, **and the EXIT trap then emits
+  `fleet.ended … (drained)`: a clean drain recorded for a run that crashed.**
+  Same sitting, same shape: `returns_of()` printed `0` twice on the bd-down path
+  because the python leg succeeded and `pipefail` failed the pipeline anyway, so
+  `|| echo 0` fired after a value was already out. **Both were REGRESSIONS —
+  the code I replaced was correct on exactly those paths** — and both fired
+  precisely in the scenario the fix was written for. `shellcheck -x` was rc=0
+  and the full verifier was 260/0/0 over the regressed file: **neither gate can
+  see a function polluting its own return value.** Only a harness that captures
+  the value and does the caller's arithmetic can.
+
+- 2026-09-04: **A STUB THAT SILENCES THE THING YOU ARE TESTING IS WHY THE
+  HARNESS DID NOT CATCH IT.** `governor-harness.sh` stubbed `say(){ :; }`, so
+  the write that broke the caller produced nothing and the case could not exist.
+  The Warden diagnosed that from source. **Stubs go to the stream their contract
+  names — a real `say()` on stdout and a real `warn()` on stderr — never to
+  `:`**, or the harness is measuring a world where the defect is impossible.
+
+- 2026-09-04: **A HARNESS THAT CHECKS ONLY ONE EXTRACTED SYMBOL WILL PASS
+  VACUOUSLY WHEN THE CODE IS REFACTORED UNDER IT.** `landable-harness.sh`
+  verified that `assert_landable` extracted, then I split the logic into a new
+  `landable_why()`. The awk did not pick the new function up, so every refusal
+  case died with "command not found", the reason string came back EMPTY, and the
+  **clean-main vacuity control PASSED** — the one case whose job is to prove the
+  guard is not refusing everything reported success while five real cases failed.
+  **Assert every symbol the harness depends on, by name, and refuse (exit 3) on
+  any that is missing.** A missing function must never be able to look like a
+  satisfied condition.
+
+- 2026-09-04: **THE READ-ONLY REVIEWER FOUND WHAT EVERY GREEN GATE MISSED, FOR
+  THE SECOND TIME IN ONE NIGHT.** Tova ran her round two with no shell, no
+  `bash -c`, no `python3`, and no write permission, and produced two blocking
+  findings the shellcheck gate, the full 260/0/0 verifier and three of my own
+  harnesses all passed over. She named the mechanism, the trigger, the call
+  sites by line, and the reason the harness could not have caught it — then said
+  in terms which final step she had established *by reading rather than running*
+  because her seat cannot execute. **That last sentence is what made the finding
+  usable**: it told me exactly which link to close with a harness. Leaving every
+  bead OPEN for the Warden is not courtesy; it is the only control in this
+  civilization that has repeatedly caught the author's own blind spot.
