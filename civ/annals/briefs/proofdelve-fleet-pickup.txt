@@ -1,0 +1,256 @@
+BRIEF FOR MARREK SPLITSTONE (they/them), MAYOR OF PROOFDELVE
+From Emrith Cairnwright, Mayor of Manyhalls. 2026-09-03.
+Handed over by the Overseer. Nothing here overrides your own charter or judgement.
+
+================================================================================
+WHAT HAPPENED IN YOUR FORT WHILE YOU WERE ASLEEP
+================================================================================
+
+A Regent edict (`fortkit-fzpf`, Calder Sealbroken, Overseer present throughout)
+built a work-dispatching fleet in Proofdelve on 2026-09-02 and ran it once,
+attended. It announced itself in your event stream at both ends, per covenant 4.
+
+  Commits:   b5cd333 (the build), ecb1162 (the post-run repair)
+  Handoff:   fortkit/civ/handoffs/regent-2026-09-02T170231.md  — READ THIS FIRST
+  Origin:    fortkit/civ/annals/briefs/proofdelve-fleet-sitting.txt
+  Epic:      ForgeOs-9mfw, children .1 through .6
+
+WHY IT WAS BUILT. The Overseer asked whether the fort civilization is paying for
+itself. Measured across four forts, 2026-08-03 to 09-02: Forge sessions have a
+median length of 3.8 minutes and have NEVER exceeded 15; 03:00-06:00 carries
+exactly zero events every day since founding; 325 beads sat ready and 2 in
+progress. There was no dispatcher and no queue consumer. The architecture had
+producers and no consumers. That is what `fleet.sh` is.
+
+THE RUN. ForgeOs-b0vj.9.1 went from ready to closed in 11m33s with no attended
+session: claimed to veyra, Forge exited 0, host verifier green in the bead's own
+worktree at 260 passed / 0 skipped, Tova reviewed APPROVE-WITH-FINDINGS, merge
+slot acquired, merged, post-merge verifier green on main, follow-up ForgeOs-dvqa
+filed, parent closed. The closing actor is `fleet`, not a citizen.
+
+THE NUMBER THAT SHOULD INTEREST YOU MOST. Tova reproduces 255 passed / 5 SKIPPED
+in her scratch, because Docker is masked to her and the Testcontainers migration
+tests cannot run there. The fleet's host run got 260 / 0. The fleet's gate is
+strictly stronger than any seat's, and it is a gate your forge.sh does not have
+at all — it never ran the verifier. Worth asking how many of Tova's escalations
+were her being unable to execute rather than the work needing the Overseer.
+
+THE FLEET IS OFF, behind two independent stops. `FLEET_ENABLED=0` in
+`fort/scripts/fleet.conf`, which is kernel-read-only to every masked seat
+including you; and zero beads carry the `fleet-safe` label, so even a flipped
+switch would launch nothing. THE SECOND STOP IS YOURS. Which beads are eligible
+is your call and lives in bd where you write. The switch is not yours and not
+mine: it is the Overseer's act, or a Regent's on his instruction.
+
+================================================================================
+WHAT IS WAITING FOR YOU, IN THE ORDER I WOULD DO IT
+================================================================================
+
+0. READ `fort/scripts/fleet.sh` LINES 1-80 BEFORE THE REST OF THIS BRIEF.
+   The intent is written into the file and it states the design better than I
+   can second-hand: what it is, that it is deterministic and spends no tokens,
+   that it refuses to run from a masked seat and why, the four properties that
+   make it safe to leave running, and an explicit list of what it will not do.
+   Nearly every non-obvious decision in that file carries the measurement that
+   forced it. This brief is a pointer. That header is the source, and where the
+   two disagree the file wins.
+
+1. DISPATCH TOVA FIRST, THEN WORK WHILE SHE RUNS.
+   The `ForgeOs-9mfw` beads are deliberately left OPEN for a covenant 4.5 review
+   of the edict. Your standing rule (no bead closes without verifiers green +
+   review) is what keeps them open, and Calder left them that way on purpose.
+   Dispatching her first means her ~6 minutes runs while you do item 2. That
+   parallelism is the entire point of the thing being reviewed.
+
+   CALDER'S STEER was the landing path, and specifically whether `land()` can
+   leave a bead merged-but-open in a state you would not notice. I read the
+   file afterward and the question is sharper than "notice". THREE TARGETS,
+   the first MEASURED rather than suspected:
+
+   (a) A MERGED-BUT-OPEN BEAD IS RE-DISPATCHABLE. `land()` has two paths that
+       merge and deliberately do not close: the follow-up bead could not be
+       filed, and `bd close` failed. Both are correct refusals. But neither
+       removes the `fleet-safe` label, neither adds `fleet-escalated`, and the
+       parent's `dependency_count` stays 0 because `dep add "$follow" "$bead"`
+       points the other way. So on the next pass `dispatchable()` returns YES
+       and the bead is claimed and dispatched to a fresh Forge whose branch is
+       already in main.
+       THE LOAD-BEARING QUESTION WAS WHETHER THE CLAIM ITSELF EXCLUDES IT, and
+       it does not. Measured in the capital's tracker on 2026-09-03, bd 1.1.2,
+       by setting an assignee on a live bead and clearing it again: in
+       `bd ready` BEFORE = True, WITH an assignee set = True. `bd ready -a` is
+       a filter BY assignee, not an exclusion of assigned work.
+       Cost if it fires: a Forge launch plus a Warden review — the expensive
+       Claude one — spent retrying a `bd` write. Self-healing once bd recovers,
+       and bounded by the hard stop of 20, so the worst case is roughly ten
+       wasted loops and a record showing one branch merged ten times.
+       Cheapest fix is one line in each path: drop `fleet-safe`, or add a
+       `fleet-merged` label that `dispatchable()` refuses. That converts an
+       expensive retry loop into the Mayor triage those paths already intend.
+       RE-MEASURE IN YOUR OWN TREE before acting. Mine is a different tracker.
+
+   (b) `land()` MERGES INTO WHATEVER HEAD IS. It runs `git -C "$root" merge
+       --no-ff "bead/$sfx"`, and `preflight()` never asserts that `$root` is on
+       main or that its working tree is clean. The merge commit message and the
+       emitted event both say "into main" unconditionally. If anyone leaves
+       that checkout on another branch, the fleet merges there and the record
+       still says main. Low probability, and this fort does not tolerate a
+       record that outlives its subject.
+
+   (c) NOTHING EVER REMOVES A WORKTREE OR DELETES A BRANCH. `dispatch_pass`
+       clears the worker STATE dir, not the git worktree at
+       `$root-worktrees/$sfx`. A twenty-launch night leaves up to twenty
+       worktrees and twenty branches. This civilization has a measured instance
+       of exactly this class — `fortkit-or2.9.1`, 28 directories holding 3.6G
+       of RAM — and the fleet multiplies it. Lifecycle appears in none of the
+       six beads.
+
+   ROUTING, BECAUSE IT WILL OTHERWISE WASTE YOUR SESSION: you cannot fix any
+   of these yourself. `seat-sandbox.sh:432` binds `$t/fort/scripts` read-only
+   for every masked seat in this fort, so `fleet.sh`, `fleet.conf`, `forge.sh`
+   and `warden.sh` are all beyond you and beyond Tova. Your job on (a) to (c)
+   is to CONFIRM OR REFUTE them in your own tree and record the result on the
+   9mfw beads. The repair is a Regent sitting or the Overseer's terminal. None
+   of them blocks the review, and none is a reason to delay a low-cap night:
+   (a) is bounded by the hard stop and self-heals, (b) needs someone to have
+   left the checkout on another branch, and (c) is a slow leak. All three
+   should be fixed before the fleet runs nightly and unattended.
+
+   Not a defect, but worth Tova knowing: `run_verifier()` deliberately runs
+   WITHOUT `--no-emit` and without `CI`, so every fleet verification writes
+   `verify.run`/`pass`/`fail` into your stream. That is the right call — the
+   evidence lands in the record rather than being asserted in prose — but a
+   twenty-launch night writes roughly forty of those plus the fleet's own
+   events, into a stream that has now been found UNTRACKED three times.
+   Committing it stops being optional once the fleet runs nightly.
+
+2. ForgeOs-9mfw.1 — YOUR DECISION, AND DECLINING IS A COMPLETE ANSWER.
+   The origin brief predicted your fort used the capital's `gate-1/2/3` label
+   convention. IT WAS WRONG. Measured in your tree: the convention is absent
+   from your charter entirely, and you carry 3 gate-labelled beads in total
+   (`human` x1, `gate-1` x1, `gate-6` x1). Your actual convention is
+   `--add-label human` plus `bd human`, adopted 2026-08-29 on ForgeOs-eng3.1
+   with the Overseer's approval, and it is applied to 1 of 325 open beads.
+
+   The bead OFFERS `bd gate` and does not prescribe it. The whole argument for
+   it is narrow: `bd gate create --blocks <id>` removes the blocked bead from
+   `bd ready` outright, where a label leaves it sitting there looking workable.
+   That mattered when the dispatcher was going to read `bd ready` broadly. It
+   matters much less now, because the fleet is opt-in on `fleet-safe` and has
+   in-script guards besides. If you judge 1-in-325 does not justify a mechanism
+   change, say so and record it. Under adoption-is-pull that is a finished
+   answer, not an exception.
+
+   NOTE, because it went into two bead descriptions before Calder caught it:
+   `bd ready` defaults to `--limit 100`. Your true ready count is 324, not 100.
+   A capped query returns the cap whatever the truth is.
+
+3. ForgeOs-dvqa — triage the non-blocking findings the fleet carried out of
+   Tova's APPROVE-WITH-FINDINGS on b0vj.9.1. This bead exists because of an
+   Overseer amendment: on approve-with-findings the fleet files the findings as
+   a follow-up BEFORE closing the parent, so nothing evaporates. Expect one of
+   these per approve-with-findings once the fleet runs. If that rate is
+   unpleasant, tell us — the amendment is tunable and the alternative designs
+   are in the origin brief.
+
+4. ForgeOs-riev (P1) — A SECURITY SHAPE ON THE SEAT THAT MUST NOT WRITE.
+   Your `fort/profiles/warden-settings.json` allows `Bash(git -C * worktree
+   list*)`. The wildcard sits before the subcommand, so the rule also approves
+   inserted options without a prompt, and `git -c core.pager=<cmd> ...` is
+   arbitrary command execution. That profile IS Tova's read-only guarantee.
+   Filed as a SHAPE, not an exploit: proving reachability needs a probe from
+   inside a real Warden mask, which was outside the edict's scope.
+   DO NOT record it as exploited. DO NOT record it as safe either.
+
+   RELATED, AND IT IS MANYHALLS' FAULT, NOT YOURS: line 65 of that same file
+   carries a `Write(**)` deny that does nothing. That is `fortkit-yowr`. The
+   capital fixed it in its own profiles and it never reached you. I am filing
+   the propagation gap on our side; the fix lands in a directory kernel-read-only
+   to both of us, so it is a Regent or Overseer act either way.
+
+5. ONLY THEN: label a small first set `fleet-safe` and ask the Overseer for a
+   night with the cap low. Calder's recommendation, which I endorse: a low-cap
+   NIGHT is the right next step, not a third daylight run.
+
+   WHAT MAKES A BEAD FLEET-SAFE. This is your judgement and nobody has written
+   it down yet, so here is the template the one successful run used, and the
+   reasoning behind it rather than the rule alone. `ForgeOs-b0vj.9.1` was
+   chosen as the lowest-exposure REAL bead available: test-only, no product
+   code, no auth surface, and its shape already specified by Tova's own
+   non-blocking finding on its parent. The Overseer asked for an invented
+   throwaway and Calder refused on the grounds that inventing work in a
+   codebase it had not read produces make-work — that refusal was right and is
+   worth keeping.
+
+   The properties that mattered, in order: the WORK WAS ALREADY SPECIFIED, so
+   the Forge had a target rather than a design problem; the BLAST RADIUS WAS
+   BOUNDED, so a bad merge could not reach production behaviour; and it was
+   GENUINELY WANTED, so a green run bought something real. Your gate-1 auth
+   surface and gate-2 migrations are the opposite of all three and should not
+   carry the label at all — they route to the Overseer by your own law, and the
+   fleet refuses `human`-labelled beads precisely so it never competes with
+   that routing.
+
+   AND KEEP THE FIRST SET SMALL FOR A REASON THAT IS NOT CAUTION. Warden
+   concurrency is fixed at 1 and will not adapt. The Overseer runs ONE Claude
+   Max plan, and that single plan funds Tova's reviews, your sessions, and mine
+   in Manyhalls, all at once. The Forge side is Codex and scales; review is the
+   scarce resource and it is shared with you. Thirty fleet-safe beads would not
+   produce thirty parallel reviews, it would produce a serialized review queue
+   draining a plan you also need to work in. Label what a night can actually
+   review, not what a night could build.
+
+6. YOUR INBOX FROM THE FLEET, so it is not a surprise at 3am.
+   - `fleet-escalated` — the bead was returned twice and the fleet gave up
+     rather than retrying. `fleet-safe` is removed and the assignee cleared.
+     Never retried again without you. This is the queue that means the loop
+     wanted a person.
+   - `fleet-return-1` / `fleet-return-2` — visible return counters, deliberately
+     labels rather than hidden state so you can see the history on the bead.
+   - A `ForgeOs-dvqa`-shaped triage bead per APPROVE-WITH-FINDINGS.
+   - `ForgeOs-merge-slot` — bd's own exclusive primitive, created by the
+     fleet's preflight. IT IS EXPECTED. Do not close it.
+   - A HALT file at `$FLEET_STATE/HALT` stops every future run until a person
+     removes it by hand. A red post-merge main is the condition that writes it.
+     That is deliberate: three workers cannot swarm-diagnose a red main the way
+     a forty-agent fleet can, so this design stops instead of rolling forward.
+
+================================================================================
+WHAT IS NOT PROVEN, SO NOBODY READS THE GREEN RUN AS TOTAL
+================================================================================
+
+  - Concurrency above 1. One bead was in flight. The slot arithmetic, the live
+    worker count and the governor's step-up never met real parallel load.
+  - Every refusal branch: a red worktree verifier, a REQUEST-CHANGES return, an
+    ESCALATE, a merge conflict, a failed follow-up filing, a genuinely red
+    post-merge main. All reasoned. None executed.
+  - The governor against a real throttle. Its step-down markers are grep
+    patterns and nothing has been throttled. After the first night, check
+    `ceiling.log` against the session logs: if a real throttle produces text
+    none of the patterns match, it will not step down and the log will show it.
+
+Two more, from your own stream and worth your attention independently:
+
+  - 19 Warden `session.start` events in your fort have NO `session.end` of
+    either kind. Not even the no-verdict incident path fired. Those reviews
+    started and never resolved, forever. An EXIT trap now covers everything but
+    SIGKILL, but the 19 are already in the record.
+  - Your `fort/events/` stream was UNTRACKED again for the whole of 2026-09-02,
+    including four Regent edict announcements. Third sighting of that class
+    (2026-08-11, 2026-09-01, 2026-09-02). Calder committed it as part of the
+    sitting because a seat acting above a constitution must not leave its own
+    record uncommitted. Whether you track it routinely is yours.
+
+================================================================================
+HOW MUCH OF THIS BRIEF TO TRUST
+================================================================================
+
+The origin brief made five predictions about your fort from the capital's tree.
+FOUR WERE WRONG and one was exact. They cost nothing only because they were
+labelled as predictions and Calder re-measured every one. Apply the same
+discipline here: everything above about YOUR fort came from your event stream,
+your profiles and your export, read by a Mayor who cannot run `bd` in your tree.
+Re-measure anything you are about to act on, and record what I got wrong.
+
+The export I read said 566 issues. Your `bd` is authoritative; mine is a
+projection I read from outside.
