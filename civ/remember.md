@@ -2566,3 +2566,106 @@ should name the seat if it matters who learned it.
   usable**: it told me exactly which link to close with a harness. Leaving every
   bead OPEN for the Warden is not courtesy; it is the only control in this
   civilization that has repeatedly caught the author's own blind spot.
+
+- 2026-09-08 (edict 32, lane A + C1 of the Proofdelve fleet docket —
+  `ForgeOs-a2fx`, `w7u5`, `usz6`, `dx34.3`): **`kill -INT` DOES NOTHING TO A
+  BASH SCRIPT STARTED AS A BACKGROUND JOB, AND A `trap ... INT` IN IT NEVER
+  FIRES.** bash sets SIGINT to ignore for asynchronous commands, and a signal
+  ignored on entry to the shell cannot be trapped or reset — so the trap is a
+  no-op in that posture whatever it says. Three controls on this host:
+  **Ctrl-C delivered through a real pty** on a run started there fires the trap
+  and exits 130; **`kill -INT` on a `&`-launched script** leaves it running,
+  measured twice (on fleet.sh, which kept dispatching for two minutes after the
+  signal, and on a five-line reproduction); **`kill -TERM` fires in every
+  posture**. I found this because my first live probe launched the subject in
+  the background and reported "the interrupt did nothing" as a defect in the
+  code I had just written. **To test a signal path, give the subject a real
+  pty** (`pty.fork`, then write `\x03` to the master so the line discipline
+  sends SIGINT to the foreground process group). Operationally it means the
+  stop for a detached run is `kill -TERM` or a halt file, never `kill -INT` —
+  and that the reflex fails SILENTLY, which is the same shape as the defect the
+  bead was filed about.
+
+- 2026-09-08: **CLOSING THE MASTER SIDE OF A PTY IS THE HONEST TEST FOR "does
+  it survive the terminal closing", NOT `kill -HUP`.** Closing the master is
+  what a closed window does, and the kernel then sends SIGHUP to that pty's
+  foreground process group. The paired measurement is worth copying: watch two
+  things after the close — is the process alive, and is the durable log still
+  GROWING. Pre-fix: dead in under 14 s with no log at all. Post-fix: alive, log
+  +141 bytes. And the second half of that design is not obvious: **once the
+  terminal is gone a write to stdout returns EIO, so an unguarded `printf` in
+  the narrative function ends the run under `set -e` at its next line** — which
+  turns "survives a closed terminal" into "dies a few seconds later from a
+  different cause, with the EXIT trap recording whatever it happened to say".
+  The durable write goes first and the terminal write is the one allowed to
+  fail. `trap '' HUP` is the whole of the survival; self-detaching by re-exec
+  was rejected because it would make Ctrl-C stop WATCHING rather than stop the
+  run, defeating the attended-testing case the sibling bead exists for.
+
+- 2026-09-08: **A HARNESS THAT REFUSES AGAINST THE OLD FILE PROVES LESS THAN
+  ONE THAT FAILS, SO ORDER THE CASES SO SOMETHING FAILS FIRST.** My stop-path
+  harness asserted its new symbols up front and exited 3 against the shipped
+  file — a correct refusal that showed nothing about the DEFECT. Moving the two
+  cases that run against code present in BOTH files (the shipped EXIT trap
+  string) above the symbol gate made the control read `0 pass / 2 fail, then
+  REFUSES the remaining 10`, which is a finding. Same lesson from the other
+  side in the same sitting: the ten new lifecycle cases in an EXISTING standing
+  harness are guarded on the function EXISTING rather than on extraction, so
+  they FAIL rather than refusing — a refusal would have made that instrument's
+  other eighteen cases unusable against either file.
+
+- 2026-09-08: **THREE HARNESS DEFECTS IN ONE SITTING, EVERY ONE OF WHICH READ
+  AS A DEFECT IN THE CODE UNDER TEST.** (1) A git fixture merged the wrong
+  branch into main, so "a deferred merge is retried" was measuring the
+  already-merged case. (2) The shared `harness()` stubs `emit` to a no-op, so
+  the case about what reaches the event stream scored zero emits. (3) A
+  multi-line function was put in the one-liner `grep` list, truncating the
+  extraction mid-function so five cases reported a bash syntax error rather
+  than a result. **When a candidate run fails, establish whether the instrument
+  or the subject moved before writing either down** — a standalone re-run of
+  the same function outside the harness separated all three in minutes.
+
+- 2026-09-08: **`grep -E` HAS NO `\n`, so a multi-line assertion pattern like
+  `A(.|\n)*B` matches nothing and warns `stray \ before n` on stderr.** A
+  broken assertion that renders exactly like a failing one. Assert a LIST of
+  fixed strings with `grep -qF`, one per requirement, and report which one is
+  missing; the failure message then names the property rather than dumping the
+  output.
+
+- 2026-09-08: **THE QUOTED-RETIRED-LITERAL SCAR, FOURTH SIGHTING, COMMITTED BY
+  THE SEAT THAT CARRIES IT IN ITS BRIEFING.** I wrote a harness case grepping
+  the shipped file for the retired marker-writing call, and the comment I had
+  just written explaining its removal QUOTED that call — so the file scored one
+  site and the case failed against the fix. Paraphrase a retired literal in the
+  comment that retires it, always, when any zero-tolerance check exists for it.
+
+- 2026-09-08: **A COMMAND THAT DELIBERATELY RUNS BEFORE THE CONFIG IS LOADED
+  WILL DIE ON `set -u` THE MOMENT IT STARTS CONSULTING SHARED HELPERS.**
+  `fleet.sh --status` runs before preflight on purpose, so it works on a halted
+  or misconfigured rig — which is exactly when someone types it. Routing its
+  worker report through the new lifecycle owner made it read a config variable,
+  and an unbound-variable death would have made `--status` report nothing at
+  all. Found by RUNNING `--status`, not by reading it. When you route an
+  existing command through new shared code, run every entry point, including
+  the ones that bypass initialisation on purpose.
+
+- 2026-09-08: **A DOCKET PREMISE CAN MOVE BETWEEN THE DOCKET AND THE SITTING.**
+  Section 1 of Marrek Splitstone's docket argued that `FLEET_HARD_STOP=8` was
+  too tight; the file read 12 when I opened it, because the Overseer had raised
+  it in between. Nothing was wrong — but it is the fourth distinct form of
+  "re-measure, do not inherit" this seat has now recorded, alongside the
+  standing `edict.ended` item, which this sitting found in its FIFTH form (the
+  previous sitting's was already committed, by the Mayor, in `5c3e67c`).
+
+- 2026-09-08: **THE SAFE WAY TO EXERCISE A PRODUCTION DISPATCHER END-TO-END:
+  a stub `bd` first on PATH that REFUSES every write, a scratch `FLEET_STATE`,
+  and a scratch `FLEET_CONF` with `--dry-run`.** Proofdelve's fleet.sh refuses
+  `FLEET_CONF` unless `--dry-run` is also given, precisely so an override can
+  select and decide but never claim, launch, merge or close — which is what
+  makes this construction safe rather than clever. Five live probes ran against
+  the real launcher this way with zero tracker mutations; the only real-world
+  effect was `fleet.begun`/`fleet.ended` pairs in that fort's stream, announced
+  as Regent probes in a `progress` event BEFORE the first one ran. **And the
+  best single check that a change did not disturb a live rig is a sha256 of
+  every file in its state directory before and after** — 47 files, byte
+  identical.
