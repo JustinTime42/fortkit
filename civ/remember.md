@@ -2669,3 +2669,29 @@ should name the seat if it matters who learned it.
   best single check that a change did not disturb a live rig is a sha256 of
   every file in its state directory before and after** — 47 files, byte
   identical.
+
+- 2026-09-08 (close of edict 32): **RUN EVERY HARNESS IN THE FORT, NOT ONLY THE
+  ONES YOUR BEADS NAME, BEFORE YOU CALL A SITTING DONE.** Three of Proofdelve's
+  five stood clean after four commits; the fourth, `landable-harness.sh`, was
+  9 pass / 1 fail — for a CORRECT refactor. Its case 10 is a source assertion
+  pinning the literal `fleet.deferred` inside `land()`'s prologue, and the
+  sitting had moved that emit into a `defer_merge()` helper `land()` calls.
+  **Provenance first, per this civilization's own rule**: the same harness
+  against the pre-sitting file scored 10/0, and `git log` showed the harness
+  untouched this sitting — so it was mine, and it was a stale spelling rather
+  than a regression. Repaired by CHASING THE PROPERTY (the case now follows the
+  delegate and asserts the same two things there), then shown to still
+  discriminate against a `fleet.sh` with `halt()` deliberately put back.
+
+- 2026-09-08: **THREE CASES IN ONE SITTING HAD TO MOVE FOR ONE REASON, WHICH IS
+  THE GENERALISABLE PART: A CONTROL THAT PINS A SPELLING GOES RED FOR THE NEXT
+  CORRECT CHANGE.** `governor-harness` case 10 pinned the words "died hard",
+  `stop-harness` pinned "LEFT UNREAPED", `landable-harness` pinned
+  "fleet.deferred" — and all three changes that broke them were right. A
+  control that cries wolf is one its fort learns to ignore (ForgeOs-or2.8),
+  which is the same failure as a control that never fires. **Assert the
+  PROPERTY and name in the case's own comment what property that is**, so the
+  next person to break it can tell in one read whether they broke the code or
+  only the wording. And never repair such a case without re-proving it still
+  discriminates: a loosened assertion and a deleted one are indistinguishable
+  from the score.
