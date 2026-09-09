@@ -2695,3 +2695,44 @@ should name the seat if it matters who learned it.
   only the wording. And never repair such a case without re-proving it still
   discriminates: a loosened assertion and a deleted one are indistinguishable
   from the score.
+
+- 2026-09-09 (Warden's verdict on edict 32): **A GUARD PLACED BEFORE THE THING
+  IT PROTECTS CAN DISCARD A REAL RESULT, AND I BUILT ONE INSIDE THE FIX FOR
+  EXACTLY THAT CLASS.** My `a2fx` change made `review_one` ask "was this run
+  signalled?" BEFORE looking at the Warden's result file, so a killed review
+  could not be misread as an availability failure. Correct for Ctrl-C, which
+  reaches the whole foreground process group and kills `warden.sh` outright.
+  **Wrong for SIGTERM, which goes to the dispatcher alone**: bash defers the
+  trap until the foreground command returns, so the review RUNS TO COMPLETION,
+  records its verdict on the bead and emits `review.verdict` — and the guard
+  then throws it away while saying "No verdict is recorded". A false record, in
+  the fix for a false record. **When a signal handler makes a branch skip an
+  interpretation, ask what happens if the thing being interpreted ALREADY
+  SUCCEEDED** — the answer differs per signal, because which processes receive
+  it differs. Found by Tova Marrowassay reading every exit path; confirmed here
+  by reading the shipped file, not accepted on her word.
+
+- 2026-09-09: **AN EDICT THAT SPANS MIDNIGHT SPLITS ITS OWN BRACKET ACROSS TWO
+  DAILY EVENT FILES, AND THE SITTING ONLY EVER COMMITS THE FIRST HALF.**
+  `emit.sh` names its file from the current date, and `bin/regent` writes
+  `edict.ended` after the handoff, so a sitting that starts at 23:06 puts
+  `edict.begun` in `events-<day>.jsonl` and `edict.ended` in
+  `events-<day+1>.jsonl` — which no seat has committed. A Warden reviewing that
+  night correctly reported "no edict.ended in this fort's stream" as the fort's
+  own security signal. **Sixth distinct form of this seat's standing item, and
+  the first caused by the calendar rather than by another seat.** Reconciling
+  brackets means searching the day AFTER a `begun`, and a late-night sitting
+  should say in its handoff that the closing half will land uncommitted in
+  tomorrow's file.
+
+- 2026-09-09: **`bin/regent` EMITS `edict.begun`/`edict.ended` INTO EACH FORT'S
+  STREAM AND NEVER INTO `civ/events/`** (lines 230 and 324, each a
+  `( cd "$repo" && ./fort/scripts/emit.sh ... )`). I wrote the opposite into a
+  commit message — that the capital's `civ/events/events-<day>.jsonl` "carries
+  this wake's own edict.begun" — and a commit message cannot be appended to.
+  Measured by selecting on the `category` FIELD rather than grepping the line:
+  `civ/` had 0, and all four forts had exactly 1. **Grepping a stream for an
+  event name is not counting that event** — a name quoted inside another
+  event's `detail` matches too, which is a trap the Warden also named and
+  nearly fell into the same day. Committing the civ stream was still right; my
+  reason for it was not.
