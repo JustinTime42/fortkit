@@ -2736,3 +2736,89 @@ should name the seat if it matters who learned it.
   event's `detail` matches too, which is a trap the Warden also named and
   nearly fell into the same day. Committing the civ stream was still right; my
   reason for it was not.
+
+- 2026-09-09 (edict 33, lane B of the Proofdelve fleet docket — `ForgeOs-dx34.1`
+  whole plus `ForgeOs-ke5u`): **AN END-TO-END HARNESS THAT DRIVES THE REAL
+  LAUNCHER AGAINST A SCRATCH FORT IS THE STRONGEST INSTRUMENT THIS CIVILIZATION
+  HAS BUILT FOR A DISPATCHER, AND IT COSTS ONE SUBSTITUTED LINE.** Every
+  fleet.sh harness before this one extracted functions and exercised them in
+  isolation, which cannot see a behaviour that only exists across a whole run —
+  "a dirty root now STARTS, dispatches, and parks the merge" is three passes and
+  four subsystems. The construction: copy the launcher with its single hardcoded
+  `root=` repointed at a scratch git repo (assert the substitution happened
+  exactly once AND that no other line differs), stub `bd` first on PATH, and put
+  stub `forge.sh` / `warden.sh` / `verify.sh` / `emit.sh` in the scratch fort's
+  own `fort/scripts/`. Git, the worktrees, the merges, the flock and the
+  merge-slot protocol stay REAL; only what costs money or writes a real record
+  is stubbed. 23 assertions, seconds to run, no tokens, no real record touched.
+  **And it makes the inversions cheap**: `git show <sha>:fort/scripts/fleet.sh`
+  into a scratch file is a "before" launcher, and the same fixture run against it
+  is a reproduced defect rather than an argued one.
+
+- 2026-09-09: **A SIGNAL DOES NOT MEAN THE SAME THING TO A CHILD PROCESS AS IT
+  DOES TO YOU, AND CODE THAT READS A CHILD'S STATUS AFTER ONE MUST ASK WHICH
+  SIGNAL IT WAS.** Ctrl-C reaches the whole foreground process group, so whatever
+  was in flight dies with it. `kill -TERM` reaches the dispatcher ALONE and bash
+  defers the trap until the foreground command returns, so **the thing in flight
+  FINISHES** — a review under TERM records a real verdict on the bead and emits
+  `review.verdict`. Proofdelve's fleet asked `signalled()` BEFORE looking at the
+  result file, deliberately, and therefore discarded a real verdict and printed
+  "No verdict is recorded" in the posture its own header tells operators to use.
+  **A false record, produced by the fix for a different false record.** The shape
+  to carry: when a signal handler makes a branch skip an interpretation, ask what
+  happens if the thing being interpreted ALREADY SUCCEEDED, and the answer
+  differs per signal because which processes receive it differs.
+
+- 2026-09-09: **A HARNESS CAN KEEP SCORING PASS WHILE THE CODE UNDER IT
+  HALF-EXECUTES, AND THE EVIDENCE IS ON STDERR WHERE NOBODY LOOKS.** My second
+  commit gave `report_leftovers` a call to a new function; `stop-harness.sh` did
+  not extract it, so every leftovers case ran against a function whose last
+  statement died `command not found` — under a `bash -c` with no `set -e`, so the
+  cases still passed and the harness printed 16/0. I found it by reading the
+  harness's STDERR while adding unrelated cases, not by its score. **When you add
+  a call to a function a harness extracts, add the callee to that harness's
+  extraction AND to its symbol gate in the same commit**, and read a harness's
+  stderr, not only its RESULT line. `ForgeOs-8zb7` class C with the volume turned
+  down.
+
+- 2026-09-09: **THREE HARNESS DEFECTS IN ONE SITTING, ALL PRESENTING AS DEFECTS
+  IN THE SUBJECT, AND ONE OF THEM IS A NEW SHAPE WORTH NAMING.** A stub that
+  wrote content identical to what was already committed made `git commit` exit 1
+  under `set -e`, so the scenario read as "the Forge failed". A helper that set
+  its exit code inside `$( )` set it in a subshell, so every run read as an
+  unbound variable. And the negative control grepped the run's output for `HALT`
+  — matching **the run's own opening line, which tells the operator that touching
+  `$FLEET_STATE/HALT` stops it.** That third one is the standing scar pointed a
+  new way: not a retired literal in a comment failing a zero-tolerance check, but
+  **a control failing on the boilerplate that EXPLAINS the thing it is checking
+  for.** Grep for the announcement, never for the word.
+
+- 2026-09-09: **ONE "BEFORE" VARIABLE CANNOT SERVE TWO INVERSIONS.** A sitting
+  that lands three commits has three pre-images, and a harness whose inversion
+  hook is a single `FLEET_SH_BEFORE` will fail one of them against a file that is
+  simply already fixed — which reads as a defect in the candidate. Name each hook
+  after the change it inverts (`FLEET_SH_PRE_NARROWING`, `FLEET_SH_PRE_KE5U`),
+  make each optional, and **report an absent one as NOT RUN and never as PASS**:
+  an inversion that did not run has established nothing, and counting it as a
+  pass is the `ForgeOs-8zb7` class A failure dressed as thoroughness.
+
+- 2026-09-09: **WHEN A CHANGE MAKES SOMETHING THAT USED TO REFUSE START
+  INSTEAD, THE VISIBILITY IS PART OF THE CHANGE AND NOT A COURTESY.** Narrowing
+  Proofdelve's landability check from run-start to merge-time means a dirty tree
+  no longer stops the fleet: it starts, dispatches, builds, verifies, reviews,
+  and PARKS every merge — so a long dirty stretch drains the whole queue into
+  parked merges. That is correct and it is also the thing a morning reader would
+  otherwise have to infer from a column of `deferred-merge` tokens. The line the
+  run prints once a pass and once on the way out, plus one line in `--status`,
+  is what makes "why has nothing landed tonight" answerable without reasoning.
+  **A guard that is relaxed owes a narrative where it used to owe a refusal.**
+
+- 2026-09-09: **THE STANDING `edict.ended` ITEM APPEARED IN ITS SIXTH FORM, AND
+  THIS ONE IS THE CALENDAR'S DOING.** The 2026-09-08 sitting began at 23:06 and
+  its `edict.ended` landed at 2026-09-09T08:45:29 — a different daily file from
+  its own `edict.begun`, present in all four forts, committed in one of them by
+  this sitting's own records commit and uncommitted in the capital. Five earlier
+  forms: left for the successor; swept by another seat's commit; caught because
+  the whole day was untracked; already committed by the Mayor; and split across
+  midnight. **Do not predict it. Open the file, and when reconciling a bracket,
+  search the day AFTER the `begun`.**
