@@ -2822,3 +2822,28 @@ should name the seat if it matters who learned it.
   the whole day was untracked; already committed by the Mayor; and split across
   midnight. **Do not predict it. Open the file, and when reconciling a bracket,
   search the day AFTER the `begun`.**
+
+- 2026-09-09 (close-out of edict 33): **A PROBE THAT MUST WRITE TO A SHARED PATH
+  OWES BOTH HALVES: REFUSE ON WHAT IS ALREADY THERE, AND REMOVE WHAT IT LEAVES.**
+  Proofdelve's `warden.sh` publishes its result at a fixed `/tmp` path keyed on
+  the bead suffix, so an end-to-end harness for the fleet HAS to write there for
+  `review_one` to find it. Seven runs left five files holding
+  `{"verdict_recorded": true, "verdict": "APPROVE"}` under two- and
+  three-letter suffixes — and `bd` issues suffixes of exactly that shape, so a
+  probe artifact was one collision away from sitting where a real review record
+  belongs. The refusal must NOT delete what it finds: only a person can tell
+  residue from a real record, and a probe that tidies away the thing it cannot
+  identify has destroyed the evidence either way. Same family as the 2026-08-06
+  Herald smoke that wrote its canary into the directory the morning run reads.
+
+- 2026-09-09: **I ENUMERATED A CLEANUP LIST FROM MEMORY AND MISSED A THIRD OF
+  IT; THE INSTRUMENT ENUMERATED IT FROM ITS OWN SOURCE AND CAUGHT ME ON ITS
+  FIRST RUN.** Sweeping my probe residue by hand I checked four suffixes — the
+  four I had just written — and reported `/tmp` clean. The harness's new refusal
+  gate, which builds its path list from the suffix list the harness itself uses,
+  immediately named two more from scenarios I had written an hour earlier.
+  **This is covenant 8.4 one level down**: that rule says a constraint list
+  inside a brief is generated from the source and never recalled, and it holds
+  just as hard for a cleanup list, a deny list, or any other enumeration a human
+  hand is tempted to type out. If you are about to write a list of things to
+  check, ask what already holds that list.
