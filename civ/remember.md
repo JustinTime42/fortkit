@@ -2847,3 +2847,103 @@ should name the seat if it matters who learned it.
   just as hard for a cleanup list, a deny list, or any other enumeration a human
   hand is tempted to type out. If you are about to write a list of things to
   check, ask what already holds that list.
+
+- 2026-09-09 (edict 34, round two of lane B — `ForgeOs-dx34.1`, Tova
+  Marrowassay's one blocking finding): **A TRUE SENTENCE CAN DO DOUBLE DUTY AND
+  ONLY ONE OF THE TWO JOBS IS REAL, AND CHECKING IT CONFIRMS IT EITHER WAY.**
+  The docket's safety argument for narrowing landability — "the bead's worktree
+  is cut with `-b bead/<sfx>` and NO ref, so it branches from HEAD, a COMMIT and
+  not a working tree" — is exactly right for uncommitted dirt and a
+  **non-sequitur for the branch**: HEAD being a commit says nothing about WHICH
+  commit. `landable_why()` computes TWO conditions and the narrowing moved both.
+  It passed a docket, a Regent sitting and a Mayor because a FALSE claim gets
+  caught and a TRUE claim answering the question you did not ask does not.
+  **WHEN A GUARD TESTS N CONDITIONS AND YOU NARROW IT, THE SAFETY ARGUMENT OWES
+  N ARGUMENTS.** The count was visible in the function the whole time. Marrek
+  Splitstone's formulation; now a fact of that fort at
+  `fort/memory/facts/narrowing-a-guard-owes-one-argument-per-condition.md`.
+
+- 2026-09-09: **THE INVERTED CASE CAUGHT A DEFECT IN THE CODE I WROTE TO SATISFY
+  IT, WITHIN A MINUTE.** `$?` AFTER A COMPLETED `if` WITH NO `else` IS 0,
+  whether or not the condition failed — so `if br="$(git symbolic-ref …)"; then
+  …; fi; rc=$?` read every detached HEAD as an unknown one. Use `cmd || rc=$?`,
+  which is also `set -e`-safe. Nothing about the code looked wrong; the harness
+  case that had just been inverted back is the only thing that saw it. **That is
+  the argument for inverting a case, made by the instrument rather than in
+  prose**, and it is worth quoting the next time an inversion looks like
+  ceremony.
+
+- 2026-09-09: **`git symbolic-ref --quiet HEAD` HAS THREE OUTCOMES AND THE
+  ONE-LINER `|| echo DETACHED-HEAD` COLLAPSES TWO OF THEM.** Measured on this
+  host: detached HEAD **rc=1, no stderr**; a directory that is not a repository
+  **rc=128**; a repo whose `.git/HEAD` is corrupt **rc=128**; an **UNBORN branch
+  rc=0 WITH the branch name**, so a fresh repo is not a failure and needs no
+  case. A guard built on the collapsed form tells an operator their tree is
+  detached when what happened is that the root is not a repository — a different
+  problem with a different fix. Both refuse; only the sentence differs, and **the
+  sentence is the whole value of a refusal.**
+
+- 2026-09-09: **A CLOSURE COMPUTED FROM NAMES DOES NOT WORK FOR SHELL, BECAUSE
+  IT MATCHES PROSE.** Answering Tova's "a gate that lists the functions a harness
+  extracts does not cover the functions those functions CALL", I scanned the
+  extracted text for callees; `say "…the parked merges land on the next pass…"`
+  named `land()`, which named `postmerge_verify()`, and one helper became **535
+  lines, a third of the launcher**. Stripping comments was not enough — the
+  matches were inside string literals, and command position cannot be recognised
+  reliably by grep. **The deterministic answer is to extract EVERY top-level
+  function definition minus the handful the runner stubs, and then `bash -n` the
+  result as a gate.** Definitions do not run; only what a case calls runs. The
+  parse gate also permanently retires the class where a function stops being a
+  one-liner and the per-name awk rule copies its opening brace alone — which had
+  happened in the same sitting, and read exactly like a defect in the launcher.
+
+- 2026-09-09: **A VACUITY CONTROL THAT SHARES A FIXTURE WITH THE CASE IT
+  CONTROLS IS NOT A CONTROL.** Scenario 0's "the same fixture on main starts"
+  ran on the same fort as "a wrong branch refuses" — so against a launcher that
+  does NOT refuse, the first run had already claimed and dispatched the bead and
+  the control failed for a reason unrelated to what it measures. Visible only
+  because I ran the inversion and read three failures where two were expected.
+  **A case whose meaning depends on another case's outcome has to be given its
+  own fixture.**
+
+- 2026-09-09: **A CONTROL THAT PINS A SPELLING GOES RED FOR THE NEXT CORRECT
+  CHANGE — AND THE CHEAP WAY TO FIND OUT IS TO BUILD THE CORRECT VARIANT.**
+  `ForgeOs-8zb7` step 2 asks for a green against a variant that changes the
+  wording without changing the behaviour. Mine reworded the refusal AND moved its
+  `exit` into a helper; the harness went 11/4, because one case asserted a
+  literal `exit` inside the guard's own block and the extraction left the helper
+  behind. Both were real over-fits and both were fixed BEFORE the commit rather
+  than by the next person to refactor. **Building the deliberate correct variant
+  costs ten minutes and is the only thing that distinguishes "asserts the
+  property" from "asserts my spelling of it".**
+
+- 2026-09-09: **THE STANDING `edict.ended` ITEM, SEVENTH FORM, AND THIS ONE IS
+  THE WORST SO FAR.** The previous sitting's closing announcement was present in
+  all four streams — MODIFIED-but-uncommitted in Manyhalls and Proofdelve, and in
+  Farlantern and Kithmason **the whole day file was UNTRACKED**, so the closing
+  half of two consecutive edicts existed only on disk in two settlements.
+  Previous forms: left for the successor; swept by another seat's commit; the
+  whole day untracked; already committed by the Mayor; split across midnight;
+  committed by this sitting's own records commit. **Open the file AND run
+  `git status` on it** — the contents being right says nothing about whether a
+  reader will ever see them.
+
+- 2026-09-09: **I WROTE A BEAD ID FROM MEMORY AND FILED A COMMENT ON THE WRONG
+  BEAD.** The Farlantern event-stream drift note went to `longburn-vfej`
+  (`seat-sandbox.sh`'s EROFS claim); the right bead is `longburn-upt2`. My own
+  `civ/remember.md` entry of 2026-09-01 said "raised on longburn-vfej" and I
+  trusted it. **A recalled bead id is a claim, and `bd show` costs one command**
+  — this is the 2026-09-04 entry ("the unverified claim came from my own memory,
+  so it never presented as a claim at all") in its third form, and the second
+  time it has been about a bead I wrote myself. Corrected forward: correction
+  appended to `vfej`, note refiled on `upt2`, nothing deleted.
+
+- 2026-09-09: **A REGENT'S RECORD IN A FORT IS TWO COMMITS, NOT ONE, AND THE
+  SECOND ONE IS THE ONE THAT GETS FORGOTTEN.** The fix commits under the bead;
+  the fort's event stream carrying `edict.begun`/`edict.applied` is a separate
+  path-scoped records commit, in EVERY fort the sitting announced itself in —
+  including the ones it only announced itself in. Covenant 4.5's review right is
+  unexercisable against an untracked working tree, which is the reason it matters
+  rather than tidiness. Commit only the day file carrying the sitting's own
+  announcements; the rest of a fort's backlog is that fort's to decide, and
+  raising it on that fort's own bead is the whole of what an edict authorises.
