@@ -2947,3 +2947,109 @@ should name the seat if it matters who learned it.
   rather than tidiness. Commit only the day file carrying the sitting's own
   announcements; the rest of a fort's backlog is that fort's to decide, and
   raising it on that fort's own bead is the whole of what an edict authorises.
+
+- 2026-09-09 (edict 35, sitting one of two on the 2026-09-09b Proofdelve docket —
+  `ForgeOs-w7u5`'s reaping branch, `ForgeOs-geym`, `ForgeOs-j3kp`): **A STATE
+  TOKEN NAMES WHAT IS TRUE OF THE THING IT IS ATTACHED TO, NOT OF EVERYTHING
+  DOWNSTREAM OF IT, AND THE OBVIOUS READING OF A DOCKET CAN BE THE WRONG ONE
+  TWICE OVER.** The docket said "reap the worktree when a worker reaches
+  SETTLED", with a stated constraint that it fire only after the merge and the
+  close both succeed. `settled` means "nothing further happens to this WORKER" —
+  a different sentence from "nothing further needs this WORKTREE" — and it is
+  written at **eight** sites in `fleet.sh`, exactly one of which is a merge and a
+  close that both succeeded. **FIVE of the other seven put the bead back in the
+  queue, and a fresh dispatch REUSES that worktree.** `forge.sh:41-43` is
+  `if [ ! -d "$wt" ]; then git worktree add "$wt" -b "bead/$suffix"; fi`, so
+  removing the tree hands the next dispatch a MISSING worktree while the branch
+  still exists — measured rather than reasoned: **rc=255,
+  `fatal: a branch named 'bead/xyz' already exists`**, dying under `set -e`
+  before the launcher's own lock, on that dispatch and every later one. The
+  docket's own reason (the deferred-merge retry reads from that tree) is real and
+  the state test alone covers it; this second reason is not in the docket and is
+  the sharper one. **When a bead tells you to branch on a state token, enumerate
+  every site that writes it before you believe the branch is one line.**
+
+- 2026-09-09: **A GUARD WITH ONE CALL SITE IS A DIFFERENT SAFETY PROPERTY FROM A
+  GUARD WITH A CONDITION, AND WHEN BOTH ARE NEEDED, SAY WHICH IS WHICH.**
+  `worker_reap_worktree()` refuses unless the worker is `settled` AND is called
+  from exactly one place. The condition is the belt; the single call site is the
+  mechanism. Written into the file above the function, with the eight-site table,
+  so a second call site cannot be added without reading why there is one — a
+  comment that says "do not add a caller" is worth nothing next to one that says
+  what the caller has to be true of.
+
+- 2026-09-09: **FOUR OUTCOMES, NOT TWO, WHENEVER A CLEANUP CAN FAIL.**
+  `reaped` / `absent` / `failed` / `refused`: `absent` and `reaped` both mean
+  nothing is left behind, `failed` means the removal RAN and the thing IS STILL
+  THERE, `refused` means it never ran. Collapsing failed into refused tells a
+  morning reader a 257 MB tree was tidied away when it is still on disk. The
+  outcome rides in the durable event payload, not only in the narrative, because
+  the narrative is not what a later query reads. `postmerge_verify()` was the
+  precedent: it clears the recorded path ONLY on a successful removal.
+
+- 2026-09-09: **A TOKEN THAT SHARES A PREFIX WITH ANOTHER TOKEN MAKES ARM ORDER A
+  CORRECTNESS PROPERTY FOREVER.** `warden.sh` parses verdicts with a `case`
+  ladder where `APPROVE-WITH-FINDINGS*` already has to sit above `APPROVE*`. The
+  new third verdict was spelled **`MERGE-PARENT-OPEN`** rather than any
+  `APPROVE-…` precisely so that no two arms can match one line: "the existing
+  tokens do not change meaning" then holds STRUCTURALLY instead of by care, and
+  one later edit moving `APPROVE*` up a line cannot silently reinterpret every
+  new verdict as a plain APPROVE **in the direction of closing**. The control
+  that keeps it true is structural too and computes the property from the
+  extracted source — for each arm, no EARLIER arm's pattern may be a prefix of
+  this arm's token — and it was proved to discriminate by hoisting `APPROVE*` in
+  a scratch copy, where it names the hazard exactly. **When you add a member to a
+  vocabulary parsed by prefix, the spelling is a safety decision, not a
+  preference.**
+
+- 2026-09-09: **`grep -c` PRINTS `0` AND RETURNS `1` ON NO MATCH, so
+  `$(( $(grep -c ...) + 1 ))` is right and `$(( $(grep -c ... || echo 0) + 1 ))`
+  IS AN ARITHMETIC SYNTAX ERROR** — the fallback appends a SECOND zero. In a stub
+  that made `bd create` return nonzero and print nothing, so `land()` saw an empty
+  follow-up id and **every APPROVE-WITH-FINDINGS scenario read as "the follow-up
+  could not be filed"**: a defect in the instrument presenting as a defect in the
+  subject, and I nearly recorded it as the existing token having changed meaning.
+  Fourth sighting of the `cat f | wc -c` / `grep -q`-in-a-pipeline family. The
+  `|| echo 0` reflex is correct for a command that prints NOTHING on failure and
+  wrong for one that prints a value AND fails.
+
+- 2026-09-09: **`t.count(substring)` CANNOT DISCRIMINATE INDENTATION, AND A
+  GENERATOR THAT REFUSES ON A MISCOUNT TURNS AN ACCEPTANCE CRITERION INTO
+  `NOT RUN`.** My RED-case generator counted
+  `'  if [ "$verdict" = "MERGE-PARENT-OPEN" ]; then\n'` and got 3, because the
+  4- and 6-space copies of the same condition each CONTAIN the 2-space spelling.
+  It refused against a launcher that had exactly what it wanted, and the RED case
+  reported NOT RUN — **the one outcome a control must never quietly become**,
+  because it reads like diligence. Anchor a line pattern on the leading newline.
+  Same family as "a name is not a line": grep and count on lines, not substrings.
+
+- 2026-09-09: **THE STANDING `edict.ended` ITEM, EIGHTH FORM, AND THIS ONE IS
+  MIXED ACROSS SETTLEMENTS.** The previous sitting's closing announcement was
+  present in all four streams; in Proofdelve it was ALREADY COMMITTED (swept by
+  the Mayor's own commit) and in the other three it was uncommitted. Two
+  previously recorded forms in ONE bracket, in different forts. **Do not expect
+  one answer for all four: open each day file AND run `git status` on each.**
+  Seven prior forms: left for the successor; swept by another seat's commit; the
+  whole day untracked; already committed by the Mayor; split across midnight;
+  committed by the sitting's own records commit; present-but-untracked in two
+  forts at once.
+
+- 2026-09-09: **A PROSE GATE IS CHEAP TO HONOUR AND EXPENSIVE TO SKIP, AND THE
+  TEST IS WHETHER TWO FILES WOULD CONTRADICT EACH OTHER FOR THE SAME READER.**
+  `fort/seats/warden.md` carried an INTERIM rule ending "until it exists, take the
+  cost and say REQUEST-CHANGES". Shipping the token would have made that sentence
+  instruct the seat to do the wrong thing, with the launcher prompt and the seat
+  file read by the SAME session. Put to the Overseer at the design point, approved
+  and reasoned ON THE BEAD BEFORE THE EDIT, `gate.approved` and `charter.amended`
+  both emitted, and the retired rule PRESERVED in place with why it could not be
+  permanent. **Ask at the design point, not after the code is written** — the
+  approval is what makes it one sitting instead of two.
+
+- 2026-09-09: **A REFUSAL CLAUSE BELONGS IN THE CODE AND THE SEAT PROMPT, NOT
+  ONLY IN THE COMMIT MESSAGE THAT HONOURED IT.** `ForgeOs-j3kp` forbade any
+  version of the fleet inspecting a review BODY for phrases — it would work for
+  the sentence the reviewer happened to write and fail on the next one, silently,
+  in the direction of merging and closing. A commit message is read once. The
+  refusal now sits above the function it would have infected and inside the
+  prompt that tells the reviewer why saying it in prose does nothing. **Nobody
+  teaches a dispatcher English; the token is the interface.**
