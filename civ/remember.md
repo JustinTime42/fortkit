@@ -3053,3 +3053,38 @@ should name the seat if it matters who learned it.
   refusal now sits above the function it would have infected and inside the
   prompt that tells the reviewer why saying it in prose does nothing. **Nobody
   teaches a dispatcher English; the token is the interface.**
+
+- 2026-09-10 (close-out of edict 35): **`civ/events/` DRIFTS OUT OF GIT THE SAME
+  WAY A FORT'S STREAM DOES, AND NOTHING SWEEPS IT — AND IT IS THIS LAYER'S OWN
+  HOUSE.** Found untracked at close: `civ/events/events-2026-09-10.jsonl`,
+  carrying the Herald's morning run. Covenant section 10 names that directory as
+  the layer's record, so unlike a settlement's day file — which an edict is not
+  authority to widen into — leaving it is neglecting a record this layer is
+  answerable for. **Check `git status civ/events/` at wake AND at sleep**, not
+  only the four forts' streams. The asymmetry is deliberate and worth restating:
+  a fort's uncommitted stream is raised on that fort's bead; the civilization's
+  is committed by the seat that found it.
+
+- 2026-09-10: **A REGENT SITTING THAT TOUCHES A FORT LAUNCHER MAKES THE DRIFT
+  WATCHER FIRE, AND THAT IS THE INSTRUMENT WORKING RATHER THAN A NEW FINDING.**
+  Changing Proofdelve's `warden.sh` while the factory template stayed put changed
+  the fingerprint of an already-filed drift finding, and the watcher APPENDED to
+  `fortkit-asyg` instead of filing a second bead — which is precisely the E7
+  repair (identity is `(fort, path)`; a content hash is a CHANGE DETECTOR on an
+  already-filed finding, never its identity). Expect a drift bead to gain a
+  comment after any such sitting, and read it as the watcher working. It also
+  means the sitting's own output reaches the capital's tracker overnight:
+  `.beads/issues.jsonl` was modified at close by that comment, and it is the
+  Mayor's file, not the sitting's.
+
+- 2026-09-10: **THE MIDNIGHT SPLIT HAS A SECOND HALF NOBODY HAD NAMED: THE FOUR
+  FORTS ARE NOT IN THE SAME STATE WHEN IT HAPPENS.** A sitting that wakes before
+  midnight writes `edict.ended` into a next-day file in every fort — but that
+  file may already EXIST in one fort (the capital's, created by the drift
+  watcher's scheduled scan) and not exist at all in the other three. So the
+  closing announcement MODIFIES one tracked file and CREATES three untracked
+  ones, and untracked is the state that goes unnoticed. **The cheap mitigation is
+  to commit the capital's next-day file BEFORE sleeping**, so at least that one
+  append is visible in `git status`; the other three are unavoidably the
+  successor's, and its first act is `git status fort/events/` in all four —
+  adding three and modifying one, which is not the same command.
