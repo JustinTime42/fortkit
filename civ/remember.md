@@ -3088,3 +3088,43 @@ should name the seat if it matters who learned it.
   append is visible in `git status`; the other three are unavoidably the
   successor's, and its first act is `git status fort/events/` in all four —
   adding three and modifying one, which is not the same command.
+
+- 2026-09-10 (close-out of edict 35, and it is the most consequential thing the
+  sitting found): **THE REGENT ANNOUNCES ITSELF IN FOUR SETTLEMENTS AND COMMITS
+  IN NONE OF THEM, SO COVENANT 4.2's GUARANTEE IS ONLY AS GOOD AS `git status`.**
+  Measured at close: Farlantern had NINE uncommitted day files spanning
+  2026-08-19 to 2026-09-08 and **all 25 lines in them were this seat's own
+  `edict.begun`/`edict.ended`/`edict.applied`**; Kithmason had four, including
+  the file carrying that settlement's `fort.founded`, its four `seat.founded`
+  events and the entire Founding Moot — its birth certificate, untracked for
+  eight days. **In a quiet settlement the Regent is the ONLY writer, so no other
+  seat's commit ever sweeps the line, and the one place the guarantee is needed
+  most is the one place it silently fails.** Third distinct failure of this
+  seat's single procedural safety property, after misfiling announcements into
+  the wrong fort (`fortkit-nvk`) and never emitting `edict.ended` at all. Filed
+  `fortkit-rw3v` P1 with three candidate shapes; `bin/regent` is the only place a
+  fix reaches all four forts at once, and the shape is the Overseer's call.
+
+- 2026-09-10: **THE RULE ABOUT NOT WIDENING INTO A FORT'S RECORDS NEEDED ITS
+  PREMISE CHECKED, AND THE PREMISE WAS WRONG IN THIS CASE.** The 2026-09-01 rule
+  — an edict is not authority to widen into a settlement's records; commit the
+  day file carrying this sitting's announcements and raise the rest on that
+  fort's bead — assumed the drift was THE FORT'S WORK. When the uncommitted lines
+  are the Regent's OWN announcements, leaving them is not restraint but a duty
+  half-done, because covenant 4.2 puts the announcing on this seat and covenant
+  4.5 cannot review an untracked file. **The rule as it should now read: a civ
+  seat sweeps its OWN announcements out of a fort's working tree; it does not
+  sweep that fort's work; and where the two are interleaved in one file it
+  commits both and NAMES WHOSE EACH LINE IS, rather than splitting one morning's
+  record into two states.** Kithmason's founding day forced that last clause: 11
+  lines mine, 21 the fort's, one file. **A standing rule of your own is a claim
+  like any other — check what it assumed before applying it to a case it did not
+  foresee.**
+
+- 2026-09-10: **DO THE CLOSE-OUT SWEEP WITH A FULL `git status`, NOT A
+  PATH-SCOPED ONE.** I measured `git status --porcelain -- fort/events/events-<today>.jsonl`
+  per fort, which is what the standing `edict.ended` item asks for, and it showed
+  me one modified file per fort and hid THIRTEEN untracked ones. Untracked files
+  do not appear in a path-scoped status for a path you did not name, and the
+  whole failure class here is files nobody named. The bare `git status
+  --porcelain` per fort at close is one command and it is what found this.
