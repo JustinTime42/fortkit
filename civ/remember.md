@@ -3128,3 +3128,119 @@ should name the seat if it matters who learned it.
   do not appear in a path-scoped status for a path you did not name, and the
   whole failure class here is files nobody named. The bare `git status
   --porcelain` per fort at close is one command and it is what found this.
+
+- 2026-09-10 (edict 36, Proofdelve sitting two — the blocker, its control, the
+  edge type and the stpx violation): **A CONTROL THAT CANNOT CONSTRUCT THE
+  FAILURE REPORTS THE SAME NUMBER WHETHER THE BUG IS THERE OR NOT, AND THE
+  CHEAPEST WAY TO BUILD ONE IS A STUB THAT ONLY EVER SUCCEEDS.** Proofdelve's
+  `fleet-e2e-harness.sh` stub `bd` always succeeded and always printed a
+  parseable id, so **every scenario in a 44-assertion end-to-end harness
+  exercised the world in which filing a follow-up works** — and the
+  merge-but-do-not-close path, which is what happens when it does NOT work, had
+  no control at all. The docket's formulation is the one to carry: *"A without C
+  is the same defect one commit later."* The repair is one knob
+  (`E2E_BD_CREATE=silent`) whose DEFAULT is the old behaviour, so no existing
+  scenario measures anything different. **When a harness's fixture can only
+  produce success, its score is evidence about the success path and about
+  nothing else** — the 2026-08-13 lesson about a green instrument, reached from
+  the fixture rather than from the assertion set.
+
+- 2026-09-10: **A RED CASE THAT SAYS ONLY "SOME FACT FAILED" CANNOT DISCRIMINATE
+  A DEATH-AFTER-MERGE FROM A RUN THAT NEVER MERGED, AND THE WHOLE SEVERITY OF
+  THE FINDING WAS IN THE FIRST.** My first inversion asserted the contract as a
+  whole and passed. Splitting it — assert the merge SEPARATELY and positively,
+  then require the rest to fail, then PRINT THE REASON ON THE PASS LINE — turned
+  it into evidence: `record=E2E-ttt|in_progress|veyra|fleet-safe … fleet-safe=
+  STILL-SET incident=NOT-EMITTED`. **A RED case owes its own evidence in its own
+  output**, because the next reader cannot re-derive which half of a conjunction
+  fired.
+
+- 2026-09-10: **THE DIAGNOSTIC IS WHAT SEPARATED A HARNESS DEFECT FROM A SUBJECT
+  DEFECT, FOR THE FOURTH SITTING RUNNING.** Two new cases failed reading *"no dep
+  add was logged at all"* — the stub logged its argv BEFORE `-C <path>` was
+  stripped, so a `^`-anchored grep never matched. A bare FAIL would have sent me
+  into `fleet.sh`. **Write the failure message so it distinguishes "the subject
+  did the wrong thing" from "the instrument never saw it"**, and log a
+  subcommand log AFTER the repo selector so a case can anchor on the verb.
+
+- 2026-09-10: **`bd blocked --limit 0` RETURNS EMPTY WHERE BARE `bd blocked`
+  RETURNS 9, AND IT FAILS TOWARD A FALSE ALL-CLEAR.** On `bd ready` and
+  `bd list`, `--limit 0` means UNLIMITED and is the spelling this civilization
+  tells its seats to pass for any number headed into a durable record — because
+  `bd ready` defaults to `--limit 100`, so its length is a cap and not a count.
+  On `bd blocked` the same flag empties the query and exits cleanly. **The habit
+  that makes one number trustworthy silently empties another.** My own first
+  control ran `bd blocked --limit 0 | grep -c <bead>` and scored 0, which is the
+  right answer for the wrong reason: it would have scored 0 for a bead that WAS
+  blocked. Filed `ForgeOs-kjyj`. Nobody has checked whether other subcommands
+  read the flag as a cap of zero.
+
+- 2026-09-10: **A NOT-IN-THE-LIST RESULT IS WORTH NOTHING UNTIL THE LIST HAS BEEN
+  SHOWN TO CONTAIN SOMETHING.** Measuring `discovered-from` as non-blocking, the
+  load-bearing step was not "6843 is absent from `bd blocked`" — it was that
+  `bd blocked` reports **9** entries including `ForgeOs-aqc6.2.3`, the same
+  witness the fort's own earlier measurement used. Without that the absence is
+  indistinguishable from a broken command, which is exactly what the `--limit 0`
+  trap above produces.
+
+- 2026-09-10: **MEASURE A TYPE'S BEHAVIOUR WITH A REAL EDGE THAT IS TRUE, NOT A
+  PROBE EDGE.** Proofdelve's fact ledger said in its own words *"this database
+  holds ZERO `discovered-from` edges, so that type's behaviour is INFERRED …
+  confirm it against a real edge before relying on it."* The edge created —
+  `ForgeOs-6843 discovered-from ForgeOs-j3kp` — is simply the fact (6843 was
+  raised in the review of j3kp), so the measurement left a true record instead of
+  residue somebody must later decide whether to remove. **A probe that must write
+  into a shared record should look first for a write that was owed anyway.**
+
+- 2026-09-10: **I WROTE AN IDENTIFIER BEFORE THE THING EXISTED TWICE IN ONE
+  SITTING — a bead id and a commit sha — with the rule against it in my own
+  briefing.** `ForgeOs-8fjr` went into a fact-ledger file before `bd` had issued
+  anything; the real id came back `ForgeOs-kjyj`. `04d16bb` went into a bead
+  description before the commit existed; the real one is `a2acdbe`. Both
+  corrected forward and append-only, neither acted on. **The scar is dated
+  2026-08-04 and this is its fifth and sixth sightings.** The reason it is not
+  tidiness: `bd` will reissue an id it has no record of and a short sha can
+  collide, so an invented reference does not always dangle — it can resolve to a
+  real, open, plausible thing about something else, and a reader who follows it
+  is worse off than one who finds nothing. **Only the shell construction avoids
+  it: file, read the id back from the tool, then write it down.**
+
+- 2026-09-10: **"UNCHANGED" IS A DELIVERABLE, AND MAKING A SIBLING PATH TIDIER IS
+  A SECOND CHANGE.** Item D's first draft gave BOTH verdict tokens an explicit
+  `--type` through one variable — behaviour-identical, arguably better hardening
+  against a `bd` default change. Backed out: the docket said one argument on one
+  path and said the older token was unchanged, and **the entire risk of a
+  vocabulary change is that it reinterprets records nobody will re-read.** Where
+  a fix could be spelled narrow or tidy, the narrow one is what a reviewer can
+  check by reading a diff. The corresponding harness case then asserts the
+  PROPERTY (the older token's edge carries no non-blocking type) rather than the
+  absence of a flag, so a later correct change making it explicit does not go red.
+
+- 2026-09-10: **SHIPPING A FIX WITH NO CONTROL IS SOMETIMES THE RIGHT CALL, AND
+  IT IS ONLY RIGHT IF YOU SAY SO IN THE COMMIT.** Item B repaired an
+  unconditional-report violation on a branch no scenario can reach, because the
+  stub `bd` cannot be made to refuse an update selectively. Building that knob is
+  not the "four lines" the docket scoped, so it was raised as `ForgeOs-lv7x`
+  instead — with the shape it would take and the assertion that matters — and the
+  gap is named in B's own commit message. **A disclosed gap is a bead; an
+  undisclosed one is the thing the reviewer finds and the sitting loses a round
+  to.**
+
+- 2026-09-10: **THE STANDING `edict.ended` ITEM, NINTH FORM, AND IT SPLIT THE
+  OTHER WAY THIS TIME.** The 2026-09-09 23:16 sitting's closing announcement
+  crossed midnight into `events-2026-09-10.jsonl` and was **already committed in
+  Manyhalls and Proofdelve, uncommitted in Farlantern and Kithmason** — the exact
+  inverse of the previous sitting's split. Eight prior forms are in this file.
+  **Stop trying to predict it. Open each of the four files AND run `git status`
+  on each**, and do the sweep with a BARE `git status --porcelain` per fort:
+  a path-scoped status cannot show an untracked file for a path you did not name,
+  and the whole failure class is files nobody named. This sitting found zero
+  untracked day files, against thirteen the sitting before.
+
+- 2026-09-10: **`civ/` IS EDIT-WRITABLE TO THIS SEAT AND `bd -C <other fort>`
+  WORKS FROM THE CAPITAL WITHOUT A `cd`**, so a whole sitting's tracker work in
+  another settlement — beads, comments, dependency edges — costs no permission
+  prompts at all. Only `emit.sh` genuinely needs the subshell `cd`, because it
+  resolves its stream from `$PWD`. Four prompts this sitting, one per
+  announcement, which is the correct number: each is the Overseer seeing a write
+  into a settlement that is not this seat's own.
