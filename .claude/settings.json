@@ -40,7 +40,6 @@
     ]
   },
   "permissions": {
-    "defaultMode": "auto",
     "allow": [
       "Bash(/home/justin/dev/fortkit/fort/scripts/emit.sh *)",
       "Bash(/home/justin/dev/fortkit/fort/scripts/status.sh*)",
