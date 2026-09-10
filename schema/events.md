@@ -21,6 +21,13 @@ Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `for
 - `incident`, `incident.corrected`, `laurel`, `overseer.decision`, `watcher.alert`, `drift.scan`
 - `edict.begun`, `edict.ended`, `edict.applied`, `watcher.repaired` (fortkit-7vdm)
 - `rule.fired`, `rule.retired`, `advisory.raised` (fortkit-gbhk.6)
+- `measurement.taken`, `spec.moved` (fortkit-keku, 2026-09-10) — listed by the
+  Mayor who had just emitted both of them UNLISTED, which is the wrong order and
+  is recorded as such here rather than tidied. `measurement.taken` marks a
+  measurement whose result is recorded elsewhere and whose point is the date;
+  `spec.moved` marks a document leaving this fort for the settlement that holds
+  its subject, and names the receiving commit in its detail. See the audit note
+  below: these two are the newest of FOURTEEN unlisted categories.
 - `digest.emitted` (fortkit-zj8e.2) — the session digest's window anchor:
   the next default run reads its timestamp as the lower bound. **Listed
   BEFORE the first one is emitted**, which is the whole point of the
@@ -43,6 +50,27 @@ not begin with `-`: **this list is documentation, not a fence.** Making it one
 is `fortkit-4ah3.4` (Regent lane, since `fort/scripts/` is read-only whole to
 every seat), and until that lands a typo'd category is silently accepted and
 invisible.
+
+**AUDIT, 2026-09-10, and it is worse than the `fortkit-7vdm` count that this
+section already records.** Measured across every file in `fort/events/`:
+**44 distinct categories emitted, 40 listed here, 14 used and unlisted, 349
+emissions between them.** The largest are `work.begun` (155) and `work.ended`
+(159), both last emitted 2026-09-02 and neither ever listed. The full set:
+`work.begun`, `work.ended`, `milestone` (18), `correction` (6), `edict` (2),
+`decision` (2), `bead.progress`, `mask.changed`, `measurement`, `design.recorded`,
+`spec.written`, `spec.corrected`, `measurement.taken`, `spec.moved`.
+
+Two of them are this seat's, from today. **Listing all fourteen was NOT done
+here**, deliberately: several look like retired conventions (`work.begun`/
+`work.ended` stop dead on 2026-09-02) and one, `edict`, is plainly a
+hand-emitted near-miss for `edict.begun` — exactly the typo'd category the
+paragraph above says is silently accepted and invisible. Promoting a retired
+convention or a typo into the canonical list would make this document wrong in a
+new way. Sorting them is `fortkit-dq0l`.
+
+The count is the argument for `fortkit-4ah3.4`. A list that is documentation and
+not a fence drifts by 349 emissions in five weeks, in the fort that owns the
+schema, while two beads about the exact failure sit open.
 
 `rule.fired` and `rule.retired` support the law ledger (`docs/specs/law.md`).
 `rule.fired` names the ruling a control acted under and is what makes "has this
