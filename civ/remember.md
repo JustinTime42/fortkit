@@ -3402,3 +3402,87 @@ should name the seat if it matters who learned it.
   (covenant 8.7's worked example, third sighting in this seat's record). Left
   open, carrying the `human` label, with the signature named as the only
   remaining item.
+
+- 2026-09-10 (edict 38, stall detection in Proofdelve's fleet — `ForgeOs-dx34.9`):
+  **A BEAD'S PREDICATE CAN BE ONE TERM SHORT, AND THE MISSING TERM IS THE ONE
+  THE BEAD'S OWN NEGATIVE CONTROL EXISTS TO PROTECT.** The bead said "a healthy
+  pass either dispatches, reaps, or finds the queue empty and exits" — three
+  outcomes — and named the 14.2-minute-silence run as the thing a detector must
+  not kill. That silence IS the fourth outcome: a pass that does nothing because
+  a Forge is LIVE and the queue is waiting behind it. A three-term predicate
+  (nothing dispatched, nothing reaped, work startable) halts that run in four
+  passes; the shipped one has a fourth term (no Forge live), which costs nothing
+  because `live_forges()` was already consulted every pass. **Generate the
+  bead's literal predicate as a variant and run it against the negative control
+  before trusting the prose** — the e2e harness now does (scenario 32b), and it
+  is what turned "the fourth term is load-bearing" from an argument into a RED.
+
+- 2026-09-10: **THE KNOWN WEDGE RECIPE NO LONGER WEDGES, SO THE POSITIVE CONTROL
+  NEEDED A DIFFERENT CAUSE — AND THE FILE ALREADY DISCLOSED ONE.** The bead's
+  recipe ("bd ready clears it, the dispatch guard refuses it") DRAINS on the
+  shipped launcher, because `ForgeOs-czhb` made both sides ask
+  `any_dispatchable()`. Reproducing a wedge meant finding one the czhb fix did
+  not close, and `any_dispatchable()`'s own header names it: a startable bead
+  whose worktree `.forge.lock` a process OUTSIDE the fleet holds "keeps the run
+  polling rather than draining it". Held from a background `flock … sleep`, it
+  wedges the pre-fix launcher in eight identical passes. **When a bead hands you
+  a reproduction recipe, run it against the current file before building on it;
+  a recipe fixed since the bead was written reproduces nothing, and the file's
+  own comments are where the next recipe usually is.** A tracker refusing every
+  claim (`ForgeOs-dx34.2`'s contention) was the second cause exercised.
+
+- 2026-09-10: **`mkfort`'s STUB VERIFIER POISONS `$root` ON EVERY POST-MERGE
+  VERIFICATION, BY DESIGN, so any e2e scenario that lands TWO beads parks the
+  second one.** That injection is scenario 1's B1 control and it is inside the
+  fixture every scenario shares. My negative control's second bead parked on
+  "uncommitted tracked SOURCE changes: subject.txt" while the detector under
+  test behaved perfectly, and the case read as the detector failing. Strip the
+  poison AND COMMIT the stub (an uncommitted edit dirties the tree and parks
+  the merge anyway). **A shared fixture carries every earlier scenario's
+  injections; read `mkfort` before writing a scenario whose property depends on
+  a clean run.** Fifth sitting running in which the first failing case was the
+  instrument.
+
+- 2026-09-10: **ADDING A FIELD TO THE `fleet.ended` PAYLOAD BREAKS
+  `stop-harness.sh` BY CONTRACT, AND THAT IS THE HARNESS WORKING.** Its
+  `trap_out()` evaluates the launcher's real trap string in a shell "that has
+  ONLY the variables it reads, so a trap referring to something undeclared fails
+  loudly". The new `stalled` field failed two cases with `stalled: unbound
+  variable` until the preamble declared it. **When you add a variable to the
+  EXIT trap, grep every harness for `trap` and add the declaration in the same
+  commit** — and run the OLD harness against the NEW launcher on purpose, so the
+  loud failure is on the record as the reason for the edit.
+
+- 2026-09-10: **A STALL IS A `halt()`, NOT A PLAIN EXIT, and the reason is
+  `ForgeOs-dx34.4`.** Under the supervisor a stalled run that ended WITHOUT a
+  halt file would be restarted into the same wedge every N×FLEET_POLL seconds,
+  each ending `stalled`, which is a restart loop the supervisor would then need
+  its own detector for. A wedge is a defect the loop cannot clear (the last one
+  needed a Regent sitting), so it stops the fleet behind the halt file with an
+  incident, like a red main. `halt()` gained a `kind` argument rather than a
+  sibling function so the end reason and the `stalled` flag are set on the
+  same path that writes the file — `ForgeOs-6843`'s default is never relied on.
+  The cost, stated for the signature: a tracker outage longer than 90 s halts
+  the night, with the halt file saying why. **Put to the Overseer at gate 6
+  rather than decided silently; it is the one design choice in the sitting
+  that a reasonable person could take the other way.**
+
+- 2026-09-10: **THE STANDING `edict.ended` ITEM, TENTH FORM: committed in
+  Proofdelve only, uncommitted in the other three.** The 14:52 sitting's closing
+  line at 17:16:13 was swept into Proofdelve by the Mayor's own `233d977` and
+  sat untracked-modified in Manyhalls, Farlantern and Kithmason. Swept the two
+  quiet settlements under a message naming every line as this seat's; the
+  capital's file also carries two harness `digest.emitted` lines, so it goes in
+  the records commit with whose-line-is-whose named. Nine prior forms are in
+  this file. **Measure all four; expect four answers.**
+
+- 2026-09-10 (edict 38, close): **`pgrep -f '<pattern>'` SELF-MATCHED FOR THE
+  THIRD TIME IN THIS SEAT'S RECORD, AND THIS TIME THE PATTERN WAS THE LAUNCHER'S
+  FULL COMMAND LINE.** The harness's `bash -c` wrapper carries the whole command
+  text, so a `pgrep -f` inside it matches its own wrapper, which exits the moment
+  the command does. My wait loop ended in eight seconds on a review that ran
+  twelve minutes, and the empty log read for one moment as a dead launch. The
+  construction that does not lie: `ps -eo pid,etime,cmd | grep '[w]arden.sh …'`
+  (the bracket defeats the self-match) or the launcher writing its own `$$` to
+  a file. **Three entries in this file now say it. Read the shell, not the
+  memory.**
