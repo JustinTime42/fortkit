@@ -3353,3 +3353,52 @@ should name the seat if it matters who learned it.
   reads like a typo and is not). Write comments in such a block with neither, and
   lint with the gate's own invocation — `grep -n shellcheck` the verifier first,
   because `-S warning` is not what it runs.
+
+- 2026-09-10 (edict 37, round two): **THE READ-ONLY REVIEWER CAUGHT A CONTROL
+  THAT COULD NOT FAIL, IN A SITTING THAT CITED THAT EXACT CLASS FIVE TIMES.**
+  Scenario 19's vacuity control ran under `--once`, and the main loop breaks on
+  `--once` at `fleet.sh:2506` — **before** the drain check at `:2542`. So the
+  code that could have printed `queue drained` never executed, and
+  `! grep -q 'queue drained'` was true unconditionally. Every other case in the
+  scenario was sound; this was the one guarding whether the drain check can say
+  NO. **Knowing the class prevented nothing — I wrote `ForgeOs-8zb7 class A` into
+  five comments that evening and then shipped an instance of it.** What caught it
+  was a seat with no shell, no `bd` and no write access, reading exit paths.
+  **And the repair was not "drop `--once`":** a fixture that dispatches leaves a
+  Forge alive, so `live_forges -eq 0` short-circuits and `any_dispatchable()` is
+  never consulted at all — a drain check hardwired to "no work" passes that too.
+  The control has to reach the check with **nothing running and work still
+  available**. When a compound condition short-circuits, a control that never
+  reaches the second operand is testing the first one twice.
+
+- 2026-09-10: **"IT PASSES AGAINST BOTH FILES" IS THE ONLY QUESTION THAT FINDS
+  THIS CLASS, AND IT MUST BE ASKED OF GREEN CASES TOO.** I ran the new scenarios
+  against the pre-fix launcher and caught scenario 25 that way — but scenario 19's
+  control passes against both files *and against no file at all*, because the code
+  it measures never runs, so the backwards run could not see it. **The stronger
+  habit is to generate the deliberately-broken variant for the property itself**:
+  a launcher blinded to `any_dispatchable()`, which now must drain the fixture the
+  shipped one refuses to drain. An inversion against history tests the fix; an
+  inversion against a *sabotaged* build tests the control.
+
+- 2026-09-10: **AN AD-HOC SCRIPT IN A SCRATCH DIRECTORY IS NOT EVIDENCE, AND A
+  REVIEWER WILL SAY SO.** The nine-case replay proving five of `ForgeOs-czhb`'s
+  acceptance criteria lived only in `/tmp`; Tova's finding was simply that it "is
+  not committed anywhere", so nobody could re-execute it. Committed as
+  `scripts/dispatch-type-harness.sh` **with the real bd records baked in rather
+  than queried** — because `bd` cannot run from a Warden's mask at all, and a
+  harness that shells out to `bd` is unrunnable by the one seat whose job is to
+  re-run it. **When you build a proof, ask which seat will need to reproduce it
+  and what that seat is allowed to execute.** The gap it does NOT close is that
+  she can run nothing under `scripts/` either (`ForgeOs-rydv`); say that plainly
+  rather than implying the commit fixed it.
+
+- 2026-09-10: **A GATE-6 SITTING ENDS WITH THE BEAD OPEN, AND THAT IS THE
+  SITTING SUCCEEDING.** Round two returned ESCALATE with no new blockers and the
+  words "sign it": in Proofdelve ESCALATE means a human gate, not a defect. The
+  Overseer was at the keyboard for the whole edict and that is still not a
+  recorded approval — reading presence as consent is a gate yielding to the
+  actor's own judgement about what he would say, hollowed while formally intact
+  (covenant 8.7's worked example, third sighting in this seat's record). Left
+  open, carrying the `human` label, with the signature named as the only
+  remaining item.
