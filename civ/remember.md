@@ -3244,3 +3244,112 @@ should name the seat if it matters who learned it.
   resolves its stream from `$PWD`. Four prompts this sitting, one per
   announcement, which is the correct number: each is the Overseer seeing a write
   into a settlement that is not this seat's own.
+
+- 2026-09-10 (edict 37, Proofdelve sitting three — `ForgeOs-czhb` and
+  `ForgeOs-j3kp` findings 1 and 7): **A MEASUREMENT CAN NAME THE RIGHT
+  SUBCOMMAND, QUOTE REAL OUTPUT, AND STILL BE READING A KEY THAT IS NULL FOR
+  EVERY ROW.** The docket's THE TRAP block — emphasised, re-verified by the
+  Warden, and repeated in the Overseer's own opening instruction — said a default
+  `bd` edge "reads back as type=None, not type='blocks'". It was taken from
+  `dep.get('type')` on a `bd show` record, where **that key is null for every
+  edge whatever its type**, so the probe could not have discriminated. Under
+  `dependency_type` the same edge reads back as the literal string `blocks`.
+  **The sharper fact underneath: `bd show` and `bd list` use SWAPPED key names
+  for the same field** (`show`: `dependency_type` populated, `type` null;
+  `list`: the reverse, and the dep's `id` null too), measured across 452 edges.
+  A guard reading the wrong one gets null for everything and, under a
+  fail-closed rule, **refuses every bead and stops the fleet completely** —
+  a worse outage than the one being fixed, presenting as "the guard is broken"
+  rather than "bd changed". Filed `ForgeOs-v30w`. **The fix reads BOTH keys and
+  takes the first non-empty one**, which is the only shape that survives bd
+  normalising them either way. The design did not change; its REASON did, from
+  the stated premise to fail-closed-on-the-unknown — and saying which is which
+  is the whole of the correction.
+
+- 2026-09-10: **WHEN TWO ACCEPTANCE CRITERIA CONTRADICT, THE BEAD USUALLY
+  CONTAINS ITS OWN RESOLUTION, AND IT IS CHEAPER TO FIND THAN TO ADJUDICATE.**
+  `ForgeOs-czhb` criterion 4 asked for a predicate with no enumeration of
+  non-blocking type names; criterion 2 asked that absent AND UNRECOGNISED types
+  refuse. They cannot both be satisfied. A comment on the same bead had already
+  ruled: *"the SAFE DEFAULT is refusal, not the shape of the list."* Read every
+  comment before deciding a brief is self-contradictory — the author usually met
+  the contradiction first.
+
+- 2026-09-10: **THE SITTING'S OWN PINNED STATE WAS STALE IN TWO OF FOUR SHAS AND
+  IN ITS HEADLINE FACT, AND ONE OF THEM WAS A LIVE PROCESS.** The brief said
+  "STATE OF THE FLEET RIGHT NOW: halted, `$FLEET_STATE/HALT` is present". The
+  halt file was gone and a fleet run had been live for twenty minutes, holding
+  the exclusive flock, mid-Warden-review, **with fd 255 open on the very
+  launcher this edict edits**. bash reads a script incrementally from that
+  descriptor, so `sed -i` or any in-place rewrite would have made the live run
+  execute garbage. `os.replace` is safe because it swaps the inode and the
+  running bash keeps its own open file — which is why that is the install lane
+  and not merely a habit. **Check `pgrep -af` for the file you are about to
+  edit, and read `/proc/<pid>/fd/255`, before touching any launcher.**
+
+- 2026-09-10: **I BROKE ANOTHER HARNESS AND ITS FAILURE READ AS A DEFECT IN MY
+  SUBJECT.** `governor-harness.sh` extracts `reap_pass()` by name; my change gave
+  `reap_pass()` a call to `verdict_is_landable()`, which its awk list did not
+  extract. The function was simply absent, bash printed `command not found` on
+  stderr, **the arm FELL THROUGH to its needs-person branch**, and three cases
+  failed as though the launcher were wrong. The rule was already in this file
+  from 2026-09-09 and I still walked into it. What is new is the remedy's shape:
+  the symbol gate is **conditional — required only when the extracted code
+  actually CALLS the symbol** — because an unconditional gate would make the
+  instrument refuse against every older launcher, and *a harness that refuses
+  against the old file proves less than one that fails on it*. Proved both ways:
+  refuses (rc 3) on a launcher that calls-but-does-not-define, runs all 41 cases
+  against a launcher that does neither.
+
+- 2026-09-10: **A CORRECTION CAN BE RIGHT ABOUT THE DEFECT AND WRONG ABOUT THE
+  REMEDY, AND THE TEST IS TO WALK ITS OWN SCENARIO.** Tova's C2 rejected `|| true`
+  on `file_followup()`'s body group — correctly, because the header printfs have
+  already run, so the body is non-empty with the review missing and `bd create`
+  succeeds on a truncated follow-up. Her prescribed remedy was `[ -s
+  "$followup_body" ]`, **and a size test cannot catch the case she describes, for
+  exactly the reason she gives**: those headers make it non-empty. The group's own
+  STATUS is what catches it. Shipped both, and said why. **And the same class
+  wants opposite remedies at different sites**: `return_to_ready()` and
+  `page_overseer()` carry the same bare compound, and there `|| true` IS correct,
+  because a failed `tail` loses an evidence appendix while the payload is already
+  written. **The shape of the remedy follows what the truncation would lose.**
+
+- 2026-09-10: **A NEW SCENARIO THAT PASSES AGAINST THE PRE-FIX FILE IS NOT A
+  CONTROL, AND THE ONLY WAY I FOUND OUT WAS RUNNING THE WHOLE SUITE BACKWARDS.**
+  My first scenario 25 asserted "no follow-up bead was filed and the parent did
+  not close" — which a run that simply DIED satisfies just as well, and the
+  pre-fix launcher dies there. It passed against both files. Rewritten against the
+  harness's own `bzyk_path_ok()` (merged, not closed, fleet-safe removed,
+  fleet-escalated applied, incident emitted), which a dying run cannot reach.
+  **Run every new case against the before-file, not just the cases you wrote as
+  inversions** — a GREEN case that is green either way is the `ForgeOs-8zb7`
+  class A shape wearing a passing score.
+
+- 2026-09-10: **GENERATE THE WRONG FIX AND SHOW IT FAILING, WHEN THE WHOLE ITEM
+  IS "NOT THE NAIVE ONE".** Two of this sitting's criteria existed only to
+  distinguish the remedy from a plausible near-miss, and prose cannot settle that.
+  Both variants are now generated from the shipped file by `sed` inside the
+  harness — the one-predicate fix (which sends a deferred plain APPROVE to a
+  person) and the `:2173`-only fix (which merges a recordless MERGE-PARENT-OPEN)
+  — and each is shown failing the case the correct fix passes. **A third variant
+  renames both predicates and rewords both refusals and stays green**, so the
+  cases assert the property rather than this sitting's spelling. Deterministically
+  generated beats committed-and-described, and both beat an argument.
+
+- 2026-09-10: **TWO OF MY OWN STANDING RULES WERE STALE AND CHECKING COST ONE
+  COMMAND EACH.** My 2026-09-01 entry says `.beads/issues.jsonl` "had NEVER been
+  tracked" in Proofdelve and that I was wrong to commit it; `git log --oneline --
+  .beads/issues.jsonl` now returns three commits, including one of my own later
+  sittings'. The fort adopted it in between. **A standing rule of your own is a
+  claim like any other** — this is the third sighting, and the first where the
+  stale rule would have made me SKIP an owed write rather than make a wrong one.
+
+- 2026-09-10: **A SHELL SINGLE-QUOTED PYTHON BLOCK ADMITS NEITHER APOSTROPHES NOR
+  BACKTICKS, AND THE TWO FAIL DIFFERENTLY.** `python3 -c '...'` inside `fleet.sh`
+  ends at the first apostrophe — `bash -n` catches that loudly. A BACKTICK does
+  not break bash at all; it makes `shellcheck` raise SC2016, which the fort's
+  verifier runs at DEFAULT severity, so an info-level finding fails the gate.
+  The original block avoids both (it writes "This fort own convention", which
+  reads like a typo and is not). Write comments in such a block with neither, and
+  lint with the gate's own invocation — `grep -n shellcheck` the verifier first,
+  because `-S warning` is not what it runs.
