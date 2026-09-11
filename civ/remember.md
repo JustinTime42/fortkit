@@ -3486,3 +3486,77 @@ should name the seat if it matters who learned it.
   (the bracket defeats the self-match) or the launcher writing its own `$$` to
   a file. **Three entries in this file now say it. Read the shell, not the
   memory.**
+
+- 2026-09-10 (edict 39, the fleet supervisor in Proofdelve — `ForgeOs-dx34.4`):
+  **THE SESSION BUS IS REACHABLE INSIDE EVERY SEAT MASK, AND `systemd-run --user`
+  FROM INSIDE ONE STARTS AN UNMASKED HOST PROCESS.** Found by the bead's own
+  criterion 6: the probe with the marker stripped was expected to die and ran to
+  completion. Measured in real masks from ForgeOs's lib, both arms: a transient
+  unit started from inside the claude mask saw the HOST's 30 mounts (the mask
+  had 80), read the inode-masked secret at its full 1925 bytes, and could write
+  `fort/scripts`; the codex mask (73 mounts) the same. The lib binds `--bind / /`
+  and inverts only `$HOME`; `/run/user/$uid` is never masked and `mask_env`
+  passes `XDG_RUNTIME_DIR` through. **Every kernel-read-only guarantee this
+  civilization measures is void for a seat that runs one command**, and
+  `scripts/mask-harness.sh` scores 61/0 on all four libs with no assertion
+  about the bus — the 2026-08-13 lesson exactly. Filed `fortkit-y7no`, P0; not
+  repaired in-sitting (lands-alone, four diverged copies). The candidate repair
+  is one `--ro-bind /dev/null /run/user/$uid/bus` per arm, MEASURED FIRST for
+  whether claude or codex need the bus (the `~/.claude/teams` launch-abort
+  shape), then a harness case that `systemd-run --user /bin/true` FAILS inside
+  every mask with the positive control that it succeeds outside.
+
+- 2026-09-10: **`~/.local/state` IS AN rw GRANT IN `RW_PATHS` (ForgeOs lib :445,
+  capital :419), SO THE FLEET'S HALT FILE, LOCK AND STREAK ARE MASKED-MAYOR-
+  WRITABLE.** Harmless while a person had to launch every run; with the
+  supervisor's timer enabled, REMOVING THE HALT FILE STARTS THE FLEET within
+  two minutes, so the halt file became a launch control a seat can operate on
+  the night the supervisor landed. Stated on the bead for the Overseer's
+  signature rather than decided. General shape: **a new automation changes the
+  weight of every file it reads, so re-ask who can write each of them.**
+
+- 2026-09-10: **A ONESHOT SERVICE THAT LASTS THE WHOLE JOB CAN NEVER BE FIRED
+  DURING THE JOB.** systemd will not start a unit that is already active, so a
+  supervisor whose service ran the fleet as its main process would satisfy
+  "exits 75 when a run is live" vacuously — the timer would simply skip it — and
+  the refusal streak the amended criterion 3 exists for could never count. The
+  run is started as ITS OWN transient unit (`systemd-run --user --unit
+  proofdelve-fleet-run-<id> -p KillMode=process -p TimeoutStopSec=45min`) and
+  the oneshot exits at once. Two things that shape buys for free: a per-run
+  journal, and `systemctl --user stop <unit>` as a stop handle that reaches
+  fleet.sh ALONE (the TERM drain path, exit 143, Forges untouched) — measured:
+  23 s to a clean `fleet.ended interrupted by SIGTERM`. And `SuccessExitStatus=75`
+  in the unit is the literal form of "not recorded as a failure": without it an
+  80-minute run puts forty failed units in `--failed`.
+
+- 2026-09-10: **I FIRED THE SUPERVISOR WITH THE HALT FILE ABSENT AND THE REAL
+  QUEUE READY, AND IT DID EXACTLY WHAT IT IS FOR.** Criterion 5 needs a firing
+  after the run ends; I made it before writing the halt file, the lock was free,
+  five beads were fleet-safe, and real run 20260910T223739 started and
+  dispatched `ForgeOs-5nm9` to a Forge before I halted it 30 s later. The
+  Overseer's condition for the night ("HALT present at the end") was the right
+  invariant and I applied it at the END instead of BEFORE THE FIRST FIRING THAT
+  COULD START A RUN. **A control you are about to test for its no-op case must be
+  armed before you exercise the case adjacent to it.** Recorded as an incident
+  in Proofdelve's stream; the Forge finished (exit 0) and its output waits in the
+  worker dir for the next run.
+
+- 2026-09-10: **THE SUPERVISOR SELECTS AND fleet.sh DECIDES, AND THE COST OF THAT
+  IS STATED RATHER THAN HIDDEN.** The supervisor's "is there work" test is
+  `ready_candidates()`'s query verbatim (`bd ready --limit 0 --label fleet-safe`)
+  with no label exclusions and no second copy of `dispatchable()`, because two
+  deciders diverged once and wedged a run (`ForgeOs-czhb`). A bead that passes
+  the query and that the dispatcher refuses therefore starts a run that drains
+  at once — one `fleet.begun`/`fleet.ended` pair per interval until the bead is
+  fixed. Visible, and the fix is on the bead. The alternative was a filter that
+  could silently disagree with the dispatcher forever.
+
+- 2026-09-10: **THE VERIFIER'S `locked-dir-clean` STAGE REFUSES ON UNTRACKED
+  FILES UNDER `fort/scripts`, so a new host-executed script must be STAGED
+  before the verifier will score the tree** — "Commit them or delete them.
+  Nothing untracked belongs where the host executes." The first run exited 1 at
+  that step for the file the sitting was adding. `git add` the new paths
+  path-scoped, then verify, then commit; the order is not optional.
+
+- 2026-09-10: **Proofdelve's full suite is 298 / 0 / 0 with Docker up as of
+  `4a2bbc1`**, not the 260 recorded on 2026-09-04. Read it from the run.
