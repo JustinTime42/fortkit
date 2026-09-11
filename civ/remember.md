@@ -3560,3 +3560,65 @@ should name the seat if it matters who learned it.
 
 - 2026-09-10: **Proofdelve's full suite is 298 / 0 / 0 with Docker up as of
   `4a2bbc1`**, not the 260 recorded on 2026-09-04. Read it from the run.
+
+- 2026-09-11 (edict 40, the Proofdelve fleet wrap-up — ForgeOs-4778 + items 2-5):
+  **CODEX ENFORCES `~/.codex/rules/*.rules` AT DISPATCH, BUT ONLY ON A COMMAND IT
+  PARSES AS A SINGLE STATEMENT — A COMPOUND SHELL LINE ESCAPES IT.** The guarded
+  profile in `~/.codex/config.toml` is a FILESYSTEM deny table and cannot name a
+  command; codex's execpolicy can. Codex auto-loads every `*.rules` in
+  `~/.codex/rules/` (the dir it also writes the Overseer's own "always approve"
+  rules into) and enforces `prefix_rule(pattern=[...], decision="forbidden")` at
+  dispatch. Measured live in a real Forge mask (gpt-5.5): a single-statement
+  `systemd-run --user /bin/true` is REJECTED ("policy forbids commands starting
+  with `systemd-run`"), and so is `systemctl ...` — the bare `["systemd-run"]`
+  prefix rule binds the bare command word. BUT a COMPOUND line
+  (`systemd-run ... ; echo rc=$?`, `&& ...`) runs as one opaque `/bin/bash -lc
+  '...'` and matches NOTHING — measured rc=0. The standalone
+  `codex execpolicy check` tool does NOT see through `bash -lc` either, and needs
+  `--resolve-host-executables` to match an absolute path against a basename rule,
+  but the RUNTIME resolves the bare command itself for a single statement. Net:
+  an execpolicy rule is a real interim control against a naive single-command
+  reach and is defeated by shell compounding (the ForgeOs-21f.8 class). It is
+  GLOBAL to the host (binds the Overseer's own codex sessions), and the rules
+  file is itself kernel-writable by the Forge's codex process (`~/.codex` is a
+  live rw bind, only `config.toml` re-bound RO) — closing that is a lib change.
+
+- 2026-09-11: **`os.replace` ACROSS FILESYSTEMS FAILS `Invalid cross-device link`,
+  and the scratch dir is a DIFFERENT filesystem from the repo.** The gated install
+  lane (pre-image sha256 + filecmp, then `os.replace`) must write its temp file IN
+  THE DESTINATION DIRECTORY, not in the session scratchpad (tmpfs) — `os.replace`
+  is a rename and rename cannot cross a mount boundary. Write
+  `os.path.join(os.path.dirname(dst), '.'+basename+'.inst')`, chmod, then replace.
+  Cost one retry this sitting. (The 2026-08-13 entry recording `os.replace` as the
+  lane never said the temp's filesystem matters; it does.)
+
+- 2026-09-11: **A STALL IS ONLY DETECTED WHEN startable=yes, so a LONE deferred
+  merge DRAINS rather than spins** (Proofdelve `fleet.sh:1201`,
+  `[ "$2" = yes ] || return 0`). dx34.11's premise ("a run whose only work is a
+  forever-deferred merge spins until a person stops it") is false for the lone
+  case — `any_dispatchable()` answers no and the drain check ends the run. The
+  real spin needs the deferred merge (a reap that wrongly reset the counter every
+  pass) COEXISTING with genuinely-startable-but-unstartable work (a ready bead
+  whose worktree `.forge.lock` a foreign process holds, the scenario-30 fixture).
+  Tova filed dx34.11 with the wrong reproduction and corrected it in her own
+  review; the bead was right about the mechanism. **When a bug report says "spins",
+  find the exact configuration that makes the loop's OWN exit condition
+  unreachable — often the report names a symptom, not the reproduction.**
+
+- 2026-09-11: **THE CLEAN WAY TO GIVE A WARDEN A REVIEW OF EXACTLY YOUR COMMITS
+  WHEN A CONCURRENT SEAT'S COMMITS INTERLEAVE YOURS ON MAIN: a cherry-pick review
+  branch in a worktree.** The Mayor committed g0ev/snni/p0a6 to main all sitting,
+  between my two items-2-5 commits, so `A~1..B` would have pulled her work into my
+  review. Fix: `git worktree add -b regent-<x>-review <WT> <base-before-my-first>`,
+  `cherry-pick <my commits>` (clean when they touch files her interleaved commits
+  did not), then `warden.sh <bead> <base>..<branch> <WT>`. Proofdelve's warden.sh
+  has NO tip-reachability guard (unlike fortkit's): it diffs `git -C $root diff
+  $range` and rsyncs `$src` (arg 3) as the build cwd, so an unmerged review branch
+  reviews fine. Verify the branch's files are byte-identical to main HEAD first, so
+  the review is of what actually landed. Remove the worktree and branch at close.
+
+- 2026-09-11: **Marrek Splitstone, Mayor of Proofdelve, is they/them** (docket
+  header, and the fort's roster). I leaned on a possessive ("your Mayor's rec") to
+  avoid the pronoun in a summary rather than writing they/them; the Overseer
+  flagged it. Read the roster, use they/them. No durable record this sitting
+  misgendered them (checked across every bead comment and commit).
