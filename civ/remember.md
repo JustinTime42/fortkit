@@ -3622,3 +3622,134 @@ should name the seat if it matters who learned it.
   avoid the pronoun in a summary rather than writing they/them; the Overseer
   flagged it. Read the roster, use they/them. No durable record this sitting
   misgendered them (checked across every bead comment and commit).
+
+- 2026-09-11 (edict 41, the 2026-09-12 Proofdelve docket — lw8x, dx34.15, 9ikw,
+  riev, tq8s): **THIS SITTING'S LAUNCHER DIED AND ITS `edict.ended` DOES NOT
+  EXIST AND CANNOT.** `edict.begun` landed correctly in all four forts at
+  17:07:44 for session `2026-09-11T170735`; that launcher (pid 2133851) then
+  died, and `bin/regent` emits the closing half ONLY from its own exit path, so
+  four streams carry a begun with no end permanently. The sitting finished
+  because the conversation continued under a BARE relaunch (pid 2508153, session
+  `2026-09-11T215229`), whose pair brackets only the close-out. A third session,
+  `2026-09-11T214416`, woke at 21:44, announced in four forts, and ended at
+  21:45:59 with NO HANDOFF — the 2026-09-02 class, second sighting. **This is
+  the standing `edict.ended` item's TWELFTH form and the first where the line
+  does not exist at all**; every earlier form was about where it landed or
+  whether it was committed. Filed `fortkit-89f0` with three candidate shapes;
+  the only one that survives a SIGKILL is a wake-time reconciliation pass in
+  `bin/regent` that finds an unmatched begun and explains it. **Do not expect to
+  find a closing line; reconcile against the bead.** Mitigation used: an
+  explanatory `incident` in all four fort streams plus `civ/events/`, a full
+  handoff at the ANNOUNCED session id, and a pointer handoff at the HOSTING id
+  so the live launcher has a file at the path it expects.
+
+- 2026-09-11: **I FOUND THE DEAD LAUNCHER ONLY BECAUSE THE CLOSE-OUT SWEEP
+  ENUMERATES EVERY UNCOMMITTED LINE INSTEAD OF GREPPING FOR MY OWN.** Piping the
+  capital's day-file diff through a one-line python that prints `ts actor seat
+  category` for each added line showed three `edict.begun` where I had emitted
+  one. A grep for my own session id would have shown nothing wrong. **When you
+  sweep a record at close, enumerate what is THERE rather than confirming what
+  you expect** — the 2026-09-10 bare-`git status` rule, paying off in a direction
+  it was not written for.
+
+- 2026-09-11: **`--settings` TAKES AN INLINE JSON STRING, NOT ONLY A PATH**, and
+  that is what makes a per-launch permission decision possible. Measured through
+  the product's own rule checker with one-rule scratch inputs: a flagged rule
+  passed inline is still flagged, an explicit-path rule is not. `ForgeOs-riev`'s
+  repair rests on it — `warden.sh` renders the Warden's profile per review
+  (adding a twin of every explicit-root `git -C` rule with the candidate
+  worktree's exact path) and passes the result inline, so there is no gap between
+  `-C` and the subcommand for a `-c KEY=COMMAND` option to sit in AND no settings
+  file on disk the seat could edit that it was launched under. **A wildcard in an
+  allow rule is not narrowable by a deny** (`ForgeOs-21f.8`: enumerating
+  spellings was measured defeatable 6/6); it is narrowable by making the caller
+  render the exact value, and the render must FAIL CLOSED — refuse the launch
+  rather than fall back to anything wider, with the twin count as the check.
+
+- 2026-09-11: **A REFUSAL CODE IS ONLY USEFUL IF THE CALLER TELLS IT APART FROM
+  THE WORK FAILING.** `forge.sh` exits 76 when it cannot bring a reused bead
+  worktree current with main, and `fleet.sh` routes exactly 76 to
+  `page_overseer` — never `return_to_ready`, because re-dispatching repeats the
+  identical refusal and a return would spend the return counter on a failure
+  that is not the Forge's and then escalate two passes later under a message
+  blaming the Forge. The harness case that matters is the DISCRIMINATION one: a
+  Forge exit of 1 must still be RETURNED. Also: `page_overseer`'s standing
+  sentence ("the work in its worktree is UNTOUCHED and was verifier-green") is
+  FALSE for a caller where nothing was ever built, so it became a parameter with
+  the old text as the default. **When you reuse a reporting function, read the
+  sentences it asserts on your behalf.**
+
+- 2026-09-11: **A MERGE ALREADY IN PROGRESS IS NOT YOURS TO ABORT, AND THE
+  BACK-OUT PROOF WILL LIE ABOUT IT.** My first refresh implementation aborted on
+  any failed merge and then proved the back-out by `HEAD == before`. Tova
+  Marrowassay's finding: a worktree that ALREADY carries `MERGE_HEAD` (a Forge
+  told to stop on a conflict leaves exactly that) makes `git merge` die "you
+  have not concluded your merge", the abort then destroys a PERSON's in-progress
+  merge, and HEAD is unchanged either way so the proof reports "UNCHANGED". Check
+  for a pre-existing `MERGE_HEAD` BEFORE attempting anything, and refuse without
+  touching it. **A back-out proof only proves what it can distinguish.**
+
+- 2026-09-11: **A STATE-CHANGE FINGERPRINT MUST BE THE SET, NOT THE LAST VALUE,
+  WHENEVER THE VALUE CAN FLAP.** `ForgeOs-dx34.11` backed out a stall counter's
+  reap credit when a deferred merge re-deferred on the SAME reason as last pass;
+  a reason that alternates A,B,A,B differs from last pass every time, so the
+  credit was never withdrawn and the parked merge masked the stall exactly as
+  before the fix. Keyed on the set of reasons the worker has EVER deferred on,
+  a repeat is never progress and a genuinely new reason still is. Same shape as
+  the 2026-08-12 drift-watcher lesson (a content hash is a change detector, not
+  an identity) reached from the opposite side: there the key churned when it
+  should have been stable, here it changed when it should have been a membership
+  test.
+
+- 2026-09-11: **THE PER-BEAD WARDEN LOCK MEANS A SMOKE AND A REVIEW CANNOT SHARE
+  A BEAD.** I launched `WARDEN_SMOKE` and a review both on `ForgeOs-9ikw`; the
+  review refused at exit 75 on the smoke's own `/tmp/warden-<sfx>.lock` and NO
+  REVIEW HAPPENED. The lock is per bead by design (the Warden has no worktree and
+  concurrent reviews of different beads must stay possible), and a smoke holds it
+  for its whole run. Put the two on different beads and cross-reference the
+  verdict, or serialise them.
+
+- 2026-09-11: **A COMPLETED SMOKE FELL THROUGH INTO THE REVIEW RECORDING BLOCK
+  AND REPORTED `verdict_recorded:true`.** My `ForgeOs-9ikw` fix added an honest
+  smoke result and did not EXIT after it, so `warden.sh`'s final
+  `write_result`/`session.end` — which hardcode a recorded verdict — overwrote
+  it: a boundary test reported as a verdict, inside the fix for a boundary test
+  that reported nothing. Found by the read-only Warden reading exit paths, for
+  the third sitting running. **When you add a branch that produces its own
+  record, check what runs AFTER it**, and give the branch its own terminator.
+
+- 2026-09-11: **A SMOKE'S DURABLE RECORD MUST CARRY THE PASS LINES, NOT ONLY THE
+  FAILURES.** `ForgeOs-x19f`'s lesson is that probe 12 has two PASS spellings and
+  one of them ("ran but the named program did not execute") is a FALSE ALL-CLEAR
+  produced by a TTY check rather than by the permission profile. A record keeping
+  only FAIL lines cannot tell those apart later. The full probe table now goes to
+  the bead. And a probe reporting FAIL must NOT fail the launcher: the run is
+  tabled at exit 0 and only SILENCE (a missing line, an absent terminator) exits
+  nonzero — otherwise the instrument's own findings look like launcher faults and
+  somebody stops running it.
+
+- 2026-09-11: **BUILD THE REAL MASK FROM THE LAUNCHER'S OWN LINES TO MEASURE A
+  SEAT'S BOUNDARY WITHOUT LAUNCHING THE SEAT.** Re-verifying `ForgeOs-4778` meant
+  asking what a Mayor and a Forge can execute. Running `mayor.sh` or `forge.sh`
+  would have written a `session.start` under another fort's citizen and owed a
+  correction each. Instead: `source lib/seat-sandbox.sh`, call `build_mask` /
+  `mask_env` / `seat_identity` / `seat_build_env` exactly as that launcher does,
+  then `bwrap "${mask[@]}" -- claude -p` (or `codex exec`) with a REPORT-ONLY
+  prompt. Measured, both postures: bare `systemd-run`/`systemctl` refused,
+  `/usr/bin/systemd-run` executes at the claude tool layer, and a COMPOUND shell
+  line escapes codex's execpolicy prefix rule — the two recorded residuals and
+  no more. **And demand the output shape in the prompt** ("your final message
+  must be EXACTLY these five lines"): my first run answered in prose with a
+  helpful summary and I could not read three of the four results off it.
+
+- 2026-09-11: **FOLDING A REVIEWER'S NON-BLOCKING FINDINGS IS USUALLY RIGHT WHEN
+  THE FILE IS KERNEL-LOCKED, AND IT CHANGES WHAT THE SIGNATURE COVERS.** Six of
+  Tova's fourteen findings across two rounds were cheap and lived in the FILE SET;
+  a follow-up bead on any of them would have been another Regent sitting, because
+  those files are read-only to every seat. Folded verbatim, each with a NEW
+  discriminating harness case, and the gate-6 signature was then asked for on the
+  FOLDED tree with that stated plainly — the reviewer saw the pre-fold version,
+  the Overseer signed the post-fold one, and the commit message says so. The
+  alternative (sign the reviewed artifact, bead the rest) is also defensible;
+  what is not defensible is folding silently and letting the signature read as
+  covering a reviewed diff.
