@@ -3753,3 +3753,46 @@ should name the seat if it matters who learned it.
   alternative (sign the reviewed artifact, bead the rest) is also defensible;
   what is not defensible is folding silently and letting the signature read as
   covering a reviewed diff.
+
+- 2026-09-11 (cause established the same evening, by the Overseer): **THE
+  LAUNCHER DIED BECAUSE THE SITTING WAS DRIVEN OVER SSH AND THE CONNECTION
+  DROPPED** — a SIGHUP to the foreground process group when the pty went away.
+  Not a mystery and not a compromise, and it turns `fortkit-89f0` from a design
+  question into a BACKPORT GAP: `fort/scripts/fleet.sh:320` has carried
+  `trap '' HUP` since **2026-09-08, landed by this seat, for this exact failure
+  mode**, and `bin/regent` has no signal handling at all. The structure means
+  the one-liner would have worked: `bin/regent:385` runs the session as a CHILD
+  (`script -c "$RUNNER"`, deliberately not `exec`, per fortkit-nvk) and
+  propagates its status, so with HUP ignored the launcher outlives the pty and
+  its EXIT trap emits `edict.ended` in all four forts.
+  **AND THE ONE-LINER ALONE WOULD NOT HAVE BEEN ENOUGH, which is the expensive
+  half.** `bin/regent` is `set -euo pipefail`, and `cleanup()` stamps the
+  handoff FIRST, echoing `WARNING:` lines to the terminal on its failure paths —
+  including an unconditional one when no handoff exists yet, which IS the
+  disconnect case. On a dead pty that write returns **EIO**, so `set -e` kills
+  cleanup **upstream of the `edict.ended` loop**: the naive fix converts "no
+  closing announcement" into "no closing announcement for a different reason".
+  ForgeOs-dx34.3 recorded this exact second half — *the durable write goes first
+  and the terminal write is the one allowed to fail* — so **the ordering is the
+  real repair**: hoist the announcement above anything that touches the
+  terminal, with `|| true` on the narrative as belt.
+  **AND KNOW WHAT EACH REPAIR BUYS.** `trap '' HUP` saves the LAUNCHER'S
+  BOOKKEEPING and does NOT save the CONVERSATION — the interactive session's pty
+  is genuinely gone. Only a persistent pty (**tmux/screen**, available with no
+  code change) keeps the sitting itself alive across a disconnect. Two losses,
+  two fixes; conflating them leaves one believed-fixed.
+  **DO NOT HAND-EMIT THE MISSING `edict.ended`.** A typed closing line is
+  indistinguishable in the stream from a launcher's, which is the fortkit-w1ew
+  scar. Let a reconciliation pass emit it with a payload flag naming it
+  reconciled and by which session, or leave the orphan standing behind its
+  explanatory incidents.
+
+- 2026-09-11: **"NOTHING WAS LOST" IS A CLAIM AND IT IS CHEAP TO ESTABLISH.**
+  After the disconnect I checked four things rather than assuming: commit
+  timestamps against the gap (all substantive work landed 17:16:02-17:56:51,
+  before it, with the sitting idle at a human gate); orphaned children by `ps`
+  for claude/bwrap/codex/warden.sh with **ppid 1** (none — the pty death took the
+  whole process group cleanly); stray worktrees (0); and stale locks, the fleet
+  lock and the halt file. **The recovery question and the repair question are
+  different**, and answering the first in four commands is what makes it honest
+  to spend the rest of the time on the second.
