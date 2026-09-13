@@ -3796,3 +3796,115 @@ should name the seat if it matters who learned it.
   lock and the halt file. **The recovery question and the repair question are
   different**, and answering the first in four commands is what makes it honest
   to spend the rest of the time on the second.
+
+- 2026-09-12 (edict 42, the 2026-09-12b Proofdelve docket — nv0j, g3n1,
+  dx34.18, the prompt riders): **`rsync -a` GIVES THE COPY THE SOURCE TREE'S
+  MTIME, SO A DIRECTORY'S AGE IS NOT THE COPY'S AGE.** The scratch reaper's
+  first draft read `stat -c %Y` on the Warden's rsync copy and called a
+  one-minute-old copy three hours old (dir mtime 18:19 on a copy made 19:39,
+  seen on the first smoke of the installed launcher). The age of a review is
+  the newest of what the LAUNCHER writes — its lock, lock.info and the
+  transcript it streams into — never the tree it copied. A harness case with
+  an old directory mtime and a fresh lock is what discriminates the two, and
+  it went RED against the draft.
+
+- 2026-09-12: **A ROOT UNDER `~/.cache` IS WRITABLE TO EVERY SEAT, BECAUSE
+  `~/.cache` IS AN RW_PATHS GRANT IN EVERY MASK.** The bead said "XDG cache
+  dir" and I shipped it; Tova's round-one finding was that this lost the
+  per-seat isolation `/tmp` (a private tmpfs) had: every review's record,
+  every result file the fleet gates merges on, and every live sibling copy
+  writable from the Forge's and the Mayor's masks. `~/.local/share` is NOT
+  granted, and the seat's own copy is bound rw by `--rw-tmp` anyway.
+  Measured in the real Warden mask, built from warden.sh's own lines: own
+  copy WRITABLE, sibling copy READ-ONLY, sibling result READ-ONLY (create
+  and append), `~/.cache/...` WRITABLE. **Before choosing a directory for a
+  seat-adjacent artifact, ask what RW_PATHS grants there** — the same
+  question as the 2026-08-12 "relocating a file moves its permissions" entry,
+  reached from a new file rather than a moved one.
+
+- 2026-09-12: **A FUNCTION EXTRACTED WITHOUT ITS CALLEE CAN SILENTLY REPORT
+  "NOTHING" INSTEAD OF FAILING, AND THE VERIFIER RUNS THE HARNESS FROM
+  `main`.** `looks_rate_limited` gained `awk -v env="$(env_signature)"`;
+  `verify-impl.sh` runs the governor harness from the committed `main` copy,
+  whose extraction did not carry `env_signature()`, so awk got an EMPTY
+  pattern, which matches every line, and every log read as "no back-pressure"
+  while looking exactly like the detector working (verify step FAILED 46/3).
+  Two fixes, both kept: the callee is extracted by the new harness AND the
+  function degrades to "exclude nothing" (`|| printf '^$'`) when its callee
+  is missing, so an old extractor fails LOUDLY on the exclusion case rather
+  than passing on silence. **When a change adds a callee to an extracted
+  function, run the OLD committed harness against the NEW file before the
+  verifier does it for you.**
+
+- 2026-09-12: **`pgrep -f` / `pkill -f` WITH A PATTERN YOUR OWN COMMAND LINE
+  CONTAINS KILLS YOUR OWN SHELL — exit 144, three times in one sitting, with
+  the self-match scar in the briefing.** `pkill -f 'riders/fleet-e2e-harness.sh'`
+  matched the bash running that very command. The bracket trick
+  (`pgrep -f 'harnes[s]'`) defeats it: the pattern does not match its own
+  literal spelling. Fourth entry in this file about the same trap; the
+  construction is the only thing that avoids it.
+
+- 2026-09-12: **A HARNESS FIXTURE MUST REPRODUCE THE ORDERING THE DEFECT
+  DEPENDS ON, AND DIRECTORY-WALK ORDER IS AN ORDERING.** The 15k.6 strand
+  needed a Forge to finish while the reap loop was inside ANOTHER worker's
+  slow reap, AFTER the loop had already passed the finishing worker's
+  directory — `for d in workers/*/` expands once, alphabetically, and 15k.6
+  sorted before b0vj.53. My fixture named the straggler so it sorted AFTER
+  the slow bead, and the loop's own walk picked it up on every launcher: the
+  case measured nothing. Renaming the straggler (rc1 before rd1) was the
+  whole fix. Two earlier drafts had also measured nothing (a pre-built
+  finished worker whose sibling was still LIVE at the foot). Three fixture
+  drafts before the subject was tested once.
+
+- 2026-09-12: **A THREE-DOT RANGE IS EMPTY AFTER THE BRANCH LANDS, SO A
+  REVIEW DIFF MUST BE CAPTURED AT REVIEW TIME.** Scenario 41's first draft
+  ran `git diff <range>` after the fleet had merged the bead; the merge base
+  had moved to the tip and the diff was empty on every launcher. The stub
+  Warden now records `git diff --name-status <range>` when it is called,
+  which is what the real Warden sees. And **identical file content across
+  two branches reads as a RENAME (R100), not D+A** — the two-dot inversion
+  showed no deletion until each bead's unique file carried unique content.
+
+- 2026-09-12: **AN EVENT PER FIRING FOR A PERSISTENT STATE THE FIRER CANNOT
+  REPAIR IS or2.8 EXACTLY, EVEN WHEN A REVIEWER ASKS WHETHER THE STATE
+  DESERVES AN EVENT.** A listed worktree whose directory is gone while its
+  branch survives (forge.sh's rc=255 shape) is named in the reaper's journal
+  and summary and raises no event; the harness's quiet-no-op case caught the
+  first fold (which emitted) because the fixture still listed the orphan on
+  the second sweep. Decide it, write the decision beside the code, and let
+  the harness hold it.
+
+- 2026-09-12: **THE STANDING `edict.ended` ITEM: this sitting's predecessor
+  (2026-09-11T170735) has NO closing line and never will (fortkit-89f0); its
+  hosting session 215229's pair brackets only the close-out.** Reconcile
+  against the bead, not the stream. Thirteenth form.
+
+- 2026-09-12: **MACHINERY THAT READS LOGS FOR A SIGNATURE WILL READ THE FORT'S
+  OWN WRITING ABOUT THE SIGNATURE.** Three harness case labels spelled "Disk
+  quota exceeded"; `run_step` prints every label into the verifier's stdout;
+  `run_verifier()` captures that into `$vout`; and the new environmental
+  check would have HALTED a healthy host on any RED at step 13 or later, with
+  a false claim in the durable record. The same class in prose form on the
+  review path (the Warden's own review body) and the Forge path (a transcript
+  that discussed the change). Tova's blocking finding on g3n1. The quoted-
+  retired-literal scar in a new shape: not a comment failing a zero-tolerance
+  grep, but the fort's machinery reading its own prose as evidence. Two
+  remedies, both kept: no label spells the signature (the harness runs the
+  detector over its own 106 labels), and each call site asks only in the
+  failure shape it explains -- a RED verifier, a review with no result file,
+  a Forge that exited nonzero. **A completed review or a successful session is
+  never asked what its prose contains.**
+
+- 2026-09-12: **`verify-impl.sh` RUNS HARNESSES FROM `main`, SO A HARNESS AND
+  ITS SUBJECT THAT CHANGE TOGETHER CAN ONLY BE VERIFIED TOGETHER AFTER THE
+  COMMIT.** Three times this sitting the pre-commit verifier's only red was the
+  OLD committed harness against the NEW file (a stub that could not answer a
+  new `--reapable` question; an assertion on the old `reapable:0` pairing).
+  That is ForgeOs-75hn's design, not a defect; the cost is a round: commit,
+  re-verify the committed tree, paste the green on the bead. Budget for it.
+
+- 2026-09-12: **AN OVERSEER'S "SIGN ON ALL" IS ONE ACT ACROSS FOUR BEADS AND
+  IS RECORDED ON EACH, VERBATIM, WITH THE TREE NAMED.** Two of the four were
+  then left OPEN deliberately: their acceptance carries an executed control
+  (the next fleet run's pastes and handoff headings) that only the Mayor can
+  measure. A signature closes the gate, not the bead.
