@@ -1,0 +1,410 @@
+<title>ForgeOS Fleet</title>
+<style>
+  :root {
+    --bg: #EDF0F3;
+    --surface: #FAFBFC;
+    --surface-2: #E2E7EC;
+    --ink: #161B21;
+    --ink-soft: #55616C;
+    --line: #C9D2DA;
+    --fleet: #0C7883;
+    --fleet-soft: #D3E9EB;
+    --human: #B0600A;
+    --human-soft: #F1E4D1;
+    --ok: #1E7A45;
+    --ok-soft: #D4E9DD;
+    --stop: #AE2F23;
+    --stop-soft: #F0DAD5;
+    --shadow: 0 1px 2px rgba(20,30,40,.06), 0 6px 20px rgba(20,30,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1216;
+      --surface: #161B21;
+      --surface-2: #1F262E;
+      --ink: #E8EDF2;
+      --ink-soft: #92A0AB;
+      --line: #29323B;
+      --fleet: #35B8C3;
+      --fleet-soft: #10333640;
+      --human: #E0912F;
+      --human-soft: #35271340;
+      --ok: #54B37D;
+      --ok-soft: #16341f40;
+      --stop: #E26B5D;
+      --stop-soft: #35201c40;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1216;
+    --surface: #161B21;
+    --surface-2: #1F262E;
+    --ink: #E8EDF2;
+    --ink-soft: #92A0AB;
+    --line: #29323B;
+    --fleet: #35B8C3;
+    --fleet-soft: #10333640;
+    --human: #E0912F;
+    --human-soft: #35271340;
+    --ok: #54B37D;
+    --ok-soft: #16341f40;
+    --stop: #E26B5D;
+    --stop-soft: #35201c40;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Hanken Grotesk", system-ui, sans-serif;
+    line-height: 1.55; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1160px; margin: 0 auto; padding-block: 40px 64px; padding-inline: 20px; }
+
+  h1, h2, h3 { font-family: "Chivo", "Hanken Grotesk", sans-serif; text-wrap: balance; margin: 0; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--fleet); font-weight: 500; }
+  .page-head h1 { font-size: clamp(40px, 7vw, 66px); font-weight: 900; letter-spacing: -.02em; margin-top: 6px; line-height: .98; }
+  .page-head .lede { font-size: clamp(16px, 2.4vw, 20px); color: var(--ink-soft); max-width: 62ch; margin-top: 14px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 20px; font-family: "JetBrains Mono", monospace; font-size: 12px; }
+  .meta span { border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; color: var(--ink-soft); background: var(--surface); }
+  .meta span b { color: var(--ink); font-weight: 600; }
+  .meta span.live { border-color: var(--fleet); color: var(--fleet); }
+  .meta span.live b { color: var(--fleet); }
+
+  .hero { margin: 34px 0 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 22px clamp(14px, 3vw, 28px) 18px; }
+  .hero svg { display: block; width: 100%; height: auto; }
+  figure { margin: 0; }
+  figcaption { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--ink-soft); }
+  figcaption b { color: var(--ink); font-weight: 600; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; font-size: 13px; color: var(--ink-soft); }
+  .legend .k { display: inline-flex; align-items: center; gap: 8px; }
+  .swatch { width: 22px; border-top-width: 3px; border-top-style: solid; display: inline-block; }
+  .swatch.fleet { border-color: var(--fleet); }
+  .swatch.ok { border-color: var(--ok); }
+  .swatch.human { border-color: var(--human); border-top-style: dashed; }
+  .swatch.stop { border-color: var(--stop); }
+  .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .dot.fleet { background: var(--fleet); }
+
+  .section-head { margin: 54px 0 18px; }
+  .section-head h2 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -.01em; }
+  .section-head p { color: var(--ink-soft); margin-top: 6px; max-width: 64ch; }
+
+  .safety { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .safe { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); border-top: 3px solid var(--fleet); }
+  .safe .n { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--fleet); font-weight: 600; }
+  .safe h3 { font-size: 17px; font-weight: 800; margin: 4px 0 6px; }
+  .safe p { font-size: 13.5px; color: var(--ink-soft); margin: 0; }
+  .safe p .m { font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--ink); }
+
+  .seats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .seat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 9px; }
+  .seat h3 { font-size: 20px; font-weight: 800; }
+  .seat .runtime { align-self: flex-start; font-family: "JetBrains Mono", monospace; font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line); }
+  .seat .runtime.codex { color: var(--human); border-color: var(--human); background: var(--human-soft); }
+  .seat p { font-size: 13.5px; margin: 0; }
+  .seat p.cant { color: var(--ink-soft); }
+  .seat p.cant b { color: var(--stop); font-weight: 600; }
+
+  .grid2 { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; align-items: start; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; box-shadow: var(--shadow); }
+  .panel h3 { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 9px; }
+  .panel h3 .tag { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 500; padding: 2px 7px; border-radius: 5px; background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line); }
+  .panel > p { color: var(--ink-soft); font-size: 13.5px; margin: 8px 0 0; }
+  .stack { display: grid; gap: 8px; margin-top: 12px; }
+  .kv { display: grid; grid-template-columns: 130px 1fr; gap: 10px; font-size: 13px; align-items: start; }
+  .kv dt { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--fleet); padding-top: 1px; }
+  .kv.human dt { color: var(--human); }
+  .kv dd { margin: 0; color: var(--ink); }
+  .kv dd small { color: var(--ink-soft); }
+
+  ul.ticks { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+  ul.ticks li { font-size: 13.5px; padding-left: 18px; position: relative; }
+  ul.ticks li::before { content: ""; position: absolute; left: 0; top: 8px; width: 7px; height: 7px; border-radius: 2px; background: var(--fleet); }
+  ul.ticks li b { font-family: "JetBrains Mono", monospace; font-weight: 500; font-size: 12.5px; }
+
+  .gates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .gate { border: 1px solid var(--line); border-left: 3px solid var(--human); border-radius: 10px; padding: 13px 15px; background: var(--surface); }
+  .gate .g { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--human); font-weight: 600; }
+  .gate p { margin: 3px 0 0; font-size: 13px; }
+
+  footer.note { margin-top: 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-soft); font-family: "JetBrains Mono", monospace; display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: space-between; }
+
+  .f-ink { fill: var(--ink); } .f-soft { fill: var(--ink-soft); }
+  .f-fleet { fill: var(--fleet); } .f-human { fill: var(--human); }
+  .f-surface { fill: var(--surface); } .f-surface2 { fill: var(--surface-2); }
+  .f-fleetsoft { fill: var(--fleet-soft); } .f-humansoft { fill: var(--human-soft); }
+  .f-oksoft { fill: var(--ok-soft); } .f-stopsoft { fill: var(--stop-soft); }
+  .s-fleet { stroke: var(--fleet); } .s-human { stroke: var(--human); }
+  .s-ink { stroke: var(--ink); } .s-ok { stroke: var(--ok); } .s-stop { stroke: var(--stop); }
+  .card-stroke { stroke: var(--line); }
+  .svg-role { font-family: "Chivo", sans-serif; font-weight: 800; }
+  .svg-mono { font-family: "JetBrains Mono", monospace; }
+  .svg-body { font-family: "Hanken Grotesk", sans-serif; }
+  .svg-title { font-family: "Chivo", sans-serif; font-weight: 800; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .flowdash { stroke-dasharray: 5 7; animation: march 1.5s linear infinite; }
+    @keyframes march { to { stroke-dashoffset: -24; } }
+  }
+  @media (max-width: 780px) {
+    .safety, .seats, .gates { grid-template-columns: 1fr; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">the platform, and the fleet that builds it</div>
+    <h1>ForgeOS</h1>
+    <p class="lede">A .NET deal-collaboration platform, built by a continuous fleet of agents that pulls ready work, gates it, reviews it, and lands it, without waiting for me between turns.</p>
+    <div class="meta">
+      <span class="live"><b>●</b> fleet: continuous</span>
+      <span>3 seats · 2 runtimes</span>
+      <span>Forge concurrency <b>1→6</b> adaptive</span>
+      <span>deterministic loop · <b>no tokens</b></span>
+      <span>ships to <b>Azure staging</b></span>
+    </div>
+  </header>
+
+  <figure class="hero">
+    <svg viewBox="0 0 1120 566" role="img" aria-label="The ForgeOS continuous fleet. A systemd-timed supervisor fires on a short interval and starts a run only when a ready, fleet-safe bead exists. The deterministic fleet loop then dispatches Forge builds at adaptive concurrency of one to six, runs the verifier on the host, dispatches one Warden review, checks landability, and merges, pushes, and closes. It idles between runs and is continuous rather than nightly. No model runs in the loop and it spends no tokens. Justin labels beads fleet-safe, adds work at any time while the fleet runs, and owns the gates: auth changes, data migrations, and Azure deploys wait for him.">
+      <defs>
+        <marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-ink"/></marker>
+        <marker id="af" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-fleet"/></marker>
+        <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="f-human"/></marker>
+        <marker id="ao" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ok)"/></marker>
+      </defs>
+
+      <!-- JUSTIN / operator -->
+      <rect x="20" y="150" width="150" height="250" rx="12" class="f-humansoft s-human" stroke-width="1.5"/>
+      <text x="95" y="180" text-anchor="middle" class="svg-role f-human" font-size="17">Justin</text>
+      <text x="95" y="199" text-anchor="middle" class="svg-mono f-human" font-size="11">intent &amp; unblocking</text>
+      <line x1="42" y1="214" x2="148" y2="214" class="s-human" stroke-width="1" opacity=".35"/>
+      <text x="95" y="236" text-anchor="middle" class="svg-body f-ink" font-size="11.5">labels beads</text>
+      <text x="95" y="252" text-anchor="middle" class="svg-mono f-fleet" font-size="11.5">fleet-safe</text>
+      <line x1="42" y1="268" x2="148" y2="268" class="s-human" stroke-width="1" opacity=".35"/>
+      <text x="95" y="289" text-anchor="middle" class="svg-body f-ink" font-size="11.5">adds work anytime</text>
+      <text x="95" y="304" text-anchor="middle" class="svg-body f-soft" font-size="10.5">no waiting for a run</text>
+      <line x1="42" y1="320" x2="148" y2="320" class="s-human" stroke-width="1" opacity=".35"/>
+      <text x="95" y="341" text-anchor="middle" class="svg-body f-ink" font-size="11.5">owns the gates</text>
+      <text x="95" y="356" text-anchor="middle" class="svg-body f-soft" font-size="10.5">auth · migration · deploy</text>
+      <text x="95" y="380" text-anchor="middle" class="svg-mono f-soft" font-size="10">Mayor runs alongside</text>
+
+      <!-- SUPERVISOR -->
+      <rect x="196" y="210" width="124" height="80" rx="11" class="f-surface card-stroke" stroke-width="1.4"/>
+      <text x="258" y="238" text-anchor="middle" class="svg-role f-ink" font-size="15">Supervisor</text>
+      <text x="258" y="256" text-anchor="middle" class="svg-mono f-soft" font-size="10">systemd timer</text>
+      <text x="258" y="271" text-anchor="middle" class="svg-body f-soft" font-size="10.5">no-op unless ready</text>
+
+      <!-- GATE: ready & fleet-safe? -->
+      <path d="M372,224 L400,250 L372,276 L344,250 z" class="f-fleetsoft s-fleet" stroke-width="1.4"/>
+      <text x="372" y="247" text-anchor="middle" class="svg-mono f-ink" font-size="8.5">ready &amp;</text>
+      <text x="372" y="257" text-anchor="middle" class="svg-mono f-ink" font-size="8.5">fleet-safe?</text>
+
+      <!-- DISPATCH: Forge xN -->
+      <rect x="424" y="206" width="152" height="88" rx="11" class="f-surface card-stroke" stroke-width="1.4"/>
+      <text x="500" y="230" text-anchor="middle" class="svg-role f-ink" font-size="15">Dispatch</text>
+      <g class="svg-mono" font-size="9" fill="var(--ink-soft)">
+        <rect x="438" y="240" width="36" height="16" rx="3" class="f-surface2 s-fleet" stroke-width="1"/>
+        <rect x="482" y="240" width="36" height="16" rx="3" class="f-surface2 s-fleet" stroke-width="1"/>
+        <rect x="526" y="240" width="36" height="16" rx="3" class="f-surface2 s-fleet" stroke-width="1" opacity=".55"/>
+        <text x="456" y="251" text-anchor="middle" class="f-ink">Forge</text>
+        <text x="500" y="251" text-anchor="middle" class="f-ink">Forge</text>
+        <text x="544" y="251" text-anchor="middle" class="f-soft">…</text>
+      </g>
+      <text x="500" y="277" text-anchor="middle" class="svg-mono f-fleet" font-size="10">concurrency 1→6, adaptive</text>
+      <text x="500" y="289" text-anchor="middle" class="svg-body f-soft" font-size="9.5">back-pressure ↓ · clean period ↑</text>
+
+      <!-- VERIFIER -->
+      <rect x="616" y="210" width="118" height="80" rx="11" class="f-surface card-stroke" stroke-width="1.4"/>
+      <text x="675" y="236" text-anchor="middle" class="svg-role f-ink" font-size="15">Verifier</text>
+      <text x="675" y="253" text-anchor="middle" class="svg-body f-soft" font-size="10">build · tests · tsc</text>
+      <text x="675" y="270" text-anchor="middle" class="svg-mono f-stop" font-size="9" fill="var(--stop)">host-run, not self-reported</text>
+
+      <!-- REVIEW -->
+      <rect x="778" y="210" width="112" height="80" rx="11" class="f-surface card-stroke" stroke-width="1.4"/>
+      <text x="834" y="236" text-anchor="middle" class="svg-role f-ink" font-size="15">Review</text>
+      <text x="834" y="253" text-anchor="middle" class="svg-body f-soft" font-size="10.5">Warden, read-only</text>
+      <text x="834" y="270" text-anchor="middle" class="svg-mono f-soft" font-size="10">concurrency 1</text>
+
+      <!-- LANDABLE gate -->
+      <path d="M942,224 L970,250 L942,276 L914,250 z" class="f-oksoft s-ok" stroke-width="1.4"/>
+      <text x="942" y="253" text-anchor="middle" class="svg-mono f-ink" font-size="8.5">landable?</text>
+
+      <!-- MERGE -->
+      <rect x="986" y="210" width="118" height="80" rx="11" class="f-oksoft s-ok" stroke-width="1.5"/>
+      <text x="1045" y="236" text-anchor="middle" class="svg-role f-ink" font-size="15">Land</text>
+      <text x="1045" y="253" text-anchor="middle" class="svg-body f-soft" font-size="10">merge · push · close</text>
+      <text x="1045" y="270" text-anchor="middle" class="svg-mono f-soft" font-size="9.5">parks if tree dirty</text>
+
+      <!-- FLOW ARROWS -->
+      <line x1="170" y1="250" x2="192" y2="250" class="s-fleet flowdash" stroke-width="2" marker-end="url(#af)"/>
+      <text x="181" y="242" text-anchor="middle" class="svg-mono f-fleet" font-size="9">beads</text>
+      <line x1="320" y1="250" x2="342" y2="250" class="s-ink flowdash" stroke-width="2" marker-end="url(#a)"/>
+      <line x1="400" y1="250" x2="422" y2="250" class="s-ink flowdash" stroke-width="2" marker-end="url(#a)"/>
+      <text x="411" y="242" text-anchor="middle" class="svg-mono f-soft" font-size="9">yes</text>
+      <line x1="576" y1="250" x2="614" y2="250" class="s-ink flowdash" stroke-width="2" marker-end="url(#a)"/>
+      <line x1="734" y1="250" x2="776" y2="250" class="s-ok" stroke-width="2" marker-end="url(#ao)"/>
+      <text x="755" y="242" text-anchor="middle" class="svg-mono f-soft" font-size="9">pass</text>
+      <line x1="890" y1="250" x2="912" y2="250" class="s-ink" stroke-width="2" marker-end="url(#a)"/>
+      <line x1="970" y1="250" x2="984" y2="250" class="s-ok" stroke-width="2" marker-end="url(#ao)"/>
+
+      <!-- RETURN LOOP -->
+      <path d="M1045,290 L1045,436 Q1045,448 1033,448 L270,448 Q258,448 258,436 L258,290" fill="none" class="s-fleet" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round" marker-end="url(#af)"/>
+      <rect x="470" y="434" width="372" height="26" rx="13" class="f-surface card-stroke" stroke-width="1"/>
+      <text x="656" y="451" text-anchor="middle" class="svg-mono f-fleet" font-size="11.5">idle until the next ready bead — continuous, not nightly</text>
+
+      <!-- fail-closed note -->
+      <text x="675" y="316" text-anchor="middle" class="svg-mono f-stop" font-size="9.5" fill="var(--stop)">any guard that can't decide → refuse (fail closed)</text>
+      <!-- deterministic note -->
+      <text x="656" y="492" text-anchor="middle" class="svg-mono f-soft" font-size="10">no model runs in this loop · it spends no tokens · Forge builds run in isolated worktrees</text>
+
+      <!-- HUMAN GATE branch -->
+      <path d="M834,290 L834,344" fill="none" class="s-human" stroke-width="1.8" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+      <rect x="694" y="344" width="300" height="46" rx="9" class="f-humansoft s-human" stroke-width="1.3" stroke-dasharray="5 4"/>
+      <text x="708" y="364" class="svg-mono f-human" font-size="11">gated change</text>
+      <text x="708" y="380" class="svg-body f-ink" font-size="11">auth · data migration · Azure deploy → waits for Justin</text>
+    </svg>
+    <figcaption>
+      <b>The consumer side the architecture used to lack.</b> A host-level supervisor, fired on a short timer, starts a run only when a <span class="mono">fleet-safe</span> bead is ready, then a deterministic loop builds, verifies on the host, reviews, and lands, at Forge concurrency that adapts to rate-limit pressure. It runs while I run: I add work at any time and never wait for a run to finish. The only things that reach me are the gates and an unblock request.
+    </figcaption>
+  </figure>
+
+  <div class="legend" aria-hidden="true">
+    <span class="k"><span class="swatch fleet"></span> fleet flow</span>
+    <span class="k"><span class="swatch ok"></span> verified / landed</span>
+    <span class="k"><span class="swatch human"></span> waits for Justin</span>
+    <span class="k"><span class="swatch stop"></span> fail-closed refusal</span>
+    <span class="k"><span class="dot fleet"></span> continuous, deterministic</span>
+  </div>
+
+  <div class="section-head">
+    <h2>Why it is safe to leave running</h2>
+    <p>The fleet acts on the codebase unattended, so every design choice answers one question: what happens when it cannot tell whether an action is safe? The answer is always the same.</p>
+  </div>
+  <section class="safety">
+    <article class="safe">
+      <div class="n">01</div>
+      <h3>Opt-in, never opt-out</h3>
+      <p>The fleet only touches beads the Mayor has labelled <span class="m">fleet-safe</span>. Nothing is eligible until she says so, in the tracker where she can write it. The config that could widen this is out of every seat's reach.</p>
+    </article>
+    <article class="safe">
+      <div class="n">02</div>
+      <h3>Fail closed, always</h3>
+      <p>Every guard that cannot reach a verdict refuses. If the tracker won't answer, a claim can't be read back, or a verdict file is malformed, nothing dispatches and nothing lands. There is no branch that logs a doubt and proceeds.</p>
+    </article>
+    <article class="safe">
+      <div class="n">03</div>
+      <h3>The verifier runs on the host</h3>
+      <p>Build, tests and typecheck run in the deterministic loop, never inside the seat that wrote the code and never self-reported. A green result is one the host observed, not one an agent claimed.</p>
+    </article>
+    <article class="safe">
+      <div class="n">04</div>
+      <h3>The switch is out of reach</h3>
+      <p><span class="m">FLEET_ENABLED</span> and the concurrency caps live in a file that is kernel read-only to every seat. Turning the fleet on, or raising its ceiling, is my act alone, never something a session can do to itself.</p>
+    </article>
+  </section>
+
+  <div class="section-head">
+    <h2>Three seats, one shared codebase</h2>
+    <p>The fleet is the engine; the seats are who it launches. Each holds only the power its job needs, and the runtime is matched to the work.</p>
+  </div>
+  <section class="seats">
+    <article class="seat">
+      <h3>Mayor</h3>
+      <span class="runtime">Claude Code · Opus 5 → Fable 5 → GPT-5.6</span>
+      <p>Design, triage, decomposition, specs. Decides which beads become <span class="mono">fleet-safe</span>, and runs concurrently while the fleet works.</p>
+      <p class="cant"><b>Cannot</b> write product code, or push and deploy without asking first.</p>
+    </article>
+    <article class="seat">
+      <h3>Forge</h3>
+      <span class="runtime codex">Codex · GPT-5.6 → Sonnet 5 → Opus 5</span>
+      <p>Implements one bead in an isolated worktree, launched by the fleet at adaptive concurrency. Commits; the host verifies.</p>
+      <p class="cant"><b>Cannot</b> merge, push, self-report the verifier, or edit its own constitution. Runs unattended, so its locks are mechanical.</p>
+    </article>
+    <article class="seat">
+      <h3>Warden</h3>
+      <span class="runtime">Claude Code · Opus 5 → GPT-5.6</span>
+      <p>Reviews each change against the standard of evidence and returns a verdict. Failover blocks and pages me rather than dropping below a frontier model.</p>
+      <p class="cant"><b>Cannot</b> change what it reviews. Read-only by construction; never writes code, never lands.</p>
+    </article>
+  </section>
+
+  <div class="section-head">
+    <h2>The platform being built, and where it ships</h2>
+    <p>All of the above exists to move one product forward: a secure deal-collaboration workspace for flippers and investors.</p>
+  </div>
+  <section class="grid2">
+    <article class="panel">
+      <h3>ForgeOS platform <span class="tag">Phase 1</span></h3>
+      <p>A private command-center for deals, participants, lifecycle stages, funding status, and contacts, with an MCP write surface so agents can operate it too.</p>
+      <ul class="ticks">
+        <li><b>ASP.NET Core API</b> — auth, deals, participants, lifecycle, funding, contacts, activity</li>
+        <li><b>EF Core + PostgreSQL</b> — users, deals, properties, audit logs, migrations</li>
+        <li><b>React / Vite UI</b> — command-center with KPIs, pipeline, deal workspace</li>
+        <li><b>MCP write tools</b> — create/​update deals and parcels, invitations, funding status</li>
+      </ul>
+    </article>
+    <article class="panel">
+      <h3>Delivery</h3>
+      <p>Code the fleet lands on <span class="mono">main</span> is committed and pushed, but never deployed on its own.</p>
+      <div class="stack">
+        <dl class="kv"><dt>build</dt><dd>Docker images · <small>API + web (nginx)</small></dd></dl>
+        <dl class="kv"><dt>target</dt><dd>Azure Container Apps <small>· staging</small></dd></dl>
+        <dl class="kv"><dt>health</dt><dd><span class="mono">/api/health</span> <small>· watched by cron</small></dd></dl>
+        <dl class="kv human"><dt>deploy</dt><dd><b>human-invoked only.</b> <small>Agents prepare the deploy; they never run it.</small></dd></dl>
+      </div>
+    </article>
+  </section>
+
+  <div class="section-head">
+    <h2>The infrastructure underneath</h2>
+    <p>The fleet and the seats sit on the same three foundations: what stops a mistake, what remembers across sessions, and what watches while nobody is looking.</p>
+  </div>
+  <section class="grid2">
+    <article class="panel">
+      <h3>Enforcement &amp; memory</h3>
+      <ul class="ticks">
+        <li><b>kernel masks</b> per seat — each runtime sees only what its job needs</li>
+        <li><b>fleet.conf</b> — the enable switch and caps, kernel read-only</li>
+        <li><b>airlock</b> — privileged operations pass through one audited door</li>
+        <li><b>facts ledger + current.md</b> — sourced facts, a regenerated snapshot</li>
+        <li><b>handoffs + append-only events</b> — one session briefs the next; history replays</li>
+        <li><b>telemetry</b> — probes and a prompt log for what the fleet actually did</li>
+      </ul>
+    </article>
+    <article class="panel">
+      <h3>Watchers <span class="tag">cron · no model</span></h3>
+      <p>Crons watch, models act. Each watcher files a bead on failure rather than fixing anything itself.</p>
+      <ul class="ticks">
+        <li>push-drift — commits that outran the last sync</li>
+        <li>test-count monotonicity — a suite that shrank</li>
+        <li>secrets-pattern scan on diffs</li>
+        <li>config checksums — a protected file that changed</li>
+        <li>staging health — the deployed app answering</li>
+      </ul>
+    </article>
+  </section>
+
+  <div class="section-head">
+    <h2>Where it still needs me</h2>
+    <p>The fleet is designed to reduce my role to intent and unblocking. These are the boundaries it will not cross without a human decision, defined by what a change does, not which file it touches.</p>
+  </div>
+  <section class="gates">
+    <article class="gate"><div class="g">gate</div><p>Any change to the <b>auth surface</b> — reviewed before merge, always.</p></article>
+    <article class="gate"><div class="g">gate</div><p><b>Data migrations</b> that mutate data — an explicit operator step.</p></article>
+    <article class="gate"><div class="g">gate</div><p><b>Azure deploys</b> and any Azure mutation — human-invoked only.</p></article>
+    <article class="gate"><div class="g">gate</div><p><b>.env and secrets</b> — deny-listed from all agent access.</p></article>
+    <article class="gate"><div class="g">gate</div><p>Reviving or retiring the <b>approvals module</b> — a product decision.</p></article>
+    <article class="gate"><div class="g">gate</div><p>The <b>fort's own config</b> — seats, launchers, profiles — Warden plus me.</p></article>
+  </section>
+
+  <footer class="note">
+    <span>ForgeOS · continuous fleet</span>
+    <span>seats: Mayor · Forge · Warden — deterministic loop, host-run verifier, fail-closed</span>
+  </footer>
+</div>

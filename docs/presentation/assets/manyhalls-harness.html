@@ -1,0 +1,474 @@
+<title>Manyhalls</title>
+<style>
+  :root {
+    --bg: #E9EDF1;
+    --surface: #F7F9FB;
+    --surface-2: #DEE4EA;
+    --ink: #1A2026;
+    --ink-soft: #55616D;
+    --line: #C4CDD6;
+    --human: #B45309;
+    --human-soft: #F2E3D0;
+    --wall: #A62B1E;
+    --wall-soft: #F0DAD5;
+    --ok: #2C7A4E;
+    --ok-soft: #D7EADD;
+    --shadow: 0 1px 2px rgba(20,30,40,.06), 0 6px 20px rgba(20,30,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161B;
+      --surface: #1B2128;
+      --surface-2: #232B33;
+      --ink: #E7ECF1;
+      --ink-soft: #99A5B1;
+      --line: #303A44;
+      --human: #E4954A;
+      --human-soft: #38271620;
+      --wall: #E76B5E;
+      --wall-soft: #3a201c40;
+      --ok: #5DB683;
+      --ok-soft: #1e3a2a40;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161B;
+    --surface: #1B2128;
+    --surface-2: #232B33;
+    --ink: #E7ECF1;
+    --ink-soft: #99A5B1;
+    --line: #303A44;
+    --human: #E4954A;
+    --human-soft: #38271620;
+    --wall: #E76B5E;
+    --wall-soft: #3a201c40;
+    --ok: #5DB683;
+    --ok-soft: #1e3a2a40;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-block: 40px 64px;
+    padding-inline: 20px;
+  }
+
+  h1, h2, h3 { font-family: "Bricolage Grotesque", "IBM Plex Sans", sans-serif; text-wrap: balance; margin: 0; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--human); font-weight: 500;
+  }
+  .page-head h1 { font-size: clamp(38px, 7vw, 64px); font-weight: 700; letter-spacing: -.02em; margin-top: 6px; line-height: 1; }
+  .page-head .lede { font-size: clamp(16px, 2.4vw, 20px); color: var(--ink-soft); max-width: 60ch; margin-top: 14px; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 20px;
+    font-family: "IBM Plex Mono", monospace; font-size: 12px;
+  }
+  .meta span {
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 4px 11px; color: var(--ink-soft); background: var(--surface);
+  }
+  .meta span b { color: var(--ink); font-weight: 500; }
+
+  .hero {
+    margin: 34px 0 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 22px clamp(14px, 3vw, 30px) 18px;
+  }
+  .hero svg { display: block; width: 100%; height: auto; }
+  figure { margin: 0; }
+  figcaption {
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line);
+    font-size: 13.5px; color: var(--ink-soft);
+  }
+  figcaption b { color: var(--ink); font-weight: 600; }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px;
+    font-size: 13px; color: var(--ink-soft);
+  }
+  .legend .k { display: inline-flex; align-items: center; gap: 8px; }
+  .swatch { width: 22px; height: 0; border-top-width: 3px; border-top-style: solid; display: inline-block; }
+  .swatch.human { border-color: var(--human); }
+  .swatch.flow { border-color: var(--ink); }
+  .swatch.ok { border-color: var(--ok); }
+  .swatch.wall { border-color: var(--wall); }
+  .swatch.dash { border-top-style: dashed; border-color: var(--human); }
+  .chip { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .chip.mask { background: transparent; border: 1.5px dashed var(--wall); border-radius: 4px; }
+
+  .section-head { margin: 52px 0 18px; }
+  .section-head h2 { font-size: clamp(22px, 3.4vw, 30px); font-weight: 700; letter-spacing: -.01em; }
+  .section-head p { color: var(--ink-soft); margin-top: 6px; max-width: 62ch; }
+
+  .seats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .seat {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: 18px 18px 16px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .seat .top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .seat h3 { font-size: 21px; font-weight: 700; }
+  .seat .who { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-soft); }
+  .runtime {
+    align-self: flex-start;
+    font-family: "IBM Plex Mono", monospace; font-size: 11.5px;
+    padding: 3px 9px; border-radius: 6px;
+    background: var(--surface-2); color: var(--ink-soft);
+    border: 1px solid var(--line);
+  }
+  .runtime.codex { color: var(--human); border-color: var(--human); background: var(--human-soft); }
+  .seat dl { margin: 4px 0 0; display: grid; gap: 9px; }
+  .seat .row { display: grid; grid-template-columns: 54px 1fr; gap: 10px; align-items: start; }
+  .seat dt {
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px;
+    letter-spacing: .1em; text-transform: uppercase; padding-top: 2px;
+  }
+  .seat dt.can { color: var(--ok); }
+  .seat dt.cant { color: var(--wall); }
+  .seat dd { margin: 0; font-size: 14px; }
+
+  .rails { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .rail {
+    border-radius: 14px; padding: 18px 20px; border: 1px solid var(--line);
+    background: var(--surface); box-shadow: var(--shadow);
+    border-left-width: 4px;
+  }
+  .rail.enforce { border-left-color: var(--wall); }
+  .rail.memory { border-left-color: var(--human); }
+  .rail h3 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 9px; }
+  .rail p { color: var(--ink-soft); font-size: 14px; margin: 8px 0 0; }
+  .rail ul { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+  .rail li { font-size: 13.5px; padding-left: 18px; position: relative; }
+  .rail li::before { content: ""; position: absolute; left: 0; top: 8px; width: 7px; height: 7px; border-radius: 2px; background: var(--ink-soft); }
+  .rail li b { font-family: "IBM Plex Mono", monospace; font-weight: 500; font-size: 12.5px; }
+
+  .regent {
+    margin-top: 16px; border: 1px dashed var(--human); border-radius: 14px;
+    padding: 18px 20px; background: var(--human-soft);
+    display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center;
+  }
+  .regent .badge {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 15px;
+    color: var(--human); writing-mode: horizontal-tb; align-self: start;
+    border: 1px solid var(--human); border-radius: 8px; padding: 8px 12px; white-space: nowrap;
+  }
+  .regent p { margin: 0; font-size: 14px; }
+  .regent p b { color: var(--ink); }
+
+  .loopgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .loopcard {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 20px; box-shadow: var(--shadow);
+  }
+  .loopcard h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .loopcard.you h3 { color: var(--human); }
+  .loopcard ol { margin: 12px 0 0; padding-left: 0; list-style: none; counter-reset: step; display: grid; gap: 11px; }
+  .loopcard li {
+    display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: start;
+    font-size: 14px;
+  }
+  .loopcard li::before {
+    counter-increment: step; content: counter(step);
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600;
+    width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center;
+    background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line);
+  }
+  .loopcard.you li::before { color: var(--human); border-color: var(--human); background: var(--human-soft); }
+  .loopcard li b { font-weight: 600; }
+  .loopcard li span { color: var(--ink-soft); }
+
+  footer.note {
+    margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft); font-family: "IBM Plex Mono", monospace;
+    display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: space-between;
+  }
+
+  /* SVG token classes */
+  .s-flow { stroke: var(--ink); }
+  .s-human { stroke: var(--human); }
+  .s-wall { stroke: var(--wall); }
+  .s-ok { stroke: var(--ok); }
+  .f-ink { fill: var(--ink); }
+  .f-soft { fill: var(--ink-soft); }
+  .f-human { fill: var(--human); }
+  .f-surface { fill: var(--surface); }
+  .f-surface2 { fill: var(--surface-2); }
+  .f-humansoft { fill: var(--human-soft); }
+  .f-oksoft { fill: var(--ok-soft); }
+  .card-stroke { stroke: var(--line); }
+  .svg-title { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; }
+  .svg-role { font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; }
+  .svg-mono { font-family: "IBM Plex Mono", monospace; }
+  .svg-body { font-family: "IBM Plex Sans", sans-serif; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .flowdash { stroke-dasharray: 5 7; animation: march 1.4s linear infinite; }
+    @keyframes march { to { stroke-dashoffset: -24; } }
+  }
+
+  @media (max-width: 720px) {
+    .seats, .rails, .loopgrid { grid-template-columns: 1fr; }
+    .regent { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <div class="eyebrow">the fortkit fort · an agent harness</div>
+    <h1>Manyhalls</h1>
+    <p class="lede">Four agents with separate powers turn my intent into reviewed, merged code. The loop runs on its own. It returns to me only at the gates.</p>
+    <div class="meta">
+      <span><b>4</b> seats</span>
+      <span><b>2</b> runtimes · Claude Code + Codex</span>
+      <span>work queue · <b>beads</b></span>
+      <span>boundary · <b>kernel masks</b></span>
+      <span>records · <b>append-only</b></span>
+    </div>
+  </header>
+
+  <figure class="hero">
+    <svg viewBox="0 0 1080 668" role="img" aria-label="The Manyhalls harness. The Overseer feeds intent to the Mayor, who decomposes it into beads. The Forge claims ready beads and builds product code inside a kernel-masked worktree. Work passes a verifier, then Warden review, then merge and push. The Researcher feeds cited findings to the Mayor. The whole loop returns to the Overseer only at the gates: pushes, decisions, and handoffs. Everything sits on two foundations: enforcement by kernel masks and human gates, and an append-only memory of facts, handoffs, and events. The Regent operates above the fort, unmasked, invoked by hand.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="f-ink" />
+        </marker>
+        <marker id="ah-h" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="f-human" />
+        </marker>
+        <marker id="ah-ok" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--ok)" />
+        </marker>
+      </defs>
+
+      <!-- return channel: the loop closes at the human only at the edges -->
+      <path d="M936,214 L936,150 Q936,140 926,140 L102,140 Q92,140 92,150 L92,214"
+            fill="none" class="s-human" stroke-width="2" stroke-dasharray="2 6" stroke-linecap="round" marker-end="url(#ah-h)" />
+      <rect x="360" y="118" width="356" height="26" rx="13" class="f-surface card-stroke" stroke-width="1" />
+      <text x="538" y="135" text-anchor="middle" class="svg-mono f-human" font-size="12.5">gates · decisions · digests · handoffs → you</text>
+
+      <!-- OVERSEER -->
+      <rect x="20" y="214" width="150" height="300" rx="12" class="f-humansoft s-human" stroke-width="1.5" />
+      <text x="95" y="246" text-anchor="middle" class="svg-role f-human" font-size="17">Overseer</text>
+      <text x="95" y="266" text-anchor="middle" class="svg-mono f-human" font-size="11.5">Justin · the human</text>
+      <line x1="44" y1="284" x2="146" y2="284" class="s-human" stroke-width="1" opacity="0.4" />
+      <text x="95" y="308" text-anchor="middle" class="svg-body f-soft" font-size="12">provides</text>
+      <text x="95" y="326" text-anchor="middle" class="svg-mono f-ink" font-size="11.5">intent · specs</text>
+      <text x="95" y="343" text-anchor="middle" class="svg-mono f-ink" font-size="11.5">decisions</text>
+      <line x1="44" y1="362" x2="146" y2="362" class="s-human" stroke-width="1" opacity="0.4" />
+      <text x="95" y="386" text-anchor="middle" class="svg-body f-soft" font-size="12">owns</text>
+      <text x="95" y="404" text-anchor="middle" class="svg-mono f-ink" font-size="11.5">gate 1 · 2 · 3</text>
+      <text x="95" y="421" text-anchor="middle" class="svg-mono f-ink" font-size="11.5">push · deploy</text>
+      <line x1="44" y1="440" x2="146" y2="440" class="s-human" stroke-width="1" opacity="0.4" />
+      <text x="95" y="464" text-anchor="middle" class="svg-body f-soft" font-size="12">unblocks</text>
+      <text x="95" y="482" text-anchor="middle" class="svg-mono f-ink" font-size="11.5">when asked</text>
+
+      <!-- RESEARCHER (feeds Mayor) -->
+      <rect x="210" y="60" width="150" height="70" rx="11" class="f-surface card-stroke" stroke-width="1.2" />
+      <text x="285" y="88" text-anchor="middle" class="svg-role f-ink" font-size="16">Researcher</text>
+      <text x="285" y="107" text-anchor="middle" class="svg-mono f-soft" font-size="11">reads web + repo</text>
+      <text x="285" y="121" text-anchor="middle" class="svg-mono f-soft" font-size="11">read-only to the world</text>
+
+      <!-- MAYOR -->
+      <rect x="210" y="220" width="150" height="88" rx="11" class="f-surface card-stroke" stroke-width="1.4" />
+      <text x="285" y="250" text-anchor="middle" class="svg-role f-ink" font-size="17">Mayor</text>
+      <text x="285" y="270" text-anchor="middle" class="svg-body f-soft" font-size="11.5">design · decompose</text>
+      <text x="285" y="293" text-anchor="middle" class="svg-mono f-soft" font-size="10.5">Claude Code</text>
+
+      <!-- BEADS queue -->
+      <g>
+        <rect x="398" y="238" width="86" height="14" rx="4" class="f-surface2 card-stroke" stroke-width="1" />
+        <rect x="398" y="256" width="86" height="14" rx="4" class="f-surface2 card-stroke" stroke-width="1" />
+        <rect x="398" y="274" width="86" height="14" rx="4" class="f-surface2 card-stroke" stroke-width="1" />
+        <text x="441" y="224" text-anchor="middle" class="svg-mono f-soft" font-size="11">beads</text>
+        <text x="441" y="305" text-anchor="middle" class="svg-mono f-soft" font-size="10">the work queue</text>
+      </g>
+
+      <!-- FORGE with mask -->
+      <rect x="516" y="206" width="162" height="116" rx="12" class="s-wall" fill="none" stroke-width="1.4" stroke-dasharray="5 4" />
+      <text x="597" y="199" text-anchor="middle" class="svg-mono s-wall" font-size="10.5" fill="var(--wall)">kernel-masked worktree</text>
+      <rect x="532" y="222" width="130" height="84" rx="10" class="f-surface card-stroke" stroke-width="1.4" />
+      <text x="597" y="250" text-anchor="middle" class="svg-role f-ink" font-size="17">Forge</text>
+      <text x="597" y="270" text-anchor="middle" class="svg-body f-soft" font-size="11.5">writes product code</text>
+      <text x="597" y="293" text-anchor="middle" class="svg-mono f-soft" font-size="10.5">Codex</text>
+
+      <!-- VERIFY node -->
+      <path d="M742,236 L766,260 L742,284 L718,260 z" class="f-oksoft s-ok" stroke-width="1.4" />
+      <text x="742" y="264" text-anchor="middle" class="svg-mono f-ink" font-size="9.5">verify</text>
+      <text x="742" y="308" text-anchor="middle" class="svg-mono f-soft" font-size="10">verify.sh</text>
+
+      <!-- WARDEN -->
+      <rect x="806" y="220" width="118" height="88" rx="11" class="f-surface card-stroke" stroke-width="1.4" />
+      <text x="865" y="250" text-anchor="middle" class="svg-role f-ink" font-size="17">Warden</text>
+      <text x="865" y="270" text-anchor="middle" class="svg-body f-soft" font-size="11.5">review, read-only</text>
+      <text x="865" y="293" text-anchor="middle" class="svg-mono f-soft" font-size="10.5">Claude Code</text>
+
+      <!-- MERGE / PUSH -->
+      <rect x="946" y="220" width="114" height="88" rx="11" class="f-oksoft s-ok" stroke-width="1.4" />
+      <text x="1003" y="250" text-anchor="middle" class="svg-role f-ink" font-size="16">Merge</text>
+      <text x="1003" y="270" text-anchor="middle" class="svg-body f-soft" font-size="11.5">then push</text>
+      <text x="1003" y="293" text-anchor="middle" class="svg-mono f-human" font-size="10.5">push = gate</text>
+
+      <!-- MAIN FLOW ARROWS -->
+      <line x1="170" y1="264" x2="204" y2="264" class="s-flow flowdash" stroke-width="2" marker-end="url(#ah)" />
+      <text x="187" y="255" text-anchor="middle" class="svg-mono f-soft" font-size="10">intent</text>
+
+      <line x1="285" y1="130" x2="285" y2="214" class="s-flow" stroke-width="2" marker-end="url(#ah)" />
+      <text x="299" y="178" text-anchor="start" class="svg-mono f-soft" font-size="10">findings</text>
+
+      <line x1="360" y1="264" x2="392" y2="264" class="s-flow flowdash" stroke-width="2" marker-end="url(#ah)" />
+      <text x="376" y="255" text-anchor="middle" class="svg-mono f-soft" font-size="10">files</text>
+
+      <line x1="484" y1="264" x2="526" y2="264" class="s-flow flowdash" stroke-width="2" marker-end="url(#ah)" />
+      <text x="505" y="255" text-anchor="middle" class="svg-mono f-soft" font-size="10">claims</text>
+
+      <line x1="662" y1="264" x2="716" y2="262" class="s-flow flowdash" stroke-width="2" marker-end="url(#ah)" />
+      <line x1="766" y1="260" x2="802" y2="262" class="s-ok" stroke-width="2" marker-end="url(#ah-ok)" />
+      <text x="786" y="253" text-anchor="middle" class="svg-mono f-soft" font-size="10">pass</text>
+
+      <line x1="924" y1="264" x2="942" y2="264" class="s-flow" stroke-width="2" marker-end="url(#ah)" />
+      <text x="884" y="329" text-anchor="middle" class="svg-mono f-soft" font-size="10">verdict → merge</text>
+
+      <!-- SUBSTRATE -->
+      <text x="30" y="556" class="svg-mono f-soft" font-size="11">every seat runs on two foundations</text>
+      <rect x="20" y="566" width="1040" height="40" rx="9" class="f-surface card-stroke" stroke-width="1" />
+      <rect x="20" y="566" width="5" height="40" rx="2.5" fill="var(--wall)" />
+      <text x="40" y="583" class="svg-title f-ink" font-size="13">ENFORCEMENT</text>
+      <text x="40" y="598" class="svg-body f-soft" font-size="11.5">kernel masks per seat (bwrap) · human gates 1·2·3 · deny-lists are convenience, the mask is the boundary</text>
+
+      <rect x="20" y="614" width="1040" height="40" rx="9" class="f-surface card-stroke" stroke-width="1" />
+      <rect x="20" y="614" width="5" height="40" rx="2.5" fill="var(--human)" />
+      <text x="40" y="631" class="svg-title f-ink" font-size="13">MEMORY</text>
+      <text x="40" y="646" class="svg-body f-soft" font-size="11.5">fact ledger · distilled current.md · handoffs between sessions · append-only event stream</text>
+
+      <!-- REGENT -->
+      <rect x="744" y="60" width="316" height="70" rx="11" class="f-humansoft s-human" stroke-width="1.3" stroke-dasharray="5 4" />
+      <text x="762" y="86" class="svg-role f-human" font-size="15">Regent</text>
+      <text x="762" y="105" class="svg-body f-ink" font-size="11.5">above the fort · unmasked · invoked by hand</text>
+      <text x="762" y="121" class="svg-mono f-soft" font-size="10.5">does what the fort cannot do to itself</text>
+    </svg>
+    <figcaption>
+      <b>The loop, and where it touches me.</b> Intent enters at the Mayor and leaves as merged code at the far right. The Forge does its writing inside a kernel-masked worktree; nothing reaches a branch until a verifier and the Warden pass it. The dashed amber path is the only return to the human: pushes, decisions, and handoffs. Everything rides two foundations, an enforcement layer that is a wall rather than a request, and an append-only memory that survives every session.
+    </figcaption>
+  </figure>
+
+  <div class="legend" aria-hidden="true">
+    <span class="k"><span class="swatch flow"></span> work flowing</span>
+    <span class="k"><span class="swatch ok"></span> verified / merged</span>
+    <span class="k"><span class="swatch dash"></span> returns to you</span>
+    <span class="k"><span class="chip mask"></span> kernel-masked</span>
+    <span class="k"><span class="swatch wall"></span> the boundary</span>
+  </div>
+
+  <div class="section-head">
+    <h2>Four seats, separated on purpose</h2>
+    <p>Each seat holds the power its job needs and nothing more. The reason for the split is the whole point: the seat that reads the world is never the seat that can touch it, and the seat that writes code is never the seat that reviews or ships it.</p>
+  </div>
+  <section class="seats">
+    <article class="seat">
+      <div class="top"><h3>Mayor</h3><span class="who">Emrith Cairnwright</span></div>
+      <span class="runtime">Claude Code · Opus 5 → Fable 5 → GPT-5.6</span>
+      <dl>
+        <div class="row"><dt class="can">can</dt><dd>Turn intent into a bead tree, write specs and docs, decide what work exists. The seat I talk to.</dd></div>
+        <div class="row"><dt class="cant">can't</dt><dd>Write a line of product code. Push or deploy without asking me first, every time.</dd></div>
+      </dl>
+    </article>
+    <article class="seat">
+      <div class="top"><h3>Forge</h3><span class="who">Kethra Anvilmark</span></div>
+      <span class="runtime codex">Codex · GPT-5.6 → Sonnet 5 → Opus 5</span>
+      <dl>
+        <div class="row"><dt class="can">can</dt><dd>Implement beads as product code, inside an isolated worktree sealed by a kernel mask.</dd></div>
+        <div class="row"><dt class="cant">can't</dt><dd>Push, edit the charter, or touch the verifier that judges its work. Runs unattended, so its locks are mechanical.</dd></div>
+      </dl>
+    </article>
+    <article class="seat">
+      <div class="top"><h3>Warden</h3><span class="who">Ilva Trueglass</span></div>
+      <span class="runtime">Claude Code · Opus 5 → GPT-5.6</span>
+      <dl>
+        <div class="row"><dt class="can">can</dt><dd>Review every change against the fort's standard of evidence and return a verdict.</dd></div>
+        <div class="row"><dt class="cant">can't</dt><dd>Change a byte of what it reviews. Read-only, kernel-enforced. It never writes code and never pushes.</dd></div>
+      </dl>
+    </article>
+    <article class="seat">
+      <div class="top"><h3>Researcher</h3><span class="who">Saelin Stillmere</span></div>
+      <span class="runtime">Claude Code · Sonnet 5 → Opus 5</span>
+      <dl>
+        <div class="row"><dt class="can">can</dt><dd>Read the open web and the local repo, return cited findings to the Mayor who dispatched it.</dd></div>
+        <div class="row"><dt class="cant">can't</dt><dd>Write product code or act on the world. Latitude to read is not latitude to touch.</dd></div>
+      </dl>
+    </article>
+  </section>
+
+  <div class="section-head">
+    <h2>The two foundations</h2>
+    <p>The seats above are only as trustworthy as what sits beneath them. Both layers are designed so a mistake or an injected instruction fails closed rather than open.</p>
+  </div>
+  <section class="rails">
+    <article class="rail enforce">
+      <h3><span class="chip mask"></span> Enforcement — the wall</h3>
+      <p>Permission rules match the text of a command, so they bind a spelling, not a file. The kernel mask binds the inode. Every spelling of a masked path, including ones nobody has thought of, reads empty.</p>
+      <ul>
+        <li><b>bwrap</b> masks per seat — each runtime sees only what its job needs</li>
+        <li><b>gate 1</b> the fort's own constitution — Warden + me</li>
+        <li><b>gate 2</b> <b>.env</b> and secrets — denied to every agent</li>
+        <li><b>gate 3</b> anything public-facing — mine alone</li>
+      </ul>
+    </article>
+    <article class="rail memory">
+      <h3>Memory — what survives the session</h3>
+      <p>A new conversation starts without losing what matters. Facts carry their provenance, stale ones are superseded rather than deleted, and nothing in the record is ever quietly rewritten.</p>
+      <ul>
+        <li><b>fact ledger</b> — tiered, sourced, admission-controlled</li>
+        <li><b>current.md</b> — the distilled view, regenerated not edited</li>
+        <li><b>handoffs</b> — one session briefs the next</li>
+        <li><b>events</b> — append-only JSONL, the replayable history</li>
+      </ul>
+    </article>
+  </section>
+  <div class="regent">
+    <span class="badge">Regent</span>
+    <p><b>Some work the fort is deliberately unable to do to itself</b> — repair a launcher, change its own enforcement layer, carry law between forts. The Regent does that, from outside: a civilization-level seat that runs unmasked, invoked by hand and only while I'm present. It is never scheduled, and it announces every edict into the fort's own event stream.</p>
+  </div>
+
+  <div class="section-head">
+    <h2>The loop between me and it</h2>
+    <p>The design goal is to write myself out of the primary loop. I stay in flow; the harness works asynchronously on whatever is ready, and reaches for me only at the edges.</p>
+  </div>
+  <section class="loopgrid">
+    <article class="loopcard you">
+      <h3>Where I touch it</h3>
+      <ol>
+        <li><b>Intent in.</b> <span>Specs, decisions, and the occasional unblock. The Mayor turns them into work.</span></li>
+        <li><b>Gates.</b> <span>A bead that needs me is labelled the moment it does — gate-1, gate-2, gate-3 — never buried.</span></li>
+        <li><b>Push and deploy.</b> <span>I approve every one, and I'm told exactly what and why.</span></li>
+      </ol>
+    </article>
+    <article class="loopcard">
+      <h3>Where it runs without me</h3>
+      <ol>
+        <li><b>Decompose and claim.</b> <span>The Mayor files the bead tree; the Forge claims whatever is ready.</span></li>
+        <li><b>Build, verify, review.</b> <span>Code is written under a mask, checked by the verifier, then judged by the Warden.</span></li>
+        <li><b>Report back.</b> <span>A digest surfaces the decisions at quiescence, so they reach me without my reading scrollback.</span></li>
+      </ol>
+    </article>
+  </section>
+
+  <footer class="note">
+    <span>Manyhalls · the fortkit fort</span>
+    <span>seats: Mayor · Forge · Warden · Researcher · (Regent, above)</span>
+  </footer>
+</div>
