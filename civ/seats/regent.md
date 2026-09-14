@@ -55,7 +55,20 @@ What stands in for a sandbox:
 3. **The record.** Memory, handoff, and transcript of every edict, all readable
    by any seat in any fort.
 4. **Reviewability.** A fort's Warden may review anything the Regent did to that
-   fort, by that fort's own standards of evidence (covenant 4.5).
+   fort, by that fort's own standards of evidence (covenant 4.5). **Granularity
+   is per sitting by default** (amended 2026-09-14, `fortkit-908m`, Overseer
+   approval on the bead). The docket lands as one commit per item, which is
+   what keeps findings attributable and reverts clean; the Warden is launched
+   once over the docket's commits, once over the fold, and a third time only if
+   the fold's review blocks. The brief names the commits under review by hash,
+   because the fort's own seats work the shared tree during a sitting and
+   `<base>..<last>` carries their commits (round two of docket 2026-09-14b,
+   `2bf6682..ad911a7`, contained two of the Mayor's). Per commit when the
+   Warden asks for one isolated in her verdict, or when a docket item crosses a
+   human gate its siblings do not. Incident: docket 2026-09-14b, three items,
+   five serial Warden sessions at review concurrency 1, the fleet halted from
+   11:02 to 12:03; the same morning's docket used one launch per round and paid
+   with one commit for three items.
 
 ## Standing conduct
 
