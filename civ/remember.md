@@ -3908,3 +3908,83 @@ should name the seat if it matters who learned it.
   then left OPEN deliberately: their acceptance carries an executed control
   (the next fleet run's pastes and handoff headings) that only the Mayor can
   measure. A signature closes the gate, not the bead.
+
+- 2026-09-13 (edict 43, the Proofdelve docket of 2026-09-13 — jara, mdwx,
+  o6ky.5): **A PROBE GATED ON AN UPSTREAM ASSERTION INHERITS THAT ASSERTION'S
+  STALENESS, AND A MONTH OF WITHHELD PROBES READS EXACTLY LIKE A MONTH OF
+  NOTHING TO REPORT.** The new `warden-lock` probe sat behind `t3_mask_ok`, and
+  two `seat-mask-live` checks above it had FAILED on every run since
+  2026-08-13: one still expected the `~/.codex` tmpfs fortkit-52vf.10 retired
+  (the file is visible AND read-only by design), the other `rmdir`'d its own
+  `--rw-tmp` scratch in the subshell that built the mask, so bwrap died on an
+  absent bind source. That was `ForgeOs-u65j.7`, P1, open, and every posture
+  probe below the gate — mask-spelling, tier 3 — had been withheld for a
+  month. Nobody read the suite because its top line was always red for the
+  same reason. **When you add an assertion to a suite, run it and read WHICH
+  earlier line decided whether yours ran**; a gate that has been red since
+  before you arrived is a defect in the instrument, and the acceptance
+  criterion "RED before, GREEN after" cannot be met without repairing it.
+
+- 2026-09-13: **`nohup cmd &` UNDER THIS TOOL HARNESS IS NOT DETACHED, AND
+  THE KILL LANDS AFTER THE INTERESTING PART.** A `WARDEN_SMOKE` launched that
+  way ran its whole claude session (two minutes, SMOKE-COMPLETE) and was
+  SIGKILLed the instant the session exited — before `warden.sh`'s recording
+  block, with no trap firing: no result file, no `session.end`, an orphan
+  `session.start` under Tova's actor id. Farlantern's ledger has said
+  `nohup … & disown` since 2026-08-09. **`setsid nohup bash -c '…; echo
+  rc=$? > file' … & disown`, and read the rc file** — the second run completed
+  every step. The orphan needs an `incident.corrected` each time.
+
+- 2026-09-13: **A FORT-LOCAL RW GRANT GOES IN THE LAUNCHER AS `mask+=(--bind
+  d d)` AFTER `build_mask`, AND THE PROBE'S ARM MUST CARRY THE SAME LINE.**
+  No `--rw-path` option exists in the lib and `--rw-tree` is wrong for a data
+  dir (declaring a second tree drops the `$root-worktrees` grant). Appending
+  is safe only when nothing masked lies beneath the path — check MASK_FILES,
+  MASK_DIRS, SECRET_GLOBS, RO_PATHS first — and `mkdir -p` first, because
+  bwrap refuses a `--bind` whose source is absent. Spell it as the SEAT will
+  resolve it: `mask_env` does not forward `XDG_DATA_HOME`/`XDG_CONFIG_HOME`,
+  so inside every mask `$HOME/.local/share` is the truth whatever the host
+  exports. Narrow to the directory the grant is FOR (Tova: a sibling created
+  later must not inherit rw by adjacency).
+
+- 2026-09-13: **THE LIB'S SECRET SWEEP IS REPO-RELATIVE.** `SECRET_GLOBS`
+  expands as `"$x"/$g "$x"/*/$g` over env_roots and extra_ro, so a secret
+  under `~` (the Keep's token in `~/.config/proofdelve/`) is never reached by
+  it; the shape is `--mask-file <path>` per launcher, which rides the
+  existence-guarded `/dev/null` pass, last in the ordering. And for a codex
+  seat the mask is HALF the both-lists rule: `forge.sh`'s `deny_table` is a
+  `-c` string that REPLACES the guarded table on dispatch, so the path goes
+  there AND in `~/.codex/config.toml`, or the policy layer silently un-denies
+  it.
+
+- 2026-09-13: **ENVIRON INSTEAD OF `awk -v` CLOSES ESCAPE PROCESSING AND
+  NOTHING ELSE.** A header value assembled from a JSON payload can carry a
+  REAL newline (decoded `\n`), and ENVIRON hands it over verbatim — so the
+  injected second header line still appeared, in the very fold meant to stop
+  it. The producer collapses every whitespace run (`" ".join(s.split())`) and
+  the consumer keeps the first line only. **The harness case written for the
+  finding is what caught the half-fix**, before commit; a fold applied from a
+  reviewer's description without its own case would have shipped.
+
+- 2026-09-13: **KEY A "WHICH EVENT IS MINE" LOOKUP ON `payload.tree` AND THE
+  TIMESTAMP, NEVER ON A NAME.** `verify.run`/`verify.pass`/`verify.fail` carry
+  the exact worktree path; the fleet's own `verify.pass` lines carry no tree
+  at all and a `detail` that names the bead. A grep for the bead name matches
+  both; a tree+time key matches only the run that judged this checkout. The
+  vocabulary in the stamped line is a single second word
+  (`PASS|FAIL|NO-OUTCOME|NO-RUN|UNKNOWN`) so a payload field can carry it
+  without parsing prose — Tova's finding, and the reason `NO RUN` became
+  `NO-RUN`.
+
+- 2026-09-13: **THREE ESCALATES IN ONE SITTING ARE THREE SIGNATURES, EACH
+  RECORDED VERBATIM ON ITS BEAD BEFORE THE NEXT EDIT.** "1. signed" /
+  "2. signed" / "ate 6: signed." — the last a typo, recorded as typed with the
+  reading stated beside it. And a signature given after a fold is a signature
+  on the FOLDED tree: say so on the bead and in the `gate.approved` payload
+  (`commits: [round one, round two]`), so nobody reads it as covering only
+  the diff the reviewer saw.
+
+- 2026-09-13: **THE STANDING `edict.ended` ITEM, FIFTEENTH FORM:** committed
+  in Proofdelve, uncommitted-modified in the capital, whole day file untracked
+  in Farlantern and Kithmason. Swept the two quiet forts under a message
+  naming every line as this seat's. Fourteen prior forms are in this file.

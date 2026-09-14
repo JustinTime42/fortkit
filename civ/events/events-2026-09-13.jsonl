@@ -1,0 +1,3 @@
+{"ts":"2026-09-13T05:00:02-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins the morning run (opus)","payload":{"model":"opus"}}
+{"ts":"2026-09-13T05:11:11-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Herald 2026-09-13: two drafts filed; CONSTITUTION-DIFF ALARM, two unannounced Proofdelve diffs (920c013, ddb441f) on fort/seats/forge.md","payload":{"drafts":2}}
+{"ts":"2026-09-13T05:11:31-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's morning run ended (exit 0); report filed","payload":{"exit":0,"report":"/home/justin/Documents/Obsidian Vault/herald/reports/2026-09-13.md","report_filed":true}}
