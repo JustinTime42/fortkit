@@ -3988,3 +3988,81 @@ should name the seat if it matters who learned it.
   in Proofdelve, uncommitted-modified in the capital, whole day file untracked
   in Farlantern and Kithmason. Swept the two quiet forts under a message
   naming every line as this seat's. Fourteen prior forms are in this file.
+
+- 2026-09-14 (edict 44, the 2026-09-14 Proofdelve docket — 4hzq, u65j.11, sa14):
+  **`codex exec` READS THE PROMPT FROM STDIN (`-`, or piped with no positional)
+  AND RUNS HEADLESS UNDER bwrap.** The `</dev/null` in the "hard-won headless
+  recipe" was only ever to stop codex blocking on a TTY; a piped regular file
+  does not hang (measured this sitting in the real Forge mask: `-` < file → rc 0,
+  no hang; `< /dev/null` with no positional → "No prompt provided", the control).
+  The large-bead dispatch failure was Linux MAX_ARG_STRLEN (32 pages = 131072 B
+  per argv string): a bead whose `bd show` exceeds it fails execve E2BIG (exit
+  126) and no Forge runs. Moving the whole prompt to stdin ELIMINATES the limit,
+  and **the redirect is opened host-side so the prompt file need not be visible
+  inside the mask** — the open fd is inherited across bwrap. Content is
+  byte-identical whether it rode argv or stdin (diff the two once; ForgeOs-4hzq).
+
+- 2026-09-14: **THE Forge's `.git/packed-refs.lock: Read-only file system`
+  WARNING IS INHERENT TO `git commit`'s OWN REF TRANSACTION (git 2.54), not any
+  of the three things a docket guessed.** Measured by ELIMINATION inside the real
+  codex mask, with `git rev-parse main` unchanged before/after every probe: it
+  fires whether the bead ref is PACKED-only or LOOSE-only (not the ref's packed
+  state); with `gc.auto=0` AND `maintenance.auto=false` both confirmed reaching
+  git (the latter removes the post-commit `git maintenance run --auto` spawn but
+  not the error); and with the beads hooks ALSO disabled — leaving only
+  `git commit` itself, which takes the lock to keep the loose/packed views
+  consistent while writing the branch ref. The commit ALWAYS succeeds (loose ref
+  in the granted dir, HEAD advances). **The read-only is DELIBERATE** (a Forge
+  that could write packed-refs could move main) and the warning is not
+  suppressible without widening the grant (forbidden) or switching the repo's ref
+  backend (out of scope). So a measurement bead's "fix by outcome" was: NAME IT
+  EXPECTED in the prompt, not silence it. (ForgeOs-u65j.11.)
+
+- 2026-09-14: **THE packed-refs READ-ONLY IS A CODEX-SANDBOX PROPERTY, NOT
+  bwrap's — so choose the probe home by which layer enforces it.** bwrap grants
+  `$root/.git` writable (only config/hooks masked); codex's `--sandbox
+  workspace-write` + the `--add-dir` list is what makes `.git` root (packed-refs)
+  read-only. A bwrap-only or a claude-posture probe therefore CANNOT reproduce
+  it. The docket asked for the probe in `probe-boundaries.sh`, whose tier-3 is
+  claude-only; the honest home was the codex-native `FORGE_SMOKE` (in forge.sh),
+  beside the existing ref-boundary probes 19/20. Before placing a probe, ask
+  which sandbox layer enforces the property you are probing.
+
+- 2026-09-14: **THE LIB KEYS NOTHING BY FORT-SEAT; A "MAYOR POSTURE ONLY" GRANT
+  LIVES IN mayor.sh, NOT seat-sandbox.sh's RW_PATHS.** `build_mask claude` serves
+  BOTH the Mayor and the Warden, so the shared RW_PATHS (the docket named
+  `seat-sandbox.sh:444-452`) cannot be a Mayor-only hook — a grant there hands
+  the read-only Warden the same write. The Mayor-only slot is a post-`build_mask`
+  `mask+=(--bind …)` in mayor.sh (where `mayor_warden_data` already lives). And
+  **only the Mayor triggers `~/.claude/settings.json` hooks: the Warden launches
+  with `--setting-sources ""` and the Forge is codex** — which is why the atuin
+  PreToolUse hook's SQLITE_CANTOPEN only ever hit the Mayor. (ForgeOs-sa14.)
+
+- 2026-09-14: **A SMOKE PROBE'S EXPECTED VALUE GOES STALE WHEN THE MASKING
+  MECHANISM CHANGES.** FORGE_SMOKE probe 8 expected `git status` to show
+  `M scripts/deploy-azure-staging.sh` — true in the `/dev/null`-mask era, false
+  since ForgeOs-96bg (2026-09-01) switched those tracked scripts to READ-ONLY
+  BINDS OF THEIR REAL CONTENT (a ro-bind of identical content is no git
+  modification, so the worktree is clean). Found by running the smoke, which had
+  not been run since 96bg. Establish provenance (the mechanism change) before
+  calling it a regression; it was not mine. Filed P3.
+
+- 2026-09-14: **I EMITTED A gate.approved UNDER `-a justin -s overseer` — a
+  covenant-4.3 SLIP.** A civ seat emits under its OWN actor, never another's,
+  even when RECORDING the Overseer's decision. The right record of a decision the
+  seat transcribes is a `bd comment` authored by the seat (calder), quoting his
+  words; if an event is wanted, it is the seat's own actor. Corrected with an
+  appended `incident.corrected`. The Overseer's genuine gate.approved comes from
+  HIS hand (the Keep), as 4hzq's 07:39 one did.
+
+- 2026-09-14: **FOLDING A REVIEWER'S NON-BLOCKING FINDINGS IN A KERNEL-RO FILE IS
+  RIGHT, AND IT COMPOUNDS: two fold rounds this sitting.** Tova returned
+  APPROVE-WITH-FINDINGS on the base (6 non-blocking) and again on the r2 fold (3
+  cosmetic); both folded because forge.sh/fleet.sh are kernel-RO and a follow-up
+  bead there is another Regent sitting. Each fold shipped with its own
+  discriminating harness case (RED vs the pre-fold launcher). A stricter
+  assertion (grepping the state reason) can be folded without re-review; a
+  routing change (exit 77 → paged like 76) got its own harness case and the
+  re-review. Know when to stop: three cosmetic label/comment notes on the r2 fold
+  were folded and handed to the Overseer on the folded tree WITHOUT a third full
+  Warden session — re-reviewing label text indefinitely is the anti-pattern.
