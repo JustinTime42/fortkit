@@ -4066,3 +4066,144 @@ should name the seat if it matters who learned it.
   re-review. Know when to stop: three cosmetic label/comment notes on the r2 fold
   were folded and handed to the Overseer on the folded tree WITHOUT a third full
   Warden session — re-reviewing label text indefinitely is the anti-pattern.
+
+- 2026-09-14 (edict 45, the 2026-09-14b Proofdelve docket — b9mj, xzg1, 36b9,
+  rider fv7f): **A GUARD THAT CHANGES THE DEFAULT BEHAVIOUR CHANGES EVERY
+  FIXTURE THAT WAS BUILT ON THE OLD DEFAULT, AND THE PLACE TO LOOK IS THE
+  CONFIGURATION THE GUARD KEYS ON.** The touch-set co-dispatch guard makes an
+  undeclared bead touch EVERYTHING, so two undeclared beads never share a
+  pass — which is the design (an unlabelled board degrades to serial, never
+  to collisions) and it silently serialised every e2e scenario that set
+  `FLEET_FORGE_START=2` to get two Forges live at once (39, 39b, 41, 41c).
+  None of them was about overlap; each needed a disjoint `Touches:` line in
+  its fixture. Grep the harness for the knob your guard keys on before you
+  run it, and expect the failures to present as the SUBJECT being wrong.
+
+- 2026-09-14: **THE SAME CLASS, ONE ITEM LATER, FROM THE OTHER SIDE.** The
+  refresh-before-verify (36b9) finds a conflict BEFORE the review; the e2e
+  stub Forge wrote ONE `marker.txt` for every bead, so two beads cut from one
+  base had always conflicted at the second landing — and scenarios 39 and 41
+  tolerated it because the old order found it after the review, where they
+  had stopped asserting. Per-bead files (`marker-<sfx>.txt`) is the fix, and
+  the general rule: **a shared fixture file is a latent conflict, and it stays
+  latent exactly until something checks earlier.** And a generated inversion
+  must strip EVERY newer mechanism that makes the old defect unreachable:
+  41c's two-dot variant had to drop the refresh too, because once a branch
+  contains main the two spellings agree (the docket's own point (b)).
+
+- 2026-09-14: **A DOCKET'S "RETURN THE BEAD" CAN BE A PAGE WITH EXTRA STEPS,
+  AND TRACING THE FILES IS WHAT SHOWS IT.** 36b9 said: on conflict, return.
+  Traced: a returned bead is re-dispatched next pass, forge.sh reuses the
+  worktree, `refresh_reused_worktree()` meets the same conflict, exits 76,
+  and reap_pass pages a person (lw8x) — after a return tick, a launch from
+  the hard stop and a pass, with a message that no longer names the paths.
+  Paged directly, departure recorded on the bead and in the commit for the
+  Warden to judge. **When a brief prescribes a recovery route, walk the route
+  to its end state before implementing the first step.**
+
+- 2026-09-14: **`git merge-tree --write-tree` EXITS 1 FOR TWO DIFFERENT THINGS
+  (measured, git 2.54): a conflict (line 1 is the merged tree's 40-hex oid,
+  then one conflicted path per line with `--name-only`, then a blank line,
+  then prose) and an unmergeable ref (`merge-tree: X - not something we can
+  merge`, no oid).** Discriminate on line 1 or a missing branch pages a person
+  over "conflicts on: <unnamed>". The three-argument form reports no
+  conflicts at all (Marrek measured 2026-09-13).
+
+- 2026-09-14: **A BARE `for tok in $line` GLOBS.** A declared `Touches: *`
+  expanded to the dispatcher's cwd listing on the first fixture run.
+  `read -r -a toks <<< "$line"` never globs. The fixture that caught it is
+  case 2 of the governor harness's b9mj set; keep an everything-fixture in
+  any parser of user-written paths.
+
+- 2026-09-14: **A TOP-LEVEL VARIABLE IS UNBOUND IN AN EXTRACTING HARNESS,
+  SECOND FORM: not the thing you added, the thing you newly READ.** Adding
+  `prelanding_refresh()` — which reads `$main_branch`, defined at top level
+  in fleet.sh — to reap_pass's verify arm made three UNRELATED, pre-existing
+  governor-harness cases die `main_branch: unbound variable`, because no
+  extracted function had read it before and the runner never defined it. The
+  env_signature rule (make it a function) applies to constants; for a
+  genuine variable, the extracting runner defines it, and the cost is the
+  known one round where the committed harness is red against the new file
+  until both land.
+
+- 2026-09-14: **`say()` PREFIXES A CLOCK, SO `grep -c '^dispatched '` COUNTS
+  ZERO ON A LOG FULL OF DISPATCHES.** Anchor on the two-space gap
+  (`'  dispatched E2E-'`) or on the message, never on the line start. Five
+  scenarios read `dispatched=0` under a log that showed the dispatch.
+
+- 2026-09-14: **THE KEEP'S "DEAD PID" FIXTURE IS 999999 AND THIS HOST'S
+  pid_max IS 4194304.** `fort/scripts/verify.sh` went RED at `keep-test` on a
+  committed tree the sitting had not touched there: the pid counter was
+  passing through 1,0xx,xxx (the verifier itself was pid 1026774, the e2e
+  harness had just spawned thousands of processes), so `process.kill(999999,
+  0)` found a live process and 'orphaned' read 'running'. Two minutes later
+  107/107. Filed ForgeOs-erco (inject pidIsAlive). **Provenance first: a RED
+  on a step your diff never touched is a fixture or the host until proven
+  otherwise, and the proof is one re-run.**
+
+- 2026-09-14: **THE SMOKE FOUND THE NEXT STALE PROBE WHILE MEASURING THE FIX
+  FOR THE LAST ONE.** fv7f inverted FORGE_SMOKE probe 8 (clean status since
+  96bg); the acceptance run reported PROBE 8 PASS and PROBE 9 FAIL — `wc -c`
+  on the worktree's deploy script returns its full 16236 bytes, because since
+  96bg it is a read-only bind of REAL content and reading it is permitted by
+  design (the Forge prompt says so). The bead's "probes 1-7, 9-23 unaffected"
+  was a false premise. Not widened into the rider; recorded on the bead and
+  raised to the Overseer. **A probe list with one stale expectation from a
+  mechanism change usually has two; read the whole table, not the row you
+  came for.**
+
+- 2026-09-14: **THE TOUCH-SET GUARD BUYS THROUGHPUT ONLY AS THE MAYOR
+  DECLARES.** FLEET_FORGE_START=2 and a carried ceiling change nothing on an
+  undeclared board — it stays serial by construction. The first nights after
+  this sitting measure the Mayor's `Touches:` coverage, not the launcher.
+  And `ceiling.log` start lines now read `start forge_conc=N (carried from
+  run X)`; a reader counting starts by the old spelling must widen.
+
+- 2026-09-14: **THE STANDING `edict.ended` ITEM, SIXTEENTH FORM: the previous
+  sitting's closing line landed at 10:20:52, TWO SECONDS before this
+  sitting's begun** (the Overseer closed one launcher and opened the next),
+  so both lines sat together in every fort's day file — MODIFIED-uncommitted
+  in Proofdelve, Farlantern and Kithmason, and in the capital the whole 09-14
+  day file UNTRACKED. Swept the two quiet forts under a message naming both
+  lines as this seat's; Proofdelve's goes in the sitting's records commit
+  with the fleet's own lines named; the capital's with civ/events.
+
+- 2026-09-14 (edict 45, round two): **A REVIEWER'S CORRECT FINDING, FOLDED
+  CORRECTLY, MADE A SENTENCE IN THE SAME FILE FALSE, AND THE FALSE SENTENCE
+  WAS THE STALL DETECTOR'S SAFETY ARGUMENT.** Round one said the touch-set
+  guard left the stall detector untouched "because this guard never refuses
+  when no Forge is live" — true while the predicate was `worker_live`. Tova's
+  round-one finding 1 widened it to reapable holders (right: a deferred merge
+  holds an unlanded branch). Her ROUND-TWO review traced the consequence: a
+  parked merge holds its set with no Forge live, an undeclared candidate is
+  held behind it, `any_dispatchable()` knows nothing of touch sets and says
+  startable, the repeat-reason retry backs its reap count out, and
+  `stall_check` HALTS THE FLEET on the third quiet pass — ninety seconds after
+  any parked merge on a dirty tree. A regression relative to the first
+  commit, shipped inside the fix for a review finding. **When you fold a
+  finding that widens a predicate, grep the file for every sentence that
+  reasoned from the old predicate — the one that says "therefore X is
+  untouched" is the one that just became false.** Repaired in round three
+  exactly as she prescribed, and reproduced BY EXECUTION at run level (e2e
+  45b: the pre-fix launcher writes HALT), which her mask could not do. Three
+  Warden rounds on one item is the price of two behaviour-changing folds; it
+  was cheaper than the night the fleet would have lost.
+
+- 2026-09-14: **GENERATORS THAT ANCHOR ON A LINE'S FULL SPELLING REFUSE THE
+  WHOLE HARNESS FOR A CORRECT CHANGE — TWICE IN ONE SITTING.** The 41c
+  two-dot generator anchored on `prelanding_refresh()`'s header comment,
+  which gained `[$5 check]`; `mkdie` anchored on the loop-top reset line,
+  which gained a counter. Each exited the e2e harness at rc 3 ("expected one
+  ... line") before a single scenario ran, and each read at first as the
+  subject being wrong. Anchor a generator on the line's HEAD (a regex on the
+  stable prefix) and let its tail vary; an exact anchor is a control that
+  pins a spelling, the class recorded on 2026-09-08 from the assertion side.
+
+- 2026-09-14: **THE STANDING RULE ON FOLDS, RESTATED WITH ITS COST.** Fold a
+  reviewer's cheap, in-file-set findings with a case each (kernel-RO files
+  make a follow-up bead another Regent sitting) — but every fold that changes
+  BEHAVIOUR (a predicate, a new check on a path) owes a re-review, and a
+  re-review can find a regression the fold introduced. Cosmetic folds
+  (wording, a residue file, a fixture nit) do not. Say on the bead which
+  kind each fold was, and ask for the signature on the tree the Warden
+  actually signed.
