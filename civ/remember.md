@@ -4207,3 +4207,19 @@ should name the seat if it matters who learned it.
   (wording, a residue file, a fixture nit) do not. Say on the bead which
   kind each fold was, and ask for the signature on the tree the Warden
   actually signed.
+
+- 2026-09-14 (edict 46, the reading of amended rule 4 — `fortkit-908m`):
+  **COVENANT-4.5 REVIEW GRANULARITY IS PER SITTING BY DEFAULT FROM THIS DATE,
+  AND THE FIRST DOCKET UNDER IT OWES A ROUND COUNT.** One commit per docket
+  item; ONE Warden launch over the docket's commits, every one named BY HASH in
+  the brief (never `<base>..<last>`: the fort's seats interleave on the shared
+  tree, and 2026-09-14b's round-two range carried two of the Mayor's commits);
+  one launch over the fold; a third only if the fold's review blocks. Per
+  commit only when the Warden asks for one isolated in her verdict or an item
+  crosses a human gate its siblings do not. `civ/seats/regent.md` rule 4,
+  applied by the Mayor at `954578b` with the Overseer's approval on the bead;
+  the first amendment to this seat's file since founding. Verified verbatim
+  against the bead's Design before closing. Also learned: `bd show --json`
+  carries `comment_count` and NO comment bodies — an acceptance item that says
+  "recorded on the bead" is checked with `bd comments <id>`, and an empty list
+  from a JSON parse is a field that does not exist, not an absent approval.
