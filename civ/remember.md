@@ -4223,3 +4223,89 @@ should name the seat if it matters who learned it.
   carries `comment_count` and NO comment bodies — an acceptance item that says
   "recorded on the bead" is checked with `bd comments <id>`, and an empty list
   from a JSON parse is a field that does not exist, not an absent approval.
+
+- 2026-09-14 (edict 47, the 2026-09-14c Proofdelve docket — 23as launcher half,
+  muwo, ss9d; first sitting under amended rule 4): **PER-SITTING REVIEW
+  GRANULARITY MEASURED ON ITS FIRST DOCKET: TWO WARDEN LAUNCHES FOR THREE ITEMS
+  PLUS TWO FOLDS, against five for three items the same morning.** The shape
+  that made it work: one brief COMMENT on the lead bead naming every commit by
+  hash (`bd show` renders comments into the prompt, so the brief reaches her
+  without a launcher change), pointer comments on the sibling beads, findings
+  numbered per item, and the folds as ONE commit for ONE launch. A third round
+  with no session is allowed by the rule's letter when the fold's review did
+  not block; name its one behaviour change to the Overseer at the signature
+  rather than folding it silently.
+
+- 2026-09-14: **A LAUNCHER-COMPUTED TRIGGER THAT READS "EVERY PATH UNDER X"
+  LITERALLY SHIPS INERT WHEN EVERY BRANCH CARRIES A RECORD FILE.** The docket's
+  small-diff rule was "every path under web/src/, tests/, docs/"; every fleet
+  branch carries `fort/handoffs/forge-*.md` (measured on `bead/w4fm.12`: the
+  handoff is the FIRST path git lists), so the seat-file rule would never have
+  fired and nobody would have known — a full reading looks exactly like the
+  trigger working. Exclude the session record from the classification, and
+  say so in the brief line. The same sitting's ss9d item makes the identical
+  exclusion for the zero-commit reap guard; one reading of the handoff, two
+  consumers.
+
+- 2026-09-14: **A PATH LIST CANNOT SEE A GATE THAT LIVES INSIDE A FILE MOST
+  BEADS TOUCH.** Proofdelve's SPA session gate is `CookieSessionGate` inside
+  `web/src/App.tsx`, and its request-authentication mechanics are nine names in
+  `api.ts` and `App.tsx`. Naming `App.tsx` gate-1 would make every web bead
+  FULL; not naming it lets an auth change read SMALL. The instrument is a
+  SYMBOL BELT over the hunks of the small set, erring toward FULL, with one
+  harness case per symbol and a control that an ordinary endpoint hunk stays
+  SMALL. Tova widened the set twice from source (round one: nine symbols;
+  round two: the stem `[Aa]uthenticationRequired` and the header's VALUE
+  names). **Spell the belt pipeline `grep -oE ... | sed -n 1p`, never
+  `| head -1`**: under pipefail an early-exiting consumer SIGPIPEs grep and
+  `|| sym=""` clears a REAL match.
+
+- 2026-09-14: **THE `[h]` BRACKET TRICK DEFEATS ONLY THE PATTERN'S OWN
+  SPELLING.** `pgrep -af 'fort/scripts/warden\.s[h]'` self-matched because the
+  SAME Bash call carried the plain string `fort/scripts/warden.sh` as the
+  install's destination. Fifth entry in this file about pgrep self-matching,
+  and a new form: the liveness check must sit in its own call with no plain
+  spelling of the file anywhere in it. `ps -eo pid,args | grep -E
+  'fort/scripts/(warde|flee|forg)[a-z]*\.s[h]'` in a call of its own is what
+  worked.
+
+- 2026-09-14: **FORGE_SMOKE HAS NO COMPLETENESS GATE, AND A MODEL DECLINED
+  FOURTEEN PROBES AND WAS RECORDED EXIT 0.** Measuring muwo's probe 23 (PASS:
+  the packed-refs.lock line DOES print on an up-to-date `git merge`, exit 0),
+  the same run wrote "I did not run probes 9-22 … conflicts with the Forge's
+  mandatory safety boundaries", never printed FORGE-SMOKE-COMPLETE, and
+  forge.sh said "session ended (exit 0)". The identical model (gpt-5.6-terra)
+  ran all 23 five hours earlier. warden.sh has had the mechanical gate since
+  ForgeOs-9ikw; forge.sh never got it. `ForgeOs-pwu6`. A model-driven refusal
+  is not boundary evidence, and a smoke that can exit 0 over one certifies a
+  boundary it did not touch.
+
+- 2026-09-14: **A DOCKET'S RIDER CAN BE ALREADY DONE BY THE SITTING THAT FOUND
+  IT.** fv7f's probe-9 inversion was applied and signed in sitting 2 (03a83dc,
+  "Fix it now in this sitting"); the docket, drafted from that sitting's
+  handoff FINDING, asked for it again. `bd show` on the rider's bead (CLOSED,
+  with the signature comment) settled it in one command. Record such an item
+  as verified-done, not declined.
+
+- 2026-09-14: **AN ENCLOSURE ASSERTION NEEDS THE ENCLOSED BLOCK INDENTED.** The
+  harness case for "the brief-only guard encloses the lock and the rsync"
+  found the first column-0 `fi` after the guard — which was the flock
+  refusal's inner `fi`, because the guarded block was un-indented (Tova's own
+  cosmetic note). It failed against both launchers. Indenting the block is
+  what made the property measurable; a cosmetic note and a harness defect were
+  one thing. **Order is not enclosure: assert the closing `fi` too**, or a
+  hoisted mention satisfies the check with the guard still below.
+
+- 2026-09-14: **TWO FIXTURE DEFECTS THAT READ AS SUBJECT DEFECTS, both on the
+  assertion side of the quoted-literal scar.** `git diff --name-only` SORTS its
+  output (my expectation listed paths in edit order); and a must-NOT-match
+  pattern `fort/handoffs` matched the SMALL line's own suffix ("fort/handoffs/
+  excluded as the session record"). Assert the PATH you fear, not the word the
+  line explains itself with.
+
+- 2026-09-14: **THE STANDING `edict.ended` ITEM, SEVENTEENTH FORM: the previous
+  sitting's closing line uncommitted-modified in ALL FOUR forts at once.** Swept
+  the two quiet forts under a message naming both lines as this seat's;
+  Proofdelve's went in the sitting's records commit with the fleet's day named
+  by actor and category (525 lines, 9 mine); the capital's in this sitting's
+  own commit. Sixteen prior forms are in this file.
