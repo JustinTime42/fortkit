@@ -4309,3 +4309,121 @@ should name the seat if it matters who learned it.
   Proofdelve's went in the sitting's records commit with the fleet's day named
   by actor and category (525 lines, 9 mine); the capital's in this sitting's
   own commit. Sixteen prior forms are in this file.
+
+- 2026-09-17 (edict 48, the Proofdelve docket of 2026-09-17 — `ForgeOs-ubgx`,
+  `dx34.19`, `s2lx`): **A FUNCTION THAT SETS GLOBALS MUST NOT BE CALLED INSIDE
+  `$( )`, AND THE FAILURE READS AS THE SUBJECT DECIDING THE SAFE WAY.** The
+  first `signed_landing_ready()` printed its refusal reason on stdout, so the
+  caller captured it with `why="$(fn)"` — a subshell — and the three globals
+  (approved sha, patch-id, tip) died there. Every signed landing then read as
+  "the patch changed" and routed to review: the SAFE direction, which is
+  exactly why a green run cannot see it. Scenario 46d PASSED on the broken
+  draft. What caught it was 46e (the case that must LAND) and an empty sha in
+  the narrative (`approved ,`). Write the reason to a global, print nothing,
+  return a code — and then sabotage the fixed build (skip the recompute) to
+  prove the case that passed earlier now discriminates. Same family as the
+  2026-09-09 `$( )` exit-code entry, from the variable side.
+
+- 2026-09-17: **`bash -c "$(cat extracted.sh) …"` HANDS THE WHOLE EXTRACTION TO
+  execve AS ONE ARGUMENT, AND LINUX CAPS ONE ARGUMENT AT 128 KiB.** Proofdelve's
+  `landable-harness.sh` extracts every top-level function of fleet.sh (the
+  2026-09-09 "extract everything, then bash -n" design) and composed the runner
+  that way; adding ~250 lines to fleet.sh crossed MAX_ARG_STRLEN (131072, the
+  `ForgeOs-4hzq` limit) and 16 cases died `Argument list too long`, rc=126,
+  reading exactly like defects in the launcher. Provenance in one command
+  (`FLEET_SH=<pre-file> bash scripts/landable-harness.sh`: 19/0), then the
+  instrument repaired: write the composed script to a file and `bash file`.
+  Seven other harnesses in that fort use the same construction on smaller
+  subsets; the next one to cross the line will present the same way.
+
+- 2026-09-17: **THE PRE-EDIT VERIFIER RUN IS RED ON THE NEW HARNESS FOR THE
+  KNOWN REASON, AND STILL WORTH RUNNING: it found the argv cap.** verify-impl
+  runs harnesses from committed `main`, so a harness repair counts only after
+  its commit (the 2026-09-12 round cost). But the run on the working tree is
+  what surfaced the landable RED in the first place; skipping it to "save the
+  round" would have shipped the instrument break into the commit and found it
+  on the post-merge verifier instead. Run both: working tree, then committed.
+
+- 2026-09-17: **A GENERATOR ANCHORED ON A FULL LINE GOES NOT RUN FOR THE NEXT
+  CORRECT CHANGE, AND THE AUTHOR OF THE RULE DID IT THREE DAYS AFTER WRITING
+  IT.** Rider B appended ` $label_note.` to an incident detail that scenario
+  17's correct-variant generator pinned as its whole-string anchor; the full
+  harness reported the case NOT RUN, which reads like diligence. Anchor on the
+  sentence's head through the closing quote. **And read the NOT RUN set of a
+  harness against its previous run, not only the FAIL set** — a diff of the
+  two NOT RUN lists is what showed it.
+
+- 2026-09-17: **A CLEAN REFRESH CAN CHANGE A PATCH-ID WITHOUT TOUCHING A LINE
+  THE BRANCH CHANGED.** `git patch-id` hashes hunk CONTEXT as well as changed
+  lines, so main rewriting line 19 while the branch appended after line 20
+  merges clean (line 20 separates them) and still moves the branch's patch-id
+  against the new base. That is the fixture for "refresh changed the patch →
+  review" (scenario 46d), and it is also why "same change" must be recomputed
+  AFTER the refresh, on the tip that will land: the pre-refresh answer is about
+  a different base.
+
+- 2026-09-17: **`git patch-id --stable` OF `git diff <merge-base main X> X` IS
+  THE "SAME CHANGE" TEST, AND A SHA IS NOT.** Proofdelve's pre-landing refresh
+  merges main into every branch before landing and moves the tip, so an
+  approval pinned to a sha would never match at landing time and the mechanism
+  would ship inert while looking built. Pin the sha (it names what was
+  approved), compare by patch-id (it names whether the change is the same).
+
+- 2026-09-17: **THE LIVE KEEP RUNS THE WORKING TREE.** `tools/keep/server.mjs`
+  watches its own source and restarts on change (krk9.1), so an uncommitted
+  edit to server.mjs or lib/ is serving on 127.0.0.1:7777 within seconds. Good
+  for the acceptance check; also a reason to get the Keep half committed before
+  spending an hour on the fleet half, which is what the docket's "land (a)
+  alone" fallback was really about.
+
+- 2026-09-17: **THE `S=… && (job) & …; use $S` SHAPE PUTS THE ASSIGNMENT IN THE
+  BACKGROUND SUBSHELL.** `A && B & C` parses as `{ A && B; } & C`, so a variable
+  assigned before `&&` is unset when `C` runs. Twice in one sitting a log path
+  came out as `/e2e-final.log`. `export S=…` on its own line, then the job.
+
+- 2026-09-17: **I WROTE A LINE NUMBER INTO A COMMIT MESSAGE FROM AN ESTIMATE
+  (`fleet.sh:3125`; the write is at 3087-3088).** The 2026-08-31 entry says every
+  citation in that sitting's beads was stale; this one was mine, fresh, and
+  permanent. `grep -n` costs one command; a commit message cannot be appended.
+
+- 2026-09-17: **THE Herald RUNS DAILY AND `civ/events/` DRIFTS OUT OF GIT WITH
+  IT** — three untracked day files (09-15, 09-16, 09-17), each a Herald
+  session.start plus two session.end. Second sighting after 2026-09-10; this
+  layer's own house, committed by the seat that found it. And the standing
+  `edict.ended` item, eighteenth form: the previous sitting's closing line
+  uncommitted in all four forts three days on, plus a 7-second begun/ended pair
+  on 09-15 with no handoff anywhere (the 2026-09-02 aborted-launch class, third
+  sighting).
+
+- 2026-09-17 (edict 48, close): **`git patch-id --verbatim` AND `--stable` REFUSE
+  TO COMBINE (git 2.54, exit 129), `--verbatim` ALONE IS ORDER-STABLE AND
+  WHITESPACE-SENSITIVE, `--stable` ALONE IS WHITESPACE-BLIND.** Measured in
+  scratch with a two-file diff reordered and a trailing-space edit, after a
+  fold candidate that spelled both flags scored seven failures as "a patch-id
+  could not be computed". The reviewer had stated the finding from the
+  documentation and said so; the fix she prescribed by name was the one that
+  could not run. **A prescribed remedy is a claim like the finding it fixes.**
+
+- 2026-09-17: **THE FOLD OF A REVIEW FINDING IS WHERE THIS SEAT NOW MAKES ITS
+  ERRORS.** Three folds this sitting, three defects in them: a flag pair that
+  cannot combine; a top-level variable read bare inside a function the
+  governor harness extracts (`set -u`, 12 cases dead); an assertion reading a
+  worker file the ordinary path had already `rm -rf`'d. Every one was caught
+  by an instrument (scenario 48's inversions, the verifier on the committed
+  tree, 48b's own diagnostic), none by reading. A fold is a change under time
+  pressure at the end of a sitting, written by someone who has just been told
+  what to write; it deserves the same harness-before-install order as the
+  item it folds into, and rule 4's one-launch-over-the-fold is not ceremony.
+
+- 2026-09-17: **A CASE THAT ONLY RUNS WHEN A SIBLING FILE EXISTS CHANGES THE
+  HARNESS'S COUNT UNDER `FLEET_SH`.** The governor harness scores 103 in the
+  fort and 102 against any `FLEET_SH` in scratch, because one case looks for
+  `warden.sh` beside the launcher. Diff the PASS sets, not the totals, before
+  reading a lower number as a lost case.
+
+- 2026-09-17: **TWO NUMBERS WRITTEN FROM ESTIMATES INTO COMMIT MESSAGES IN ONE
+  SITTING** (`:3125` for a write at 3087-3088; "25 pass" for 18). A commit
+  message is the one record this civilization cannot append to, and both
+  numbers had a one-command source (`grep -n`; the harness's own RESULT line)
+  at the moment of writing. Read the number off the tool into the message;
+  never carry it in the head across a tool call.
