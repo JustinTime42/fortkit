@@ -4531,3 +4531,79 @@ should name the seat if it matters who learned it.
 - 2026-09-18: **THE STANDING `edict.ended` ITEM, NINETEENTH FORM: committed in
   Proofdelve (the Mayor's sweep), uncommitted in the other three.** Same split
   as the tenth form. Measure all four; expect four answers.
+
+- 2026-09-18 (edict 50, Proofdelve sitting AD — Sittings A and D folded, the
+  fleet's own machinery; sixteen items landed, two verified done, one design):
+  **`BEADS_ACTOR` IS NOT SET IN THE REGENT'S SHELL, AND A `bd comment` WITHOUT
+  IT IS AUTHORED AS THE OVERSEER.** Eighteen gate-6 approval transcriptions
+  landed under `Justin Schneider` before the author field was read back; B's
+  had run as `calder` because that session exported it. Covenant 4.3 binds bd
+  writes as it binds events. `export BEADS_ACTOR=calder` is the first line of
+  any Regent shell that touches a tracker, and `bd comments <id> --json` after
+  the first write is the check. Corrected forward by an appended note on every
+  bead; a comment cannot be edited.
+
+- 2026-09-18: **I EDITED A HARNESS WHILE A BACKGROUND RUN WAS EXECUTING IT,
+  TWICE, WITH MY OWN 2026-09-02 RULE IN THE BRIEFING.** A 3000-line e2e harness
+  takes 2.5 minutes; bash reads it incrementally; the first run died at a
+  syntax error mid-file and the second read an appended scenario without its
+  variables. Both runs were discarded. **A background harness run is a live
+  reader of its file; wait for it, or edit a copy.** Same rule as the launcher,
+  same failure, smaller blast radius, same sitting-pressure cause.
+
+- 2026-09-18: **A HALT FILE IS NOW A `stopping()` CONDITION IN PROOFDELVE'S
+  FLEET** (ForgeOs-fhak): every `stopping && break`, the ladder head and the
+  merge-defer site read it, so a person's HALT mid-pass is seen before the next
+  claim, and `operator_halt_stop()` runs before the loop's early breaks (under
+  `--once` too). Consequence for a fixture: a HALT placed while a Forge is live
+  is found at the end of that pass with the worker RUNNING; to test "finished
+  and unreaped", place it the moment the exit file exists, inside the poll
+  sleep. And the incident measures live `.forge.lock` holders at emit time.
+
+- 2026-09-18: **A FINDING'S MECHANISM CAN BE UNREACHABLE ON THE FILE IT WAS
+  FILED AGAINST, AND THE FIXTURE BUILT TO REPRODUCE IT IS HOW YOU FIND OUT.**
+  lzvo's finding 2 (budget_stop carries mid-pass, a later governor_down in the
+  same pass is uncarried) is unreachable: the reap loop breaks at the budget
+  and dispatch_pass's budget_stop returns into the loop's break. The fixture
+  carried 2 on both launchers. Land the simplification, say it is
+  behaviour-preserving, and let the RED-before be the code motion — never
+  claim an inversion the instrument did not produce.
+
+- 2026-09-18: **A PLAIN SPELLING OF THE LAUNCHER PATH IN THE SAME BASH CALL AS
+  THE LIVENESS GREP SELF-MATCHES — SIXTH ENTRY, THIRD FORM.** The `[h]`
+  bracket protects the pattern's own spelling; the `install.py … fort/scripts/forge.sh`
+  argument in the same call does not. Three false "live: 3" readings this
+  sitting. The liveness check is a call of its own, with nothing else in it.
+
+- 2026-09-18: **COUNT AN EVENT BY ITS CATEGORY AT COLUMN ONE OF THE STUB'S
+  LOG, NEVER BY THE WORD**: the fhak/lv7x incidents say "no fleet.parent-open
+  was emitted" in their own detail, and `grep -c fleet.parent-open` scored that
+  as emitted. Third form of the announcement-not-the-word rule (2026-09-09).
+
+- 2026-09-18: **THE SUPERVISOR'S BACK-OFF READS THE RUN'S OUTCOME, NOT THE
+  BOARD** (ForgeOs-s49w): fleet.sh writes `$FLEET_STATE/last-run.outcome`
+  (run, autostart, launches, reason, duration_s) on its ordinary exit path,
+  outside the EXIT trap because stop-harness evaluates that trap string with
+  only the variables it reads; the supervisor backs off only when ITS own unit
+  (passed as `FLEET_AUTOSTART`) drained in under 20 s with zero launches. A
+  zero-launch run that LASTED is a landing, not a wedge: duration is the
+  discriminator, per Tova's own shape. New category `fleet.backoff`.
+
+- 2026-09-18: **A `kv()` HELPER THAT GREPS A FILE THAT MAY NOT EXIST DIES AT
+  EXIT 2 UNDER `set -e -o pipefail`**, and the supervisor's `fire()` reported it
+  as rc=2 with empty output. `[ -f ] || echo ""` first, then `grep … || true`.
+  Fifth sighting of the grep-in-a-pipeline family; the supervisor's own
+  `streak_get()` had the safe shape three functions above.
+
+- 2026-09-18: **THE E2E REFUSAL GATE FOR /tmp RESIDUE CAUGHT ME ON ITS FIRST RUN
+  AFTER I REGISTERED MY SUFFIXES** — exactly as on 2026-09-09: probe residue
+  from runs made before the suffixes were in `E2E_SUFFIXES`. Register a new
+  scenario's suffixes in the same edit that introduces them.
+
+- 2026-09-18: **A MINI-RUNNER FOR ONE E2E SCENARIO IS WORTH BUILDING WHEN THE
+  FULL HARNESS TAKES MINUTES** (`scratchpad/mkmini.py`: the harness head, the
+  helpers the scenario calls, one scenario, a RESULT line; the trap replaced by
+  an echo of the work dir so a failure can be read). Its own defects (missing
+  `run_loop`, `wstate`, `upto_review`, `merged_in`) presented as
+  `command not found` in the subject's place; extract by name, and read
+  stderr before believing a FAIL.
