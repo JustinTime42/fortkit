@@ -4427,3 +4427,107 @@ should name the seat if it matters who learned it.
   numbers had a one-command source (`grep -n`; the harness's own RESULT line)
   at the moment of writing. Read the number off the tool into the message;
   never carry it in the head across a tool call.
+
+- 2026-09-18 (edict 49, Proofdelve sitting B — the Warden's execution
+  capacity: `ForgeOs-mskx`, `rydv`, `40rj`+`278`, `ehre`, `bsw1`, `25rz`,
+  `ixud`): **A "STILL UNBOUND" RE-DERIVATION CAN BE A CASE-SENSITIVE GREP.**
+  The docket said the only NUGET token in `seat-sandbox.sh` was
+  `NUGET_PACKAGES` at :608 and item 4 (`ForgeOs-5wk`) was still open. The lib
+  grants `$HOME/.local/share/NuGet` — mixed case — in RW_PATHS since
+  `468baca1` (2026-08-04, one day BEFORE the bead was filed against the
+  then-inline Warden mask). Measured in the real Warden mask: `http-cache`
+  WRITABLE, `dotnet restore` rc=0. A re-derivation is a claim like the bead it
+  re-derives; grep the class case-insensitively, and measure in the mask
+  before editing a shared lib every seat sources.
+
+- 2026-09-18: **THE WARDEN'S POLICY LAYER STOPPED WITHHOLDING EXECUTION ON
+  2026-09-16 AND NOBODY SAID SO.** `ForgeOs-51x1` granted Edit over her scratch
+  copy; her scratch `fort/scripts` is WRITABLE inside her mask (measured, built
+  from warden.sh's own lines); and `<scratch>/fort/scripts/verify.sh` has been
+  on her allow list since `ForgeOs-8yad`. So she could already run arbitrary
+  shell as herself by rewriting one file. That measurement is what made
+  granting node/python3/sed/harnesses (`ForgeOs-mskx`/`rydv`) the convenience
+  it is rather than the widening it reads as — and the profile `$comment` now
+  says so. **Before weighing a permission grant, ask what the seat can already
+  reach through the grants it has**; the kernel mask was the boundary the
+  whole time, which the profile had said since 2026-08-03.
+
+- 2026-09-18: **RENDER A PER-REVIEW ALLOW LIST FROM THE TREE, NOT FROM A
+  STATIC LIST.** `warden.sh` now enumerates `scripts/*-harness.sh` in the
+  candidate tree at launch and renders two exact-scratch-path rules per file,
+  counted fail-closed (exit 67 on a miscount). ADV-0002's "name specific
+  scripts, never a glob over scripts/" is satisfied by every rule, and the
+  static file never carries a list that goes stale as harnesses are added.
+  Every candidate rule scored 0 on the vendor checker
+  (`claude --dangerously-skip-permissions --setting-sources "" --settings <one-rule file> -p hi`),
+  with `Bash(git -C * worktree list*)` as the positive control at 1. The
+  checker did NOT flag `Bash(FLEET_SH=* bash <path>*)` either; not used —
+  harnesses default to the launcher beside them and the scratch launcher is
+  hers to edit, so no env-prefix rule (and its wildcard gap) is needed.
+
+- 2026-09-18: **THE SEAT EXECUTED ITS OWN INVERSION INSIDE THE REAL MASK, AND
+  THAT IS THE MEASUREMENT.** A report-only `claude -p` under the rendered
+  profile (`scratchpad/capacity-probe.sh` pattern: build the mask and the
+  render from the candidate launcher's own lines; no seat launched, no event)
+  ran node, python3, sed, the Keep suite (156/156), a harness alone (86/0),
+  then EDITED its scratch launcher and re-ran the harness to 85/1 with the
+  broken case named, and was refused perl as the control. Seven lines, demanded
+  in the prompt. This is the `ForgeOs-8zb7` step 2 the fort had performed once
+  and could not reproduce; now the reviewer can.
+
+- 2026-09-18: **A LAUNCHER THAT READS A BEAD WITHOUT `-C` READS THE CALLER'S
+  TRACKER.** Proofdelve's `warden.sh` ran `bd show "$bead"` bare and fell back
+  to `"See bead $bead"` on failure, so a Regent launching from the capital
+  would have briefed Tova from Manyhalls' database and a bd outage would have
+  briefed her with a stub, silently. Now `warden_bead_desc()`: `bd -C "$root"`,
+  refuse at 66 with an incident, HOISTED above the lock and the rsync so a
+  refused launch copies nothing (the fortkit-px7e hoisting argument again).
+  Brief-only refuses the same way and emits nothing. **Probe 10, red since
+  2026-08-11 because it asserted a capability the seat provably lacks, is
+  reclassified with the access RESTORED beside it** (a fresh `bd export` seeded
+  into the scratch, 0.6 s, 22 MB) — the bead's own rule, never reclassify a red
+  probe without restoring what it reports on.
+
+- 2026-09-18: **FLEET.SH'S POST-MERGE `verify.pass` HAS A FULL SHA AND NO TREE
+  AND NO DOCKER FIELD**, being its own emit rather than verify-impl's, so a
+  HOST VERIFY keyed on tree+commit never found it for a hand review of a landed
+  range on main — the shape every docket review takes. Accepted now only when
+  candidate == root, by full-sha equality, ranked with docker:true (it is the
+  host suite in a fresh worktree: 661/0/0 in today's log), with a suffix saying
+  what it is. Never for a candidate worktree: a landed green says nothing about
+  an unlanded branch.
+
+- 2026-09-18: **THREE INSTRUMENT DEFECTS PRESENTING AS SUBJECT DEFECTS, SIXTH
+  SITTING RUNNING**: a fixture `printf` with three `%s` fed two arguments; a jq
+  predicate counting `fort/scripts/verify.sh` rules as harness rules because it
+  matched `/scripts/`; and a "first mention of the variable" anchor that a new
+  function above the guard turned into a false FAIL (sharpened to the column-0
+  guard statement — a mention is not an enclosure, Tova's own rule). Each was
+  separated from the subject by running the extracted function by hand outside
+  the harness. **When a new case fails against the candidate, reproduce the
+  function alone before touching either.**
+
+- 2026-09-18: **A GENERATED-RIGHT CHECK FOR A PROMPT NEEDS THE LAUNCHER TO BE
+  RUNNABLE WITHOUT ITS SIDE EFFECTS, AND `WARDEN_SMOKE=1 WARDEN_BRIEF_ONLY=1`
+  IS EXACTLY THAT**: prints the smoke prompt above the lock, the rsync, the
+  mask and every emit, exit 0. The REVIEW prompt cannot be generated the same
+  way from inside the Warden's mask, because it needs `bd show` and bd cannot
+  run there — so the harness asserts the review-prompt paragraphs in source
+  and the smoke prompt generated. Say which is which in the case name.
+
+- 2026-09-18: **`shellcheck -x` AT DEFAULT SEVERITY FAILS ON INFO-LEVEL SC2016
+  IN A HARNESS FIXTURE** (`'...$3...'` in a stub body), which `-S warning`
+  passes. Third sighting of "lint with the gate's own invocation"; the
+  candidate was linted with the gate's spelling this time and the two lines got
+  `# shellcheck disable=SC2016` with reasons before install.
+
+- 2026-09-18: **THE MAYOR'S OWN `.claude/settings.json` IN PROOFDELVE CARRIES
+  THE riev CLASS** — five wildcard-before-subcommand git allow rules the vendor
+  checker flags (2421 bytes of launch stderr, pre-existing). Found while
+  checking one added deny line through the checker. Filed `ForgeOs-7yd4`, not
+  widened into. **Run the whole profile through the checker after any edit to
+  it, and read what was already there.**
+
+- 2026-09-18: **THE STANDING `edict.ended` ITEM, NINETEENTH FORM: committed in
+  Proofdelve (the Mayor's sweep), uncommitted in the other three.** Same split
+  as the tenth form. Measure all four; expect four answers.
