@@ -4607,3 +4607,82 @@ should name the seat if it matters who learned it.
   `run_loop`, `wstate`, `upto_review`, `merged_in`) presented as
   `command not found` in the subject's place; extract by name, and read
   stderr before believing a FAIL.
+
+- 2026-09-18 (edict 51, Proofdelve sitting CE — the mask, its probe, and the
+  airlock; nz3u rider): **MASKING THE SESSION BUS ALONE LEAVES THE USER
+  MANAGER REACHABLE THROUGH `systemd/private`.** fortkit-y7no's candidate
+  repair said one `--ro-bind /dev/null /run/user/$uid/bus`. Measured in the
+  real Mayor mask: with the bus masked, `systemd-run --user` is refused but
+  `systemctl --user is-system-running` still answered "degraded" — systemctl
+  talks to the manager's private socket directly, which is enough to start
+  any unit it already knows, the fleet supervisor included. The port
+  (ForgeOs-tq8s, `fb273760`) masks three: `bus`, `systemd/private` and
+  `systemd/io.systemd.Manager` (varlink). All three: systemd-run, systemctl
+  and busctl fail "Connection refused" in both arms, and both runtimes still
+  launch. The other three lib copies and `scripts/mask-harness.sh` are still
+  open on y7no. **When a finding names one door, look for the siblings before
+  closing it.**
+
+- 2026-09-18: **A DOCKET'S "RE-DERIVED" CITATION CAN RE-DERIVE THE LOCATION
+  AND NOT THE CONTENT.** The docket named probe-boundaries.sh:366-388 as a
+  stale codex-posture assertion (ForgeOs-u65j.7, P1). The block at those
+  lines IS the repaired one (`18cb8b06`, 2026-09-13), scoring PASS in every
+  run since; the docket confirmed the lines existed and did not read what
+  they said. Five of the fourteen C beads were already done in the file
+  (u65j.7, u65j.3.3.1, u65j.3.3.3, u65j.9, oob). Before acting on a
+  line-cited item, open the lines.
+
+- 2026-09-18: **bwrap CREATES A MISSING `--ro-bind` DESTINATION ON THE HOST.**
+  A depth decoy swept into every posture's MASK_FILES at build time, removed
+  mid-run, came back as a 0-byte mode-444 file the moment a later section ran
+  a bwrap with the same mask. A mask must outlive the file it masks: remove
+  probe fixtures in the EXIT trap after the last bwrap, never mid-run
+  (ForgeOs-5l7x for the lib-comment half).
+
+- 2026-09-18: **`-maxdepth 4` MEANS FILES AT DEPTH FOUR; A DECOY IN
+  `fort/telemetry/probes/<stamp>/` IS AT DEPTH FIVE.** The first depth probe
+  read 49 bytes in every posture and looked exactly like a k47 regression.
+  Count the components before calling a limit crossed; the decoy now sits
+  beside the run directories.
+
+- 2026-09-18: **A HOME PATH ABSENT ON THE HOST CANNOT APPEAR IN A MASK'S ARGV,
+  because the lib's MASK_DIRS binds are existence-guarded** (a `--tmpfs` over
+  a missing directory aborts bwrap and no seat launches). Reading the kernel
+  layer off the argv (the honest source) scored `~/.aws` as unmasked on a host
+  that has no `~/.aws` — true of the argv, false of the boundary. For an
+  absent path the evidence is the lib's declaration, and the verdict says
+  which kind of yes it is.
+
+- 2026-09-18: **A HARNESS THAT DRIVES A HOST-SIDE SCRIPT AGAINST A FIXTURE
+  MUST REFUSE, OR REPOINT, A VERSION OF THAT SCRIPT THAT HONOURS NO ROOT
+  OVERRIDE.** The airlock harness's first RED-before ran the shipped
+  `airlock.sh` with `AIRLOCK_ROOT` set — which that file ignores — and every
+  call went to the REAL `fort/airlock/` (nothing landed only because each
+  died on an unknown operation). The 2026-08-06 Herald-smoke scar, one step
+  from repeating. The harness now renders a scratch copy with its `root=`
+  line repointed (asserting exactly one such line) when the subject lacks
+  the override, which is also what turns the RED-before from a refusal into
+  a measured failure.
+
+- 2026-09-18: **A PROBE SUITE MUST REFUSE INSIDE A MASK, AND THE KERNEL SIGN
+  IS BETTER THAN THE MARKER.** `~/.ssh` is btrfs on this host and a tmpfs
+  inside every seat mask, both arms; a launcher can forget `FORT_MASKED`, a
+  mask cannot forget MASK_DIRS. Proofdelve's suite refuses on either sign
+  before writing anything (ForgeOs-7gs/8cy). Measured RED-before: the
+  shipped suite inside the Mayor mask wrote 99 rows of artifacts and a
+  telemetry directory.
+
+- 2026-09-18: **DECLARING `--rw-tree "$root"` IS NOT A NO-OP:** it duplicates
+  every carve-out and drops the `$root-worktrees` grant (149 argv entries
+  against 116). To evaluate forge.sh's own `build_mask` line in a probe, cut
+  a throwaway detached worktree and remove it in the trap, rather than
+  passing the root as the tree.
+
+- 2026-09-18: **`bd comment` ON A RECALLED BEAD ID, FOURTH SIGHTING:** the
+  drift note went to `fortkit-6jf`, CLOSED; the live bead was `fortkit-hhjb`.
+  `bd show <id> | head -1` costs one command and prints the status.
+
+- 2026-09-18: **THE STANDING `edict.ended` ITEM, TWENTY-FIRST FORM:** the
+  previous sitting's closing line uncommitted-modified in all four forts.
+  Swept the two quiet forts; Proofdelve's in the sitting's records commit
+  with every line's author named; the capital's below.
