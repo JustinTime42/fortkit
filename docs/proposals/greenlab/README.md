@@ -69,3 +69,9 @@ customer-facing paid work.
   current forts.** The corpus evidence-strength ladder is a different axis and
   earns its place only in Greenlab, where "real vs simulated" is the central
   question. See 04 and `../proofdelve-additions/`.
+- **D6. Greenlab may hold early paying customers; graduation is the Overseer's
+  decision, not an automatic trigger** (2026-09-19). The autonomous work is meant
+  to continue into the first customers, mitigated by the Overseer's monitoring and
+  his standing ability to make any customer whole without material loss — not by a
+  hard "never customer-facing" exclusion. Recorded as a knowing trade in the
+  covenant §12; the machine boundary (§4 / 01) remains the sole immovable clause.

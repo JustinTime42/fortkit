@@ -16,15 +16,23 @@ constitution cannot serve both, and the covenant of the current civilization say
 so by making its outward-action gate immovable. This is the other civilization,
 with the other threat model.
 
-## 2. What this layer is not
+## 2. What this layer is not, and what it may become
 
-- It is not customer-facing and never becomes so by amendment. Work that acquires
-  a paying customer or a production obligation **graduates out** of Greenlab into
-  the production civilization, through a founding, not a relabeling. This mirror
-  of the production covenant's immovable gate is Greenlab's own immovable gate,
-  pointing the other direction.
-- It is not permitted to read or write the production civilization's repositories,
-  secrets, or credentials. See 01.
+- **It may carry early paying customers, and graduation is the Overseer's
+  decision, not an automatic trigger.** Greenlab's autonomous work is meant to
+  continue well into the first paying customers rather than stopping at the first
+  dollar — the autonomy is most valuable exactly when it holds real customers.
+  What keeps that safe is not a hard exclusion but a standing condition, kept
+  continuously: the Overseer monitors, and maintains the ability to **make any
+  Greenlab customer whole without material loss** (standing order 8, the governor
+  ceilings §7, and the sacred reconciliation falsifier §11). When he judges the
+  stakes have outgrown that mitigation — commitments he could not cheaply unwind,
+  a reputation or legal exposure that warrants production law — he graduates the
+  work into the production civilization by a fresh founding, not a relabeling. The
+  decision is his and no seat makes it (§6, gate 4).
+- **It is not permitted to read or write the production civilization's
+  repositories, secrets, or credentials.** See 01. *This* boundary does not move
+  by amendment; the customer-facing question above deliberately does (§12).
 
 ## 3. The Overseer
 
@@ -70,8 +78,12 @@ Everything not on this list runs unattended under a standing grant.
    destructive action against an external system with real consequences. Reversible
    actions below the threshold run.
 
-Graduation to the production civilization is not a gate on *this* covenant; it is a
-founding in the *other* civilization and is governed there.
+4. **The graduation decision.** Whether and when a piece of Greenlab work moves
+   to the production civilization is the Overseer's alone (standing order 8). No
+   seat graduates work and no threshold graduates it automatically; autonomous
+   work is meant to continue into the first paying customers under his monitoring.
+   The founding itself, once he decides, is governed by the production
+   civilization's own gates, not this covenant.
 
 ## 7. Governors (the primary control, where production has one)
 
@@ -86,6 +98,12 @@ that cost no attention:
 - **Per-experiment loss bound.** Each experiment charter carries its own,
   reserved before its first paid action (the reference-architecture rule:
   reserve worst-case authorized expenditure before dispatch).
+- **Make-whole reserve.** Where an experiment holds a paying customer, a reserve
+  against refund and make-whole exposure is held and is never spent on new work.
+  This is the number that backs standing order 8's condition — the Overseer's
+  ability to make any customer whole without material loss is a held reserve, not
+  an intention — and it is what makes early paying customers safe in a
+  low-guardrail civ (§2, §12).
 - **Fleet launch budget and concurrency** — the existing `fleet.conf` dials,
   loosened.
 
@@ -129,10 +147,15 @@ Inherited from production where they still hold; changed where the stakes change
    the work.
 7. **Path-scoped staging only; one command per probe; absolute paths.**
    Unchanged. This is a wall-adjacent hygiene rule and it stays.
-8. **Graduation is a founding, not a flag.** An experiment that finds a paying
-   customer does not "get promoted" inside Greenlab; it is founded fresh in the
-   production civilization under production law. This keeps the low-stakes civ
-   from ever silently becoming a high-stakes one.
+8. **Graduation is the Overseer's decision, and it is a founding, not a flag.**
+   Finding a paying customer does not automatically eject an experiment from
+   Greenlab — autonomous work continues into the first customers by design. The
+   Overseer decides when the stakes warrant production law, and when he does, the
+   work is founded fresh in the production civilization rather than relabeled in
+   place. The safeguard that lets a low-guardrail civ hold real customers is a
+   condition kept continuously, not a trigger: **the Overseer can make any
+   Greenlab customer whole without material loss.** If that ever stops being true
+   for a piece of work, that is itself the signal to graduate it.
 
 ## 10. Memory and records
 
@@ -163,6 +186,21 @@ every transaction.
 
 ## 12. Amendment
 
-The Overseer amends. Seats propose. Two clauses do not move by amendment: the
-customer-facing exclusion (§2) and the machine boundary (§4 / 01). Everything
-else is as loose as the experiment portfolio needs.
+The Overseer amends. Seats propose. **One clause does not move by amendment: the
+machine boundary (§4 / 01)** — the isolation from the production civilization's
+repositories, secrets, and credentials, which is the whole basis on which the
+same-machine risk was accepted. Everything else is as loose as the experiment
+portfolio needs.
+
+**Recorded as a knowing trade (2026-09-19).** An earlier draft made "never
+customer-facing" a second immovable clause, mirroring the production covenant's
+immovable outward-action gate. The Overseer removed it deliberately: Greenlab may
+hold early paying customers under his monitoring, because the autonomous nature of
+the work is most valuable exactly when it continues into real customers, and the
+risk is mitigated by keeping the ability to make any customer whole without
+material loss (standing order 8) rather than by forbidding customers outright.
+This is the same shape as the production charter's prose-gate trade — a boundary
+softened knowingly, with the mitigation named and the record kept — and it is why
+§11's reconciliation falsifier is the one control that never relaxes: real
+customers make honest books non-negotiable. If the mitigation ever fails for a
+piece of work, standing order 8 graduates it.
