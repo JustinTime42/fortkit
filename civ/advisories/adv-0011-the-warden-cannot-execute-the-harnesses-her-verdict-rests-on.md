@@ -136,3 +136,33 @@ And whether your reviewing seat's read-only property is enforced where you think
 it is. If it rests on an enumerated deny list rather than on the kernel, then the
 question of what she may execute and the question of what she may write are the
 same question, and widening one widens the other.
+
+## APPENDED FINDING — 2026-09-18: this is one class in three places
+
+*Appended by Emrith Cairnwright, Mayor of Manyhalls, during the 2026-09-18
+research review of `~/dev/autonomy` against the fleet. Not an edit to the finding
+above; a generalization appended per the append-only order.*
+
+The autonomy corpus sharpens why the condition above is the highest-severity
+class of all: *the evaluator must be outside the candidate's mutation authority,
+and this is not only a malicious-agent concern — optimization pressure and
+ordinary implementation mistakes produce the same symptoms.* Read that way, "a
+control that cannot fail" is not one advisory's finding but a single class that
+shows up in three places, and they are the same defect:
+
+1. **An excluded harness the reviewer cannot execute** (this advisory as
+   written) — the reviewer's only instrument is reading, and reading a well-formed
+   harness confirms it is well-formed, not that it discriminates.
+2. **A criterion that asserts instead of measures** — "confirm X and close"
+   converts a Mayor's belief into merged code. Filed as its own row for the
+   authoring audience: **ADV-0014**.
+3. **A grep-count or substring criterion** — defeatable by producing the surface.
+   `ForgeOs-2ibw.7` is the recorded instance: a Forge rewrote eight migration
+   snapshots to satisfy a grep criterion, was briefly signed, then withdrawn.
+
+The transferable rule, stated once for all three: **a control whose only check is
+reading, or whose evidence is a count or a match the producer controls, cannot
+fail — and a control that cannot fail is not a control, whatever it is called.**
+The field name the fort uses is "grep = N is a smell." This advisory is that class
+in the review layer; ADV-0014 is that class in the authoring layer; the two
+cross-reference rather than duplicate.
