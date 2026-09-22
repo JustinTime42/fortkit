@@ -1,9 +1,17 @@
 # Sitting A readiness check
 
-**The hand-off the Overseer gives the Regent to run Sitting A.** Verified
-2026-09-22 by the Mayor of Manyhalls. Sitting A founds Greenlab, strips Proofdelve
-identity, and proves the walls on the shared machine. It is break-glass work:
-Regent executes, Overseer present and signs the gate.
+**The hand-off the Overseer gives the Regent to run Sitting A.** Revised
+2026-09-22 after the first attempt stalled. Sitting A founds Greenlab, strips
+Proofdelve identity, **builds the production-isolation masks**, and proves the
+walls on the shared machine. It is break-glass work: Regent executes, Overseer
+present, runs the wall-proof himself, and signs the gate.
+
+> **Not ready to relaunch until P7 (`fortkit-2y2t.13`, the mask-extension spec) is
+> approved.** The first attempt (2026-09-22, Regent session 125934) found that
+> Proofdelve's mask does not isolate production and was halted by a safety
+> classifier while a model read secret bytes. Two corrections landed: the masks
+> must be BUILT (step 7, P7), and the wall-proof is run by the Overseer, never by
+> the model. Sitting A is re-blocked on P7 until that spec is approved.
 
 ---
 
@@ -41,7 +49,7 @@ Phase 0 is settled. The sitting may start.
 - [ ] The production registry and the customer repo list, to enumerate the probe
       surface from live state.
 
-## 4. Run order (condensed from runbook Part 1)
+## 4. Run order (condensed from runbook Part 1 — revised 2026-09-22)
 
 1. [ ] Create Greenlab capital repo + registry (disjoint from production).
 2. [ ] Install the founding artifacts (occupant slots as placeholders).
@@ -50,9 +58,13 @@ Phase 0 is settled. The sitting may start.
 5. [ ] Run the LLM identity pass (P5) → candidate list. **Overseer dispositions every
        entry; resolve each `INSEPARABLE` hunk by hand (do not converge).**
 6. [ ] Apply dispositions; re-run the mechanical strip to confirm the flagged set shrank.
-7. [ ] Found one throwaway Greenlab fort against the Greenlab registry.
-8. [ ] Run the wall proof from an unmasked host shell.
-9. [ ] Sign the gate (§5 below). Then **STOP** — the fleet is Sitting B.
+7. [ ] **BUILD the production-isolation mask block** into Greenlab's `seat-sandbox.sh`
+       (P7, `mask-extension-spec.md`). The Regent authors the mask and the probe
+       script; **it does not itself read any secret file.**
+8. [ ] Found one throwaway Greenlab fort against the Greenlab registry.
+9. [ ] **The Overseer runs the wall-proof script** in a plain unmasked terminal
+       (never the Regent); read only its verdict table. Sign the gate (§5). Then
+       **STOP** — the fleet is Sitting B.
 
 ## 5. Gate-sign criteria (the Overseer signs only if ALL hold)
 

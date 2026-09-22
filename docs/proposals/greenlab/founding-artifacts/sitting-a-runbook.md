@@ -55,21 +55,30 @@ in `docs/proposals/greenlab/founding-artifacts/`.
    Re-run the mechanical strip to confirm the flagged set has shrunk as expected;
    the tool is deterministic and re-runnable for exactly this.
 
-7. **Found one throwaway Greenlab fort.** Use the Greenlab fort-init against the
+7. **BUILD the production-isolation mask block** into Greenlab's `seat-sandbox.sh`,
+   against `mask-extension-spec.md` (P7). This is real enforcement-layer work, and
+   it is the step the first attempt was missing: **Proofdelve's mask does not
+   isolate production** (measured 2026-09-22 — production `.env`, credentials,
+   Codex auth readable; `~/.local/state` writable). Mask the production secret set
+   to `/dev/null`, bind production repos absent, isolate `~/.local/state`, and hold
+   Greenlab's credentials in a Greenlab-only path. **The Regent authors the mask
+   and the probe script; it does not itself read any secret file** (see Part 2).
+
+8. **Found one throwaway Greenlab fort.** Use the Greenlab fort-init against the
    Greenlab registry to found a single disposable experiment fort. This is the
    fort the walls are proven against.
 
-8. **Run the wall-proof probe (Part 2).** From an **unmasked host shell** — never
-   from inside any mask — run the probe. This is the gate.
+9. **The Overseer runs the wall-proof (Part 2) and signs the gate.** The probe is a
+   script the **Overseer** executes in a plain unmasked terminal; the Regent does
+   not run it. Sign only if: the verdict table is fully green (Part 2 rules), the
+   strip report and disposition list are reviewed, and the founding moot has been
+   told the tree may still carry placeholder Proofdelve identity to replace. Then
+   **STOP.** Do not port the fleet; that is Sitting B.
 
-9. **The Overseer signs the gate.** Sign only if: the probe is fully green (Part 2
-   verdict rules), the strip report and disposition list are reviewed, and the
-   founding moot has been told the tree may still carry placeholder Proofdelve
-   identity to replace. Then **STOP.** Do not port the fleet; that is Sitting B.
-
-If the probe is not green, Sitting A ends at step 8. A red wall proof on the
-shared machine is the one outcome the whole plan is built to catch early, and it
-is a complete and correct place to stop.
+If the wall proof is not green, Sitting A ends at step 9 — return to step 7 and
+extend the mask, or stop. A red wall proof on the shared machine is the one outcome
+the whole plan is built to catch early, and it is a complete and correct place to
+stop.
 
 ---
 
@@ -85,10 +94,23 @@ that work paid for it.
 
 ## Non-negotiable properties
 
+0. **A MODEL NEVER RUNS THIS PROBE, and never reads a production secret.** This is
+   the correction from the 2026-09-22 stall: the Regent (a model) drove the probe
+   itself, reading real credential bytes into its context, and the safety
+   classifier halted it — correctly, because a model reading production secret
+   *contents*, even to check a mask, is both a classifier trigger and something you
+   never want the founding model doing. So: **the Regent authors the probe as a
+   committed shell script; the Overseer runs it in a plain unmasked terminal; the
+   script emits only a PASS/FAIL verdict table (byte counts as bare numbers, never
+   file contents) to a file; the Regent/model reads only that verdict file.** No
+   `cat <secret>` is ever issued by the model, and no secret's contents ever enter
+   a model's context.
+
 1. **Run from an unmasked host shell. No model in the loop.** A model cannot probe
    its own leash — asked to read a forbidden file it refuses on manners before
    enforcement is ever consulted, and a refusal reads identical to a wall. The
-   probe issues the reads and writes itself, from a shell, and counts bytes.
+   script issues the reads and writes itself, from the Overseer's shell, and counts
+   bytes.
 
 2. **Run from an HONEST context — not inside another mask.** This is the scar that
    matters most for the same-machine case. In the production civilization, a probe

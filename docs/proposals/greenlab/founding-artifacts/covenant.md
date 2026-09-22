@@ -63,25 +63,35 @@ Greenlab's.** This isolation is the entire basis on which the same-machine risk
 was accepted (`../01-threat-model-and-boundary.md`), and it does not move by
 amendment.
 
-Concretely, enforced by the masks the machinery ports unchanged:
+**Enforced by masks the founding BUILDS — not by Proofdelve's masks unchanged.**
+Measured 2026-09-22 (P7): Proofdelve's `seat-sandbox.sh` masks a seat's *own*
+repo secrets and binds `$HOME` read-only-but-readable; it does nothing about a
+sibling civilization's secrets on the same disk, and it leaves `~/.local/state`
+writable. So the isolation below is a production-masking block the founding adds
+to Greenlab's own `seat-sandbox.sh` (full build target: `mask-extension-spec.md`):
 
-1. Production secrets (every `.env*` across the customer repos, `~/.ssh`,
-   `~/.aws`, the production `civilization.json`) are masked to `/dev/null` in every
-   Greenlab seat — masked, not read-only, so a byte count returns zero under every
-   spelling.
-2. Production repositories are bound read-only or absent in every Greenlab seat; a
-   Greenlab Forge cannot even read a customer repo it has no business in.
-3. Greenlab uses a **separate outbound credential set** the production civilization
-   never sees, and never sees the production credentials. The Effect Gateway (§5)
-   holds Greenlab's; the reasoning seats hold none.
-4. A Greenlab seat is kernel-refused from launching a production seat and vice
+1. Production secrets are masked to `/dev/null` (byte count zero under every
+   spelling) in every Greenlab seat: every customer repo's `.env*`,
+   `~/.claude/.credentials.json`, `~/.claude/civilization.json`, `~/.codex/auth.json`,
+   `~/.ssh/*`, `~/.aws/*` — enumerated from the production registry at build time.
+2. Production repositories are bound **absent** (empty tmpfs), not merely
+   read-only, in every Greenlab seat; a Greenlab seat has no business reading a
+   customer repo at all.
+3. `~/.local/state` is isolated: Greenlab seats get their own state root, and the
+   production fleet's state (HALT file, locks) is not writable or visible to a
+   Greenlab seat. This closes cross-civ *interference*, not just disclosure.
+4. Greenlab uses a **separate outbound credential set** in a Greenlab-specific
+   path, held only by the Effect Gateway (§5); the reasoning seats hold none, and
+   production credentials are masked from every Greenlab seat.
+5. A Greenlab seat is kernel-refused from launching a production seat and vice
    versa; the two registries name disjoint fort sets.
-5. Host-executed scripts — Greenlab's launchers, its `seat-sandbox.sh`, its
+6. Host-executed scripts — Greenlab's launchers, its `seat-sandbox.sh`, its
    `.git/config` and hooks — are kernel read-only to every Greenlab seat. Fewer
    guardrails on the work never lets a seat edit the machinery that sandboxes it.
 
-The founding gate (Sitting A) proves 1–4 by measurement — byte counts from a
-shell — before any Greenlab work runs.
+The founding gate (Sitting A) **builds** items 1–4, then **proves** them by
+measurement — byte counts from a shell, run by the Overseer or a standalone
+script and never by a model — before any Greenlab work runs.
 
 ## 5. The seats of the civilization
 

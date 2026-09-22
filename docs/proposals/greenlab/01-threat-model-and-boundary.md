@@ -60,40 +60,47 @@ secrets and cannot write the production repos.
 
 ## The mask non-negotiables (what does NOT relax at low stakes)
 
-These port from `fort/scripts/lib/seat-sandbox.sh` **unchanged**. Greenlab
-having fewer guardrails never touches any of them.
+These are **built** into Greenlab's own `seat-sandbox.sh` by the founding — they
+do **not** port from Proofdelve unchanged. Measured 2026-09-22 (P7,
+`founding-artifacts/mask-extension-spec.md`): Proofdelve's mask masks a seat's own
+repo secrets and binds `$HOME` read-only-but-readable, so applied as-is it leaves
+production `.env` (2135 bytes), `~/.claude/.credentials.json` (524),
+`~/.codex/auth.json` (4178), the production registry, and production repo files all
+readable from a Greenlab seat, and `~/.local/state` writable. The isolation below
+is the production-masking block the founding adds. Greenlab having fewer guardrails
+never touches any of it.
 
-1. **Production secrets masked to `/dev/null` in every Greenlab seat.** Not
-   read-only — masked, so a byte count returns zero under every spelling. This
-   is the existing `MASK_FILES` / secret-glob sweep, with its glob extended to
-   the production civilization's `.env*` across every customer repo on the disk,
-   not just Greenlab's own tree. The production civ's `civilization.json` and
-   this planning folder's real-secret neighbours are included.
-2. **Production repositories bound read-only or absent** in every Greenlab seat.
-   The cross-fort write refusal is already a measured property of the current
-   masks (core memory: `touch` fails in `/home/justin/dev/ForgeOs` and
-   `/home/justin/dev/longburn` from a masked Manyhalls Mayor). Greenlab extends
-   it so a Greenlab Forge cannot even *read* a customer repo it has no business
-   in.
-3. **`~/.ssh`, `~/.aws` masked; the production `~/.codex` / `~/.claude`
-   credentials invisible.** Greenlab uses a **separate credential set** the
-   production civ never sees, and the production creds a Greenlab seat never
-   sees. A greenfield experiment must be unable to push with a production key or
-   spend against a production billing account. This is the effect gateway's job
-   (04, and the founder-gateway in 05 Phase 4): it holds Greenlab's own outbound
-   credentials, and the reasoning seats hold none.
-4. **Cross-civilization launch refusal.** A Greenlab seat is kernel-refused from
+1. **Production secrets masked to `/dev/null` in every Greenlab seat.** Byte count
+   zero under every spelling. The set (enumerated from the production registry at
+   build time): every customer repo's `.env*`, `~/.claude/.credentials.json`,
+   `~/.claude/civilization.json`, `~/.codex/auth.json`, `~/.ssh/*`, `~/.aws/*`.
+2. **Production repositories bound ABSENT** (empty tmpfs), not merely read-only, in
+   every Greenlab seat. The `touch`-refusal already holds (core memory); the new
+   requirement is that a Greenlab seat cannot even *read* a customer repo — absent
+   is cleaner than readable-with-secrets-masked and does not rely on glob
+   completeness.
+3. **`~/.local/state` isolated.** Greenlab seats get their own state root; the
+   production fleet's HALT file and locks are not writable or visible to a Greenlab
+   seat. This is the one finding that is cross-civ *interference*, not disclosure,
+   and the most important to close.
+4. **Separate credentials.** Greenlab uses its own credential set in a
+   Greenlab-specific path, held only by the Effect Gateway (04, Phase 4); the
+   reasoning seats hold none, and production credentials are masked from every
+   Greenlab seat. A greenfield experiment must be unable to push with a production
+   key or spend against a production billing account.
+5. **Cross-civilization launch refusal.** A Greenlab seat is kernel-refused from
    launching a production seat and vice versa. This is the existing `FORT_MASKED`
    marker plus registry-scoping: a masked seat aborts at preflight, and the two
    registries (`~/.claude/civilization.json` vs `~/.claude/greenlab.json`) name
    disjoint fort sets. The `fort-init` factory already reads `FORT_REGISTRY`;
    the enforcement is that a Greenlab launcher resolves only the Greenlab
    registry and a production launcher only the production one.
-5. **Host-executed scripts stay kernel read-only to every seat.** A sandbox is
+6. **Host-executed scripts stay kernel read-only to every seat.** A sandbox is
    only as strong as the script that builds it. Greenlab's launchers, its
-   `seat-sandbox.sh`, its `.git/config` and hooks are read-only to every Greenlab
-   seat exactly as they are in production. Fewer guardrails on the *work* never
-   means a seat can edit the machinery that sandboxes it.
+   `seat-sandbox.sh` (including the production-masking block above), its
+   `.git/config` and hooks are read-only to every Greenlab seat exactly as they
+   are in production. Fewer guardrails on the *work* never means a seat can edit
+   the machinery that sandboxes it.
 
 ## What DOES relax
 
