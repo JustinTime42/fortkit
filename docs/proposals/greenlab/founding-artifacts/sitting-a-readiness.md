@@ -19,18 +19,16 @@ Regent executes, Overseer present and signs the gate.
 The prep band is complete. The tree is staged to run against a spec, not a
 conversation.
 
-## 2. Decisions to LOCK before the sitting (Phase 0)
+## 2. Phase 0 decisions — LOCKED (Overseer, 2026-09-22)
 
-These are the Overseer's to settle at or before the start. The artifacts use
-working values; confirm or change them:
+- [x] **Registry path:** `~/.claude/greenlab.json` (disjoint from
+      `~/.claude/civilization.json`). Confirmed.
+- [x] **Capital repo location:** `~/dev/greenlab`. Confirmed.
+- [x] **Civilization name:** DEFERRED to the founding moot (A7). "Greenlab" stays a
+      placeholder through Sitting A; the identity strip and the moot failsafe both
+      assume placeholders may survive.
 
-- [ ] **Registry path.** Working value: `~/.claude/greenlab.json`. Must be disjoint
-      from `~/.claude/civilization.json`.
-- [ ] **Capital repo location.** Not yet chosen. (Working suggestion `~/dev/greenlab`;
-      the Overseer decides.)
-- [ ] **Civilization name.** "Greenlab" is a placeholder throughout. It may be named
-      now or deferred to the founding moot (A7); the identity strip and the moot
-      failsafe both assume placeholders may survive, so deferring is safe.
+Phase 0 is settled. The sitting may start.
 
 ## 3. Have open / on hand
 
