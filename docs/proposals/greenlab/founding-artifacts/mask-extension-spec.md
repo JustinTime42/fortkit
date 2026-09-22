@@ -101,3 +101,53 @@ own repo secrets, the standard fort mask) port from Proofdelve as before — tho
 were never the gap. The gap is exclusively the sibling-civilization surface, which
 Proofdelve's mask never had reason to consider because Proofdelve has no sibling on
 its disk it must be blind to.
+
+---
+
+## Amendment 2026-09-22 (Overseer approval on `fortkit-2y2t.13`, Sitting A relaunch)
+
+Appended, not edited in: the text above is what was proposed, and this is what
+was approved. Where they differ, this section governs.
+
+**A1. `$HOME` is inverted, not enumerated.** Items 1–3 above list what to mask.
+A list misses whatever it does not name, and on this host it did: credential
+surfaces outside it include `~/.azure`, `~/.config/proofdelve`, `~/.gnupg`,
+`~/.claude.json` and key files in `$HOME` itself (directory names listed during
+the relaunch; no content was opened), and 21 of the 25 repositories under `~/dev`
+are not in the production registry. So every Greenlab seat mask:
+
+- mounts an **empty tmpfs over `$HOME`**;
+- binds back **read-only** only the toolchains a seat needs to build and test
+  (node via nvm, dotnet, npm and similar caches), each named in the lib;
+- binds back **read-write** only `~/dev/greenlab`, `~/dev/greenlab-worktrees`, and
+  a Greenlab-only state root under `~/.local/state/greenlab/`;
+- keeps Proofdelve's per-repo secret sweep and `/run/user` socket masks
+  (tq8s) unchanged inside that.
+
+Production repositories, `~/.local/state/proofdelve-fleet`, the production
+registry, `~/.ssh`, `~/.aws`, and every credential are then **absent by
+construction**, and item 2's "absent, not read-only" holds for every repo on the
+disk rather than only for the registry's four. The wall-proof still enumerates
+the production surface from live host state, so the claim is measured, not
+inferred from the design.
+
+**A2. Model-runtime authentication is deferred to Sitting B/C.** Item 1 masks
+`~/.claude/.credentials.json` and `~/.codex/auth.json`, which are the files the
+claude and codex runtimes authenticate with. Under A1 all of production
+`~/.claude` and `~/.codex` is absent. **After Sitting A no Greenlab seat can run
+a model**, and that is deliberate: Sitting A's wall-proof is a no-model script.
+Before the fleet runs, Greenlab gets its own runtime auth (its own
+`CLAUDE_CONFIG_DIR` / `CODEX_HOME` login, or open models per `04-open-models`),
+decided then and proven by the same probe.
+
+**A3. The wall-proof gains two assertion rows.**
+- **E. Session bus.** From each Greenlab mask, `systemd-run --user`,
+  `systemctl --user` and `busctl --user` must fail. Any one succeeding starts an
+  unmasked host process and voids every other row.
+- **F. The `/proc` route.** From each Greenlab mask, a production surface read via
+  `/proc/<host pid>/root/<path>` must return 0 bytes, with a twin (an unmasked
+  neutral file via the same route) proving the route is reached and denied.
+  Measured closed on this host during the relaunch, on decoy files only, because
+  bwrap's user namespace denies `/proc/<pid>/root` and `environ` across it.
+  It rests on a kernel property, not on a mask line, which is why it gets its
+  own row.
