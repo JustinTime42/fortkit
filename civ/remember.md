@@ -4686,3 +4686,123 @@ should name the seat if it matters who learned it.
   previous sitting's closing line uncommitted-modified in all four forts.
   Swept the two quiet forts; Proofdelve's in the sitting's records commit
   with every line's author named; the capital's below.
+
+- 2026-09-22 (edict 52, the Proofdelve signed-landing docket — j3ga, ohsy, 1kak,
+  yz7w, the ubgx.3 residue and the ip9z rider): **A HARNESS'S OWN CONTRACT IS
+  PART OF ITS INTERFACE, AND COPYING ANOTHER HARNESS'S IDIOM INTO IT CAN TURN
+  MAIN RED.** `scripts/supervisor-harness.sh` ends `[ $fail = 0 ] && [ $notrun =
+  0 ]` — stricter than the e2e harness's `[ $fail -eq 0 ]`, and right, because a
+  control that did not run has established nothing and "NOT RUN" reads like
+  diligence. I added two inversions behind an env var with a `skip` fallback,
+  which is the e2e harness's idiom exactly; the verifier cannot set that
+  variable, so the step came back 40 pass / 0 fail / **1 NOT RUN** and exited 1.
+  **Read the last two lines of a harness before adding a case to it**, and when
+  a control needs a "before" file, DERIVE IT FROM GIT at a pinned sha rather
+  than asking an operator for it.
+
+- 2026-09-22: **`$here` IS NOT THE REPO FOR A HARNESS THE VERIFIER RUNS.**
+  Proofdelve's `verify-impl.sh` has `harness_path()`, which copies the harness to
+  a temp directory OUTSIDE the repo and runs it from there — which is exactly why
+  it also passes `SUPERVISOR_SH=<absolute path>`. So `"$(dirname "$0")/.."`
+  resolves to the repo for a hand run and to nothing for a verifier run, and my
+  first repair of the entry above passed bare and refused at exit 3 under the
+  verifier. The shape that works: try candidate roots in order — **the SUBJECT's
+  own repo first**, then `$here`, then the cwd's toplevel — and then ASSERT THE
+  BLOB CARRIES THE DEFECT it is supposed to carry, because an abbreviated sha can
+  in principle resolve in some other repository a candidate points at and a
+  "before" file lacking the before-spelling makes every inversion pass for the
+  wrong reason. **Test a harness change in all three invocation shapes**: bare
+  from the repo root, copied outside the repo with the subject passed in, and
+  the whole-file inversion.
+
+- 2026-09-22: **I MIXED TWO BEADS IN ONE COMMIT AGAIN, SECOND SIGHTING OF THE
+  2026-09-02 SCAR, AND THE MECHANISM IS `git add <file>` WHEN THE FILE ALREADY
+  CARRIES THE NEXT ITEM'S EDITS.** I applied item 5 to `fleet.sh` before item 4
+  was committed, so item 4's path-scoped `git add fort/scripts/fleet.sh` swept
+  six of item 5's lines in. Path-scoped staging is not enough when two items
+  share a file: **the unit that must not overlap is the FILE STATE, not the path
+  list.** What made it recoverable in two minutes was a scratchpad snapshot of
+  every intermediate state (`fleet-pre-<bead>.sh` per item), which let me
+  `git reset HEAD~1`, restore the item-4-only file byte-for-byte and recommit —
+  and then restore item 5's state and carry on. **Snapshot before each item, and
+  commit an item before touching its file for the next one.** Rewriting a
+  two-minute-old unpushed commit is the right call here and it is disclosed:
+  rule 4's per-item attribution is the thing being protected, and appending a
+  correction would have left a commit whose message does not describe its
+  content.
+
+- 2026-09-22: **A DOCKET CAN BE RIGHT ABOUT A DEFECT, RIGHT ABOUT ITS LOCATION,
+  AND STILL BE NAMING ONE OF TWO SITES — AND THE BEAD'S OWN `Touches:` LINE IS
+  WHERE THE OTHER ONE IS.** ip9z finding 8 quotes the string "HELD — a fleet run
+  is live". The docket re-derived it to `fleet-supervisor.sh:218`, which carries
+  the identical `flock -n 9 … 9>>` probe and takes the run-is-live branch
+  SILENTLY; the quoted literal is `fort/scripts/status.sh:76`, which the bead's
+  `Touches:` names and the docket's file set did not. Fixing only the supervisor
+  would have repaired the half nobody reads. **Read a bead's `Touches:` against
+  the docket's file set before accepting the file set**, and when a finding
+  quotes a string, grep the whole tree for that string rather than for the file
+  the re-derivation named.
+
+- 2026-09-22: **`flock -n -s -E 75 <fd>` WITH THE DESCRIPTOR OPENED READ-ONLY IS
+  THE CORRECT LIVENESS PROBE FOR A LOCK YOU DO NOT OWN**, and `9>>` is not.
+  `9>>` needs WRITE permission on the lock file, so a read-only state directory
+  or a lock file a seat cannot write makes the redirection fail, the `if` false,
+  and the probe answer "held" — a false "live" that is silent and indefinite.
+  Measured on this host: held → 75, free → 0, **a failed redirection → 1**, so
+  `-E` is what makes the three distinguishable (the 2026-08-12 `flock -E` lesson,
+  third sighting). A shared lock on a read-only fd still conflicts with an
+  exclusive one, which is `scripts/quiescent.sh`'s idiom. **And an ABSENT lock
+  file is not an error**: the thing that creates it is the thing that takes it,
+  so refusing a virgin state directory breaks the first run.
+
+- 2026-09-22: **CAP THE SHIFT, NEVER ITS RESULT.** `mins=$((4 << (n - 1)))`
+  followed by `[ "$mins" -gt 60 ] && mins=60` performs the shift first, and bash
+  arithmetic is signed 64-bit: measured, `4 << 61` is `-9223372036854775808` and
+  `4 << 62` is `0`. Neither is greater than 60, so the cap never fires and a
+  back-off window lands in the PAST — at which point every firing escapes its own
+  window and emits the event the back-off exists to suppress, every two minutes,
+  forever. The general shape: **a guard applied after an operation that can
+  overflow is a guard the overflow walks through**, and the failure is silent,
+  permanent and looks like the mechanism working.
+
+- 2026-09-22: **A COUNT WRITTEN INTO PROSE IN FOUR PLACES GOES STALE IN THREE OF
+  THEM.** Three comments in `fleet.sh` said "the three questions" about a
+  predicate that has asked FOUR since a review added one, and I propagated the
+  wrong number into two NEW comments of my own before the item that fixes it came
+  up. The repair is not to correct the count: it is to **enumerate the questions
+  once, where they are asked, and make every other site name the function instead
+  of a number.** Same class as the drift-watcher's identity key and the pinned
+  spelling: if a fact is written in N places, N-1 of them are wrong the moment it
+  moves.
+
+- 2026-09-22: **THREE OF A DOCKET'S ITEMS WERE ALREADY DONE, AND THE DOCKET SAID
+  TO CHECK RATHER THAN ASSERTING THEY WERE NOT.** `ubgx.3` item 2.5 asked for the
+  word "halted" in a comment; `git log -S"HALTED between the two commits"` shows
+  `e715ba56` added it before the docket was drafted. The `--stable` commentary the
+  bead calls "the previous, weaker rule" is the RECORD of the correction that
+  retired that rule. "LATEST gate.approved" appears nowhere. **`git log -S<string>
+  -- <file>` settles "was this reworded or did it move" in one command**, and an
+  already-done finding is recorded as a verification in the commit message, never
+  silently skipped — otherwise the next reader files it again.
+
+- 2026-09-22: **A STATE TOKEN DERIVED FROM THE FILESYSTEM CANNOT BE READ BY A
+  HELPER THAT READS THE STORED ONE.** Proofdelve's `worker_state()` derives
+  `running`/`launching`/`finished`/`orphaned` from files and STORES the rest, so
+  the e2e harness's `wstate()` — which reads the stored token — is EMPTY for a
+  live worker. My scenario-59 fixture asserted `wstate == running` and read a
+  genuinely held Forge slot as unheld, which would have made the case vacuous.
+  The facts to assert instead: the worker directory exists, it has no `exit`
+  file, and the run's own reap line says RUNNING. **Before asserting a state
+  token in a harness, check whether that token is stored or derived.**
+
+- 2026-09-22: **THE MINI-RUNNER FOR ONE E2E SCENARIO MUST EXTRACT EVERY TOP-LEVEL
+  HELPER, NOT JUST THE SETUP HEAD.** My first cut took lines 1..`mkbd` and the
+  scenario, and died on `run_to_escalate: command not found` — helpers defined
+  BETWEEN the head and the scenario (`upto_review`, `wstate`, `merged_in`,
+  `dispatched_count`, `unpoison`, `run_to_escalate`, `keep_approve`, `pendings`).
+  The working `mkmini.py`: head through the bare `mkbd` line, then EVERY
+  `^name() {` … `^}` block between there and the scenario, then the scenario and
+  a RESULT line — and it REFUSES when it extracts no helpers. Same reasoning as
+  the 2026-09-09 "extract every definition, then `bash -n`" rule, one level up.
+  Also: `ROOT=<fort>` must be passed, or the harness resolves its launcher from
+  the mini-runner's own directory and refuses.
