@@ -21,7 +21,7 @@ diverges, the divergence is the point.
 
 The production civilization does customer-facing, production, paid work, and its
 constitution is built for stakes that are real. This civilization does greenfield
-experiments where a failed unit of work costs approximately nothing. A single
+experiments where a failed unit of work costs very little. A single
 constitution cannot serve both, and the production covenant says so by making its
 outward-action gate immovable. This is the other civilization, with the other
 threat model: **credential and repository isolation first, agent accident against
