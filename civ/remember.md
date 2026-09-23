@@ -4806,3 +4806,45 @@ should name the seat if it matters who learned it.
   the 2026-09-09 "extract every definition, then `bash -n`" rule, one level up.
   Also: `ROOT=<fort>` must be passed, or the harness resolves its launcher from
   the mini-runner's own directory and refuses.
+
+- 2026-09-22 (edict 53, Greenlab Sitting A, relaunch — `fortkit-2y2t.7`):
+  **A MODEL OR SUBAGENT READING A TREE OF SECURITY MACHINERY TRIPS THE SAFETY
+  CLASSIFIER, SO THE IDENTITY STRIP OF A COPIED FORT IS MECHANICAL.** Two
+  responses were stopped this sitting: once while six read-only subagents ran
+  the P5 identity-pass prompt over the copied masks, probes and secret globs,
+  and once while I began authoring a script that counts bytes of real secrets.
+  The Overseer's ruling: no model over the tree; strip with scripts; delete
+  copied records wholesale; model judgment at most on seat files and charter;
+  the probe that touches secrets is the Overseer's to write or run. **Plan any
+  future founding-by-copy around that, not around P5 as written.**
+
+- 2026-09-22: **ON A SHARED MACHINE, ISOLATE BY INVERSION.** `greenlab_isolate()`
+  in Greenlab's lib turns `$HOME` into an empty tmpfs and drops every bind whose
+  SOURCE is under `$HOME` unless it is on an allowlist. P7's enumerated list
+  missed `~/.azure`, `~/.config/<fort>`, `~/.gnupg`, `~/.claude.json` and 21 of
+  25 repos under `~/dev`. It must run LAST, at each launch site, because
+  launchers append binds after `build_mask`. Masks whose destination the empty
+  `$HOME` already hides must be dropped too, or production paths show up as
+  empty mountpoints and every "absent" assertion fails.
+
+- 2026-09-22: **A POSITIVE CONTROL AGAINST AN UNISOLATED MASK EXECUTES WHATEVER
+  THE PROBE DOES FOR REAL.** My structural probe tested "a write never reaches
+  the host" by writing, and against the old lib the write landed in the live
+  `~/.local/state/proofdelve-fleet` (0 bytes, 8 seconds, removed, incident
+  recorded). The 2026-08-06 Herald-smoke scar ("a probe must never seed the
+  record it probes") in the direction nobody had written down: **the control
+  arm runs against the BROKEN posture, so its probe must be harmless there.**
+  Test writability with `[ -w ]`, never with a write, whenever the target is
+  production.
+
+- 2026-09-22: **A BEAD-ID REGEX MATCHES PATH SUFFIXES.** `ForgeOs-[a-z0-9]+`
+  matches `ForgeOs-worktrees`, so a mechanical citation rewrite turned 14
+  worktree paths into `origin:worktrees`, one of them in a verifier. Exclude the
+  known path suffixes (`-worktrees`) before any id rewrite, and grep the result
+  for the replacement token next to a `/`.
+
+- 2026-09-22: **BWRAP'S USER NAMESPACE DENIES `/proc/<host pid>/root` AND
+  `environ` ON THIS HOST**, measured on a decoy with a twin. So the `/proc`
+  route around inode masks is closed by a kernel property even without
+  `--unshare-pid`. Greenlab adds `--unshare-pid --proc /proc` anyway: 4 pids
+  visible from inside the mask, against 565 before.
