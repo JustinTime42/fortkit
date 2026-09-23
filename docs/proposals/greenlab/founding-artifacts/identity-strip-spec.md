@@ -105,3 +105,13 @@ And because neither layer is proven complete, the founding moot (A7) is told the
 tree may still carry placeholder Proofdelve identity to replace — the failsafe of
 last resort, turning residual risk into a task the founding citizens own rather
 than an assumption that the strip was total.
+
+---
+
+## Amendment 2026-09-22 (Sitting A lessons): mechanical-first; the model pass is a fallback
+
+Appended after Sitting A proved the point. Two corrections govern over the body above where they differ:
+
+- **The strip is mechanical-first, and mechanical was enough.** Safelist substitution + deleting the copied records wholesale + regex-genericizing residual `ForgeOs-`/name tokens took the flagged set from **5,275 to 60** with no model involved. The 60 residual were the `ForgeOS` *product* name (deferred to Sitting B) and a handful of others — none blocking.
+- **Do NOT run a model or subagents over the copied tree.** It tripped the safety classifier twice, because the tree is security machinery (masks, probes, secret globs, credential paths) and a model ingesting that at volume reads as credential/bypass material. The P5 LLM pass is a **fallback for a small set of PROSE files only** (seat files, charter) and in practice was **not needed** — the security machinery has no personality; it ports as-is.
+- **Records are deleted wholesale, not stripped.** Handoffs, annals, memory/facts, events, `.beads`, moot, transcripts do not travel (SO 12); deleting them removes most flags AND the incident content that provokes the classifier. (Sitting A confirmed step 3 already excluded them; only 8 Keep test fixtures slipped in and were deleted.)

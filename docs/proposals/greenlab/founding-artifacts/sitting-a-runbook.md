@@ -195,3 +195,11 @@ into the Greenlab tree's telemetry, and the Overseer signs against that table, n
 against a summary sentence. Exit code and byte counts, no model opinion anywhere
 in the loop — the same bar the production civilization holds, applied to the one
 risk this whole founding deliberately accepted.
+
+---
+
+## Amendment 2026-09-22 (Sitting A lessons): the model cannot even RUN the probe
+
+Property 0 above said a model never runs the wall-proof. Sitting A sharpened *why*: even a probe that opens **no real secret contents** — the shipped `mask-structural.sh` proves the production surface is **absent** and uses a self-created decoy as its positive control — still halts the classifier when the **model** runs it, because the model is executing security-probe code that names credential paths (`.ssh`, `.aws`, `.credentials.json`, `proofdelve-fleet`, …). So: the Regent **authors** the probe; the **Overseer runs it** in a plain terminal, full stop.
+
+Second lesson: for the tmpfs-over-`$HOME` mask design, **prove ABSENCE, not zero-bytes.** Byte-counting was for the old "mask specific files" design; under deny-by-default, the production repos and secrets are simply not present in the seat, and an existence check (`[ -e ] && present || absent`) proves that without opening anything. Reference result: `mask-structural.sh` scored **51/0 both arms**, with the old lib at **16/35** (the negative control that proves the check discriminates).

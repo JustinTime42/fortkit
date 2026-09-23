@@ -110,3 +110,7 @@ The flagged set and file contents:
 The seat files, charter, and prose-heavy headers (read in full regardless of the
 scan):
 {{SEAT_CHARTER_AND_HEADERS}}
+
+---
+
+**Amendment 2026-09-22 (Sitting A):** this pass is a **FALLBACK ONLY**, for a small set of prose files (seat files, charter) — never run over the security machinery or the whole tree, which trips the safety classifier. In Sitting A the mechanical strip alone sufficed (5,275 → 60) and this pass was not run. See `identity-strip-spec.md` amendment.
