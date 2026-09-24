@@ -4955,3 +4955,45 @@ should name the seat if it matters who learned it.
   failure, never offer a route; and a verifier a model can satisfy by deletion is
   not a gate.** Also: plot-det passed on the SMALL rung first time, after plot-ljp
   failed three times on the same model -- one bead is not a capability measurement.
+
+- 2026-09-24 (edict 56, Greenlab Sitting D — `fortkit-2y2t.11`, the Effect
+  Gateway): **`node --test <file>` REPORTS AN IMPORT-ONLY FILE AS ONE PASSING
+  TEST.** The runner wraps each file in a subtest named after its path, so
+  "# tests 1 / # pass 1" for a file that registers nothing (Node v24.14.0). Run
+  the file DIRECTLY (`node --test-reporter=tap <file>`): no count line at all for
+  an empty file, "# tests N" for a real one. Greenlab's registration check uses
+  the direct form and carries the runner form as a variant that must go red.
+
+- 2026-09-24: **THE CAPITAL'S TOOL-LAYER DENY RESOLVES A RELATIVE PATH AGAINST
+  THE SESSION'S WORKSPACE, NOT THE COMMAND'S cwd.** `cp bin/governor ...` after
+  `cd ~/dev/greenlab` was refused as `/home/justin/dev/fortkit/bin/governor`.
+  Nothing ran. For another repo's `bin/`, use absolute paths.
+
+- 2026-09-24: **AF_UNIX SOCKET PATHS ARE CAPPED AT 107 BYTES, AND THE
+  SCRATCHPAD PATH IS LONGER.** bind() fails and a daemon dies with the reason only
+  in its log. Put sockets in a short `mktemp -d /tmp/xx.XXXXXX` and refuse loudly
+  on length (`tools/gateway/provider.sh` does).
+
+- 2026-09-24: **A NETWORK NAMESPACE DOES NOT HIDE A PATHNAME UNIX SOCKET, BUT
+  IT DOES SCOPE AN ABSTRACT ONE, AND THE claude/codex ARMS SHARE THE HOST
+  NETWORK.** So a provider meant for one seat listens on a PATHNAME socket under
+  `$HOME` (absent in every other Greenlab mask by greenlab_isolate) and bound
+  into that seat alone. TCP and abstract sockets would both be reachable from
+  the host-network arms. Connecting to a socket on a read-only mount works
+  (sockets are exempt from the read-only-fs write check), so the socket
+  directory can be bound read-only.
+
+- 2026-09-24: **"CONFIRMED ABSENT" IS ONLY SAFE TO RELEASE AGAINST IF THE
+  LOOKUP FENCES THE ID.** A lookup that finds nothing says nothing about a copy
+  of the request still in flight. The sandbox provider's lookup(fence=true)
+  records the id as never-executable, and the Gateway releases only on
+  found=false AND fenced=true. Absence from silence is never absence.
+
+- 2026-09-24: **A DISCRIMINATION VARIANT OF A MASK LIB MUST LIVE WHERE THE MASK
+  CAN SEE IT, AND ITS CHANGE MUST LAND WHERE A LAUNCHER'S WOULD.** Two failed
+  attempts before the clean one: a bind placed before isolation's `$HOME` tmpfs
+  (bwrap never started, all 73 rows failed for one reason) and a lib under /tmp
+  (the arm execs a sibling script from the lib's directory, and /tmp is private
+  in the mask). Under the capital's gitignored `forts/`, appended after
+  isolation, the variant failed exactly the 3 rows it should. A variant that
+  fails EVERY row has shown nothing.
