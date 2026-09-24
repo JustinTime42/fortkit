@@ -5023,3 +5023,26 @@ should name the seat if it matters who learned it.
   production tracker. The renderer for existing forts is
   fort-init's substitution set plus the civ roster; prove it reproduces the
   current file byte-for-byte before rendering a change.
+
+- 2026-09-24 (edict 58, the Sitting D review fix — `fortkit-2y2t.31`): **A
+  RESERVATION KEYED ON A STABLE OPERATION ID IS UNSAFE WHEN ANY PATH RELEASES IT
+  BEFORE THE DURABLE RECORD EXISTS.** Greenlab's gateway reused the op id as the
+  governor reservation id, and the governor treated "already closed" as
+  "already reserved", so a resubmission held nothing and settled nothing. Key
+  money on the ATTEMPT (a fresh nonce) and let the provider-facing id stay
+  stable. Refuse a closed id at the ledger as a belt: each layer closes it alone
+  (measured 45/0 and fail-closed 70). **Identity for idempotency and identity for
+  money are different keys.**
+
+- 2026-09-24: **`Decimal("NaN")` AND `Decimal("sNaN")` PARSE, AND THEN RAISE
+  `InvalidOperation` ON THE FIRST `<` COMPARISON** (Infinity parses and compares).
+  A `try: Decimal(x) except InvalidOperation` guard therefore lets them through to
+  a traceback. Test `d.is_finite()` after parsing.
+
+- 2026-09-24: **A REAL FAILURE OF A REAL LEDGER, WITHOUT A STUB:** `chmod 444`
+  the governor's ledger file. The lock file beside it stays writable, reads
+  succeed, and the append raises, so `governor release` exits 70 for real. That
+  is how the orphan-sweep "release rc ignored" case was made to fail honestly.
+
+- 2026-09-24: **Greenlab plot's `emit.sh` is positional**, `emit.sh <category>
+  <detail> [-a actor] [-s seat] [-t target]`. There is no `-c`.
