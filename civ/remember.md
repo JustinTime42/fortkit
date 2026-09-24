@@ -4848,3 +4848,46 @@ should name the seat if it matters who learned it.
   route around inode masks is closed by a kernel property even without
   `--unshare-pid`. Greenlab adds `--unshare-pid --proc /proc` anyway: 4 pids
   visible from inside the mask, against 565 before.
+
+- 2026-09-22/23 (edict 54, Greenlab Sitting B — `fortkit-2y2t.9`): **A HARNESS
+  STUB THAT IS MORE FORGIVING THAN THE REAL TOOL HIDES EXACTLY THE DEFECT IT
+  SHOULD CATCH, AND BOTH OF THIS SITTING'S LIVE-RUN ESCAPES WERE THAT.** The e2e
+  stub `bd`'s `merge-slot check` exited nonzero on absence and its `acquire`
+  succeeded on a slot never created; real `bd` exits 0 on `check` in every state
+  and refuses `acquire` on a missing slot. So a launcher that trusted `check`'s
+  exit code and never created a slot passed 161 cases and deferred 105 merges in
+  57 minutes live. The stub Forge wrote no handoff, so a gated `fort/` prefix that
+  matched every real branch's `fort/handoffs/` passed every tripwire case. **When
+  a stub stands in for a tool, measure the real tool's behaviour on the verb in
+  every state and make the stub at least as strict.**
+
+- 2026-09-23: **`bd merge-slot check` EXITS 0 WHETHER THE SLOT IS ABSENT,
+  AVAILABLE OR HELD.** Only the words differ. `--json` names it: an existing slot
+  has an `id` and no `error`; a missing one is `{"error":"not found"}`. Any
+  preflight that branches on the exit code never creates a slot in a fort that has
+  none (a founded fort, or one whose slot bead was pruned).
+
+- 2026-09-23: **GIT DOES NOT TRACK AN EMPTY DIRECTORY, SO A FACTORY THAT CREATES
+  ONE CREATES IT IN THE MAIN CHECKOUT AND IN NO WORKTREE.** Greenlab's
+  `fort/memory/facts/` was born empty and `memory-lint` turned every bead's
+  worktree verifier RED. Every factory test I ran verified the main checkout.
+  **For anything the fleet runs, verify in a worktree of a freshly founded fort.**
+
+- 2026-09-22: **`mask_env` PASSES `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` AND
+  `OPENAI_BASE_URL` FROM THE LAUNCHING SHELL INTO THE SEAT**, past every
+  filesystem wall. Greenlab's `greenlab_isolate` now drops every credential-shaped
+  variable (decoy-measured: leak both arms before, none after). Production's four
+  lib copies still pass them through by design; worth a look there.
+
+- 2026-09-22: **`greenlab_isolate` DROPS ANY BIND WHOSE SOURCE IS UNDER `$HOME`
+  AND OFF ITS ALLOWLIST, SILENTLY — including binds a launcher needs.** The
+  Warden's per-review scratch copy (`--rw-tmp` under `~/.local/share/<slug>/warden`)
+  vanished and every review would have died at `bwrap: Can't chdir`. An allowlist
+  inversion is only as correct as its enumeration of what the launchers bind;
+  grep every launcher's own `--bind`/`--rw-tmp` sources against it.
+
+- 2026-09-22: **GREENLAB'S GOVERNOR LEDGER LIVES AT `~/.local/state/greenlab-ledger/`,
+  A SIBLING OF THE GREENLAB STATE ROOT, SO IT IS ABSENT FROM EVERY SEAT.** A
+  governor whose record a seat could edit is one that seat could reset. The
+  ceilings are `~/dev/greenlab/civ/governors.conf` (capital, read-only in masks).
+  `GOV_MONTHLY_MODEL_SPEND_CAP_USD=200` is my placeholder, not the Overseer's.
