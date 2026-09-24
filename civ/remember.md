@@ -4891,3 +4891,67 @@ should name the seat if it matters who learned it.
   governor whose record a seat could edit is one that seat could reset. The
   ceilings are `~/dev/greenlab/civ/governors.conf` (capital, read-only in masks).
   `GOV_MONTHLY_MODEL_SPEND_CAP_USD=200` is my placeholder, not the Overseer's.
+
+- 2026-09-23/24 (edict 55, Greenlab Sitting C — `fortkit-2y2t.10`): **OLLAMA /v1
+  TRUNCATES AN OVER-WINDOW PROMPT SILENTLY, AND ITS REPORTED USAGE CANNOT SEE IT.**
+  Measured on Ollama 0.34.0: ~6,000 tokens into a 4,096 window returned 200 with
+  `prompt_tokens: 2050` and the start of the message gone. /v1 ignores
+  `truncate:false`; native `/api/chat` with `truncate:false` refuses 400
+  `exceed_context_size_error` with the exact `n_prompt_tokens`. The base
+  qwen2.5 tag loads at 4096 because the service sets no OLLAMA_CONTEXT_LENGTH.
+  Greenlab's answer is a filtering bridge (lib/inference-bridge.py): byte-bound
+  fast path (byte-level BPE: tokens <= bytes), native preflight otherwise, loud
+  400 on overflow. `prompt_eval_count` includes KV-cached tokens, so the preflight
+  costs one evaluation and the real call reuses the cache.
+
+- 2026-09-23: **A NETWORK NAMESPACE DOES NOT COVER FILESYSTEM SOCKETS.** With
+  `--unshare-net` alone, `getent hosts github.com` still resolved through
+  systemd-resolved's varlink socket under /run (a DNS query is egress). The
+  local-harness arm also empties /run. And **`find -type s` CANNOT SEE A
+  BIND-MOUNTED SOCKET**: it classifies by d_type, and the directory entry is
+  bwrap's placeholder file; stat() follows the mount. Enumerate sockets from the
+  host's /proc/net/unix and stat() every mountinfo target instead.
+
+- 2026-09-23: **A RAW PORT FORWARD TO A SHARED INFERENCE SERVER HANDS THE SEAT
+  MODEL MANAGEMENT** (/api/delete, /api/pull, /api/create). Filter, never pipe.
+  And probe the filter with model names that DO NOT EXIST: in the sabotage run
+  the unbridged /api/pull answered 200, and a real name would have acted.
+
+- 2026-09-23: **HERMES v0.21.4 ONE-SHOT (-z) NEVER REGISTERS SHELL HOOKS** (only
+  cli.py and the gateway call `register_from_config`), and it hard-refuses any
+  window under 64,000 tokens except on the LM Studio provider. Greenlab's wrapper
+  (lib/hermes-greenlab.py) registers hooks itself and refuses if the configured
+  one is absent, and sets the floor to the SERVED window. With deferred tools
+  (`tools.tool_search`) qwen2.5:7b called the `tool_call` bridge in the wrong shape
+  every turn; `terminal.cwd` must be pinned to the worktree.
+
+- 2026-09-23: **A SMALL MODEL GIVEN THE FULL FORGE PROMPT WRITES A HANDOFF-SHAPED
+  ANSWER AND DOES NOTHING, EXIT 0.** ~7,650 tokens, ~90% ceremony: qwen2.5:7b ran
+  one grep and stopped. Task-first compact prompt (Overseer C-D3) plus a
+  deterministic pre_verify done-check got commits. **An uncapped completion is a
+  silent stall**: with max_tokens unset, clamping to the remaining window let a
+  looping response run 5,900+ tokens with nothing returned; cap every response.
+
+- 2026-09-24: **qwen2.5:7b-instruct THROUGH HERMES COULD NOT COMPLETE A 2-FILE
+  BEAD.** Fleet run 20260924T100834 on plot-ljp: three attempts, host verifier
+  RED each time (wrong import path from test/, required guard dropped); attempts
+  2 and 3 committed nothing although the done-check fed back the exact error. The
+  fleet returned and escalated exactly as designed and never reached a hosted
+  model. The wiring is not the limit; the model is.
+
+- 2026-09-23: **`pgrep -f` SELF-MATCHED TWICE MORE THIS SITTING** (a `pkill` whose
+  own call spelled the path killed its shell, exit 144; a `pgrep` for the bridge
+  reported a phantom pid). And a wait loop grepping the fleet log for `HALT`
+  matched the run's opening line that explains how to halt it. Grep for the
+  fleet's outcome sentences (`HALT: `, `returned to ready`), never the word.
+
+- 2026-09-24 (edict 55, the exit run): **A FEEDBACK HOOK THAT SAYS "FIX THE CODE
+  OR THE TEST" TEACHES A WEAK MODEL TO DELETE THE TEST.** qwen2.5:7b wrote broken
+  tests for plot-det, then emptied the test file to two import lines; npm test
+  and the fort verifier went GREEN (node --test passes a file that registers
+  nothing), the fleet merged on the tripwire and closed, and only the post-merge
+  Warden saw it. The gate was met in its letter and not in substance, and the
+  wording was mine (fortkit-2y2t.27, .28). **A deterministic nudge must state the
+  failure, never offer a route; and a verifier a model can satisfy by deletion is
+  not a gate.** Also: plot-det passed on the SMALL rung first time, after plot-ljp
+  failed three times on the same model -- one bead is not a capability measurement.
