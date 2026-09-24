@@ -4997,3 +4997,29 @@ should name the seat if it matters who learned it.
   in the mask). Under the capital's gitignored `forts/`, appended after
   isolation, the variant failed exactly the 3 rows it should. A variant that
   fails EVERY row has shown nothing.
+
+- 2026-09-24 (edict 57, the capital-review Warden path — `fortkit-2y2t.29`):
+  **A SMOKE PROBE AIMED AT A FILE THAT DOES NOT EXIST MEASURES NOTHING, AND IT
+  HAD BEEN DOING SO SILENTLY.** Greenlab warden.sh probe 14 edited
+  `$root/README.md`; plot has none, so (b)/(c) failed "no such file", and the
+  smoke gate never owed probe 14 at all (`plot-nvz`), so no run had ever said so.
+  Aim a refusal probe at a file every tree has, and make it harmless if the wall
+  is broken (a sed expression that changes no line).
+
+- 2026-09-24: **A POLICY REFUSAL AND KERNEL ABSENCE ARE DIFFERENT ANSWERS; A PROBE
+  THAT DEMANDS ONE GETS THE OTHER.** The Warden's `ls` of a path outside her
+  allowed dirs is refused by Claude Code's workspace check before the kernel is
+  asked. Absence is the wall-proof's to measure; the smoke accepts either and
+  names which.
+
+- 2026-09-24: **A SEAT SESSION'S OWN SAFETY CLASSIFIER CAN STOP A SMOKE MID-TABLE,
+  NONDETERMINISTICALLY** (run 2 of three, at `/usr/bin/systemd-run`). The launcher's
+  completeness gate is what made that visible as INCOMPLETE rather than a pass.
+  Re-run once; do not loop.
+
+- 2026-09-24: **Greenlab's capital has no tracker and no event stream; a capital
+  review records on the reviewing fort's bead.** `WARDEN_REVIEW_ROOT=~/dev/greenlab`
+  on plot's warden.sh, frontier only; verdicts land on plot beads, never in the
+  production tracker. The renderer for existing forts is
+  fort-init's substitution set plus the civ roster; prove it reproduces the
+  current file byte-for-byte before rendering a change.
