@@ -71,3 +71,20 @@ The tree is built so the Overseer can stop after any signed gate and have a
 coherent result: after A, an isolated empty civilization proven not to leak;
 after B, an autonomous fleet on frontier models; after C, on local models; after
 D, able to act outward safely; after E, self-feeding. No phase strands the next.
+
+---
+
+## Founding progress (updated 2026-09-24)
+
+| Bead | Status |
+|---|---|
+| Phase P (P1–P7) | ✅ closed |
+| Sitting A — found + strip + wall-proof 51/0 | ✅ closed |
+| A7 — founding moot (Wren Quicksow, Bex Hardgraft, Silas Chaffwinnow, Cass Brambleway, Marl Fieldgate) | ✅ closed |
+| Sitting B — fleet live, one bead closed unattended, governor fired, wall-proof 65/0 | ✅ closed |
+| Sitting C — open models: local-harness arm + Ollama bridge, wall-proof 139/0, `plot-det` closed by the local model real-runtime | ✅ closed |
+| `fortkit-2y2t.26` — ladder tuning (coder-7b local + an OpenAI-compatible API rung) | ⚪ open, follow-up |
+| Sitting D — the effect gateway | 🔒 next |
+| Sitting E — the self-feeding Mayor | 🔒 after D |
+
+Greenlab is an isolated, named, running open-model civilization on its own auth, walls re-proven at each sitting.
