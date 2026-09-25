@@ -102,8 +102,10 @@ outward identity and run fully autonomously from the start.
 ## Models and capacity
 
 - Local: `greenlab-qwen2.5-coder:7b-instruct-32k` joins the local rungs for
-  coding (`fortkit-2y2t.26`). A bake-off against gpt-oss-20b and
-  Qwen3-Coder-30B-A3B on a fixed bead set decides which local model stays.
+  coding (`fortkit-2y2t.26`). No local bake-off (Overseer, 2026-09-25: public
+  benchmarks suffice). For general text work, replace `qwen2.5:7b-instruct`
+  with Qwen3.5-9B, the strongest model in the 8GB class on public rankings,
+  if it serves through Ollama within the GPU.
 - Frontier: subscription (Claude and Codex logins Greenlab already holds).
 - Metered: a $50 prepaid trial of DeepSeek, direct (Overseer, 2026-09-25), as a
   frontier-class Forge rung behind the inference bridge, with the key held host
@@ -133,12 +135,40 @@ models and use the subscription only for what cannot be done well locally.
   money/identity-path review (frontier permanently, covenant section 11);
   research synthesis across many sources.
 - Likely local classes: bead drafting from an approved charter, filing-check
-  failures and summaries, fetch-and-extract research steps, build beads under
-  the Forge ladder, the ordinary post-merge tripwire (`fortkit-2y2t.22`).
+  failures and summaries, fetch-and-extract research steps, trivial build
+  beads, the ordinary post-merge tripwire (`fortkit-2y2t.22`).
 - A local attempt that fails escalates by the existing ladder, and every
   escalation is counted, so the table is revised from evidence: a class that
   escalates most of the time moves up, and a frontier class that a local model
   handles in a trial moves down.
+- Local text models are not chosen to save money: once DeepSeek Flash is
+  available a typical summarise or classify call costs about a tenth of a cent
+  there. Local is chosen for containment, volume, privacy and availability.
+  Starting table (Overseer, 2026-09-25):
+
+  | Task | Model |
+  |---|---|
+  | Web page to structured notes (untrusted input) | Local, no tools (the quarantined reader, below) |
+  | Bulk tag, classify, extract to a fixed schema | Local, output constrained to the schema; frontier spot-check sample |
+  | Deduplication, clustering, memory search | Local embeddings (`nomic-embed-text`) |
+  | Rough copy variants, brainstorm lists | Local |
+  | Final copy any real person will see | Frontier |
+  | Research synthesis, idea selection, experiment charters | Claude |
+  | Implementation against written tests | DeepSeek (trial), local for trivial beads |
+  | The Overseer's digest | DeepSeek Flash |
+
+- **The quarantined reader is a rule, not a preference.** Content fetched from
+  the open web is first read by a local model that holds no tools, no network
+  and no write access beyond its own output; it emits structured notes to a
+  fixed schema. No seat that holds a shell, the gateway, or bead-filing rights
+  ever reads raw fetched content; they read only the notes. A malicious page can
+  at worst corrupt one set of notes. (This is Simon Willison's dual-LLM pattern,
+  enforced by the kernel masks rather than by prompting.) It must exist before
+  the Researcher reads the web unattended.
+- **Customer-facing copy is an experiment instrument.** Weak copy can make a
+  good idea's test fail and get it killed for the wrong reason, so final copy
+  is always frontier work; local models may supply variants for the frontier
+  to choose from and edit.
 - The digest shows the local/frontier share per seat, so drift toward the
   subscription is visible.
 - Backstop: a capacity governor caps concurrent frontier sessions and backs off
