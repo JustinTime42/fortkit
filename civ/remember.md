@@ -5046,3 +5046,37 @@ should name the seat if it matters who learned it.
 
 - 2026-09-24: **Greenlab plot's `emit.sh` is positional**, `emit.sh <category>
   <detail> [-a actor] [-s seat] [-t target]`. There is no `-c`.
+
+- 2026-09-25 (edict 59, Greenlab Sitting E0 — `fortkit-2y2t.12.1`): **A RUNG
+  THAT HAS NEVER RUN A BEAD IS NOT A RUNG, AND A CONFIG COMMENT CAN SAY IT HAS.**
+  plot's fleet.conf said the coder rung went in "for the second watched run";
+  that run's log shows it dispatched on the SMALL rung. Its first real dispatch
+  (this sitting) showed qwen2.5-coder writes tool calls as JSON TEXT, Ollama /v1
+  returns no `tool_calls`, and Hermes executes nothing and exits 0. Read the
+  run log's `dispatched ... (forge <rung>)` line, not the comment, before
+  shipping a rung to the factory. Unshipped; `fortkit-2y2t.38`.
+
+- 2026-09-25: **A CHECK-THEN-LEASE PAIR RACES, AND THE HARNESS STUB REPRODUCES
+  THE RACE DETERMINISTICALLY.** The fleet asks `governor session check`, then the
+  launcher takes the lease; a stub Forge refused at 73 while the check still said
+  free, and the same pass re-dispatched the bead. Any "stop" recorded mid-pass
+  must also stop the rest of that pass (`dispatch_pass` now returns on a decided
+  end). Fixtures that make the second half of a two-step decision fail on its
+  own are how this class shows.
+
+- 2026-09-25: **Greenlab's capacity governor records a rate limit only from a
+  session that FAILED**, reading that session's own log; a completed review's
+  prose is never evidence (a review of the governor says "rate limit" a dozen
+  times). The fleet's `looks_rate_limited` regex and `lib/frontier-lease.sh`'s
+  are two copies kept identical by `tools/governor/frontier-lease-harness.sh`.
+
+- 2026-09-25: **Greenlab now has a capital verifier: `bash
+  ~/dev/greenlab/tools/verify.sh`** (judges the tree it lives in, runs every step,
+  no secret, no events). Capital harnesses live under `tools/*/` and never in
+  `templates/scripts/` (fort-init copies templates whole, so anything there ships
+  into every fort). A comment line beginning `# shellcheck` is parsed as a
+  directive — the verifier failed its own first run on one.
+
+- 2026-09-25: **A variant spec that contains the harness's own field separator
+  cannot be generated**, and "could not be generated" reads as a harness failure.
+  Build such a variant in its own block.
