@@ -102,10 +102,19 @@ outward identity and run fully autonomously from the start.
 ## Models and capacity
 
 - Local: `greenlab-qwen2.5-coder:7b-instruct-32k` joins the local rungs for
-  coding (`fortkit-2y2t.26`, narrowed: no paid API rung).
-- Frontier: subscription only (Claude and Codex logins Greenlab already holds).
-  No metered API spend, so the model-spend governor is set to **$0 metered** so
-  an accidental API-key path cannot spend (`fortkit-2y2t.17`).
+  coding (`fortkit-2y2t.26`). A bake-off against gpt-oss-20b and
+  Qwen3-Coder-30B-A3B on a fixed bead set decides which local model stays.
+- Frontier: subscription (Claude and Codex logins Greenlab already holds).
+- Metered: a $50 prepaid trial of DeepSeek, direct (Overseer, 2026-09-25), as a
+  frontier-class Forge rung behind the inference bridge, with the key held host
+  side (`fortkit-2y2t.35`); the model-spend governor caps metered spend at $50
+  (`fortkit-2y2t.17`). A two-week trial against Codex (`fortkit-2y2t.36`) feeds
+  the Overseer's decision on replacing Codex in one or both civilizations
+  (`fortkit-2y2t.37`).
+- Planned division of labour, to be confirmed by the trial: Claude for
+  judgment (Mayor, Warden, Regent, specs and tests), DeepSeek and local models
+  for implementation against frontier-written tests the implementer cannot
+  modify.
 - The real constraint is subscription capacity, not dollars. Greenlab's logins
   SHARE the Overseer's subscription with his own work and the production forts
   (Overseer, 2026-09-24), so every frontier session Greenlab spends is one he

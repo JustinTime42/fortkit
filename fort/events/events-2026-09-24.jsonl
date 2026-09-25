@@ -52,3 +52,4 @@
 {"ts":"2026-09-24T21:06:08-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-24T20:59:33-08:00","payload":null}
 {"ts":"2026-09-24T23:24:40-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-24T21:06:08-08:00","payload":null}
 {"ts":"2026-09-24T23:30:21-08:00","actor":"emrith","seat":"mayor","category":"bead.created","target":"fortkit-2y2t.12","detail":"Sitting E reshaped into an epic: fortkit-2y2t.12.1 prerequisites, fortkit-2y2t.12.2 working fort and loop, fortkit-2y2t.12.3 7-day window (Overseer-approved tree)","payload":null}
+{"ts":"2026-09-24T23:31:30-08:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-09-24T23:24:40-08:00","payload":null}
