@@ -9,6 +9,8 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { describe, expect, test } from "vitest";
@@ -16,6 +18,7 @@ import { describe, expect, test } from "vitest";
 import { recall } from "../src/recall.ts";
 
 const execFileAsync = promisify(execFile);
+const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 
 async function fixtureRoot(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "fortkit-recall-"));
@@ -71,7 +74,7 @@ The ledger-canary proves fact recall.
     ),
     writeFile(
       join(root, "civ", "handoffs", "herald.md"),
-      "# Civ handoff\n\nThe civ-handoff-canary is searchable.\n",
+      "# Herald handoff 2026-08-10T14:00:00Z\n\nThe civ-handoff-canary is searchable.\n",
     ),
     writeFile(
       join(root, "civ", "remember.md"),
@@ -252,6 +255,17 @@ The verifier-canary is authoritative for every seat.
           ]),
         });
       await expect(readFile(current, "utf8")).resolves.toBe(before);
+      await expect(
+        recall(root, "civ-handoff-canary", {}),
+      ).resolves.toMatchObject({
+        hits: [
+          {
+            source: "civ/handoffs/herald.md",
+            date: "2026-08-10T14:00:00.000Z",
+            seat: "herald",
+          },
+        ],
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -265,13 +279,88 @@ The verifier-canary is authoritative for every seat.
           join(root, "fort", "memory", "facts", `rank-${index}.md`),
           `---\nkey: rank-${index}\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\n  beads: []\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-10\n  origin: trusted\n---\nrank-canary ${index}\n`,
         );
-      await expect(recall(root, "rank-canary", {})).resolves.toMatchObject({
-        hits: expect.arrayContaining([]),
+      const defaultResult = await recall(root, "rank-canary", {});
+      expect(defaultResult.hits).toHaveLength(20);
+      expect(defaultResult.gaps).toContainEqual({
+        source: "",
+        reason:
+          "20 of 25 matching rows shown; use --limit to adjust the result cap",
       });
-      expect((await recall(root, "rank-canary", {})).hits).toHaveLength(20);
       expect(
         (await recall(root, "rank-canary", { limit: 3 })).hits,
       ).toHaveLength(3);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("ranks equal-coverage rows newest first", async () => {
+    const root = await fixtureRoot();
+    try {
+      await Promise.all([
+        writeFile(
+          join(root, "fort", "memory", "facts", "older.md"),
+          `---\nkey: older\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-01\n  origin: trusted\n---\nrecency-canary\n`,
+        ),
+        writeFile(
+          join(root, "fort", "memory", "facts", "newer.md"),
+          `---\nkey: newer\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-11\n  origin: trusted\n---\nrecency-canary\n`,
+        ),
+      ]);
+      expect(
+        (await recall(root, "recency-canary", {})).hits.map(
+          (hit) => hit.source,
+        ),
+      ).toEqual(["fort/memory/facts/newer.md", "fort/memory/facts/older.md"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("rebuilds an obsolete or corrupted index", async () => {
+    const root = await fixtureRoot();
+    try {
+      await recall(root, "ledger-canary", {});
+      const index = join(root, "fort", "memory", "index.db");
+      const db = new DatabaseSync(index);
+      db.prepare(
+        "UPDATE meta SET value = 'obsolete' WHERE key = 'builder_version'",
+      ).run();
+      db.close();
+      await expect(recall(root, "ledger-canary", {})).resolves.toBeDefined();
+      await writeFile(index, "corrupted");
+      await expect(recall(root, "ledger-canary", {})).resolves.toBeDefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("invokes recall through npm and node, and rejects invalid limits", async () => {
+    const root = await fixtureRoot();
+    try {
+      const cli = join(repositoryRoot, "src", "cli.ts");
+      await writeFile(
+        join(root, "package.json"),
+        JSON.stringify({ scripts: { recall: `node ${cli} recall` } }),
+      );
+      await expect(
+        execFileAsync("node", [cli, "recall", "ledger-canary"], { cwd: root }),
+      ).resolves.toBeDefined();
+      await expect(
+        execFileAsync("npm", ["run", "recall", "--", "ledger-canary"], {
+          cwd: root,
+        }),
+      ).resolves.toBeDefined();
+      for (const limit of ["0", "x"])
+        await expect(
+          execFileAsync(
+            "node",
+            [cli, "recall", "ledger-canary", "--limit", limit],
+            {
+              cwd: root,
+            },
+          ),
+        ).rejects.toMatchObject({ code: 2 });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

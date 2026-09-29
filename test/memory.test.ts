@@ -44,6 +44,7 @@ describe("memory consolidation", () => {
       mkdir(join(root, "fort", "memory", "facts"), { recursive: true }),
       mkdir(join(root, "fort", "handoffs"), { recursive: true }),
       mkdir(join(root, "fort", "events"), { recursive: true }),
+      mkdir(join(root, "civ", "events"), { recursive: true }),
       mkdir(join(root, ".beads"), { recursive: true }),
     ]);
     await Promise.all([
@@ -70,6 +71,10 @@ describe("memory consolidation", () => {
       writeFile(
         join(root, "fort", "events", "events-2026-08-10.jsonl"),
         '{"ts":"2026-08-10T02:00:00Z","category":"incident","detail":"Needs attention"}\n{"ts":"2026-08-10T02:00:00Z","category":"incident","detail":"Needs attention"}\n',
+      ),
+      writeFile(
+        join(root, "civ", "events", "events-2026-08-10.jsonl"),
+        '{"ts":"2026-08-10T03:00:00Z","category":"incident","detail":"Civilization attention"}\n',
       ),
     ]);
     const episodic = await Promise.all([
@@ -110,6 +115,8 @@ describe("memory consolidation", () => {
     expect(incidents).toContain("# Manyhalls incident log");
     expect(incidents).toContain("events-2026-08-10.jsonl");
     expect(incidents.match(/Needs attention/g)?.length).toBe(1);
+    expect(incidents).toContain("Civilization attention");
+    expect(incidents).toContain("civ/events/events-2026-08-10.jsonl");
     const index = new DatabaseSync(join(root, "fort", "memory", "index.db"));
     try {
       const sourceCount = index
