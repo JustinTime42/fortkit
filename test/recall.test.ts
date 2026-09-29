@@ -295,7 +295,7 @@ The verifier-canary is authoritative for every seat.
     }
   });
 
-  test("ranks more term coverage first, then timestamp, source, and section", async () => {
+  test("ranks coverage, recency, source, section, provenance, and row id", async () => {
     const root = await fixtureRoot();
     try {
       await Promise.all([
@@ -312,6 +312,25 @@ The verifier-canary is authoritative for every seat.
       expect(coverage.hits.slice(0, 2).map((hit) => hit.source)).toEqual([
         "fort/memory/facts/coverage-first.md",
         "fort/memory/facts/coverage-partial.md",
+      ]);
+
+      await Promise.all([
+        writeFile(
+          join(root, "fort", "memory", "facts", "a-older.md"),
+          `---\nkey: a-older\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-01\n  origin: trusted\n---\nrecency-canary\n`,
+        ),
+        writeFile(
+          join(root, "fort", "memory", "facts", "z-newer.md"),
+          `---\nkey: z-newer\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-11\n  origin: trusted\n---\nrecency-canary\n`,
+        ),
+      ]);
+      expect(
+        (await recall(root, "recency-canary", {})).hits.map(
+          (hit) => hit.source,
+        ),
+      ).toEqual([
+        "fort/memory/facts/z-newer.md",
+        "fort/memory/facts/a-older.md",
       ]);
 
       await Promise.all([
@@ -333,6 +352,26 @@ The verifier-canary is authoritative for every seat.
         "fort/handoffs/alpha-2026-08-12.md:State of work",
         "fort/handoffs/beta-2026-08-12.md:State of work",
       ]);
+
+      await writeFile(
+        join(root, "fort", "events", "same-keys.jsonl"),
+        '{"ts":"2026-08-12T12:00:00Z","category":"same-key-canary","detail":"first indexed row"}\n{"ts":"2026-08-12T12:00:00Z","category":"same-key-canary","detail":"second indexed row"}\n',
+      );
+      await recall(root, "same-key-canary", {});
+      const index = join(root, "fort", "memory", "index.db");
+      const db = new DatabaseSync(index);
+      try {
+        db.prepare(
+          "UPDATE source SET section = 'same-key-canary', provenance = 'same', row_id = CASE snippet WHEN 'first indexed row' THEN 1 ELSE 0 END WHERE source = 'fort/events/same-keys.jsonl'",
+        ).run();
+      } finally {
+        db.close();
+      }
+      expect(
+        (await recall(root, "same-key-canary", {})).hits.map(
+          (hit) => hit.snippet,
+        ),
+      ).toEqual(["second indexed row", "first indexed row"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -355,7 +394,7 @@ The verifier-canary is authoritative for every seat.
           repaired
             .prepare("SELECT value FROM meta WHERE key = 'builder_version'")
             .get(),
-        ).toEqual({ value: "2" });
+        ).toEqual({ value: "3" });
       } finally {
         repaired.close();
       }

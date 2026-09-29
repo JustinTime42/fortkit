@@ -257,7 +257,9 @@ also the package binary after installation. Results use deterministic
 application-side term coverage ranking because Node 24's bundled SQLite does
 not make FTS5 available.
 Equal-coverage results are ordered by parsed timestamp, newest first, then by
-source and section. When a limit omits matches, recall adds a gap entry stating
+source, section, provenance, and the deterministic index row identifier. The
+last key means that distinct indexed rows never compare equal. When a limit
+omits matches, recall adds a gap entry stating
 `N of M matching rows shown`; the cap is never silent. The disposable index
 stores the builder version as metadata. A missing, corrupt, or version-mismatched
 index rebuilds before querying, so builder changes and damaged local indexes do

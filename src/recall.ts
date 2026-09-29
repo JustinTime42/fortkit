@@ -30,6 +30,7 @@ type IndexRow = {
   scope_topics: string;
   scope_beads: string;
   snippet: string;
+  row_id: number;
 };
 
 export type RecallHit = {
@@ -74,7 +75,7 @@ function scopeMatches(
 }
 
 const DEFAULT_LIMIT = 20;
-const INDEX_BUILDER_VERSION = "2";
+const INDEX_BUILDER_VERSION = "3";
 
 function score(row: IndexRow, query: string): number {
   const haystack = `${row.section}\n${row.snippet}`.toLowerCase();
@@ -200,7 +201,9 @@ export async function recall(
           return 1;
         return (
           left.row.source.localeCompare(right.row.source) ||
-          left.row.section.localeCompare(right.row.section)
+          left.row.section.localeCompare(right.row.section) ||
+          left.row.provenance.localeCompare(right.row.provenance) ||
+          left.row.row_id - right.row.row_id
         );
       });
     const limit = filters.limit ?? DEFAULT_LIMIT;

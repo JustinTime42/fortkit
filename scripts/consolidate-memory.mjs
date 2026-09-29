@@ -18,7 +18,7 @@ const factsDirectory = join(memory, "facts");
 const current = join(memory, "current.md");
 const incidentsView = join(memory, "incidents.md");
 const index = join(memory, "index.db");
-const INDEX_BUILDER_VERSION = "2";
+const INDEX_BUILDER_VERSION = "3";
 
 function compare(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -456,12 +456,12 @@ async function build() {
   const db = new DatabaseSync(indexTemp);
   try {
     db.exec(
-      "CREATE TABLE source (source TEXT NOT NULL, ts TEXT NOT NULL, actor TEXT NOT NULL, seat TEXT NOT NULL, section TEXT NOT NULL, provenance TEXT NOT NULL, scope_seats TEXT NOT NULL, scope_topics TEXT NOT NULL, scope_beads TEXT NOT NULL, snippet TEXT NOT NULL); CREATE TABLE gaps (source TEXT NOT NULL, reason TEXT NOT NULL); CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
+      "CREATE TABLE source (source TEXT NOT NULL, ts TEXT NOT NULL, actor TEXT NOT NULL, seat TEXT NOT NULL, section TEXT NOT NULL, provenance TEXT NOT NULL, scope_seats TEXT NOT NULL, scope_topics TEXT NOT NULL, scope_beads TEXT NOT NULL, snippet TEXT NOT NULL, row_id INTEGER NOT NULL); CREATE TABLE gaps (source TEXT NOT NULL, reason TEXT NOT NULL); CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
     );
     const insert = db.prepare(
-      "INSERT INTO source VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO source VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     );
-    for (const row of rows)
+    for (const [rowId, row] of rows.entries())
       insert.run(
         row.source,
         row.ts,
@@ -473,6 +473,7 @@ async function build() {
         row.scopeTopics,
         row.scopeBeads,
         row.snippet,
+        rowId,
       );
     const insertGap = db.prepare("INSERT INTO gaps VALUES (?, ?)");
     for (const gap of gaps.sort(
