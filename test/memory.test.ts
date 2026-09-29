@@ -82,10 +82,17 @@ describe("memory consolidation", () => {
       join(root, "fort", "memory", "current.md"),
       "utf8",
     );
+    const incidents = await readFile(
+      join(root, "fort", "memory", "incidents.md"),
+      "utf8",
+    );
     await run(process.execPath, [assembler, root]);
     expect(
       await readFile(join(root, "fort", "memory", "current.md"), "utf8"),
     ).toBe(first);
+    expect(
+      await readFile(join(root, "fort", "memory", "incidents.md"), "utf8"),
+    ).toBe(incidents);
     expect(first).toContain("cycle-7 correction is the current truth");
     expect(first).toContain("fort/memory/facts/current-truth.md");
     expect(first).toContain("bead:x");
@@ -94,11 +101,12 @@ describe("memory consolidation", () => {
     expect(first).toContain("Verify it.");
     expect(first).toContain("Mayor state.");
     expect(first).toContain("Mayor action.");
-    expect(first).toContain(
-      "Incident log — resolution linkage not yet implemented",
-    );
-    expect(first).toContain("events-2026-08-10.jsonl");
-    expect(first.match(/Needs attention/g)?.length).toBe(1);
+    expect(first).toContain("fort/memory/incidents.md");
+    expect(first).not.toContain("## Incident log");
+    expect(first).not.toContain("Needs attention");
+    expect(incidents).toContain("# Manyhalls incident log");
+    expect(incidents).toContain("events-2026-08-10.jsonl");
+    expect(incidents.match(/Needs attention/g)?.length).toBe(1);
     const index = new DatabaseSync(join(root, "fort", "memory", "index.db"));
     try {
       const sourceCount = index
