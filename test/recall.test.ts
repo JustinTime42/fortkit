@@ -5,6 +5,7 @@ import {
   mkdtemp,
   readFile,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -294,24 +295,44 @@ The verifier-canary is authoritative for every seat.
     }
   });
 
-  test("ranks equal-coverage rows newest first", async () => {
+  test("ranks more term coverage first, then timestamp, source, and section", async () => {
     const root = await fixtureRoot();
     try {
       await Promise.all([
         writeFile(
-          join(root, "fort", "memory", "facts", "older.md"),
-          `---\nkey: older\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-01\n  origin: trusted\n---\nrecency-canary\n`,
+          join(root, "fort", "memory", "facts", "coverage-first.md"),
+          `---\nkey: coverage-first\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-01\n  origin: trusted\n---\ncoverage-canary alpha beta\n`,
         ),
         writeFile(
-          join(root, "fort", "memory", "facts", "newer.md"),
-          `---\nkey: newer\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-11\n  origin: trusted\n---\nrecency-canary\n`,
+          join(root, "fort", "memory", "facts", "coverage-partial.md"),
+          `---\nkey: coverage-partial\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-11\n  origin: trusted\n---\ncoverage-canary alpha\n`,
+        ),
+      ]);
+      const coverage = await recall(root, "coverage-canary alpha beta", {});
+      expect(coverage.hits.slice(0, 2).map((hit) => hit.source)).toEqual([
+        "fort/memory/facts/coverage-first.md",
+        "fort/memory/facts/coverage-partial.md",
+      ]);
+
+      await Promise.all([
+        writeFile(
+          join(root, "fort", "handoffs", "alpha-2026-08-12.md"),
+          "# Handoff: Alpha 2026-08-12T12:00:00Z\n\n## State of work\n\ntie-canary\n\n## Next actions\n\ntie-canary\n",
+        ),
+        writeFile(
+          join(root, "fort", "handoffs", "beta-2026-08-12.md"),
+          "# Handoff: Beta 2026-08-12T12:00:00Z\n\n## State of work\n\ntie-canary\n",
         ),
       ]);
       expect(
-        (await recall(root, "recency-canary", {})).hits.map(
-          (hit) => hit.source,
+        (await recall(root, "tie-canary", {})).hits.map(
+          ({ source, section }) => `${source}:${section}`,
         ),
-      ).toEqual(["fort/memory/facts/newer.md", "fort/memory/facts/older.md"]);
+      ).toEqual([
+        "fort/handoffs/alpha-2026-08-12.md:Next actions",
+        "fort/handoffs/alpha-2026-08-12.md:State of work",
+        "fort/handoffs/beta-2026-08-12.md:State of work",
+      ]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -328,6 +349,16 @@ The verifier-canary is authoritative for every seat.
       ).run();
       db.close();
       await expect(recall(root, "ledger-canary", {})).resolves.toBeDefined();
+      const repaired = new DatabaseSync(index, { readOnly: true });
+      try {
+        expect(
+          repaired
+            .prepare("SELECT value FROM meta WHERE key = 'builder_version'")
+            .get(),
+        ).toEqual({ value: "2" });
+      } finally {
+        repaired.close();
+      }
       await writeFile(index, "corrupted");
       await expect(recall(root, "ledger-canary", {})).resolves.toBeDefined();
     } finally {
@@ -339,9 +370,13 @@ The verifier-canary is authoritative for every seat.
     const root = await fixtureRoot();
     try {
       const cli = join(repositoryRoot, "src", "cli.ts");
+      const packageJson = JSON.parse(
+        await readFile(join(repositoryRoot, "package.json"), "utf8"),
+      ) as { scripts: { recall: string } };
+      await symlink(join(repositoryRoot, "src"), join(root, "src"));
       await writeFile(
         join(root, "package.json"),
-        JSON.stringify({ scripts: { recall: `node ${cli} recall` } }),
+        JSON.stringify({ scripts: { recall: packageJson.scripts.recall } }),
       );
       await expect(
         execFileAsync("node", [cli, "recall", "ledger-canary"], { cwd: root }),

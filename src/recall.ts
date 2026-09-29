@@ -188,11 +188,16 @@ export async function recall(
         if (scoreOrder !== 0) return scoreOrder;
         const leftTimestamp = Date.parse(left.row.ts);
         const rightTimestamp = Date.parse(right.row.ts);
-        if (!Number.isNaN(leftTimestamp) && !Number.isNaN(rightTimestamp))
-          if (rightTimestamp !== leftTimestamp)
-            return rightTimestamp - leftTimestamp;
-        if (!Number.isNaN(leftTimestamp)) return -1;
-        if (!Number.isNaN(rightTimestamp)) return 1;
+        if (
+          !Number.isNaN(leftTimestamp) &&
+          !Number.isNaN(rightTimestamp) &&
+          rightTimestamp !== leftTimestamp
+        )
+          return rightTimestamp - leftTimestamp;
+        if (!Number.isNaN(leftTimestamp) && Number.isNaN(rightTimestamp))
+          return -1;
+        if (Number.isNaN(leftTimestamp) && !Number.isNaN(rightTimestamp))
+          return 1;
         return (
           left.row.source.localeCompare(right.row.source) ||
           left.row.section.localeCompare(right.row.section)
