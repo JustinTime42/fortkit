@@ -1,10 +1,21 @@
-import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, test } from "vitest";
 
 import { recall } from "../src/recall.ts";
+
+const execFileAsync = promisify(execFile);
 
 async function fixtureRoot(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "fortkit-recall-"));
@@ -14,6 +25,8 @@ async function fixtureRoot(): Promise<string> {
     mkdir(join(root, "fort", "events"), { recursive: true }),
     mkdir(join(root, "fort", "annals"), { recursive: true }),
     mkdir(join(root, ".beads"), { recursive: true }),
+    mkdir(join(root, "civ", "events"), { recursive: true }),
+    mkdir(join(root, "civ", "handoffs"), { recursive: true }),
   ]);
   await Promise.all([
     writeFile(
@@ -38,7 +51,7 @@ The ledger-canary proves fact recall.
     ),
     writeFile(
       join(root, "fort", "handoffs", "forge-2026-08-10.md"),
-      "# Handoff: Forge 2026-08-10T12:00:00Z\n\n## State of work\n\nThe handoff-canary is ready.\n\n## Next actions\n\nUse recall.\n",
+      "# Handoff: Forge 2026-08-10T12:00:00Z\n\n## State of work\n\nThe handoff-canary is ready.\n\n## Next actions\n\nUse recall.\n\n## Failed attempts\n\nThe failed-canary is recorded.\n",
     ),
     writeFile(
       join(root, "fort", "events", "events-local-shard.jsonl"),
@@ -50,7 +63,19 @@ The ledger-canary proves fact recall.
     ),
     writeFile(
       join(root, ".beads", "issues.jsonl"),
-      '{"id":"fortkit-88u.7","status":"in_progress","title":"The bead-canary proves issue recall","updated_at":"2026-08-10T12:00:00Z"}\n',
+      '{"id":"fortkit-88u.7","status":"closed","title":"The bead-canary title","description":"The bead-description-canary is searchable","close_reason":"The close-reason-canary is searchable","updated_at":"2026-08-10T12:00:00Z"}\n',
+    ),
+    writeFile(
+      join(root, "civ", "events", "civ.jsonl"),
+      '{"ts":"2026-08-10T12:00:00Z","detail":"The civ-event-canary is searchable"}\n',
+    ),
+    writeFile(
+      join(root, "civ", "handoffs", "herald.md"),
+      "# Civ handoff\n\nThe civ-handoff-canary is searchable.\n",
+    ),
+    writeFile(
+      join(root, "civ", "remember.md"),
+      "# Remember\n\nThe civ-remember-canary is searchable.\n",
     ),
   ]);
   return root;
@@ -77,23 +102,23 @@ describe("fortkit recall", () => {
         ],
       });
       await expect(recall(root, "handoff-canary", {})).resolves.toMatchObject({
-        hits: [
-          {
+        hits: expect.arrayContaining([
+          expect.objectContaining({
             source: "fort/handoffs/forge-2026-08-10.md",
             section: "State of work",
             seat: "forge",
-          },
-        ],
+          }),
+        ]),
       });
       await expect(recall(root, "event-canary", {})).resolves.toMatchObject({
-        hits: [
-          {
+        hits: expect.arrayContaining([
+          expect.objectContaining({
             source: "fort/events/events-local-shard.jsonl",
             section: "work.begun",
             actor: "kethra",
             seat: "forge",
-          },
-        ],
+          }),
+        ]),
       });
       await expect(recall(root, "annal-canary", {})).resolves.toMatchObject({
         hits: [{ source: "fort/annals/recall.md", section: "Recall annal" }],
@@ -201,6 +226,81 @@ The verifier-canary is authoritative for every seat.
       );
     } finally {
       await chmod(unreadable, 0o600).catch(() => undefined);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("indexes widened corpus fields without rewriting tracked memory views", async () => {
+    const root = await fixtureRoot();
+    const current = join(root, "fort", "memory", "current.md");
+    try {
+      await writeFile(current, "tracked view must remain untouched\n");
+      const before = await readFile(current, "utf8");
+      for (const canary of [
+        "bead-description-canary",
+        "close-reason-canary",
+        "failed-canary",
+        "civ-event-canary",
+        "civ-handoff-canary",
+        "civ-remember-canary",
+      ])
+        await expect(recall(root, canary, {})).resolves.toMatchObject({
+          hits: expect.arrayContaining([
+            expect.objectContaining({
+              snippet: expect.stringContaining(canary),
+            }),
+          ]),
+        });
+      await expect(readFile(current, "utf8")).resolves.toBe(before);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("limits ranked results by default and honors --limit through the API", async () => {
+    const root = await fixtureRoot();
+    try {
+      for (let index = 0; index < 25; index += 1)
+        await writeFile(
+          join(root, "fort", "memory", "facts", `rank-${index}.md`),
+          `---\nkey: rank-${index}\nstatus: active\nsuperseded-by: null\ntier: on-demand\nscope:\n  seats: [all]\n  topics: [retrieval]\n  beads: []\nprovenance:\n  source: test\n  declared-by: kethra\n  date: 2026-08-10\n  origin: trusted\n---\nrank-canary ${index}\n`,
+        );
+      await expect(recall(root, "rank-canary", {})).resolves.toMatchObject({
+        hits: expect.arrayContaining([]),
+      });
+      expect((await recall(root, "rank-canary", {})).hits).toHaveLength(20);
+      expect(
+        (await recall(root, "rank-canary", { limit: 3 })).hits,
+      ).toHaveLength(3);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test("leaves git status clean after an index-only query", async () => {
+    const root = await fixtureRoot();
+    try {
+      await writeFile(join(root, ".gitignore"), "fort/memory/index.db\n");
+      await execFileAsync("git", ["init", "-q"], { cwd: root });
+      await execFileAsync("git", ["add", "."], { cwd: root });
+      await execFileAsync(
+        "git",
+        [
+          "-c",
+          "user.name=Recall test",
+          "-c",
+          "user.email=recall@example.test",
+          "commit",
+          "-qm",
+          "initial",
+        ],
+        { cwd: root },
+      );
+      await expect(recall(root, "ledger-canary", {})).resolves.toBeDefined();
+      await expect(
+        execFileAsync("git", ["status", "--porcelain"], { cwd: root }),
+      ).resolves.toMatchObject({ stdout: "" });
+    } finally {
       await rm(root, { recursive: true, force: true });
     }
   });

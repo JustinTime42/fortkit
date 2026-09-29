@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { access } from "node:fs/promises";
+import { access, readdir, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,7 @@ export type RecallFilters = {
   bead?: string;
   since?: string;
   until?: string;
+  limit?: number;
 };
 
 type IndexRow = {
@@ -72,6 +73,8 @@ function scopeMatches(
   );
 }
 
+const DEFAULT_LIMIT = 20;
+
 function score(row: IndexRow, query: string): number {
   const haystack = `${row.section}\n${row.snippet}`.toLowerCase();
   const words = query.toLowerCase().split(/\s+/u).filter(Boolean);
@@ -79,6 +82,40 @@ function score(row: IndexRow, query: string): number {
     (total, word) => total + (haystack.includes(word) ? 1 : 0),
     0,
   );
+}
+
+async function indexIsStale(root: string, index: string): Promise<boolean> {
+  let indexMtime: number;
+  try {
+    indexMtime = (await stat(index)).mtimeMs;
+  } catch {
+    return true;
+  }
+  const inputs = [
+    ".beads/issues.jsonl",
+    ".beads/interactions.jsonl",
+    "fort/memory/facts",
+    "fort/handoffs",
+    "fort/events",
+    "fort/annals",
+    "civ/events",
+    "civ/handoffs",
+    "civ/remember.md",
+  ];
+  async function newer(path: string): Promise<boolean> {
+    try {
+      const entry = await stat(path);
+      if (entry.mtimeMs > indexMtime) return true;
+      if (!entry.isDirectory()) return false;
+      for (const child of await readdir(path))
+        if (await newer(join(path, child))) return true;
+    } catch {
+      // Optional corpus surfaces can be absent. The index builder discloses them.
+    }
+    return false;
+  }
+  for (const input of inputs) if (await newer(join(root, input))) return true;
+  return false;
 }
 
 export async function recall(
@@ -89,7 +126,8 @@ export async function recall(
   const absoluteRoot = resolve(root);
   const index = join(absoluteRoot, "fort", "memory", "index.db");
   await access(dirname(consolidate));
-  await run(process.execPath, [consolidate, absoluteRoot]);
+  if (await indexIsStale(absoluteRoot, index))
+    await run(process.execPath, [consolidate, "--index-only", absoluteRoot]);
   const db = new DatabaseSync(index, { readOnly: true });
   try {
     const rows = db.prepare("SELECT * FROM source").all() as IndexRow[];
@@ -137,6 +175,7 @@ export async function recall(
           left.row.source.localeCompare(right.row.source) ||
           left.row.section.localeCompare(right.row.section),
       )
+      .slice(0, filters.limit ?? DEFAULT_LIMIT)
       .map(({ row }) => ({
         source: row.source,
         date: row.ts === "" ? null : new Date(row.ts).toISOString(),
