@@ -101,7 +101,7 @@ journalctl --user -u consolidate.service -e
 # .beads/*.jsonl and today's event shard dirty whenever a seat is running,
 # and NONE of that is the service's. A check that goes red for an unrelated
 # reason teaches its reader to ignore it.
-git -C ~/dev/fortkit status --short fort/memory/current.md fort/laurels/
+git -C ~/dev/fortkit status --short fort/memory/current.md fort/memory/incidents.md fort/laurels/
 
 # 3. catch-up, which is what Persistent=true is for. Miss a scheduled run
 #    (machine off or asleep across 03:00) and confirm it fires at the next
