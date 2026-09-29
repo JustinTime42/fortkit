@@ -175,7 +175,14 @@ if (command === "ambient") {
     });
   }
 } else if (command === "recall") {
-  const flags = new Set(["--seat", "--topic", "--bead", "--since", "--until"]);
+  const flags = new Set([
+    "--seat",
+    "--topic",
+    "--bead",
+    "--since",
+    "--until",
+    "--limit",
+  ]);
   const filters: Record<string, string> = {};
   const query: string[] = [];
   let valid = true;
@@ -200,9 +207,13 @@ if (command === "ambient") {
     } else query.push(argument);
   }
   if (query.length === 0) valid = false;
+  const limit =
+    filters["--limit"] === undefined ? undefined : Number(filters["--limit"]);
+  if (limit !== undefined && (!Number.isInteger(limit) || limit < 1))
+    valid = false;
   if (!valid) {
     console.error(
-      "Usage: fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>]",
+      "Usage: fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>] [--limit <positive integer>]",
     );
     process.exitCode = 2;
   } else {
@@ -219,6 +230,7 @@ if (command === "ambient") {
         ...(filters["--until"] === undefined
           ? {}
           : { until: filters["--until"] }),
+        ...(limit === undefined ? {} : { limit }),
       });
       console.log(JSON.stringify(result, null, 2));
     } catch (error) {
@@ -231,7 +243,7 @@ if (command === "ambient") {
   args.some((argument) => argument !== "--json")
 ) {
   console.error(
-    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--max-events-per-fort <positive integer>] [--fetch <id>[,<id>...]] [--json]\n       fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]\n       fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>]",
+    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--max-events-per-fort <positive integer>] [--fetch <id>[,<id>...]] [--json]\n       fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]\n       fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>] [--limit <positive integer>]",
   );
   process.exitCode = 2;
 } else {

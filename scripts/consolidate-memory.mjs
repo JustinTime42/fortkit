@@ -11,7 +11,8 @@ import {
 import { join, relative } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-const root = process.argv[2] ?? process.cwd();
+const indexOnly = process.argv[2] === "--index-only";
+const root = process.argv[indexOnly ? 3 : 2] ?? process.cwd();
 const memory = join(root, "fort", "memory");
 const factsDirectory = join(memory, "facts");
 const current = join(memory, "current.md");
@@ -202,7 +203,14 @@ async function build() {
             scopeSeats: "",
             scopeTopics: "",
             scopeBeads: bead.id,
-            snippet: `${bead.id}: ${bead.title ?? ""}`,
+            snippet: [
+              bead.id,
+              bead.title ?? "",
+              bead.description ?? "",
+              bead.close_reason ?? bead.closed_reason ?? "",
+            ]
+              .filter(Boolean)
+              .join("\n"),
           });
       } catch (error) {
         gaps.push({
@@ -251,7 +259,11 @@ async function build() {
       (stamp === old.stamp && compareHandoffFiles(file, old.file) > 0)
     )
       newest.set(seat, { file, text, stamp });
-    for (const heading of ["State of work", "Next actions"]) {
+    for (const heading of [
+      "State of work",
+      "Next actions",
+      "Failed attempts",
+    ]) {
       const body = section(text, heading);
       if (body)
         rows.push({
@@ -280,37 +292,46 @@ async function build() {
   }
 
   const incidents = [];
-  const eventsDirectory = join(root, "fort", "events");
-  for (const path of await files(eventsDirectory, ".jsonl", gaps, true)) {
-    const text = await read(path, gaps);
-    if (text === null) continue;
-    for (const [lineNumber, line] of text.split(/\r?\n/u).entries()) {
-      if (line.trim() === "") continue;
-      try {
-        const event = JSON.parse(line);
-        if (event.category === "incident")
-          incidents.push({
-            event,
-            file: relative(root, path),
-            duplicateKey: `${event.category}\u0000${event.target ?? ""}\u0000${event.detail ?? ""}`,
+  for (const eventsDirectory of [
+    join(root, "fort", "events"),
+    join(root, "civ", "events"),
+  ]) {
+    for (const path of await files(
+      eventsDirectory,
+      ".jsonl",
+      gaps,
+      eventsDirectory.includes("fort"),
+    )) {
+      const text = await read(path, gaps);
+      if (text === null) continue;
+      for (const [lineNumber, line] of text.split(/\r?\n/u).entries()) {
+        if (line.trim() === "") continue;
+        try {
+          const event = JSON.parse(line);
+          if (event.category === "incident")
+            incidents.push({
+              event,
+              file: relative(root, path),
+              duplicateKey: `${event.category}\u0000${event.target ?? ""}\u0000${event.detail ?? ""}`,
+            });
+          rows.push({
+            source: relative(root, path),
+            ts: event.ts ?? "",
+            actor: event.actor ?? "",
+            seat: event.seat ?? "",
+            section: event.category ?? "event",
+            provenance: `${relative(root, path)}:${lineNumber + 1}`,
+            scopeSeats: event.seat ?? "",
+            scopeTopics: event.category ?? "",
+            scopeBeads: event.target ?? "",
+            snippet: event.detail ?? "",
           });
-        rows.push({
-          source: relative(root, path),
-          ts: event.ts ?? "",
-          actor: event.actor ?? "",
-          seat: event.seat ?? "",
-          section: event.category ?? "event",
-          provenance: `${relative(root, path)}:${lineNumber + 1}`,
-          scopeSeats: event.seat ?? "",
-          scopeTopics: event.category ?? "",
-          scopeBeads: event.target ?? "",
-          snippet: event.detail ?? "",
-        });
-      } catch (error) {
-        gaps.push({
-          source: `${relative(root, path)}:${lineNumber + 1}`,
-          reason: `unparseable JSON: ${error.message}`,
-        });
+        } catch (error) {
+          gaps.push({
+            source: `${relative(root, path)}:${lineNumber + 1}`,
+            reason: `unparseable JSON: ${error.message}`,
+          });
+        }
       }
     }
   }
@@ -359,6 +380,48 @@ async function build() {
     });
   }
 
+  for (const handoffsDirectory of [join(root, "civ", "handoffs")]) {
+    for (const path of await files(handoffsDirectory, ".md", gaps)) {
+      const text = await read(path, gaps);
+      if (text !== null)
+        addMarkdownRows(
+          rows,
+          {
+            source: relative(root, path),
+            ts: "",
+            actor: "",
+            seat: "",
+            provenance: relative(root, path),
+            scopeSeats: "",
+            scopeTopics: "",
+            scopeBeads: "",
+          },
+          text,
+          "civ handoff",
+        );
+    }
+  }
+  const rememberPath = join(root, "civ", "remember.md");
+  if (await exists(rememberPath)) {
+    const text = await read(rememberPath, gaps);
+    if (text !== null)
+      addMarkdownRows(
+        rows,
+        {
+          source: relative(root, rememberPath),
+          ts: "",
+          actor: "",
+          seat: "",
+          provenance: relative(root, rememberPath),
+          scopeSeats: "",
+          scopeTopics: "",
+          scopeBeads: "",
+        },
+        text,
+        "civ remember",
+      );
+  }
+
   await mkdir(memory, { recursive: true });
   const indexTemp = `${index}.tmp`;
   await rm(indexTemp, { force: true });
@@ -393,6 +456,9 @@ async function build() {
   } finally {
     db.close();
   }
+
+  await rename(indexTemp, index);
+  if (indexOnly) return;
 
   const lines = [
     "# Manyhalls current operational truth",
@@ -479,7 +545,6 @@ async function build() {
   const incidentsTemp = `${incidentsView}.tmp`;
   await writeFile(currentTemp, `${lines.join("\n")}\n`, "utf8");
   await writeFile(incidentsTemp, incidentLines.join("\n"), "utf8");
-  await rename(indexTemp, index);
   await rename(currentTemp, current);
   await rename(incidentsTemp, incidentsView);
   for (const gap of gaps)

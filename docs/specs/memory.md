@@ -245,14 +245,18 @@ scope tags, and disclosed gaps. Deterministic, dependency-light, no embeddings
 in v1 (a v2 semantic layer requires an observed retrieval failure per standing
 order 11).
 
-Invoke it from a fort root as `fortkit recall <query> [--seat <seat>] [--topic
-<topic>] [--bead <bead>] [--since <ISO timestamp>] [--until <ISO timestamp>]`.
+Invoke it from a fort root as `npm run recall -- <query> [--seat <seat>] [--topic
+<topic>] [--bead <bead>] [--since <ISO timestamp>] [--until <ISO timestamp>]
+[--limit <positive integer>]`. The default limit is 20. `fortkit recall` is
+also the package binary after installation. Results use deterministic
+application-side term coverage ranking because Node 24's bundled SQLite does
+not make FTS5 available.
 It emits a JSON object with `hits` and `gaps`: every hit names its source,
 parsed UTC date where available, actor/seat, matching section, provenance, and
 the indexed section text. `--since` is inclusive and `--until` exclusive.
-Recall rebuilds the disposable index before querying, so a missing, stale, or
-poisoned `index.db` cannot silently narrow the corpus; readers expose build
-gaps alongside matching results.
+Recall rebuilds only the disposable index when it is missing or stale, so a
+query never writes tracked files such as `fort/memory/current.md`; readers
+expose build gaps alongside matching results.
 
 Filter semantics (documented 2026-08-10 per Warden 88u.7 r2 f3): a fact scoped
 `seats: [all]` matches every `--seat` filter (the spec's seats wildcard, §4.1).
