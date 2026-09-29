@@ -101,8 +101,11 @@ describe("memory consolidation", () => {
     expect(first).toContain("Verify it.");
     expect(first).toContain("Mayor state.");
     expect(first).toContain("Mayor action.");
+    expect(first).toContain("## Incident log");
+    expect(first).toContain(
+      "Historical incident log (regenerated with this view)",
+    );
     expect(first).toContain("fort/memory/incidents.md");
-    expect(first).not.toContain("## Incident log");
     expect(first).not.toContain("Needs attention");
     expect(incidents).toContain("# Manyhalls incident log");
     expect(incidents).toContain("events-2026-08-10.jsonl");

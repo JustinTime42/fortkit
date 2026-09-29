@@ -51,8 +51,9 @@ Type=oneshot
 WorkingDirectory=/home/justin/dev/fortkit
 # User units do not inherit the login shell PATH where nvm exposes Node.
 Environment=PATH=/home/justin/.nvm/versions/node/v24.14.0/bin:/usr/local/bin:/usr/bin:/bin
-# The tracked views must be committed after regeneration, or nightly runs leave
-# them dirty and never make the new truth available to other clones.
+# The tracked memory views and laurel views must be committed after regeneration,
+# or nightly runs leave them dirty and never make the new truth available to
+# other clones.
 # `git add` is path-scoped and *.md-scoped per SO4 and defect (b) above.
-ExecStart=/bin/bash -c 'set -euo pipefail; node scripts/consolidate-memory.mjs; node scripts/consolidate-laurels.mjs; git add fort/memory/current.md fort/laurels/*.md; if ! git diff --cached --quiet; then git commit -m "chore(fort): nightly consolidation of the memory ledger and the laurel views"; fi'
+ExecStart=/bin/bash -c 'set -euo pipefail; node scripts/consolidate-memory.mjs; node scripts/consolidate-laurels.mjs; git add fort/memory/current.md fort/memory/incidents.md fort/laurels/*.md; if ! git diff --cached --quiet; then git commit -m "chore(fort): nightly consolidation of the memory ledger and the laurel views"; fi'
 TimeoutStartSec=10min

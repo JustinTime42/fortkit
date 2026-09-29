@@ -432,7 +432,9 @@ async function build() {
   }
   lines.push(
     "",
-    "Historical incidents are generated on demand in [fort/memory/incidents.md](fort/memory/incidents.md).",
+    "## Incident log",
+    "",
+    "Historical incident log (regenerated with this view): [fort/memory/incidents.md](fort/memory/incidents.md).",
   );
   lines.push(
     "",
