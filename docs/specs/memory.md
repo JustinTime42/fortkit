@@ -215,6 +215,16 @@ work" + "Next actions" per seat (suffix-aware, timestamp-ordered); unresolved
 incidents from recent events; extracted rulings-of-record. Cadence per ruling
 4: ephemeral regeneration at session start, nightly cron commit.
 
+*Amended 2026-09-29 (fortkit-efv9.3, Warden finding 2): the incident log no
+longer sits in `current.md`. It is generated alongside it, by the same run and
+on the same cadence, to `fort/memory/incidents.md`, and `current.md` carries a
+one-line pointer under its own heading. The reason is startup cost: every seat
+reads `current.md` at session start, and the log (16.7KB measured 2026-09-28)
+is history, not unresolved work, despite the "unresolved" wording above, which
+was already inaccurate. The nightly unit stages both files. Separately, and
+not changed here: the "ephemeral regeneration at session start" half of the
+cadence was never wired (efv9.5 inventory); only the nightly commit runs.*
+
 *Amended 2026-08-10 (fortkit-88u.14, Overseer ruling on Warden 88u.5 r2 f7):
 the bead snapshot is capped, replacing the original full open/in-progress
 dump. It carries all in-progress beads, all gate-labeled beads, and the top
