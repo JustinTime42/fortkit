@@ -215,6 +215,11 @@ work" + "Next actions" per seat (suffix-aware, timestamp-ordered); unresolved
 incidents from recent events; extracted rulings-of-record. Cadence per ruling
 4: ephemeral regeneration at session start, nightly cron commit.
 
+The incident log admits `incident` events from both `fort/events/` and the
+optional civilization-wide `civ/events/` corpus. They remain separate from the
+distilled view because the log is historical; this makes civilization incidents
+available without injecting them into every seat's startup context.
+
 *Amended 2026-09-29 (fortkit-efv9.3, Warden finding 2): the incident log no
 longer sits in `current.md`. It is generated alongside it, by the same run and
 on the same cadence, to `fort/memory/incidents.md`, and `current.md` carries a
@@ -251,6 +256,14 @@ Invoke it from a fort root as `npm run recall -- <query> [--seat <seat>] [--topi
 also the package binary after installation. Results use deterministic
 application-side term coverage ranking because Node 24's bundled SQLite does
 not make FTS5 available.
+Equal-coverage results are ordered by parsed timestamp, newest first, then by
+source, section, provenance, and the deterministic index row identifier. The
+last key means that distinct indexed rows never compare equal. When a limit
+omits matches, recall adds a gap entry stating
+`N of M matching rows shown`; the cap is never silent. The disposable index
+stores the builder version as metadata. A missing, corrupt, or version-mismatched
+index rebuilds before querying, so builder changes and damaged local indexes do
+not leave stale results in service.
 It emits a JSON object with `hits` and `gaps`: every hit names its source,
 parsed UTC date where available, actor/seat, matching section, provenance, and
 the indexed section text. `--since` is inclusive and `--until` exclusive.

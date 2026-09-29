@@ -18,6 +18,7 @@ const factsDirectory = join(memory, "facts");
 const current = join(memory, "current.md");
 const incidentsView = join(memory, "incidents.md");
 const index = join(memory, "index.db");
+const INDEX_BUILDER_VERSION = "3";
 
 function compare(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -80,6 +81,27 @@ function handoffStamp(text) {
   return Number.isNaN(instant)
     ? { stamp: null, reason: `unparseable timestamp ${JSON.stringify(stamp)}` }
     : { stamp: instant, reason: null };
+}
+
+function headerStamp(text) {
+  const header = /^#\s+.+$/mu.exec(text)?.[0];
+  const stamp =
+    /\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}(?::?\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?/u.exec(
+      header ?? "",
+    )?.[0];
+  if (stamp === undefined) return { stamp: null, reason: "missing timestamp" };
+  const instant = Date.parse(stamp);
+  return Number.isNaN(instant)
+    ? { stamp: null, reason: `unparseable timestamp ${JSON.stringify(stamp)}` }
+    : { stamp: instant, reason: null };
+}
+
+function handoffSeat(file, text) {
+  return (
+    /^([a-z0-9_-]+)-\d{4}-\d{2}-\d{2}/iu.exec(file)?.[1] ??
+    /^#\s+([a-z0-9_-]+)\s+handoff\b/imu.exec(text)?.[1]?.toLowerCase() ??
+    ""
+  );
 }
 
 function compareHandoffFiles(left, right) {
@@ -292,16 +314,11 @@ async function build() {
   }
 
   const incidents = [];
-  for (const eventsDirectory of [
-    join(root, "fort", "events"),
-    join(root, "civ", "events"),
+  for (const { directory: eventsDirectory, required } of [
+    { directory: join(root, "fort", "events"), required: true },
+    { directory: join(root, "civ", "events"), required: false },
   ]) {
-    for (const path of await files(
-      eventsDirectory,
-      ".jsonl",
-      gaps,
-      eventsDirectory.includes("fort"),
-    )) {
+    for (const path of await files(eventsDirectory, ".jsonl", gaps, required)) {
       const text = await read(path, gaps);
       if (text === null) continue;
       for (const [lineNumber, line] of text.split(/\r?\n/u).entries()) {
@@ -383,14 +400,19 @@ async function build() {
   for (const handoffsDirectory of [join(root, "civ", "handoffs")]) {
     for (const path of await files(handoffsDirectory, ".md", gaps)) {
       const text = await read(path, gaps);
-      if (text !== null)
+      if (text !== null) {
+        const file = path.slice(handoffsDirectory.length + 1);
+        const parsedStamp = headerStamp(text);
         addMarkdownRows(
           rows,
           {
             source: relative(root, path),
-            ts: "",
+            ts:
+              parsedStamp.stamp === null
+                ? ""
+                : new Date(parsedStamp.stamp).toISOString(),
             actor: "",
-            seat: "",
+            seat: handoffSeat(file, text),
             provenance: relative(root, path),
             scopeSeats: "",
             scopeTopics: "",
@@ -399,6 +421,12 @@ async function build() {
           text,
           "civ handoff",
         );
+        if (parsedStamp.stamp === null)
+          gaps.push({
+            source: relative(root, path),
+            reason: parsedStamp.reason,
+          });
+      }
     }
   }
   const rememberPath = join(root, "civ", "remember.md");
@@ -428,12 +456,12 @@ async function build() {
   const db = new DatabaseSync(indexTemp);
   try {
     db.exec(
-      "CREATE TABLE source (source TEXT NOT NULL, ts TEXT NOT NULL, actor TEXT NOT NULL, seat TEXT NOT NULL, section TEXT NOT NULL, provenance TEXT NOT NULL, scope_seats TEXT NOT NULL, scope_topics TEXT NOT NULL, scope_beads TEXT NOT NULL, snippet TEXT NOT NULL); CREATE TABLE gaps (source TEXT NOT NULL, reason TEXT NOT NULL);",
+      "CREATE TABLE source (source TEXT NOT NULL, ts TEXT NOT NULL, actor TEXT NOT NULL, seat TEXT NOT NULL, section TEXT NOT NULL, provenance TEXT NOT NULL, scope_seats TEXT NOT NULL, scope_topics TEXT NOT NULL, scope_beads TEXT NOT NULL, snippet TEXT NOT NULL, row_id INTEGER NOT NULL); CREATE TABLE gaps (source TEXT NOT NULL, reason TEXT NOT NULL); CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
     );
     const insert = db.prepare(
-      "INSERT INTO source VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO source VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     );
-    for (const row of rows)
+    for (const [rowId, row] of rows.entries())
       insert.run(
         row.source,
         row.ts,
@@ -445,6 +473,7 @@ async function build() {
         row.scopeTopics,
         row.scopeBeads,
         row.snippet,
+        rowId,
       );
     const insertGap = db.prepare("INSERT INTO gaps VALUES (?, ?)");
     for (const gap of gaps.sort(
@@ -453,6 +482,10 @@ async function build() {
         compare(left.reason, right.reason),
     ))
       insertGap.run(gap.source, gap.reason);
+    db.prepare("INSERT INTO meta VALUES (?, ?)").run(
+      "builder_version",
+      INDEX_BUILDER_VERSION,
+    );
   } finally {
     db.close();
   }

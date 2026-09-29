@@ -30,6 +30,7 @@ type IndexRow = {
   scope_topics: string;
   scope_beads: string;
   snippet: string;
+  row_id: number;
 };
 
 export type RecallHit = {
@@ -74,6 +75,7 @@ function scopeMatches(
 }
 
 const DEFAULT_LIMIT = 20;
+const INDEX_BUILDER_VERSION = "3";
 
 function score(row: IndexRow, query: string): number {
   const haystack = `${row.section}\n${row.snippet}`.toLowerCase();
@@ -88,6 +90,19 @@ async function indexIsStale(root: string, index: string): Promise<boolean> {
   let indexMtime: number;
   try {
     indexMtime = (await stat(index)).mtimeMs;
+  } catch {
+    return true;
+  }
+  try {
+    const db = new DatabaseSync(index, { readOnly: true });
+    try {
+      const meta = db
+        .prepare("SELECT value FROM meta WHERE key = 'builder_version'")
+        .get() as { value: string } | undefined;
+      if (meta?.value !== INDEX_BUILDER_VERSION) return true;
+    } finally {
+      db.close();
+    }
   } catch {
     return true;
   }
@@ -159,7 +174,7 @@ export async function recall(
     const undated = candidates.filter(({ row }) =>
       Number.isNaN(row.ts === "" ? Number.NaN : Date.parse(row.ts)),
     );
-    const hits = candidates
+    const matching = candidates
       .filter(({ row }) => {
         const timestamp = row.ts === "" ? Number.NaN : Date.parse(row.ts);
         return (
@@ -169,22 +184,43 @@ export async function recall(
             (!Number.isNaN(timestamp) && timestamp < until))
         );
       })
-      .sort(
-        (left, right) =>
-          right.score - left.score ||
+      .sort((left, right) => {
+        const scoreOrder = right.score - left.score;
+        if (scoreOrder !== 0) return scoreOrder;
+        const leftTimestamp = Date.parse(left.row.ts);
+        const rightTimestamp = Date.parse(right.row.ts);
+        if (
+          !Number.isNaN(leftTimestamp) &&
+          !Number.isNaN(rightTimestamp) &&
+          rightTimestamp !== leftTimestamp
+        )
+          return rightTimestamp - leftTimestamp;
+        if (!Number.isNaN(leftTimestamp) && Number.isNaN(rightTimestamp))
+          return -1;
+        if (Number.isNaN(leftTimestamp) && !Number.isNaN(rightTimestamp))
+          return 1;
+        return (
           left.row.source.localeCompare(right.row.source) ||
-          left.row.section.localeCompare(right.row.section),
-      )
-      .slice(0, filters.limit ?? DEFAULT_LIMIT)
-      .map(({ row }) => ({
-        source: row.source,
-        date: row.ts === "" ? null : new Date(row.ts).toISOString(),
-        actor: row.actor || null,
-        seat: row.seat || null,
-        section: row.section,
-        provenance: row.provenance,
-        snippet: row.snippet,
-      }));
+          left.row.section.localeCompare(right.row.section) ||
+          left.row.provenance.localeCompare(right.row.provenance) ||
+          left.row.row_id - right.row.row_id
+        );
+      });
+    const limit = filters.limit ?? DEFAULT_LIMIT;
+    const hits = matching.slice(0, limit).map(({ row }) => ({
+      source: row.source,
+      date: row.ts === "" ? null : new Date(row.ts).toISOString(),
+      actor: row.actor || null,
+      seat: row.seat || null,
+      section: row.section,
+      provenance: row.provenance,
+      snippet: row.snippet,
+    }));
+    if (matching.length > hits.length)
+      gaps.push({
+        source: "",
+        reason: `${hits.length} of ${matching.length} matching rows shown; use --limit to adjust the result cap`,
+      });
     if ((since !== undefined || until !== undefined) && undated.length > 0) {
       gaps.push({
         source: "",
