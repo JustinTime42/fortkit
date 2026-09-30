@@ -244,6 +244,75 @@ The Overseer's words: "I approve all and agree with your recommendations."
    still an outward-facing act under covenant gate 6.1: a seat drafts it, and the
    Overseer files it from his own account.
 
+## Implementation: who builds it, and how
+
+Added 2026-09-30 at the Overseer's direction ("let's write this plan down so
+it's safe, then begin").
+
+### The constraint that decides the split
+
+Most of what this plan changes is kernel read-only to every seat: launchers,
+the mask lib, `warden.sh`, `fleet.sh`, profiles, `bin/`. That is deliberate (a
+fleet that could edit its own dispatcher and reviewer has no boundary), and
+Proofdelve measured the cost of forgetting it: twenty beads unroutable because
+they named only paths the Forge can never write (`ForgeOs-76uob.2`). So
+**wiring into the control plane is always a Regent sitting**, and **what sits
+behind the wiring is fleet work**, provided it lives in writable paths.
+
+### The pattern: seams cut by sittings, filled by the fleet
+
+Spec, then interface, then test, then implementation:
+
+1. **A Regent sitting cuts the seam**: defines the interface (a TypeScript
+   module signature, a JSON schema), adds the call site in the kernel-read-only
+   launcher behind a stub, and lands the black-box acceptance test that must go
+   green.
+2. **The fleet fills it**: Forges implement the module in worktrees, the Warden
+   reviews, the fleet lands. The acceptance test is the bead's criterion.
+3. **A Regent sitting wires and pins it**: stub removed, real module live,
+   verified in the real mask.
+
+The existing black-box harnesses (`fleet-e2e-harness.sh`, `mask-harness.sh`,
+the boundary probes) are what make this possible: they are unambiguous
+acceptance criteria a Forge can be held to.
+
+### Lanes by phase
+
+| Phase | Sittings | Fleet-able |
+|---|---|---|
+| 0 | Mayor: `.40.1`, `.40.2`, `.40.4`, `.40.6` (read-only; in-session subagents may parallelize). Regent: `.40.3`, `.40.5` (host-side) | none |
+| 1 | Regent: structured verdicts and the CoW snapshot (`warden.sh`), telemetry (settings), LiteLLM (inside `.35`) | the `bd` adapter module and its tests against real `bd` |
+| 2 | Regent: Gas Town bake-off install and run; seam cutting | the fleet's decision logic moved to TypeScript function by function; the mask-policy compiler; the roster/identity data |
+| 3 | Regent: host-side index install, hook registration. Mayor: fact migration and anchors | the anchor checker, reverse-lookup injection logic, eval re-runs |
+| 4 | one Regent sitting per fort port (covenant 4), each through that fort's own bead | Copier template content, package tests |
+
+Roughly half the code by volume is fleet-able; every decision and every wiring
+step is a sitting.
+
+### Which fleet (OPEN: the Overseer's decision after Phase 0)
+
+- **Not Proofdelve's**: it works only in its own repo, its queue is its Mayor's
+  (covenant 2), and it is doing product work.
+- **Greenlab's `plot` fleet** for Greenlab-side modules, on the frontier rung
+  under its capacity lease (the local rungs could not reliably finish a two-file
+  bead in Sitting C; DeepSeek, `.35`, may become the cheap rung).
+- **Recommended: found the package as its own fort** from Greenlab's factory,
+  with its own fleet, whose product is the fort machinery. Self-hosting, like a
+  compiler: the fort's running machinery is always a pinned, previously signed
+  version, so its fleet builds the next version without ever running
+  unreviewed code on itself. Founding a settlement is covenant gate 6.3.
+- Fallback: the capital's Mayor dispatching Forges by hand (no fleet loop).
+
+### Order
+
+1. **Now**: a Mayor session on the four Mayor-lane Phase 0 beads, and the Regent
+   on `.40.3` and `.40.5`. Neither blocks the other.
+2. **After Phase 0 reports**: the package-fort and fleet-rung decisions; the
+   Mayor files Phase 1 and 2 as seam-and-fill pairs with `Touches:` and
+   acceptance tests.
+3. **Then waves**: a Regent sitting cuts a batch of seams, the fleet fills them
+   over a few nights, a Regent sitting wires and pins them.
+
 ## Appendix: the AgentDB post-mortem (why "prove" is in the spine)
 
 The 2026-08 retirement of ruflo/AgentDB was mostly upstream failure, widely
