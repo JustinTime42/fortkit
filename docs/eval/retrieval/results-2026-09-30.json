@@ -1,0 +1,636 @@
+{
+  "run": "2026-09-30",
+  "set": "questions.v1.json",
+  "arms": {
+    "search": {
+      "questions": {
+        "q01": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q08": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q15": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q22": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q29": {
+          "hit1": false,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q36": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q02": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q09": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q16": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q23": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q30": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q37": {
+          "hit1": false,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q03": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q10": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q17": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q24": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "q31": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q38": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q04": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q11": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "q18": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 4,
+          "judged": "correct",
+          "note": ""
+        },
+        "q25": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q32": {
+          "hit1": false,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q39": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q05": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q12": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 4,
+          "judged": "correct",
+          "note": ""
+        },
+        "q19": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q26": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q33": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q40": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 4,
+          "judged": "correct",
+          "note": ""
+        },
+        "q06": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q13": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 6,
+          "judged": "correct",
+          "note": ""
+        },
+        "q20": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q27": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q34": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "c1": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "q07": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q14": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q21": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q28": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q35": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "c2": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 4,
+          "judged": "correct",
+          "note": ""
+        }
+      },
+      "batches": 7,
+      "tokens_by_batch": [46313, 37416, 35945, 38236, 33955, 36993, 24748],
+      "tool_uses_by_batch": [13, 11, 11, 15, 17, 18, 16],
+      "summary": {
+        "n": 42,
+        "correct": 42,
+        "partial": 0,
+        "wrong": 0,
+        "not_found": 0,
+        "hit1": 33,
+        "hit5": 36,
+        "tokens_total": 253606,
+        "tokens_per_question": 6038,
+        "tokens_per_correct": 6038,
+        "tool_uses_total": 101,
+        "tool_uses_per_question": 2.4
+      }
+    },
+    "recall": {
+      "questions": {
+        "q01": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 4,
+          "judged": "correct",
+          "note": ""
+        },
+        "q08": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 11,
+          "judged": "correct",
+          "note": ""
+        },
+        "q15": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 12,
+          "judged": "correct",
+          "note": ""
+        },
+        "q22": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 4,
+          "judged": "correct",
+          "note": ""
+        },
+        "q29": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 6,
+          "judged": "not-found",
+          "note": "ForgeOs records are outside recall's corpus"
+        },
+        "q36": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "q02": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 5,
+          "judged": "correct",
+          "note": ""
+        },
+        "q09": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q16": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q23": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "q30": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q37": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 20,
+          "judged": "not-found",
+          "note": "20 tool calls, then recall failed with the readonly-database error"
+        },
+        "q03": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 7,
+          "judged": "correct",
+          "note": ""
+        },
+        "q10": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q17": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 4,
+          "judged": "correct",
+          "note": ""
+        },
+        "q24": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 9,
+          "judged": "correct",
+          "note": ""
+        },
+        "q31": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "q38": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q04": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 7,
+          "judged": "partial",
+          "note": "named 'where the last one ended' from events, missed the session.start fallback; inferred, not from code"
+        },
+        "q11": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 9,
+          "judged": "correct",
+          "note": ""
+        },
+        "q18": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 7,
+          "judged": "partial",
+          "note": "'silently starts nothing' is right; missed exit 75 and the refusal streak record"
+        },
+        "q25": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q32": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q39": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 5,
+          "judged": "partial",
+          "note": "right conclusion, wrong mechanism: blamed the list cap, gold is that bd list hides closed beads"
+        },
+        "q05": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q12": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 7,
+          "judged": "wrong",
+          "note": "answered exit 73 (the lease refusal) instead of 75 (GOVERNOR FIRED); code not in recall's corpus"
+        },
+        "q19": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 5,
+          "judged": "not-found",
+          "note": "declared NOT FOUND; inference toward local rungs was right but unsupported"
+        },
+        "q26": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q33": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "q40": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q06": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 9,
+          "judged": "correct",
+          "note": ""
+        },
+        "q13": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 11,
+          "judged": "not-found",
+          "note": "recall failed mid-batch: 'attempt to write a readonly database'"
+        },
+        "q20": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "q27": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "q34": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "c1": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 1,
+          "judged": "correct",
+          "note": ""
+        },
+        "q07": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q14": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 5,
+          "judged": "correct",
+          "note": ""
+        },
+        "q21": {
+          "hit1": false,
+          "hit5": true,
+          "reported_tool_calls": 3,
+          "judged": "correct",
+          "note": ""
+        },
+        "q28": {
+          "hit1": true,
+          "hit5": true,
+          "reported_tool_calls": 8,
+          "judged": "correct",
+          "note": ""
+        },
+        "q35": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 2,
+          "judged": "correct",
+          "note": ""
+        },
+        "c2": {
+          "hit1": false,
+          "hit5": false,
+          "reported_tool_calls": 4,
+          "judged": "correct",
+          "note": ""
+        }
+      },
+      "batches": 7,
+      "tokens_by_batch": [116500, 216562, 86028, 90115, 79163, 51909, 92432],
+      "tool_uses_by_batch": [55, 35, 38, 34, 26, 31, 32],
+      "summary": {
+        "n": 42,
+        "correct": 34,
+        "partial": 3,
+        "wrong": 1,
+        "not_found": 4,
+        "hit1": 16,
+        "hit5": 17,
+        "tokens_total": 732709,
+        "tokens_per_question": 17445,
+        "tokens_per_correct": 21550,
+        "tool_uses_total": 251,
+        "tool_uses_per_question": 6.0
+      }
+    }
+  }
+}

@@ -1,0 +1,436 @@
+{
+  "version": 1,
+  "created": "2026-09-30",
+  "bead": "fortkit-2y2t.40.2",
+  "encoding_note": "answer, gold and quote are base64-encoded JSON so that keyword search by an arm under test cannot land on the answer key. This is contamination control, not secrecy: decode with base64 -d.",
+  "corpus": [
+    "/home/justin/dev/fortkit",
+    "/home/justin/dev/ForgeOs",
+    "/home/justin/dev/longburn",
+    "/home/justin/dev/WWWW",
+    "/home/justin/dev/greenlab"
+  ],
+  "excluded_from_search": ["docs/eval/"],
+  "questions": [
+    {
+      "id": "q01",
+      "type": "impl",
+      "domain": "capital",
+      "question": "When `fortkit recall` finds that the local memory index was built by an older version of the builder, what does it do before answering?",
+      "answer_b64": "Ikl0IHRyZWF0cyB0aGUgaW5kZXggYXMgc3RhbGUgYW5kIHJlYnVpbGRzIGl0IGZpcnN0LCBieSBydW5uaW5nIGBzY3JpcHRzL2NvbnNvbGlkYXRlLW1lbW9yeS5tanMgLS1pbmRleC1vbmx5IDxyb290PmAuIEl0IHRoZW4gcXVlcmllcyB0aGUgcmVidWlsdCBpbmRleC4gQSBtaXNzaW5nIG9yIGNvcnJ1cHQgaW5kZXggZ2V0cyB0aGUgc2FtZSB0cmVhdG1lbnQuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvc3JjL3JlY2FsbC50czoxNDQiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L3NyYy9yZWNhbGwudHM6MTAyIiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9kb2NzL3NwZWNzL21lbW9yeS5tZDoyNjQiXQ==",
+      "quote_b64": "ImBpZiAoYXdhaXQgaW5kZXhJc1N0YWxlKGFic29sdXRlUm9vdCwgaW5kZXgpKWAgLyBgYXdhaXQgcnVuKHByb2Nlc3MuZXhlY1BhdGgsIFtjb25zb2xpZGF0ZSwgXCItLWluZGV4LW9ubHlcIiwgYWJzb2x1dGVSb290XSk7YCI=",
+      "draft": "capital-1"
+    },
+    {
+      "id": "q02",
+      "type": "impl",
+      "domain": "capital",
+      "question": "How old does an unmatched session start have to be before the quiescence check stops counting it as live work, and can that be changed?",
+      "answer_b64": "IjIgaG91cnMgKDcyMDAgcykuIEFmdGVyIHRoYXQgaXQgcHJpbnRzIGEgXCJzdGFsZTogLi4uIHRyZWF0ZWQgYXMgcXVpZXRcIiBsaW5lIGluc3RlYWQgb2YgXCJidXN5XCIuIFRoZSBlbnZpcm9ubWVudCB2YXJpYWJsZSBgUVVJRVNDRU5UX1NUQUxFX0FGVEVSX1NFQ09ORFNgIGNoYW5nZXMgdGhlIGxpbWl0LiI=",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvc2NyaXB0cy9xdWllc2NlbnQuc2g6MTIiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L3NjcmlwdHMvcXVpZXNjZW50LnNoOjE4NyIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvdGVtcGxhdGVzL3NjcmlwdHMvcXVpZXNjZW50LnNoOjEyIl0=",
+      "quote_b64": "ImBzdGFsZV9hZnRlcl9zZWNvbmRzPVwiJHtRVUlFU0NFTlRfU1RBTEVfQUZURVJfU0VDT05EUzotJCgoMiAqIDYwICogNjApKX1cImAi",
+      "draft": "capital-2"
+    },
+    {
+      "id": "q03",
+      "type": "impl",
+      "domain": "capital",
+      "question": "When a verifier step fails because the command it calls isn't installed, what extra field ends up in the failure event?",
+      "answer_b64": "IldoZW4gdGhlIHN0ZXAgZXhpdHMgd2l0aCAxMjcsIHRoZSBgdmVyaWZ5LmZhaWxgIHBheWxvYWQgZ2V0cyBgXCJ0b29sTWlzc2luZ1wiOnRydWVgIG5leHQgdG8gYHN0ZXBgIGFuZCBgZXhpdENvZGVgLiBUaGUgdmVyaWZpZXIgdGhlbiBleGl0cyB3aXRoIHRoYXQgc2FtZSBzdGF0dXMuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvc2NyaXB0cy92ZXJpZnktaW1wbC5zaDoxMTAiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L3RlbXBsYXRlcy9zY3JpcHRzL3ZlcmlmeS1pbXBsLnNoOjY2IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9mb3J0L2hhbmRvZmZzL2ZvcmdlLTIwMjYtMDgtMDQubWQ6NzAiXQ==",
+      "quote_b64": "ImBpZiBbIFwiJHN0YXR1c1wiIC1lcSAxMjcgXTsgdGhlbmAgLyBgcGF5bG9hZD1cIntcXFwic3RlcFxcXCI6XFxcIiR7c3RlcH1cXFwiLFxcXCJleGl0Q29kZVxcXCI6JHtzdGF0dXN9LFxcXCJ0b29sTWlzc2luZ1xcXCI6dHJ1ZX1cImAi",
+      "draft": "capital-4"
+    },
+    {
+      "id": "q04",
+      "type": "impl",
+      "domain": "capital",
+      "question": "Without `--since`, where does the fort digest start its event window?",
+      "answer_b64": "IkF0IHRoZSB0aW1lc3RhbXAgb2YgdGhlIGxhdGVzdCBgZGlnZXN0LmVtaXR0ZWRgIGV2ZW50LiBJZiB0aGVyZSBoYXMgbmV2ZXIgYmVlbiBvbmUsIGl0IHVzZXMgdGhlIGxhdGVzdCBgc2Vzc2lvbi5zdGFydGAgYW5kIG5vdGVzIFwiZmlyc3QgcnVuOyB1c2luZyBsYXN0IHNlc3Npb24uc3RhcnRcIi4gSWYgbmVpdGhlciBleGlzdHMsIGl0IHJlcG9ydHMgdGhhdCB0aGVyZSBpcyBubyBzZXNzaW9uIGhpc3RvcnkgYW5kIGV4aXRzIDAuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvc2NyaXB0cy9kaWdlc3Quc2g6MTA5IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC90ZW1wbGF0ZXMvc2NyaXB0cy9kaWdlc3Quc2g6MTA5Il0=",
+      "quote_b64": "ImBzaW5jZT1cIiQobGFzdF9ldmVudF90aW1lc3RhbXAgZGlnZXN0LmVtaXR0ZWQpXCJgIg==",
+      "draft": "capital-5"
+    },
+    {
+      "id": "q05",
+      "type": "impl",
+      "domain": "capital",
+      "question": "The Herald launcher exited with a code I didn't expect. Which code means \"don't retry on the next model rung\", and why?",
+      "answer_b64": "IkV4aXQgNjYuIEl0IG1lYW5zIHRoZSB2YXVsdCBjYW4ndCBiZSB3cml0dGVuIHRvICh0aGUgcHJlLWZsaWdodCBjaGVjayBmYWlsZWQsIG9yIHRoZSBjcmFzaC1zdHViIHJlcG9ydCBjb3VsZG4ndCBiZSB3cml0dGVuKS4gVGhlIHZhdWx0IGlzIHRoZSBwcm9ibGVtLCBub3QgdGhlIG1vZGVsLCBzbyB0aGUgY2FsbGVyIG11c3Qgbm90IHJldHJ5IG9uIHRoZSBuZXh0IHJ1bmcuIEV4aXQgNjUgaXMgdGhlIG9uZSB0aGF0IG1lYW5zIHJldHJ5IG9uIHRoZSBuZXh0IHJ1bmcuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3NjcmlwdHMvaGVyYWxkLnNoOjMwIiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9jaXYvc2NyaXB0cy9oZXJhbGQuc2g6NjciLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L2RvY3MvcHJvcG9zYWxzL2l6ei1oZXJhbGQtaGFyZGVuaW5nL2hlcmFsZC5zaC5wcm9wb3NlZDozMCJd",
+      "quote_b64": "ImAjICAgbmV4dCBydW5nLiA2NiA9IHRoZSBWQVVMVCBpcyB1bndyaXRhYmxlIChwcmUtZmxpZ2h0IHJlZnVzYWwsIG9yIHRoZSBjcmFzaGAgLyBgIyAgIHN0dWIgaXRzZWxmIGNvdWxkIG5vdCBsYW5kKSBcdTIwMTQgYW4gaW5jaWRlbnQgaXMgZW1pdHRlZCBhbmQgdGhlIGNhbGxlciBtdXN0YCI=",
+      "draft": "capital-6"
+    },
+    {
+      "id": "q06",
+      "type": "impl",
+      "domain": "capital",
+      "question": "How much core-tier memory can a single seat carry before the memory linter fails?",
+      "answer_b64": "IjMwIGZhY3RzIGFuZCAzMDAgbGluZXMgcGVyIHNlYXQuIFRoZSBjb3VudCBjb3ZlcnMgdGhlIHNlYXQncyBvd24gc2NvcGVkIGNvcmUgZmFjdHMgcGx1cyBhbnkgYHNlYXRzOiBbYWxsXWAgZmFjdHMuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvc2NyaXB0cy9tZW1vcnktbGludC5tanM6OSIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvdGVtcGxhdGVzL2ZvcnQvbWVtb3J5L21lbW9yeS1saW50Lm1qczo5IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9kb2NzL3NwZWNzL21lbW9yeS5tZDoxMDMiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L2ZvcnQvY29udHJvbHMvZ292ZXJub3ItY29yZS1tZW1vcnktYnVkZ2V0Lm1kOjUiXQ==",
+      "quote_b64": "ImBjb25zdCBjb3JlRmFjdEJ1ZGdldCA9IDMwO2AgLyBgY29uc3QgY29yZUxpbmVCdWRnZXQgPSAzMDA7YCI=",
+      "draft": "capital-8"
+    },
+    {
+      "id": "q07",
+      "type": "impl",
+      "domain": "capital",
+      "question": "What exit code does the template drift watcher return when a second copy starts while another run is still going?",
+      "answer_b64": "Ijc1LCB3aGljaCBpcyBmbG9jaydzIGNvZGUgZm9yIGEgaGVsZCBsb2NrLiBUaGUgd2F0Y2hlciBwYXNzZXMgaXQgdGhyb3VnaCB3aXRoIHRoZSBtZXNzYWdlIFwiZHJpZnQgd2F0Y2hlciBpcyBhbHJlYWR5IHJ1bm5pbmc6IDxsb2NrPiBpcyBoZWxkXCIuIEFueSBvdGhlciBub24temVybyBjb2RlIGNvbWVzIGZyb20gdGhlIGNoaWxkIHByb2Nlc3MuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3NjcmlwdHMvZHJpZnQtd2F0Y2gubWpzOjYyIiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9jaXYvc2NyaXB0cy9kcmlmdC13YXRjaC5tanM6MTMwMSJd",
+      "quote_b64": "ImBjb25zdCBsb2NrQ29uZmxpY3RFeGl0ID0gNzU7YCI=",
+      "draft": "capital-9"
+    },
+    {
+      "id": "q08",
+      "type": "impl",
+      "domain": "capital",
+      "question": "If the ceremony-record checker runs against an annals directory that has no records in it, does it pass?",
+      "answer_b64": "Ik5vLiBJdCBmYWlscyB3aXRoIGV4aXQgMSBhbmQgcHJpbnRzIFwibm8gY2VyZW1vbnkgcmVjb3JkcyB3ZXJlIGV4YW1pbmVkXCIsIGJlY2F1c2UgYSBjaGVja2VyIHRoYXQgY2hlY2tzIG5vdGhpbmcgbXVzdCBuZXZlciByZXBvcnQgc3VjY2Vzcy4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3NjcmlwdHMvY2hlY2stY2VyZW1vbnktcmVjb3JkLnNoOjIxNSIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L2hhbmRvZmZzL3JlZ2VudC0yMDI2LTA4LTA1VDIzMTUwMC5tZDo2NyJd",
+      "quote_b64": "ImBpZiBbIFwiJHRvdGFsXCIgLWVxIDAgXTsgdGhlbmAgLyBgICBlY2hvIFwiICBGQUlMOiBubyBjZXJlbW9ueSByZWNvcmRzIHdlcmUgZXhhbWluZWQuIEEgY2hlY2tlciB0aGF0IGNoZWNrcyBub3RoaW5nXCJgIg==",
+      "draft": "capital-10"
+    },
+    {
+      "id": "q09",
+      "type": "impl",
+      "domain": "capital",
+      "question": "If a civ seat calls the civilization-layer event emitter while its working directory is inside some fort, which event stream does the line go to?",
+      "answer_b64": "IlRoZSBjaXZpbGl6YXRpb24gc3RyZWFtLCBgY2l2L2V2ZW50cy9ldmVudHMtPGRhdGU+Lmpzb25sYC4gVGhlIHNjcmlwdCBmaW5kcyBpdHMgdGFyZ2V0IGZyb20gaXRzIG93biBsb2NhdGlvbiAodmlhIGByZWFkbGluayAtZmApLCBub3QgZnJvbSBgJFBXRGAuIFRoZSBmb3J0IGVtaXR0ZXIgd29ya3MgdGhlIG90aGVyIHdheS4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3NjcmlwdHMvZW1pdC5zaDo2IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9jaXYvc2NyaXB0cy9lbWl0LnNoOjM2IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9jaXYvaGFuZG9mZnMvcmVnZW50LTIwMjYtMDgtMDRUMjIwMDA2Lm1kOjIzNCJd",
+      "quote_b64": "ImAjIFRISVMgU0NSSVBUIFJFU09MVkVTIElUUyBUQVJHRVQgU1RSRUFNIEZST00gSVRTIE9XTiBMT0NBVElPTiwgTk9UIEZST00gVEhFYCAvIGAjIENBTExFUidTIFdPUktJTkcgRElSRUNUT1JZLiBUaGF0IGlzIGRlbGliZXJhdGUgYW5kIGl0IGlzIHRoZSBkaWZmZXJlbmNlIGZyb21gIg==",
+      "draft": "capital-11"
+    },
+    {
+      "id": "q10",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "At most how many Greenlab claude/codex sessions on the shared subscription can run at the same time?",
+      "answer_b64": "IlR3by4gYEdPVl9GUk9OVElFUl9TRVNTSU9OU19NQVg9MmAsIGFuZCBgYmluL2dvdmVybm9yYCByZWZ1c2VzIGEgbGVhc2Ugb25jZSB0d28gYXJlIGhlbGQuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2dyZWVubGFiL2Npdi9nb3Zlcm5vcnMuY29uZjo0MyJd",
+      "quote_b64": "ImBHT1ZfRlJPTlRJRVJfU0VTU0lPTlNfTUFYPTJgIg==",
+      "draft": "fleet-13"
+    },
+    {
+      "id": "q11",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "If rate limits keep coming back to back, how long can the no-new-sessions window grow at most?",
+      "answer_b64": "IjI0MCBtaW51dGVzLiBUaGUgd2luZG93IHN0YXJ0cyBhdCAzMCBtaW51dGVzLCBkb3VibGVzIHdpdGggZWFjaCByYXRlIGxpbWl0IGluIGEgcm93LCBhbmQgbmV2ZXIgZ29lcyBhYm92ZSAyNDAuIEEgY2xlYW4gcmVsZWFzZSByZXNldHMgdGhlIGRvdWJsaW5nLiI=",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2dyZWVubGFiL2Npdi9nb3Zlcm5vcnMuY29uZjo0NSIsICIvaG9tZS9qdXN0aW4vZGV2L2dyZWVubGFiL2Jpbi9nb3Zlcm5vcjozNSJd",
+      "quote_b64": "ImBHT1ZfUkFURV9MSU1JVF9CQUNLT0ZGX01BWF9NSU5VVEVTPTI0MGAi",
+      "draft": "fleet-14"
+    },
+    {
+      "id": "q12",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "What exit status does bin/governor give when a spending or activity ceiling says no?",
+      "answer_b64": "Ijc1IChcIkdPVkVSTk9SIEZJUkVEXCIpLiBUaGUgcmVmdXNhbCBpcyB3cml0dGVuIHRvIHRoZSBsZWRnZXIgYW5kIG9uZSBsaW5lIHN0YXJ0aW5nIGBHT1ZFUk5PUiBGSVJFRDpgIGlzIHByaW50ZWQuIEV4aXQgNzAgbWVhbnMgYSBjb25maWcgb3IgbGVkZ2VyIGZhdWx0LCB3aGljaCBhbHNvIHJlZnVzZXMuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2dyZWVubGFiL2Jpbi9nb3Zlcm5vcjo2NyJd",
+      "quote_b64": "ImBFeGl0IGNvZGVzOiAwIGFsbG93ZWQgKGFuZCwgZm9yIGNoYXJnZSwgcmVjb3JkZWQpOyA3NSBHT1ZFUk5PUiBGSVJFRCAocmVmdXNlZDtgIg==",
+      "draft": "fleet-15"
+    },
+    {
+      "id": "q13",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "How many times can a bead be sent back to the Forge before it goes to the Mayor instead, and is that number the same in Proofdelve and in Greenlab's factory template?",
+      "answer_b64": "Ikl0IGlzIG5vdCB0aGUgc2FtZS4gUHJvb2ZkZWx2ZSBhbGxvd3MgMiByZXR1cm5zOyBHcmVlbmxhYidzIGZhY3RvcnkgdGVtcGxhdGUgYWxsb3dzIDMuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9zY3JpcHRzL2ZsZWV0LmNvbmY6OTUiLCAiL2hvbWUvanVzdGluL2Rldi9ncmVlbmxhYi90ZW1wbGF0ZXMvZm9ydC9zY3JpcHRzL2ZsZWV0LmNvbmY6OTUiXQ==",
+      "quote_b64": "ImBGTEVFVF9NQVhfUkVUVVJOUz0yYCI=",
+      "draft": "fleet-16"
+    },
+    {
+      "id": "q14",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "How many idle passes in a row, while ready work is still waiting, before the fleet declares itself wedged and halts?",
+      "answer_b64": "IjMgcGFzc2VzIChgRkxFRVRfU1RBTExfUEFTU0VTYCkuIFRoaXMgaXMgYSBjb3VudCBvZiBwYXNzZXMsIGRlbGliZXJhdGVseSBub3QgYSB0aW1lIGxpbWl0OyBhdCB0aGUgc2hpcHBlZCAzMCBzIHBvbGwgaXQgY29tZXMgdG8gYWJvdXQgOTAgc2Vjb25kcy4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9zY3JpcHRzL2ZsZWV0LmNvbmY6MTEyIiwgIi9ob21lL2p1c3Rpbi9kZXYvZ3JlZW5sYWIvdGVtcGxhdGVzL2ZvcnQvc2NyaXB0cy9mbGVldC5jb25mOjExMiIsICIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9zY3JpcHRzL2ZsZWV0LnNoOjE0NzUiLCAiL2hvbWUvanVzdGluL2Rldi9ncmVlbmxhYi90ZW1wbGF0ZXMvZm9ydC9zY3JpcHRzL2ZsZWV0LnNoOjE2MDAiXQ==",
+      "quote_b64": "ImBGTEVFVF9TVEFMTF9QQVNTRVM9M2Ai",
+      "draft": "fleet-17"
+    },
+    {
+      "id": "q15",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "What exit code does the review launcher return when the reviewer's session ends without recording a verdict?",
+      "answer_b64": "IjY1IChcIk5PIFZFUkRJQ1QgUkVDT1JERURcIikuIFRoZSBsYXVuY2hlciB0ZWxscyB0aGUgZmxlZXQgdG8gcmVsYXVuY2ggb24gdGhlIG5leHQgcnVuZyBhbmQgc2F5cyBhbiBhYnNlbnQgdmVyZGljdCBpcyBub3QgYW4gYXBwcm92YWwuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9zY3JpcHRzL3dhcmRlbi5zaDo4MDciLCAiL2hvbWUvanVzdGluL2Rldi9ncmVlbmxhYi90ZW1wbGF0ZXMvZm9ydC9zY3JpcHRzL3dhcmRlbi5zaDo5MjAiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L3RlbXBsYXRlcy9mb3J0L3NjcmlwdHMvd2FyZGVuLnNoOjI0MSJd",
+      "quote_b64": "ImAgIGV4aXQgNjVgIg==",
+      "draft": "fleet-19"
+    },
+    {
+      "id": "q16",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "How old must a leftover review scratch copy be before the hourly cleanup job will delete it?",
+      "answer_b64": "IkF0IGxlYXN0IDEyMCBtaW51dGVzIGJ5IGRlZmF1bHQgKGBSRUFQRVJfTUlOX0FHRV9NSU5gKS4gQWdlIGlzIG1lYXN1cmVkIGZyb20gdGhlIG5ld2VzdCBvZiBpdHMgbG9jaywgbG9jay5pbmZvIGFuZCB0cmFuc2NyaXB0LiBJdHMgcmV2aWV3IGxvY2sgbXVzdCBhbHNvIGJlIGZyZWUuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9zY3JpcHRzL3NjcmF0Y2gtcmVhcGVyLnNoOjEwOSIsICIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9zY3JpcHRzL3NjcmF0Y2gtcmVhcGVyLnNoOjE2IiwgIi9ob21lL2p1c3Rpbi9kZXYvRm9yZ2VPcy9mb3J0L3NjcmlwdHMvc2NyYXRjaC1yZWFwZXIuc2g6ODQiLCAiL2hvbWUvanVzdGluL2Rldi9ncmVlbmxhYi90ZW1wbGF0ZXMvZm9ydC9zY3JpcHRzL3NjcmF0Y2gtcmVhcGVyLnNoOjEwOSJd",
+      "quote_b64": "ImBtaW5fYWdlPVwiJHtSRUFQRVJfTUlOX0FHRV9NSU46LTEyMH1cImAi",
+      "draft": "fleet-20"
+    },
+    {
+      "id": "q17",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "If I resubmit, word for word, an Effect Gateway proposal whose operation was already released, what happens?",
+      "answer_b64": "Ikl0IHJldHVybnMgYHJlbGVhc2VkYCAoZXhpdCA2NikgZXZlcnkgdGltZSBhbmQgc2VuZHMgbm90aGluZy4gVG8gdHJ5IGFnYWluIHlvdSBtdXN0IGNoYW5nZSBgcHJvcG9zYWxfaWRgLCB3aGljaCBtYWtlcyBpdCBhIG5ldyBvcGVyYXRpb24uIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2dyZWVubGFiL2Jpbi9lZmZlY3QtZ2F0ZXdheTo2MCJd",
+      "quote_b64": "ImBgdGhlIGlkZW50aWNhbCBwcm9wb3NhbCByZXR1cm5zIGByZWxlYXNlZGAgKDY2KSBmb3JldmVyIGFuZCBzZW5kcyBub3RoaW5nLiBUaGF0IGlzYGAi",
+      "draft": "fleet-22"
+    },
+    {
+      "id": "q18",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "When the supervisor timer fires while a fleet run is already going, what does it do?",
+      "answer_b64": "Ikl0IGV4aXRzIDc1IHdpdGggbm8gb3V0cHV0IGFuZCBubyBldmVudCwgYnV0IGl0IGNvdW50cyB0aGUgcmVmdXNhbCBpbiBhIHN0cmVhayByZWNvcmQgKGNvdW50LCBmaXJzdF9yZWZ1c2FsLCBsYXN0X3JlZnVzYWwpLiI=",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9zY3JpcHRzL2ZsZWV0LXN1cGVydmlzb3Iuc2g6MTEiLCAiL2hvbWUvanVzdGluL2Rldi9Gb3JnZU9zL2ZvcnQvc2NyaXB0cy9mbGVldC1zdXBlcnZpc29yLnNoOjI5MSIsICIvaG9tZS9qdXN0aW4vZGV2L2dyZWVubGFiL3RlbXBsYXRlcy9mb3J0L3NjcmlwdHMvZmxlZXQtc3VwZXJ2aXNvci5zaDoxMSJd",
+      "quote_b64": "ImAjICAgMi4gSXMgYW5vdGhlciBmbGVldCBydW4gaG9sZGluZyB0aGUgICAgLT4gZXhpdCA3NSwgbm8gb3V0cHV0LCBubyBldmVudCwgYW5kYCI=",
+      "draft": "fleet-23"
+    },
+    {
+      "id": "q19",
+      "type": "impl",
+      "domain": "fleet",
+      "question": "Which Forge or review rungs don't need a capacity lease before they launch?",
+      "answer_b64": "ImBoZXJtZXM6KmAgcnVuZ3MuIFRoZXkgcnVuIG9uIHRoZSBsb2NhbCBlbmRwb2ludCBvciBhIG1ldGVyZWQgQVBJLCBub3QgdGhlIHN1YnNjcmlwdGlvbiwgc28gbm8gbGVhc2UgaXMgdGFrZW4uIEJhcmUgbW9kZWwgbmFtZXMgYW5kIGBjbGF1ZGU6YC9gY29kZXg6YCBydW5ncyBkbyBuZWVkIG9uZS4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2dyZWVubGFiL3RlbXBsYXRlcy9mb3J0L3NjcmlwdHMvbGliL2Zyb250aWVyLWxlYXNlLnNoOjM4IiwgIi9ob21lL2p1c3Rpbi9kZXYvZ3JlZW5sYWIvdGVtcGxhdGVzL2ZvcnQvc2NyaXB0cy9mbGVldC5zaDo4NDciXQ==",
+      "quote_b64": "ImAgIGNhc2UgXCIkMVwiIGluIGhlcm1lczoqfFwiXCIpIHJldHVybiAxIDs7ICopIHJldHVybiAwIDs7IGVzYWNgIg==",
+      "draft": "fleet-24"
+    },
+    {
+      "id": "q20",
+      "type": "why",
+      "domain": "decisions",
+      "question": "Why doesn't the fort run a job that picks which memory facts are always loaded at session start, based on what is being worked on right now?",
+      "answer_b64": "IlRoZSBPdmVyc2VlciByZWplY3RlZCBpdCBvbiAyMDI2LTA4LTExIGZvciB0d28gcmVhc29ucy4gVGhlIGZhY3RzIHRoYXQgbW9zdCBuZWVkIHRvIGJlIGNvcmUgYXJlIHRoZSBvbmVzIGxlYXN0IHJlbGF0ZWQgdG8gY3VycmVudCB3b3JrLCBzbyBzdWNoIGEgcmFua2VyIHdvdWxkIGRlbW90ZSB0aGVtLiBBbmQgYSBqb2IgdGhhdCBzaWxlbnRseSByZXdyaXRlcyB0aGUgYWx3YXlzLWxvYWRlZCBtZW1vcnkgaXMgaXRzZWxmIHRoZSBjaGFydGVyJ3MgZXNjYWxhdGlvbiBzaWduYWwuIEEgcGVyLXNlYXQgY29yZSBidWRnZXQgd2FzIGFkb3B0ZWQgaW5zdGVhZC4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvZG9jcy9zcGVjcy9tZW1vcnkubWQ6MTQxIiwgImZvcnRraXQtODh1LjE2IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9mb3J0L2hhbmRvZmZzL21heW9yLTIwMjYtMDgtMTEtYi5tZDozNCJd",
+      "quote_b64": "IlwiKkEgcmVsZXZhbmNlLXJhbmtlZCBjb3JlIHdhcyBjb25zaWRlcmVkIGFuZCByZWplY3RlZCogKGZvcnRraXQtODh1LjE2KS4gVGhlIC8gZmFjdHMgdGhhdCBtb3N0IG5lZWQgdG8gYmUgY29yZSBhcmUgdGhlIG9uZXMgbGVhc3QgcmVsYXRlZCB0byBjdXJyZW50IHdvcmsgXHUyMDE0XCIi",
+      "draft": "decisions-25"
+    },
+    {
+      "id": "q21",
+      "type": "why",
+      "domain": "decisions",
+      "question": "The drift watcher's older beads still match by title and never got the new identity line. Why weren't they updated?",
+      "answer_b64": "IlJld3JpdGluZyB0aGUgNTEgbGVnYWN5IGJlYWQgZGVzY3JpcHRpb25zIHdhcyByZWplY3RlZCBiZWNhdXNlIGl0IHdvdWxkIGVkaXQgcmVjb3JkcyBpbiBwbGFjZSwgd2hpY2ggc3RhbmRpbmcgb3JkZXIgNyAoYXBwZW5kLW9ubHkgcmVjb3JkcykgZm9yYmlkcy4gVGhlIG1hdGNoZXIgZmFsbHMgYmFjayB0byB0aGUgdGl0bGUgaW5zdGVhZC4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvZG9jcy9zcGVjcy9iYWNrcG9ydC1sb29wLm1kOjE1NSIsICJmb3J0a2l0LXp2ejIiLCAiZm9ydGtpdC01MnZmLjgiXQ==",
+      "quote_b64": "IlwiYERyaWZ0OiA8Zm9ydD4gPHBhdGg+YCwgYW5kIHRoZSBtYXRjaGVyIGZhbGxzIGJhY2sgdG8gaXQuICoqUnVsZWQ6KiogYSAvIG1pZ3JhdGlvbiBwYXNzIHJld3JpdGluZyA1MSBkZXNjcmlwdGlvbnMgd2FzIHJlamVjdGVkIGFzIGFuIGluLXBsYWNlIGVkaXQgb2ZcIiI=",
+      "draft": "decisions-26"
+    },
+    {
+      "id": "q22",
+      "type": "why",
+      "domain": "decisions",
+      "question": "Why does the verifier lint the template shell scripts only after filling in their placeholders, instead of just telling shellcheck to ignore the brace warnings?",
+      "answer_b64": "IlRoZSBPdmVyc2VlciBydWxlZCBmb3IgbGludGluZyB0aGUgZmlsbGVkLWluIChyZW5kZXJlZCkgb3V0cHV0LiBBIHBlci10ZW1wbGF0ZSBkaXNhYmxlIGhlYWRlciB3b3VsZCBoaWRlIHRoZSB3YXJuaW5nIGFuZCBsZWF2ZSB0aGUgc2hpcHBlZCBhcnRpZmFjdCB1bmNoZWNrZWQuIExpbnRpbmcgdGhlIHJlbmRlcmVkIG91dHB1dCBhbHNvIGNoZWNrcyB0aGF0IGZvcnQtaW5pdCdzIHN1YnN0aXR1dGlvbiBwcm9kdWNlcyB2YWxpZCBzY3JpcHRzLiI=",
+      "gold_b64": "WyJmb3J0a2l0LThpYiJd",
+      "quote_b64": "IlwiRGVjbGluZWQgYWx0ZXJuYXRpdmUgKGEpLCBhIHNoZWxsY2hlY2sgZGlzYWJsZSBoZWFkZXIgcGVyIHRlbXBsYXRlOiBpdCBzaWxlbmNlcyB0aGUgcGxhY2Vob2xkZXIgd2FybmluZyBhbmQgbGVhdmVzIHRoZSBzaGlwcGVkIGFydGlmYWN0IHVuY2hlY2tlZC5cIiI=",
+      "draft": "decisions-27"
+    },
+    {
+      "id": "q23",
+      "type": "why",
+      "domain": "decisions",
+      "question": "Why shouldn't a reader use the date in an event file's name to decide which day an event happened on?",
+      "answer_b64": "IlRoZSBmaWxlIGlzIG5hbWVkIGZyb20gdGhlIHdyaXRlcidzIGxvY2FsIGRhdGUsIHdoaWxlIGJlYWRzIHJlY29yZCBVVEMuIFdvcmsgZG9uZSBpbiB0aGUgZXZlbmluZyB0aGVyZWZvcmUgbGFuZHMgaW4gYSBmaWxlIGRhdGVkIGEgZGF5IGVhcmxpZXIuIEl0IHdhcyBkZWNpZGVkIG9uIDIwMjYtMDgtMDQgKGZvcnRraXQtZHB1KSB0aGF0IHRoZSBmaWxlbmFtZSBpcyBvbmx5IGEgc2hhcmQga2V5LCBhbmQgcmVhZGVycyBncm91cCBieSB0aGUgcGFyc2VkIFVUQyB0aW1lc3RhbXAuIFRoZSBzdHJlYW0gaXRzZWxmIGlzIG5vdCByZXdyaXR0ZW4gYmVjYXVzZSBpdCBpcyBhcHBlbmQtb25seS4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvc2NoZW1hL2V2ZW50cy5tZDo3IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9mb3J0L2V2ZW50cy9SRUFETUUubWQ6NyIsICJmb3J0a2l0LWRwdSIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvZm9ydC9oYW5kb2Zmcy9tYXlvci0yMDI2LTA4LTAzLm1kOjU2Il0=",
+      "quote_b64": "IlwiY29uc3VtZXJzIGdyb3VwIGFuZCBvcmRlciBieSAqKnBhcnNlZCBVVEMsIG5ldmVyIGJ5IGZpbGVuYW1lKiouIFRoZSBkYWlseSBmaWxlbmFtZSAoYGV2ZW50cy1ZWVlZLU1NLURELmpzb25sYCwgd3JpdGVyLWxvY2FsIGRhdGUpIGlzIGEgKipzaGFyZCBrZXksIG5vdCBhIGZhY3QqKlwiIg==",
+      "draft": "decisions-28"
+    },
+    {
+      "id": "q24",
+      "type": "why",
+      "domain": "decisions",
+      "question": "Three of the proposals in fortkit-ugr.7 were never written into the covenant: the concurrence, the borrowed bench's ballot rules, and the per-sitting convener. Why not?",
+      "answer_b64": "IlRoZSBPdmVyc2VlciBkZWNsaW5lZCB0aGVtIG9uIDIwMjYtMDgtMTcuIFRoZSAyMDI2LTA4LTA1IGFwcG9pbnRtZW50IGFtZW5kbWVudCBtZWFucyBub3RoaW5nIGluIHRoZSBjaXZpbGl6YXRpb24gbGF5ZXIgaXMgZGVjaWRlZCBieSBiYWxsb3QgYW55IG1vcmUsIHNvIHRoZSBydWxlcyBoYWQgbm90aGluZyBsZWZ0IHRvIGdvdmVybiwgYW5kIGRlYWQgcHJvY2VkdXJlIGluIGEgbGl2ZSBjb25zdGl0dXRpb24gaXMgd29yc2UgdGhhbiBub25lLiI=",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L2NvdmVuYW50Lm1kOjQ4NCIsICJmb3J0a2l0LXVnci43IiwgImZvcnRraXQtcDVtci43Il0=",
+      "quote_b64": "IlwiaXMgZGVjaWRlZCBieSBiYWxsb3QgYW5kIHRoZXJlIGlzIG5vIGNlcmVtb255IGZvciB0aG9zZSBydWxlcyB0byBnb3Zlcm4uICoqRGVhZCAvIHByb2NlZHVyZSBpbiBhIGxpdmUgY29uc3RpdHV0aW9uIGlzIHdvcnNlIHRoYW4gbm8gcHJvY2VkdXJlKiosIGJlY2F1c2UgYSBsYXRlclwiIg==",
+      "draft": "decisions-30"
+    },
+    {
+      "id": "q25",
+      "type": "why",
+      "domain": "decisions",
+      "question": "The Regent's seat first lived inside the Manyhalls charter. Why was it moved out?",
+      "answer_b64": "IlRoZSBPdmVyc2VlciBtb3ZlZCBpdCB0byB0aGUgY2l2aWxpemF0aW9uIGxheWVyIGJ5IGVkaWN0IG9uIDIwMjYtMDgtMDQuIEEgc2VhdCB3aXRoIHJvb3Qgb24gZXZlcnkgZm9ydCBjYW5ub3QgdGFrZSBpdHMgYXV0aG9yaXR5IGZyb20gb25lIGZvcnQncyBjb25zdGl0dXRpb24sIGFuZCBhIHNldHRsZW1lbnQgc2hvdWxkIG5vdCBiZSBhc2tlZCB0byBnb3Zlcm4gc29tZXRoaW5nIGl0IGNhbm5vdCBjb25zdHJhaW4uIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3NlYXRzL3JlZ2VudC5tZDoxMTAiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L2Npdi9jb3ZlbmFudC5tZDoyNCIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjM2IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9jaXYvaGFuZG9mZnMvcmVnZW50LTIwMjYtMDgtMDRUMjIwMDA2Lm1kOjIwMSIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvZG9jcy9wcm9wb3NhbHMvaGVyYWxkLWZvdW5kaW5nL0NJVi1MQVlFUi1TVVBFUlNFU1NJT04ubWQ6MTUiLCAiZm9ydGtpdC11Z3IiXQ==",
+      "quote_b64": "IlwiLSAyMDI2LTA4LTA0OiBNb3ZlZCB0byB0aGUgY2l2aWxpemF0aW9uIGxheWVyIGJ5IHRoZSBPdmVyc2VlcidzIGVkaWN0LiBBIHNlYXQgLyB3aXRoIHJvb3Qgb24gZXZlcnkgZm9ydCBjYW5ub3QgZGVyaXZlIGl0cyBhdXRob3JpdHkgZnJvbSBvbmUgZm9ydCdzXCIi",
+      "draft": "decisions-31"
+    },
+    {
+      "id": "q26",
+      "type": "why",
+      "domain": "decisions",
+      "question": "Why isn't the Researcher limited to fetching from an approved list of sites, given that fetching is a way data can leave the fort?",
+      "answer_b64": "IlJlc3RyaWN0aW5nIGl0IHRvIGNlcnRhaW4gZG9tYWlucyB3YXMgY29uc2lkZXJlZCBhbmQgcmVqZWN0ZWQsIHdpdGggT3ZlcnNlZXIgYXBwcm92YWwsIGJlY2F1c2UgaXQgd291bGQgY3JpcHBsZSB0aGUgc2VhdCdzIHB1cnBvc2UuIFRoZSBmZXRjaCBjaGFubmVsIGlzIGluc3RlYWQgYWNjZXB0ZWQgYXMgYSBtZWFzdXJlZCByZXNpZHVhbCByaXNrIChmb3J0a2l0LXZoay41LjMsIDIwMjYtMDgtMTEpLiI=",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvZG9jcy9zcGVjcy9yZXNlYXJjaGVyLXNlYXQubWQ6MjEzIiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9mb3J0L2NoYXJ0ZXIubWQ6MzEiLCAiZm9ydGtpdC12aGsuNS4zIiwgImZvcnRraXQtdmhrLjUiLCAiZm9ydGtpdC12aGsuMTAiLCAiZm9ydGtpdC10Y21nIiwgImZvcnRraXQtejl4bCIsICJmb3J0a2l0LTBkdmsiLCAiZm9ydGtpdC1jbHdrIl0=",
+      "quote_b64": "IlwiZmV0Y2ggYXJiaXRyYXJ5IFVSTHMsIGFuZCBhIEdFVCBjYXJyaWVzIGEgVVJMLiBEb21haW4tc2NvcGluZyB3YXMgY29uc2lkZXJlZCAvIGFuZCByZWplY3RlZCBhcyBjcmlwcGxpbmcgdG8gdGhlIHNlYXQncyBwdXJwb3NlIChPdmVyc2Vlci1hcHByb3ZlZCkuXCIi",
+      "draft": "decisions-32"
+    },
+    {
+      "id": "q27",
+      "type": "why",
+      "domain": "decisions",
+      "question": "Why was the Mayor's 2026-08-10 subagent rule (fortkit-c62) replaced rather than kept?",
+      "answer_b64": "Ikl0IGFsbG93ZWQgb25seSBcInJlYWQtb25seSBFeHBsb3JlXCIgc3ViYWdlbnRzLCBidXQgRXhwbG9yZSBob2xkcyBCYXNoLCBzbyB0aGUgcmVhZC1vbmx5IHByb3BlcnR5IGl0IHJlbGllZCBvbiB3YXMgbm90IHJlYWwuIGZvcnRraXQtZWZ2OS4xIChPdmVyc2VlciBhcHByb3ZhbCAyMDI2LTA5LTI5KSByZXBsYWNlZCBpdCB3aXRoIGEgbG9jYWwtb25seSBydWxlIGVuZm9yY2VkIGJ5IGEgc3RhbmRpbmcgcHJvc2UgcHJlYW1ibGUuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvZm9ydC9zZWF0cy9tYXlvci5tZDoxMyIsICJmb3J0a2l0LWVmdjkuMSIsICJmb3J0a2l0LWVmdjkuOSJd",
+      "quote_b64": "IlwiVGhlIGM2MiB0ZXh0IHNhaWQgXCJyZWFkLW9ubHkgYEV4cGxvcmVgXCIsIGEgcHJvcGVydHkgRXhwbG9yZSBkb2VzIG5vdCBoYXZlLCB3aGljaCBpcyB3aHkgaXQgd2FzIHJlcGxhY2VkIHJhdGhlciB0aGFuIGtlcHQ7IGl0IGlzIHByZXNlcnZlZCBpbiBnaXQgaGlzdG9yeS5cIiI=",
+      "draft": "decisions-33"
+    },
+    {
+      "id": "q28",
+      "type": "why",
+      "domain": "decisions",
+      "question": "Why must a correction to a bead go in its comments rather than its notes?",
+      "answer_b64": "IkNvcnJlY3Rpb25zIGhhZCBiZWVuIGxhbmRpbmcgaW4gbm90ZXMgd2hpbGUgdGhlIHJldmlld2luZyBzZWF0J3MgaGFiaXQgaXMgdG8gcmVhZCBjb21tZW50cywgYW5kIGEgY29ycmVjdGlvbiBwbGFjZWQgd2hlcmUgdGhlIHJldmlld2VyIGRvZXMgbm90IGxvb2sgZG9lcyBub3QgZG8gaXRzIGpvYi4gVGhlIGZpeCB3YXMgYSBjaGFydGVyIGFtZW5kbWVudCBvbiAyMDI2LTA4LTExIChmb3J0a2l0LXpwdzgsIE92ZXJzZWVyLWFwcHJvdmVkKS4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvZm9ydC9jaGFydGVyLm1kOjU1IiwgImZvcnRraXQtenB3OCIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvZm9ydC9oYW5kb2Zmcy9tYXlvci0yMDI2LTA4LTExLWIubWQ6OTMiXQ==",
+      "quote_b64": "IlwiSW5jaWRlbnQ6IHRoaXMgb3JkZXIgc2FpZCBjb3JyZWN0aW9ucyBtdXN0IGJlIGFwcGVuZGVkIGFuZCBuZXZlciBzYWlkIHdoZXJlLCBzbyB0aGV5IGxhbmRlZCBpbiBgbm90ZXNgIHdoaWxlIHJldmlldyBoYWJpdCByZWFkIGBjb21tZW50c2AuXCIi",
+      "draft": "decisions-34"
+    },
+    {
+      "id": "q29",
+      "type": "why",
+      "domain": "decisions",
+      "question": "In ForgeOs, why was the plan to make email and login subject unique per organization abandoned?",
+      "answer_b64": "Ikp1c3RpbiBkZWNpZGVkIG9uIDIwMjYtMDgtMTAgb24gb25lIGFjY291bnQgcGVyIHBlcnNvbi4gUGVyLW9yZyB1bmlxdWVuZXNzIGNvbnRyYWRpY3RlZCB0aGUgY3Jvc3Mtb3JnIHBhcnRpY2lwYXRpb24gc3BlYyBhbmQgb3BlbmVkIGFuIG9pZC1oaWphY2sgaG9sZTogYW4gb3JnIGFzc2VydGluZyBhIHZpY3RpbSdzIHN1YmplY3QgcGx1cyB0aGUgT3duZXIgcm9sZSB3b3VsZCBsYW5kIHRoZSB2aWN0aW0ncyBsb2dpbiBpbiB0aGUgYXR0YWNrZXIncyBvcmcuIEZvcmdlT3MtOTFwMi40IHdhcyBhYmFuZG9uZWQuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9tZW1vcnkvZmFjdHMvb25lLWFjY291bnQtcGVyLXBlcnNvbi5tZDoyNCIsICIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9oYW5kb2Zmcy9tYXlvci0yMDI2LTA4LTEwLXIzLm1kOjExNyIsICJGb3JnZU9zLTkxcDIuNCIsICJGb3JnZU9zLWZrbW0uNyJd",
+      "quote_b64": "IlwiaXMgdGhlIHByaW1hcnkgbG9naW4ga2V5LiBUaGUgcGVyLW9yZyBwcmVtaXNlIG9wZW5lZCBhbiBvaWQtaGlqYWNrIGhvbGUsIHdoZXJlIGFuIC8gb3JnIGFzc2VydGluZyBhIHZpY3RpbSdzIHN1YmplY3QgcGx1cyBPd25lciByb2xlIHdvdWxkIGxhbmQgdGhlIHZpY3RpbSdzIGxvZ2luIGluXCIi",
+      "draft": "decisions-35"
+    },
+    {
+      "id": "q30",
+      "type": "why",
+      "domain": "incidents",
+      "question": "I'm about to write a wait loop that polls for a running launcher by matching its command line with `pgrep -f`. Is that safe?",
+      "answer_b64": "Ik5vLiBgcGdyZXAgLWZgIC8gYHBraWxsIC1mYCBtYXRjaCB0aGUgd2F0Y2hlcidzIG93biBjb21tYW5kIGxpbmUsIHdoaWNoIGNvbnRhaW5zIHRoZSBwYXR0ZXJuLiBUaGUgbG9vcCB0aGVuIG5ldmVyIGVuZHMgb3IgcmVwb3J0cyBhIGZpbmlzaGVkIGpvYiBhcyBhbGl2ZSwgYW5kIGBwa2lsbGAgaGFzIGtpbGxlZCBpdHMgb3duIHNoZWxsIChleGl0IDE0NCkuIFdhdGNoIGEgcGlkIHdpdGggYGtpbGwgLTAgJHBpZGAsIHVzZSB0aGUgYnJhY2tldCB0cmljayAoYCdbd11hcmRlbi5zaCdgKSwgb3IgcmVhZCBhIGR1cmFibGUgcmVjb3JkIHN1Y2ggYXMgdGhlIGV2ZW50IHN0cmVhbS4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjU1OSIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjY5MyIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjI0NzUiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L2Npdi9yZW1lbWJlci5tZDozNDc5IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9jaXYvcmVtZW1iZXIubWQ6MzgzOSIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjQ5NDIiLCAiL2hvbWUvanVzdGluL2Rldi9Gb3JnZU9zL2ZvcnQvbWVtb3J5L2ZhY3RzL3ZlcmlmeS15b3VyLWNoZWNrLW5vdC1qdXN0LXRoZS10aGluZy5tZDoyNCIsICIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9ldmVudHMvZXZlbnRzLTIwMjYtMDktMDQuanNvbmw6MjAiXQ==",
+      "quote_b64": "IlwiLSAyMDI2LTA4LTExOiAqKkEgTW9uaXRvciB3aG9zZSBjb21tYW5kIGdyZXBzIGZvciBpdHMgb3duIHBhdHRlcm4gc2VsZi1tYXRjaGVzIC8gYW5kIG5ldmVyIGV4aXRzLioqIFR3byBgd2hpbGUgcGdyZXAgLWYgXCJ3YXJkZW4uc2ggPGJlYWQ+XCJgIG1vbml0b3JzIHdhdGNoZWRcIiI=",
+      "draft": "incidents-37"
+    },
+    {
+      "id": "q31",
+      "type": "why",
+      "domain": "incidents",
+      "question": "I ran `bd ready` and counted its rows to report how much work is queued. Can I trust that number?",
+      "answer_b64": "Ik5vLiBgYmQgcmVhZHlgIChhbmQgYGJkIGxpc3RgKSBkZWZhdWx0IHRvIGEgbGltaXQgb2YgMTAwIGFuZCBwcmludCBub3RoaW5nIHRvIHNheSBtb3JlIHJvd3MgZXhpc3QuIE9uZSBtZWFzdXJlbWVudCBzaG93ZWQgMTAwIGFnYWluc3QgYSB0cnVlIDM0OCwgYW5vdGhlciAxMDAgYWdhaW5zdCAzMjQuIFBhc3MgYC0tbGltaXQgMGAgd2hlbmV2ZXIgdGhlIGNvdW50IG9yIGEgXCJub3QgdGhlcmVcIiByZXN1bHQgbWF0dGVycy4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9tZW1vcnkvZmFjdHMvYmQtcmVhZHktdHJ1bmNhdGVzLWF0LTEwMC5tZDoxNSIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjIyNjMiLCAiL2hvbWUvanVzdGluL2Rldi9Gb3JnZU9zL2ZvcnQvbWVtb3J5L2ZhY3RzL2JkLWRlcGVuZGVuY3ktdHlwZXMtYW5kLXdoYXQtYWN0dWFsbHktYmxvY2tzLm1kOjEwNyJd",
+      "quote_b64": "IlwiKipgYmQgcmVhZHlgIHNob3dzIDEwMCByb3dzIGFuZCBkb2VzIG5vdCBzYXkgdGhlcmUgYXJlIG1vcmUuKiogTWVhc3VyZWQgb24gdGhpcyAvIGJvYXJkLCAyMDI2LTA5LTE0OiBgYmQgcmVhZHlgIHJldHVybmVkICoqMTAwKiosIGBiZCByZWFkeSAtLWxpbWl0IDBgIHJldHVybmVkXCIi",
+      "draft": "incidents-38"
+    },
+    {
+      "id": "q32",
+      "type": "why",
+      "domain": "incidents",
+      "question": "I added the usual \"no cap\" flag to `bd blocked` and piped it to `grep -c`, and got zero. Does that mean nothing is blocked?",
+      "answer_b64": "Ik5vLiBgYmQgYmxvY2tlZGAgZG9lcyBub3QgYWNjZXB0IGAtLWxpbWl0YDogaXQgZXhpdHMgMSB3aXRoIFwiRXJyb3I6IHVua25vd24gZmxhZzogLS1saW1pdFwiIGFuZCBwcmludHMgbm90aGluZyBvbiBzdGRvdXQuIFRoZSBwaXBlIGhpZCB0aGUgZXhpdCBzdGF0dXMgYW5kIHN0ZGVyciwgc28gdGhlIHJlZnVzYWwgbG9va2VkIGxpa2UgYW4gYWxsLWNsZWFyLiBDaGVjayB0aGUgZXhpdCBzdGF0dXMgZmlyc3QsIGFuZCBjaGVjayBlYWNoIHN1YmNvbW1hbmQncyBmbGFncyBzZXBhcmF0ZWx5LiI=",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9tZW1vcnkvZmFjdHMvYmQtZGVwZW5kZW5jeS10eXBlcy1hbmQtd2hhdC1hY3R1YWxseS1ibG9ja3MubWQ6ODYiLCAiL2hvbWUvanVzdGluL2Rldi9Gb3JnZU9zL2ZvcnQvbWVtb3J5L2ZhY3RzL2JkLTEtMS0yLWRlZmVjdC1yZWdpc3Rlci5tZDoyMiIsICIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9tZW1vcnkvZmFjdHMvYmQtcmVhZHktdHJ1bmNhdGVzLWF0LTEwMC5tZDoyOSIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjMxNjYgKG5vdGU6IHRoaXMgcmVtZW1iZXIubWQgZW50cnkgcmVjb3JkcyB0aGUgZWFybGllciIsICJzaW5jZS1jb3JyZWN0ZWQgbWVjaGFuaXNtLCBcImVtcHRpZXMgdGhlIHF1ZXJ5IGFuZCBleGl0cyBjbGVhbmx5XCIpIl0=",
+      "quote_b64": "IlwiVEhBTiBgYmRgLioqIGBiZCBibG9ja2VkYCBkb2VzIG5vdCBhY2NlcHQgYC0tbGltaXRgIGF0IGFsbCwgYW5kIGl0IHNheXMgc286XCIi",
+      "draft": "incidents-39"
+    },
+    {
+      "id": "q33",
+      "type": "why",
+      "domain": "incidents",
+      "question": "What goes wrong if I put inline-code formatting inside a double-quoted `bd comment` string or an unquoted heredoc?",
+      "answer_b64": "IlRoZSBzaGVsbCBydW5zIHRoZSBiYWNrdGlja2VkIHRleHQgKGFuZCBgJCguLi4pYCkgYXMgYSBjb21tYW5kLiBUaGF0IGN1dHMgd29yZHMgb3V0IG9mIHRoZSByZWNvcmQsIGFuZCBpdCBjb3VsZCBydW4gYXJiaXRyYXJ5IGNvbW1hbmRzLiBVc2UgYGJkIGNvbW1lbnQgPGlkPiAtLWZpbGUgPHBhdGg+YCwgb3Igd3JpdGUgdGhlIHRleHQgdGhyb3VnaCBhIHF1b3RlZCBoZXJlZG9jIChgPDwnRU9GJ2ApLCB0aGVuIHJlYWQgdGhlIGZpZWxkIGJhY2suIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjc3NCIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjEyNDgiLCAiL2hvbWUvanVzdGluL2Rldi9Gb3JnZU9zL2ZvcnQvbWVtb3J5L2ZhY3RzL25ldmVyLWJ1aWxkLWJkLWZpZWxkLXRleHQtaW5saW5lLm1kOjE5Il0=",
+      "quote_b64": "IlwiLSAyMDI2LTA4LTEyOiAqKkEgQkFDS1RJQ0sgSU4gQSBgYmQgY29tbWVudGAgQVJHVU1FTlQgSVMgRVhFQ1VURUQuKiogQSAvIGRvdWJsZS1xdW90ZWQgaGVyZWRvYyBsZXQgYmFzaCBjb21tYW5kLXN1YnN0aXR1dGUgYSBiYWNrdGlja2VkIHdvcmQgb3V0IG9mIGFcIiI=",
+      "draft": "incidents-40"
+    },
+    {
+      "id": "q34",
+      "type": "why",
+      "domain": "incidents",
+      "question": "If I call another fort's `fort/scripts/emit.sh` by its full path from my own directory, which fort's event stream gets the event?",
+      "answer_b64": "IlRoZSBjYWxsZXIncy4gYGVtaXQuc2hgIHBpY2tzIGl0cyBzdHJlYW0gZnJvbSB0aGUgY3VycmVudCB3b3JraW5nIGRpcmVjdG9yeSwgbm90IGZyb20gd2hlcmUgdGhlIHNjcmlwdCBsaXZlcywgc28gdGhlIGV2ZW50IGxhbmRzIGluIHdoaWNoZXZlciBmb3J0IHlvdSBhcmUgc3RhbmRpbmcgaW4uIEFsd2F5cyBydW4gaXQgYXMgYCggY2QgXCIkcmVwb1wiICYmIC4vZm9ydC9zY3JpcHRzL2VtaXQuc2ggLi4uIClgLCBvbmUgY2FsbCBwZXIgYmFzaCBpbnZvY2F0aW9uLiI=",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjEyIiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9jaXYvcmVtZW1iZXIubWQ6MTIzMSIsICIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjMyNDMiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L2ZvcnQvZXZlbnRzL2V2ZW50cy0yMDI2LTA4LTA0Lmpzb25sOjEzMyIsICIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9ldmVudHMvZXZlbnRzLTIwMjYtMDgtMDQuanNvbmw6MTYzIiwgIi9ob21lL2p1c3Rpbi9kZXYvbG9uZ2J1cm4vZm9ydC9ldmVudHMvZXZlbnRzLTIwMjYtMDgtMDQuanNvbmw6MzMyIiwgIi9ob21lL2p1c3Rpbi9kZXYvbG9uZ2J1cm4vZm9ydC9ldmVudHMvZXZlbnRzLTIwMjYtMDgtMTMuanNvbmw6MTUiXQ==",
+      "quote_b64": "IlwiLSAyMDI2LTA4LTA0IChlZGljdCAyLCBmb3VuZGluZyB0aGUgZmlmdGggc2VhdCk6ICoqYGVtaXQuc2hgIHJlc29sdmVzIGl0cyB0YXJnZXQgZXZlbnQgc3RyZWFtIGZyb20gdGhlIENVUlJFTlQgV09SS0lORyBESVJFQ1RPUlksIG5vdCBmcm9tIHRoZSBzY3JpcHQncyBvd24gcGF0aC4qKlwiIg==",
+      "draft": "incidents-41"
+    },
+    {
+      "id": "q35",
+      "type": "why",
+      "domain": "incidents",
+      "question": "From the Regent's own unlaunched shell, who is recorded as the author of a `bd comment` I write?",
+      "answer_b64": "IlRoZSBPdmVyc2VlciAoSnVzdGluIFNjaG5laWRlcikuIFdpdGggYEJFQURTX0FDVE9SYCB1bnNldCwgYmQgZmFsbHMgYmFjayB0byBnaXQncyBgdXNlci5uYW1lYC4gVGhpcyBoYXBwZW5lZCB0byAxOCBiZWFkIHdyaXRlcyBpbiBTaXR0aW5nIEFELCBhbmQgZ2l0IGNvbW1pdHMgY2FycnkgdGhlIHNhbWUgZmFsbGJhY2suIEV4cG9ydCBgQkVBRFNfQUNUT1JgIGZpcnN0IGFuZCByZWFkIHRoZSBhdXRob3IgYmFjay4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9tZW1vcnkvZmFjdHMvYS1yZWdlbnQtc2hlbGwtd2l0aG91dC1iZWFkcy1hY3Rvci13cml0ZXMtYXMtdGhlLW92ZXJzZWVyLm1kOjE1IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9jaXYvcmVtZW1iZXIubWQ6NDUzNyJd",
+      "quote_b64": "IlwiKipBIGBiZGAgd3JpdGUgZnJvbSBhIHNoZWxsIHdpdGggbm8gYEJFQURTX0FDVE9SYCBpcyBhdHRyaWJ1dGVkIHRvIGdpdCdzIC8gYHVzZXIubmFtZWAsIHdoaWNoIG9uIHRoaXMgbWFjaGluZSBpcyB0aGUgT3ZlcnNlZXIuKipcIiI=",
+      "draft": "incidents-42"
+    },
+    {
+      "id": "q36",
+      "type": "why",
+      "domain": "incidents",
+      "question": "Can I patch a launcher or harness script with `sed -i` while a run of it is still going?",
+      "answer_b64": "Ik5vLiBiYXNoIHJlYWRzIGEgc2NyaXB0IGJpdCBieSBiaXQgZnJvbSBpdHMgb3BlbiBmaWxlLCBzbyBhbiBpbi1wbGFjZSBlZGl0IG1ha2VzIHRoZSBsaXZlIHJ1biBleGVjdXRlIGdhcmJhZ2UgKG9uZSBoYXJuZXNzIHJ1biBkaWVkIG9uIGEgc3ludGF4IGVycm9yIG1pZC1maWxlKS4gV2FpdCBmb3IgdGhlIHJ1biwgZWRpdCBhIGNvcHksIG9yIGluc3RhbGwgd2l0aCBgb3MucmVwbGFjZWAsIHdoaWNoIHN3YXBzIHRoZSBpbm9kZSBhbmQgbGVhdmVzIHRoZSBydW5uaW5nIGNvcHkgYWxvbmUuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjIyODAiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L2Npdi9yZW1lbWJlci5tZDozMjc4IiwgIi9ob21lL2p1c3Rpbi9kZXYvZm9ydGtpdC9jaXYvcmVtZW1iZXIubWQ6NDU0NiJd",
+      "quote_b64": "IlwiLSAyMDI2LTA5LTAyOiAqKk5FVkVSIEVESVQgQSBTQ1JJUFQgV0hJTEUgQSBDT1BZIE9GIElUIElTIFJVTk5JTkcuKiogYmFzaCByZWFkcyAvIGEgc2NyaXB0IGluY3JlbWVudGFsbHkgZnJvbSBhbiBvZmZzZXQsIHNvIGFuIGluLXBsYWNlIGVkaXQgdG8gYSBsaXZlIGxhdW5jaGVyXCIi",
+      "draft": "incidents-43"
+    },
+    {
+      "id": "q37",
+      "type": "why",
+      "domain": "incidents",
+      "question": "I ran the verifier as `verify.sh | tail` and saw exit 0. Can I record that as a pass?",
+      "answer_b64": "Ik5vLiBBIHBpcGVsaW5lIHJlcG9ydHMgdGhlIGV4aXQgc3RhdHVzIG9mIGl0cyBsYXN0IGNvbW1hbmQgKGB0YWlsYCksIHNvIHRoZSB2ZXJpZmllcidzIG93biBmYWlsdXJlIGlzIHRocm93biBhd2F5LiBUaGlzIGhhcyBoYXBwZW5lZCBldmVuIHdoaWxlIGB2ZXJpZnkuZmFpbGAgd2FzIGJlaW5nIGVtaXR0ZWQuIFJ1biBpdCB3aXRob3V0IGEgcGlwZSwgb3IgcmVkaXJlY3QgdG8gYSBmaWxlLCBhbmQgcmVjb3JkIG9ubHkgYW4gZXhpdCBjb2RlIHlvdSBzYXcgZGlyZWN0bHkuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9tZW1vcnkvZmFjdHMvYS1waXBlZC1sYXVuY2hlci1sb3Nlcy1pdHMtZXhpdC1zdGF0dXMubWQ6MTYiLCAiL2hvbWUvanVzdGluL2Rldi9Gb3JnZU9zL2ZvcnQvbWVtb3J5L2ZhY3RzL3ZlcmlmeS15b3VyLWNoZWNrLW5vdC1qdXN0LXRoZS10aGluZy5tZDoyMCIsICIvaG9tZS9qdXN0aW4vZGV2L2xvbmdidXJuL2ZvcnQvbWVtb3J5L2ZhY3RzL3ZlcmlmaWVycy1hbmQtZXhpdC1jb2RlLWRpc2NpcGxpbmUubWQ6MTYiXQ==",
+      "quote_b64": "IlwiKipOZXZlciBwaXBlIGEgbGF1bmNoZXIuKiogYGZvcnQvc2NyaXB0cy92ZXJpZnkuc2ggfCB0YWlsYCwgYHdhcmRlbi5zaCB8IHRhaWxgIC8gYW5kIGV2ZXJ5IHZhcmlhbnQgcmVwb3J0IHRoZSBleGl0IHN0YXR1cyBvZiB0aGUgTEFTVCBjb21tYW5kIGluIHRoZSBwaXBlbGluZSxcIiI=",
+      "draft": "incidents-44"
+    },
+    {
+      "id": "q38",
+      "type": "why",
+      "domain": "incidents",
+      "question": "In a `set -o pipefail` script, `printf '%s' \"$big\" | grep -q X` sometimes says the pattern is missing even though it is there. Why?",
+      "answer_b64": "ImBncmVwIC1xYCBxdWl0cyBhdCB0aGUgZmlyc3QgbWF0Y2gsIHNvIHRoZSBzdGlsbC13cml0aW5nIGBwcmludGZgIGdldHMgU0lHUElQRSAoMTQxKSwgYW5kIHBpcGVmYWlsIG1ha2VzIHRoYXQgdGhlIHBpcGVsaW5lJ3MgcmVzdWx0LiBGaW5kaW5nIHRoZSBtYXRjaCBpcyB3aGF0IG1ha2VzIHRoZSBjaGVjayBmYWlsLiBVc2UgYSBoZXJlc3RyaW5nIChgZ3JlcCAtcSBYIDw8PFwiJG91dFwiYCkgb3IgY2FwdHVyZSB0aGUgb3V0cHV0IGludG8gYSB2YXJpYWJsZSB3aXRob3V0IGAtcWAuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9tZW1vcnkvZmFjdHMvYS1jaGVjay1jYW4tZmFpbC1iZWNhdXNlLXRoZS1tYXRjaC13YXMtZm91bmQubWQ6MTYiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L2Npdi9yZW1lbWJlci5tZDoyMDEiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L2Npdi9yZW1lbWJlci5tZDo0NTkyIl0=",
+      "quote_b64": "IlwiKipVbmRlciBgc2V0IC1vIHBpcGVmYWlsYCwgYHByaW50ZiAnJXMnIFwiJGJpZ1wiIHwgZ3JlcCAtcSBQQVRURVJOYCBmYWlscyBhdCByYW5kb20gLyBCRUNBVVNFIHRoZSBwYXR0ZXJuIHdhcyBmb3VuZC4qKlwiIg==",
+      "draft": "incidents-45"
+    },
+    {
+      "id": "q39",
+      "type": "why",
+      "domain": "incidents",
+      "question": "Before splitting a parent bead into subtasks, I ran a plain `bd list | grep` for its children and found none. Is that enough to go ahead?",
+      "answer_b64": "Ik5vLiBgYmQgbGlzdGAgd2l0aG91dCBgLS1zdGF0dXNgIHNob3dzIG9ubHkgb3BlbiBiZWFkcywgc28gZmluaXNoZWQgY2hpbGRyZW4gYXJlIGludmlzaWJsZS4gVGhhdCBpcyBob3cgdGhyZWUgZHVwbGljYXRlcyBvZiBhbHJlYWR5LWNsb3NlZCB3b3JrIHdlcmUgZmlsZWQgKGBGb3JnZU9zLWIwdmouNjVgKS4gTGlzdCBjaGlsZHJlbiBmb3IgZWFjaCBvZiBvcGVuLCBpbl9wcm9ncmVzcyBhbmQgY2xvc2VkIHdpdGggYC0tbGltaXQgMGAuIg==",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L0ZvcmdlT3MvZm9ydC9tZW1vcnkvZmFjdHMvYmQtbGlzdC1oaWRlcy1jbG9zZWQtYmVhZHMubWQ6MTUiXQ==",
+      "quote_b64": "IlwiKipgYmQgbGlzdGAgV0lUSE9VVCBgLS1zdGF0dXNgIFNIT1dTIE9OTFkgT1BFTiBCRUFEUy4qKiBTbyBldmVyeSBcImRvZXMgdGhpcyAvIGFscmVhZHkgZXhpc3Q/XCIgcXVlc3Rpb24gYXNrZWQgd2l0aCBhIGJhcmUgYGJkIGxpc3QgLi4uIHwgZ3JlcGAgY29tZXMgYmFjayBOTyBmb3JcIiI=",
+      "draft": "incidents-46"
+    },
+    {
+      "id": "q40",
+      "type": "why",
+      "domain": "incidents",
+      "question": "A Regent sitting started around 23:00 and ran past midnight. Why can't a reviewer find its closing event in that day's event file?",
+      "answer_b64": "ImBlbWl0LnNoYCBuYW1lcyB0aGUgZmlsZSBhZnRlciB0aGUgY3VycmVudCBkYXRlLCBhbmQgYGJpbi9yZWdlbnRgIHdyaXRlcyBgZWRpY3QuZW5kZWRgIGFmdGVyIHRoZSBoYW5kb2ZmIGNvbW1pdC4gVGhlIGNsb3NpbmcgbGluZSBsYW5kcyBpbiB0aGUgbmV4dCBkYXkncyBmaWxlLCB3aGljaCBubyBzZWF0IGNvbW1pdHRlZC4gT3BlbiBlYWNoIGRheSBmaWxlIGFuZCBydW4gYGdpdCBzdGF0dXNgIGluIGV2ZXJ5IGZvcnQgaW5zdGVhZCBvZiBhc3N1bWluZy4i",
+      "gold_b64": "WyIvaG9tZS9qdXN0aW4vZGV2L2ZvcnRraXQvY2l2L3JlbWVtYmVyLm1kOjI3MTUiLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0L2Npdi9yZW1lbWJlci5tZDoyODE2Il0=",
+      "quote_b64": "IlwiLSAyMDI2LTA5LTA5OiAqKkFOIEVESUNUIFRIQVQgU1BBTlMgTUlETklHSFQgU1BMSVRTIElUUyBPV04gQlJBQ0tFVCBBQ1JPU1MgVFdPIC8gREFJTFkgRVZFTlQgRklMRVMsIEFORCBUSEUgU0lUVElORyBPTkxZIEVWRVIgQ09NTUlUUyBUSEUgRklSU1QgSEFMRi4qKlwiIg==",
+      "draft": "incidents-48"
+    },
+    {
+      "id": "c1",
+      "type": "control-positive",
+      "domain": "control",
+      "question": "A bead was filed today, 2026-09-30, as the retrieval eval's canary. What token does its description carry?",
+      "answer_b64": "ImNhbmFyeS0yMjE3NDkwOGI2ZjIi",
+      "gold_b64": "WyJmb3J0a2l0LW5uY2ciLCAiL2hvbWUvanVzdGluL2Rldi9mb3J0a2l0Ly5iZWFkcy9pc3N1ZXMuanNvbmwiXQ==",
+      "quote_b64": "IiI=",
+      "draft": "control"
+    },
+    {
+      "id": "c2",
+      "type": "control-negative",
+      "domain": "control",
+      "question": "Which seat holds the office of Quartermaster, and what is its model ladder?",
+      "answer_b64": "Ik5vIHN1Y2ggc2VhdCBvciBvZmZpY2UgZXhpc3RzIGFueXdoZXJlIGluIHRoZSBjb3JwdXMgKGdyZXAgLXJpbCBxdWFydGVybWFzdGVyIG92ZXIgdGhlIGZpdmUgcmVwb3M6IDAgZmlsZXMsIDIwMjYtMDktMzApLiBDb3JyZWN0IHJlc3BvbnNlOiBub3QgZm91bmQuIg==",
+      "gold_b64": "W10=",
+      "quote_b64": "IiI=",
+      "draft": "control"
+    }
+  ]
+}
