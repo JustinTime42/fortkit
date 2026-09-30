@@ -5080,3 +5080,31 @@ should name the seat if it matters who learned it.
 - 2026-09-25: **A variant spec that contains the harness's own field separator
   cannot be generated**, and "could not be generated" reads as a harness failure.
   Build such a variant in its own block.
+
+- 2026-09-29/30 (sitting 60, the systemic-upgrade design sitting — `fortkit-2y2t.40`):
+  **THE CIVILIZATION HAS THREE MACHINERY LINEAGES AND THE CAPITAL'S TEMPLATE IS
+  THE STALEST.** Proofdelve (production, still moving), Greenlab's factory
+  (`greenlab/bin/fort-init` + `greenlab/templates`, copied from Proofdelve
+  2026-09-22 and extended), and `fortkit/templates` (no fleet at all; last
+  touched 2026-08-17; founded Kithmason). Say WHICH factory when you say "the
+  factory": the Overseer read an unqualified mention as the stale one, and was
+  right to object. The upgrade's package is built from the first two.
+
+- 2026-09-29: **WHEN THE SESSION RUNS WITH BYPASSED PERMISSIONS, DO WEB RESEARCH
+  YOURSELF, NOT THROUGH RESEARCH AGENTS.** Proofdelve's fact
+  `research-agent-dispatch-rule` (the 2026-08-10 incident: research subagents
+  under inherited bypass probed 18 third-party endpoints): agents inherit the
+  permission mode. WebSearch/WebFetch from the parent session are read-only and
+  visible. Local read-only inventory via an Explore agent is fine.
+
+- 2026-09-29: **A MEASURED NUMBER ABOUT OURSELVES:** the Regent briefing at wake
+  was 551,377 bytes (~140k tokens), mostly this file injected whole, and the
+  `pgrep -f` self-match scar recurred six times while sitting in it. Injection is
+  not recall at the point of use. `fortkit-2y2t.40.6` classifies this file's
+  entries by kind; many are missing controls written as prose.
+
+- 2026-09-29: **"NOTHING OFF THE SHELF DOES THIS" IS A CLAIM, AND I MADE IT
+  WITHOUT SEARCHING.** I said so of per-seat kernel isolation; greywall and
+  ai-jail (2026) do much of it. Search before asserting novelty, and state the
+  narrower true claim (per-role postures inside one repo) with its test
+  (`fortkit-2y2t.40.5`).

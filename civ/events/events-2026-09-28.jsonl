@@ -1,0 +1,4 @@
+{"ts":"2026-09-28T00:13:31-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins the morning run (opus)","payload":{"model":"opus"}}
+{"ts":"2026-09-28T09:44:31-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins the morning run (opus)","payload":{"model":"opus"}}
+{"ts":"2026-09-28T09:46:19-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Herald 2026-09-28: zero-valid morning, 8 candidates scored, no constitution diffs, 09-27 report missing","payload":{"drafts":0}}
+{"ts":"2026-09-28T09:46:26-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's morning run ended (exit 0); report filed","payload":{"exit":0,"report":"/home/justin/Documents/Obsidian Vault/herald/reports/2026-09-28.md","report_filed":true}}
