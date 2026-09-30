@@ -84,7 +84,7 @@ Every item produces a number that decides a later item.
 |---|---|---|
 | 0.1 | Run the drift watcher's identity normalization over the five-version files; count what remains as real architecture. **And diff the two cutting-edge lineages, Proofdelve against Greenlab's factory, since the 2026-09-22 copy** (see 4.0) | size of Phase 2.1 and 4 (is packaging a step or a refactor), and how much reconciliation the package's source needs |
 | 0.2 | Build a **retrieval eval**: 30-50 questions taken from real incidents and tasks ("what does `bd merge-slot check` return with no slot?"), scored hit@k, tokens, tool calls. Baseline: grep only | whether Phase 3 adds a structural index, a semantic index, both, or neither |
-| 0.3 | Time `cp --reflink=always` of `.beads/embeddeddolt` into a Warden scratch root (both btrfs; 1.5 GB in Proofdelve), and whether `bd --readonly` then serves every read subcommand from the copy | Phase 1.2 |
+| 0.3 | DONE 2026-09-30, see 1.2. Time `cp --reflink=always` of `.beads/embeddeddolt` into a Warden scratch root (both btrfs; 1.5 GB in Proofdelve), and whether `bd --readonly` then serves every read subcommand from the copy | Phase 1.2 |
 | 0.4 | Does `bd --metadata` reach the export, and can `bd list/ready` filter on it? | Phase 1.3 (`Touches:` as metadata) |
 | 0.5 | Run the capital's mask conformance suite (`mask-harness.sh`, boundary probes) against **greywall** and **ai-jail** profiles expressing our three seat postures | Phase 2.2 (substrate: ours or theirs) |
 | 0.6 | Inventory `civ/remember.md` and the four facts ledgers: which entries are procedural scars convertible to a control, which are "why", which restate code | Phase 3.3 scope |
@@ -98,8 +98,14 @@ order, truncation. The vocabulary (APPROVE, APPROVE-WITH-FINDINGS,
 MERGE-PARENT-OPEN, REQUEST-CHANGES, ESCALATE) becomes an enum in one schema file.
 Control: the existing injection fixtures must still fail to change the verdict.
 
-**1.2 The Warden's `bd` snapshot (DECIDED).** At launch, `warden.sh` reflinks
-`embeddeddolt` into her scratch; she runs real `bd` (with `--readonly`) against
+**1.2 The Warden's `bd` snapshot (DECIDED).** *Corrected 2026-09-30 by the
+measurement `fortkit-2y2t.40.3`: a reflink is impossible (every `.beads` is
+btrfs No_COW), but a plain copy of Proofdelve's 1.5 G database takes 0.96 s and
+`bd` serves every read from it identically, so the design stands as a plain
+copy. The copy must be taken under `bd`'s own lock (`embeddeddolt/.lock`), and
+a copy `bd` cannot open falls back to the export loudly.* At launch,
+`warden.sh` copies `embeddeddolt` (plus `config.yaml` and `metadata.json`) into
+her scratch; she runs real `bd` (with `--readonly`) against
 it; her profile stays read-subcommands-only so she never believes a write
 landed; the snapshot dies with the scratch. Falls back to today's export on a
 non-reflink filesystem, loudly. Retires the prompt paragraph, the `jq`

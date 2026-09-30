@@ -5108,3 +5108,14 @@ should name the seat if it matters who learned it.
   ai-jail (2026) do much of it. Search before asserting novelty, and state the
   narrower true claim (per-role postures inside one repo) with its test
   (`fortkit-2y2t.40.5`).
+
+- 2026-09-30 (`fortkit-2y2t.40.3`): **EVERY FORT'S `.beads` IS btrfs No_COW
+  (`lsattr` shows `C`), SO IT CANNOT BE REFLINKED**: `cp --reflink=always`
+  fails EINVAL per file. A plain copy of Proofdelve's 1.5 G `embeddeddolt` took
+  0.96 s, and `bd` served every read from the copy identically (it needs
+  `config.yaml`, `metadata.json`, and `.beads` at 0700). The spec had assumed
+  reflink from `stat -f` saying btrfs; the filesystem type was right and the
+  file attribute made it irrelevant. **A failed `cp` into a fresh path leaves a
+  directory skeleton, and the next `cp` into that path nests one level deep**:
+  clear the destination between attempts, or the second measurement reads as
+  the subject failing.
