@@ -5138,3 +5138,17 @@ should name the seat if it matters who learned it.
   output**: the first ai-jail run scored 17 failures, almost all of them a
   warning line inside a byte count. Read a surprising failure's raw text before
   scoring it, and keep the tool's stderr out of the measured stream.
+
+- 2026-10-01 (`fortkit-2y2t.40.7`): **SCIONHALL WAS FOUNDED**, in Greenlab, at
+  `~/dev/greenlab/forts/scionhall`; release v0 = its founding commit `a25e99b`.
+  **IN GREENLAB, CITIZENS BELONG TO THE CIVILIZATION, NOT TO A FORT**:
+  `greenlab/bin/fort-init` renders every fort's seats from
+  `greenlab/civ/seats/roster.json` (Wren, Bex, Silas, Cass; Marl civ-scoped), and
+  each fort keeps its own records. I told the Overseer a new Mayor would declare
+  at a moot; that is the production convention and was wrong for Greenlab, caught
+  by reading the factory before drafting. Read the civilization's own factory
+  before describing how one of its forts is staffed.
+- 2026-10-01: **A THROWAWAY FOUNDING PAID FOR ITSELF AGAIN**: `scionhall-probe`
+  found that a hyphenated slug is born with a red verifier (`fortkit-2y2t.40.8`).
+  Name the probe so it can fail differently from the real thing only on purpose:
+  here the hyphen was an accident that measured something real.
