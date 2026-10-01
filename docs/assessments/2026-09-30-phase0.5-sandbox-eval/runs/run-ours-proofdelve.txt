@@ -1,0 +1,89 @@
+=== E2 mask harness — candidate: /home/justin/dev/ForgeOs/fort/scripts/lib/seat-sandbox.sh
+=== TOOL=ours
+
+--- A. MAYOR posture:  build_mask claude $root
+  PASS  A1 6ovg verify-impl.sh: sed -i (sibling + rename) works    content identical after
+  PASS  A2 6ovg verify-impl.sh: git checkout replaces it           restored, sha matches
+  PASS  A2b SHAPE B: the verify.sh SHIM is read-only               append blocked
+  PASS  A2c skills/ writable for an attended seat (prose gate, 4n8c) append succeeded (expected)
+  PASS  A3 mayor.sh not writable                                   append blocked
+  PASS  A4 mayor.sh not unlinkable/renamable                       unlink refused, rename refused
+  PASS  A5 lib/seat-sandbox.sh not writable                        append blocked
+  PASS  A4b fort/scripts DIRECTORY not renamable                   rename refused — the directory is itself a mount point
+  PASS  A6 SHAPE B: no new file in fort/scripts                    new file blocked
+  PASS  A7a fort/profiles not writable                             append blocked
+  PASS  A7b .claude not writable                                   append blocked
+  PASS  A7c bin/ not writable                                      append blocked
+  PASS  A7d civ/scripts not writable                               append blocked
+  PASS  A7e civ/profiles not writable                              append blocked
+  PASS  A7f .git/config not writable                               append blocked
+  PASS  A7g src/ IS writable (real work)                           append succeeded (expected)
+  PASS  A8a 5sk ~/.claude/civilization.json RO                     append blocked
+  PASS  A8b 5sk ~/.claude/skills RO                                append blocked
+  PASS  A8c 5sk ~/.claude/commands RO                              append blocked
+  PASS  A8d 5sk ~/.claude/plugins RO                               append blocked
+  PASS  A8e ~/.claude/teams STILL WRITABLE (harness state)         deliberate
+  PASS  A9a 2kub .env.staging.local                                0 bytes in mask / 34 on host
+  PASS  A9b 2kub ..env.staging.local.kate-swp                      0 bytes in mask / 34 on host
+  PASS  A9c 2kub .#env.local (emacs lock)                          0 bytes in mask / 34 on host
+  PASS  A9d 2kub #env.local# (emacs autosave)                      0 bytes in mask / 34 on host
+  PASS  A9e 2kub .envrc.swp (vim)                                  0 bytes in mask / 35 on host
+  PASS  A9f 2kub ..env.staging.local.swp (vim)                     0 bytes in mask / 35 on host
+  PASS  A9g 2kub env.local~ (backup)                               0 bytes in mask / 35 on host
+  PASS  A9h 2kub sub/.env.local (depth 1)                          0 bytes in mask / 35 on host
+  PASS  A9i 2kub sub/..env.local.kate-swp                          0 bytes in mask / 35 on host
+  PASS  A10 1q9 Mayor keeps $root-worktrees writable               append succeeded (expected)
+
+--- B0. MEASUREMENT, not an assertion: the Warden call AS IT SHIPS TODAY
+        (build_mask claude $root $root $src — no $root-worktrees argument).
+        NO LIB CHANGE CAN CLOSE THIS; only warden.sh passing the tree can.
+        worktree fort/scripts/mayor.sh under today's Warden call: WRITABLE
+        worktree bin/ under today's Warden call:                  WRITABLE
+
+--- B. WARDEN posture: build_mask claude $root $root $src $root-worktrees
+  PASS  B1a 6ovg verify.sh shim RO for the Warden                  append blocked
+  PASS  B1b 6ovg verify-impl.sh RO for the Warden                  append blocked
+  PASS  B1c skills/ RO for the Warden (whole checkout)             append blocked
+  PASS  B2 6ovg hole ABSENT for the Warden                         new file blocked
+  PASS  B3a 1q9 worktree fort/scripts not writable                 append blocked
+  PASS  B3b 1q9 worktree fort/scripts no newfile                   new file blocked
+  PASS  B3c 1q9 worktree bin/ not writable                         append blocked
+  PASS  B3d 1q9 worktree civ/scripts not writable                  append blocked
+  PASS  B3e 1q9 whole worktree tree RO for the Warden              append blocked
+  PASS  B4a worktree secret masked                                 0 bytes in mask / 35 on host
+  PASS  B4b worktree kate residue masked                           0 bytes in mask / 35 on host
+
+--- C. FORGE posture:  build_mask codex $root --rw-tree $wt
+  PASS  C1 1q9 declared worktree src IS writable                   append succeeded (expected)
+  PASS  C2a 1q9 declared worktree fort/scripts RO                  append blocked
+  PASS  C2b 1q9 declared worktree scripts dir RO                   new file blocked
+  PASS  C2c 1q9 NEW: worktree bin/ RO (was writable)               append blocked
+  PASS  C2d 1q9 NEW: worktree civ/scripts RO                       append blocked
+  PASS  C2e 1q9 worktree charter RO (codex keeps lock)             append blocked
+  PASS  C3 1q9 OTHER worktree not writable at all                  append blocked
+  PASS  C4a codex: $root verify.sh RO (whole-dir lock)             append blocked
+  PASS  C4b codex: no new-file hole at $root                       new file blocked
+  PASS  C4c codex: verify-impl.sh RO (the Shape B wrinkle)         append blocked
+  PASS  C4d codex: $root skills/ RO (unattended lock)              append blocked
+  PASS  C4e codex: declared worktree verify-impl.sh RO             append blocked
+  PASS  C5a --rw-tree sweeps worktree secrets                      0 bytes in mask / 35 on host
+  PASS  C5b --rw-tree sweeps worktree residue                      0 bytes in mask / 35 on host
+  PASS  C6 codex: ~/.claude masked entirely                        0 bytes in mask
+
+--- D. RESEARCHER posture: build_mask claude $root --env-root $wts $root $wts
+  PASS  D1 whole $root RO                                          append blocked
+  PASS  D2 whole $root-worktrees RO                                append blocked
+  PASS  D3 verify.sh shim RO                                       append blocked
+  PASS  D4 verify-impl.sh RO                                       append blocked
+
+--- E. HOST-ESCAPE (added for this evaluation; Mayor posture)
+  PASS  E1 systemd-run --user refused                              
+  PASS  E2 systemctl --user unreachable                            Failed to connect to user scope bus via local transport: Connection refused
+  PASS  E3 credential env vars scrubbed                            
+  PASS  E4 ~/.ssh private key + config unreadable                  
+  FAIL  E5 host pids hidden                                        537 visible
+  PASS  E6 session bus socket absent                               
+
+==============================================================
+E2 HARNESS: 66 passed, 1 failed
+  E5 host pids hidden :: 537 visible

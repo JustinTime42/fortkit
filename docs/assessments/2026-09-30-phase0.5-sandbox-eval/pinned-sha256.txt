@@ -1,0 +1,2 @@
+f68f5b3cfb337e7cdcbbc6ac4a197c8ebcbf8cbb5e1bd16734e1b51e556761e7  ai-jail-linux-x86_64.tar.gz
+1a340a9027a8ac71a33907f84cb8c39bbaa4a313ef7669ef2bc6f3aaafc5c7ff  greywall_0.3.7_Linux_x86_64.tar.gz

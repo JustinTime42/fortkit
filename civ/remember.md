@@ -5126,3 +5126,15 @@ should name the seat if it matters who learned it.
   and the diff against the copy was 0 lines. When the question is divergence from
   a snapshot, measure against the snapshot's commit (`git log <copy-commit>..`,
   or a diff), never a calendar date. Found by the Mayor, `fortkit-2y2t.40.1`.
+
+- 2026-09-30 (`fortkit-2y2t.40.5`): **OUR MASK SUITE IS PORTABLE, AND THAT IS THE
+  ASSET.** `docs/assessments/2026-09-30-phase0.5-sandbox-eval/harness.generic.sh`
+  runs `mask-harness.sh`'s assertions unchanged against any sandbox; only
+  `inmask()` and the posture builders differ. Scores on 67 assertions: capital lib
+  63/4, Proofdelve lib 66/1, ai-jail 2.2.0 65/2, greywall 0.3.7 63/4. Neither
+  third-party tool can express per-role postures across several trees (ai-jail:
+  no RO carve-outs inside an extra rw tree; greywall: cwd-relative secret globs,
+  no env scrub). **Third-party sandboxes print warnings on stderr that look like
+  output**: the first ai-jail run scored 17 failures, almost all of them a
+  warning line inside a byte count. Read a surprising failure's raw text before
+  scoring it, and keep the tool's stderr out of the measured stream.
