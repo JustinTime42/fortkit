@@ -213,6 +213,16 @@ The civilization has three machinery lineages, measured 2026-09-29:
 | **Greenlab's factory** (`greenlab/bin/fort-init`, `greenlab/templates`) | a copy of Proofdelve's machinery taken 2026-09-22 (Sitting A), identity-stripped, then extended: isolation by inversion, governor, Effect Gateway, capacity leases, capital-review Warden | fleet.sh 4,717 lines, warden.sh 932, seat-sandbox 1,230 |
 | **The capital's template** (`fortkit/templates`, `fortkit/bin/fort-init`) | the factory that founded Kithmason on 2026-09-02 | far behind: no fleet at all, warden.sh 245 lines, last touched 2026-08-17 |
 
+> **CORRECTION, 2026-09-30, by the Regent who wrote the table above** (found by
+> the Mayor, `fortkit-2y2t.40.1`): Proofdelve's row says "still moving: 6 commits
+> ... since 2026-09-22". All six (f9fec86c 11:17 to 7d2a5e7d 12:08) PREDATE the
+> Greenlab copy taken at 13:29 that day; the raw diff of fleet.sh and warden.sh
+> against the copy is 0 lines. I counted by date, not against the copy's
+> commit. Measured properly, Greenlab's factory is a near-superset of Proofdelve
+> (over 125 copied files: Proofdelve-only 3, Greenlab-only 32, both disjoint 5,
+> conflicting 5, all conflicts in harnesses and lint). The conclusion stands and
+> is stronger: build the package from Greenlab's factory, reconciling five files.
+
 So the package is built by **reconciling Proofdelve and Greenlab** (0.1 measures
 their divergence as well as the five-version copies), and the capital's
 template is **retired or regenerated from the package**, never used as a base.

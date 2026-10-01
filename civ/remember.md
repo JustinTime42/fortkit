@@ -5119,3 +5119,10 @@ should name the seat if it matters who learned it.
   directory skeleton, and the next `cp` into that path nests one level deep**:
   clear the destination between attempts, or the second measurement reads as
   the subject failing.
+
+- 2026-09-30: **"N COMMITS SINCE <DATE>" IS NOT "N COMMITS SINCE THE COPY".** I
+  wrote that Proofdelve was "still moving, 6 commits since 2026-09-22" against a
+  Greenlab copy taken at 13:29 that day; all six were earlier the same morning
+  and the diff against the copy was 0 lines. When the question is divergence from
+  a snapshot, measure against the snapshot's commit (`git log <copy-commit>..`,
+  or a diff), never a calendar date. Found by the Mayor, `fortkit-2y2t.40.1`.
