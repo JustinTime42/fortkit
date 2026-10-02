@@ -296,6 +296,36 @@ assert_ro "D3 verify.sh shim RO"                            "$ROOT/fort/scripts/
 assert_ro "D4 verify-impl.sh RO"                            "$ROOT/scripts/verify-impl.sh"
 
 echo
+echo "--- E. USER MANAGER UNREACHABLE (fortkit-y7no), every posture"
+# The positive control comes first and is a gate: if the host itself cannot
+# reach its user manager, a "refused" inside the mask proves nothing, so the
+# section refuses rather than scoring. Probes are harmless even through a
+# broken mask: /bin/true, and two read-only queries. show-environment, not
+# is-system-running, because a degraded host returns nonzero there.
+um_probe() {  # runs the three probes in the current shell or mask; prints one word each
+  echo 'systemd-run --user --quiet --wait /bin/true >/dev/null 2>&1 && echo RUN:REACHED || echo RUN:REFUSED;
+        systemctl --user show-environment >/dev/null 2>&1 && echo CTL:REACHED || echo CTL:REFUSED;
+        busctl --user list >/dev/null 2>&1 && echo BUS:REACHED || echo BUS:REFUSED'
+}
+host="$(bash -c "$(um_probe)" 2>&1 | tr '\n' ' ')"
+if [ "$host" != "RUN:REACHED CTL:REACHED BUS:REACHED " ]; then
+  bad "E0 host reaches its own user manager (positive control)" "host: $host -- section E not scored"
+else
+  ok "E0 host reaches its own user manager (positive control)" "$host"
+  um_assert() {  # $1 label, then the build_mask arguments
+    local label="$1"; shift
+    mask=(); build_mask "$@" || { bad "$label" "build_mask FAILED"; return; }
+    local got; got="$(inmask "$(um_probe)" | tr '\n' ' ')"
+    if [ "$got" = "RUN:REFUSED CTL:REFUSED BUS:REFUSED " ]; then ok "$label" "$got"
+    else bad "$label" "$got"; fi
+  }
+  um_assert "E1 Mayor: systemd-run, systemctl, busctl all refused"      claude "$ROOT"
+  um_assert "E2 Warden: systemd-run, systemctl, busctl all refused"     claude "$ROOT" "$ROOT" "$WTS"
+  um_assert "E3 Forge: systemd-run, systemctl, busctl all refused"      codex "$ROOT" --rw-tree "$WTS/wt1"
+  um_assert "E4 Researcher: systemd-run, systemctl, busctl all refused" claude "$ROOT" --env-root "$WTS" "$ROOT" "$WTS"
+fi
+
+echo
 echo "=============================================================="
 printf 'E2 HARNESS: %d passed, %d failed\n' "$PASS" "$FAIL"
 if [ "$FAIL" -gt 0 ]; then printf '  %s\n' "${FAILURES[@]}"; fi
