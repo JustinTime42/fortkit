@@ -5260,3 +5260,35 @@ should name the seat if it matters who learned it.
   untracked day files since 2026-09-22, every line calder's. Sweep them at
   every sitting that touches those forts, naming whose each line is, until
   the launcher does it itself.
+
+- 2026-10-02 (fourth sitting, fortkit-w37v): **THE SEAT MASK MASKS SOCKETS BY
+  NAME, SO EVERY HOST SOCKET UNDER /run/user/$uid AND /tmp IS OPEN BY DEFAULT.**
+  A 33-socket census from all four postures (own fixtures, connect-and-close,
+  no protocol data): only the three user-manager sockets (y7no) are masked.
+  Reachable from every seat: the running Regent's Claude Code IPC socket
+  (`/run/user/$uid/cc-socks/<pid>.sock`), X11 (incl. the ABSTRACT
+  `@/tmp/.X11-unix/X0`, which no filesystem mask can close), at-spi, wayland,
+  pipewire/pulse, akonadi+mysql, speech-dispatcher. ssh-agent is reachable from
+  Mayor/Warden/Researcher but holds no identities and the Forge masks it.
+  **Graded MEDIUM, deferred** (fortkit-w37v grade comment): accident can't
+  trigger it, injection can but needs a live GUI and is noisy, and the clean
+  systemd-run escape is already closed. The class fix (invert /run/user and
+  /tmp, allowlist-resurface, as Greenlab does for $HOME) is fortkit-tmym,
+  measure-first.
+
+- 2026-10-02: **RETRACTED: the 2026-09-11 recommendation to run SSH-driven
+  sittings under tmux.** A tmux server on /tmp is a confirmed mask escape
+  (measured: a Mayor-posture seat that could not write fort/scripts directly
+  had a probe tmux server write there via `run-shell`). No server runs today;
+  do not start one for a sitting until fortkit-tmym lands. For a disconnect,
+  `trap '' HUP` keeps the LAUNCHER alive (bin/regent still lacks it,
+  fortkit-89f0); only a persistent pty keeps the CONVERSATION, and tmux is that
+  pty, which is the conflict.
+
+- 2026-10-02: **AN ESCAPE PROBE THAT RECREATES OR WAITS ON A LIVE SOCKET IS THE
+  OVERSEER'S TO RUN, NOT THE REGENT'S.** My attempt to author the H1 fixture
+  (mask a socket, then recreate it while a masked process waits) was stopped by
+  a safety classifier. This is the 2026-09-22 Greenlab precedent in a new form:
+  do not rephrase and retry; hand the live-system escape measurement to the
+  Overseer. Connect-and-close census and own-fixture write probes were fine;
+  the recreate-while-waiting shape was not.
