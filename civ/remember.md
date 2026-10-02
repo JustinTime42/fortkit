@@ -5163,3 +5163,13 @@ should name the seat if it matters who learned it.
   (`printf '... ForgeOs-%s'`, `id="ForgeOs-${x}"`): its bead-id pattern needs a
   suffix. Any import into Greenlab gets a second, broader grep for fort and
   product names after the tool reports zero.
+
+- 2026-10-01: **A PACKAGE FORT'S VERIFIER SCANS ITS TEMPLATES**, so importing a
+  factory imports its dormant tests as this fort's failures. Answer chosen by the
+  Overseer: hash-pinned exemptions (exempt only while the content hash matches;
+  any edit re-arms the check), never a wholesale `templates/` exclusion, because
+  the deletion guard matters most where the fleet may edit template harnesses.
+- 2026-10-01: **AN UNANCHORED rsync EXCLUDE THAT MEANS "BUILD OUTPUT" ALSO
+  MEANS "SOURCE" IN A FORT WITH A TOP-LEVEL bin/.** Proofdelve's Warden copy
+  `--exclude 'bin'` (for .NET) hid `bin/fort-init` from Scionhall's Warden.
+  Found by the Warden herself on her first review. `--include '/bin/***'` first.
