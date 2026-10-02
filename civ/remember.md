@@ -5173,3 +5173,41 @@ should name the seat if it matters who learned it.
   MEANS "SOURCE" IN A FORT WITH A TOP-LEVEL bin/.** Proofdelve's Warden copy
   `--exclude 'bin'` (for .NET) hid `bin/fort-init` from Scionhall's Warden.
   Found by the Warden herself on her first review. `--include '/bin/***'` first.
+
+- 2026-10-02 (edict 61, Scionhall: yge, 7cl.56, 7cl.41): **A FORT LAUNCHER RUN
+  FROM ANOTHER FORT'S DIRECTORY EMITS INTO THAT FORT'S STREAM, AND IT WAS MY
+  OWN LAUNCH.** I started Scionhall's warden.sh with cwd in the capital; its
+  emit.sh resolves from `$PWD`, so Silas's session.start, review.verdict and
+  session.end landed in Manyhalls' stream: a Greenlab citizen in a production
+  record. This is `fortkit-nvk`, the first entry in this file. Corrected by
+  appending in both streams, never by re-emitting as silas. **Launch any fort's
+  seat as `( cd <fort> && fort/scripts/<seat>.sh … )`.** Filed as
+  `scionhall-7cl.60` item 6.
+
+- 2026-10-02: **CODEX'S `workspace-write` SANDBOX IS WHAT MAKES `$HOME` PATHS
+  READ-ONLY FOR A GREENLAB FORGE, NOT bwrap.** Under greenlab_isolate, `$HOME`
+  is a writable tmpfs, but `mkdir ~/.local/share/...` from inside the Forge's
+  codex session returns EROFS. The honest instrument is forge.sh's own mask
+  lines plus `codex exec --sandbox workspace-write` with its `--add-dir` list,
+  in a throwaway detached worktree, with a report-only prompt
+  (`scratchpad/yge/forge-posture-probe.sh` pattern). `codex sandbox`, the debug
+  subcommand, cannot do it on this host: it refuses with "unreadable glob
+  expansion for ~/.codex matched more than 8192 paths".
+
+- 2026-10-02: **THE WARDEN'S SCRATCH COPY IN SCIONHALL IS NOW `git archive` OF
+  THE RANGE'S TIP**, not an rsync of the working tree (`7b423a0`). A range
+  whose tip resolves to no commit refuses at 64. Uncommitted worktree changes
+  are no longer reviewed; that is deliberate, because the fleet merges commits.
+  `.gitattributes` export-ignore would silently alter the copy, and is noted on
+  `scionhall-7cl.60`.
+
+- 2026-10-02: **STANDING APPROVAL (Overseer): Regent edits to Scionhall's
+  running machinery are allowed until V1 is pinned (`scionhall-7cl.18`)**,
+  each made in a sitting, Warden-reviewed, and paired with a template bead.
+  Recorded on `scionhall-7cl`. After V1, rule 4 applies with no exception.
+
+- 2026-10-02: **A GENERATED CHECK LIST CAN BE EMPTY, AND AN EMPTY LIST SCORES
+  CLEAN.** My first roster-name grep for the misrouted.py import parsed
+  `**Held by: Name Surname**` wrongly and produced 0 names, so "0 hits" meant
+  nothing. Count the list, and run the positive control on a file that
+  contains one of the names, before reading a zero.
