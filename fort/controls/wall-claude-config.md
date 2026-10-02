@@ -3,7 +3,7 @@ key: wall-claude-config
 status: active
 kind: wall
 refuses: "Writes to ~/.claude settings, CLAUDE.md and helpers by claude seats"
-implements: fort/scripts/lib/seat-sandbox.sh:250
+implements: fort/scripts/lib/seat-sandbox.sh:267
 falsified-by: null
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

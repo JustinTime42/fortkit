@@ -3,7 +3,7 @@ key: wall-secret-file-mask
 status: active
 kind: wall
 refuses: "Reads of .env* and secret-glob files, in every mask"
-implements: fort/scripts/lib/seat-sandbox.sh:148
+implements: fort/scripts/lib/seat-sandbox.sh:165
 falsified-by: null
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

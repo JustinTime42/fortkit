@@ -3,7 +3,7 @@ key: wall-forge-claude-runtime
 status: active
 kind: wall
 refuses: "All access to ~/.claude by codex-branch seats"
-implements: fort/scripts/lib/seat-sandbox.sh:216
+implements: fort/scripts/lib/seat-sandbox.sh:233
 falsified-by: null
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"

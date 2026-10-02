@@ -3,7 +3,7 @@ key: wall-forge-prose-gate-lock
 status: active
 kind: wall
 refuses: "Writes to charter.md, fort/seats, verify-impl.sh and skills by the unattended seat"
-implements: fort/scripts/lib/seat-sandbox.sh:241
+implements: fort/scripts/lib/seat-sandbox.sh:258
 falsified-by: falsifier-mask-harness
 provenance:
   source: "read from the tree 2026-08-29 during fortkit-4ah3.2"
