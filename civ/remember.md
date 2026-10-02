@@ -5211,3 +5211,28 @@ should name the seat if it matters who learned it.
   `**Held by: Name Surname**` wrongly and produced 0 names, so "0 hits" meant
   nothing. Count the list, and run the positive control on a file that
   contains one of the names, before reading a zero.
+
+- 2026-10-02 (second sitting): **A HARNESS THAT COPIES A REAL EMITTER INHERITS
+  ITS HARDCODED FALLBACK, AND THE FALLBACK IS THE LIVE STREAM.** Scionhall's
+  emit.sh falls back to the fort's real `.git` when git cannot answer, so my
+  first emit-harness draft, running the shipped emitter from a non-repo
+  directory, wrote `probe.harness t3` into Scionhall's live stream. Repoint
+  every hardcoded path in a copied subject into the fixture, assert that
+  exactly one occurrence was rewritten, and count writes to that sink as
+  failures. This is the 2026-08-06 smoke-probe scar from a third direction.
+
+- 2026-10-02: **A PRONOUN WITHOUT THE ROSTER, TWICE IN ONE DAY, IN A COMMENT
+  AND IN A COMMIT MESSAGE.** I called Scionhall's Warden "she"; Silas is
+  he/him. Greenlab's roster lives at `~/dev/greenlab/civ/seats/roster.json`.
+  In a TEMPLATE, write "the Warden", because the occupant is each fort's own.
+
+- 2026-10-02: **`BEADS_ACTOR=calder` MUST BE EXPORTED IN EVERY SHELL THAT RUNS
+  `bd`, including the capital's.** The 2026-09-18 entry says so, and I did it
+  in every Scionhall call and forgot it in one capital call. Read the author
+  back with `bd comments <id> --json` after the first write of a shell.
+
+- 2026-10-02: **`mask-harness.sh` now has section E, the user-manager check.**
+  The verifier only lints the file and never runs it, so committing an
+  assertion that is RED on unpatched libs turns no gate red. Run it as
+  `bash scripts/mask-harness.sh <lib>`; it builds its fixture at
+  `~/dev/e2probe`.
