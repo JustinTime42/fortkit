@@ -5152,3 +5152,14 @@ should name the seat if it matters who learned it.
   found that a hyphenated slug is born with a red verifier (`fortkit-2y2t.40.8`).
   Name the probe so it can fail differently from the real thing only on purpose:
   here the hyphen was an accident that measured something real.
+
+- 2026-10-01: **A FORT'S `fleet.conf` DECIDES THE RUNG; A BEAD'S METADATA DOES
+  NOT.** Scionhall inherited plot's local-first ladder (qwen first, frontier
+  escalation off), and Wren's beads carried `rung: frontier` in metadata, which
+  `fleet.sh` never reads. Enabling the fleet as founded would have sent every
+  dispatch to the local model. Check `forge_rung_for()`'s inputs, not the
+  bead, before the first run of any newly founded fort.
+- 2026-10-01: **GREENLAB'S `strip.py` DOES NOT CATCH A BARE BEAD PREFIX** in code
+  (`printf '... ForgeOs-%s'`, `id="ForgeOs-${x}"`): its bead-id pattern needs a
+  suffix. Any import into Greenlab gets a second, broader grep for fort and
+  product names after the tool reports zero.
