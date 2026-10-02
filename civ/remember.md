@@ -5236,3 +5236,27 @@ should name the seat if it matters who learned it.
   assertion that is RED on unpatched libs turns no gate red. Run it as
   `bash scripts/mask-harness.sh <lib>`; it builds its fixture at
   `~/dev/e2probe`.
+
+- 2026-10-02 (third sitting): **INSERTING LINES INTO THE CAPITAL'S
+  seat-sandbox.sh TURNS control-lint RED, AND THE REPAIR IS MECHANICAL.**
+  Eleven `fort/controls` records cite that file by line number. For each one,
+  find the line whose sha256 matches its key in
+  `scripts/control-fingerprints.json`, and repoint `implements:` to it. Never
+  edit the fingerprints file. Never add the shift arithmetically: a line can
+  match twice (`wall-codex-config`, the RO_PATHS line in both arms), and then
+  position decides. Farlantern and Kithmason have no control register, so
+  this costs nothing there.
+
+- 2026-10-02: **A DIFFERENT FORT'S WARDEN RUNS IN PARALLEL CLEANLY WHEN EACH
+  IS LAUNCHED FROM INSIDE ITS OWN FORT.** Pattern:
+  `setsid nohup bash -c "cd <fort> && fort/scripts/warden.sh <bead> <c>~1..<c>"`,
+  one per fort. Each wrote to its own stream and recorded on its own bead.
+  Production Wardens cannot rerun the Regent's bwrap probes (their profiles
+  refuse `/run/user` and `systemctl`), so they review the code and take the
+  measurements on faith, and say so. Give them the numbers in the brief.
+
+- 2026-10-02: **QUIET FORTS STILL COLLECT THE REGENT'S ANNOUNCEMENTS
+  UNTRACKED** (`fortkit-rw3v`). Farlantern and Kithmason each had seven
+  untracked day files since 2026-09-22, every line calder's. Sweep them at
+  every sitting that touches those forts, naming whose each line is, until
+  the launcher does it itself.
