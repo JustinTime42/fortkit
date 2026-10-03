@@ -1,0 +1,289 @@
+:root {
+  color-scheme: light dark;
+  --bg: #eef0ed;
+  --surface: #fffdf8;
+  --raised: #f7f5ee;
+  --ink: #20242a;
+  --muted: #636970;
+  --line: #d7d0c4;
+  --accent: #0c6170;
+  --amber: #805000;
+  --violet: #5d3a82;
+  --blue: #155e9f;
+  --green: #176b38;
+  --grey: #5f6469;
+  --waiting: #636970;
+  --landed: #6f9f7d;
+  --danger: #a42b2b;
+  --chip-ink: #fff;
+  --control-ink: #fff;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --radius-sm: 0.35rem;
+  --radius-md: 0.6rem;
+  --radius-pill: 999px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c;
+    --surface: #22262b;
+    --raised: #292e34;
+    --ink: #edf0f2;
+    --muted: #bac0c6;
+    --line: #3f464d;
+    --accent: #71c8d5;
+    --amber: #ffd166;
+    --violet: #d4b8ff;
+    --blue: #8bc4ff;
+    --green: #8de1a6;
+    --grey: #c2c7cc;
+    --waiting: #bac0c6;
+    --landed: #6eaa7d;
+    --danger: #ff8f8f;
+    --chip-ink: #17191c;
+    --control-ink: #17191c;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    var(--text-sm) / 1.4 system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+.keep-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.keep-nav a {
+  color: var(--accent);
+  text-decoration: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.keep-nav a[aria-current="page"] {
+  background: var(--accent);
+  color: var(--control-ink);
+  font-weight: 700;
+}
+.keep-nav .spacer {
+  flex: 1;
+}
+.badge,
+.chip {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 0.15rem 0.55rem;
+  font-size: var(--text-xs);
+}
+.badge[hidden] {
+  display: none;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.chip {
+  background: var(--raised);
+  color: inherit;
+}
+.stage-needs-you {
+  --stage-color: var(--amber);
+}
+.stage-in-review {
+  --stage-color: var(--violet);
+}
+.stage-verifying,
+.stage-building {
+  --stage-color: var(--blue);
+}
+.stage-ready {
+  --stage-color: var(--green);
+}
+.stage-blocked {
+  --stage-color: var(--grey);
+}
+.stage-waiting {
+  --stage-color: var(--waiting);
+}
+.stage-landed {
+  --stage-color: var(--landed);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+#drawer {
+  position: fixed;
+  z-index: 4;
+  inset: 0 0 0 auto;
+  width: min(34rem, 100%);
+  overflow: auto;
+  padding: var(--space-4);
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 24px #0003;
+}
+#drawer[hidden] {
+  display: none;
+}
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  align-items: start;
+}
+.drawer-header h2 {
+  margin: var(--space-1) 0;
+  font-size: var(--text-lg);
+}
+.meta,
+.dependency-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--muted);
+}
+.drawer-section {
+  border-top: 1px solid color-mix(in srgb, var(--muted) 35%, transparent);
+  padding: var(--space-2) 0;
+}
+.drawer-section summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.drawer-section pre {
+  overflow: auto;
+  padding: var(--space-2);
+  background: var(--raised);
+}
+.drawer-section code,
+.pasted {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.comment {
+  padding: var(--space-2) 0;
+  border-top: 1px solid color-mix(in srgb, var(--muted) 25%, transparent);
+}
+.notice {
+  color: var(--amber);
+  font-weight: 700;
+}
+.signing-desk {
+  display: grid;
+  gap: var(--space-3);
+}
+.signing-desk textarea,
+.signing-desk input[type="password"] {
+  width: 100%;
+  border: 1px solid var(--muted);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  background: var(--raised);
+  color: var(--ink);
+}
+.sign-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.sign-actions button {
+  border: 1px solid var(--accent);
+}
+.sign-options label {
+  display: block;
+  padding: var(--space-1) 0;
+}
+#sign-result {
+  display: block;
+  min-height: 1.4em;
+  color: var(--accent);
+}
+@media (max-width: 640px) {
+  #drawer {
+    width: 100%;
+  }
+}
+/* CIV KEEP: fort picker and tags. */
+.keep-nav .brand {
+  margin-right: var(--space-2);
+}
+.fort-pick select {
+  font: inherit;
+  color: inherit;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+}
+.fort-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.fort-pill {
+  font: inherit;
+  font-size: var(--text-xs);
+  color: inherit;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 0.15rem 0.6rem;
+  cursor: pointer;
+}
+.fort-pill.active {
+  background: var(--accent);
+  color: var(--control-ink);
+  font-weight: 700;
+}
+.fort-pill.stale {
+  border-color: var(--danger);
+}
+.fort-pill .needs {
+  background: var(--amber);
+  color: var(--chip-ink);
+  border-radius: var(--radius-pill);
+  padding: 0 0.4rem;
+}
+.fort-pill .halted {
+  color: var(--danger);
+  font-weight: 700;
+}
+.fort-tag,
+.fort-chip {
+  font-weight: 700;
+}
+.muted {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.bar input[type="checkbox"],
+.board-bar input[type="checkbox"] {
+  min-width: 0;
+}

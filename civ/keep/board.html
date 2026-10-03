@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Civ Keep board</title>
+  <link rel="stylesheet" href="/static/keep.css">
+  <style>
+    .board-bar { display:flex; gap:var(--space-2); align-items:center; padding:var(--space-3) var(--space-4); flex-wrap:wrap; border-bottom:1px solid var(--line); background:var(--surface); }
+    .board-bar button,.board-bar select,.board-bar input { font:inherit; color:inherit; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--raised); padding:var(--space-2); }
+    .board-bar button { cursor:pointer; }.board-bar button[aria-pressed=true] { background:var(--accent); color:var(--control-ink); font-weight:700; }.board-bar input { min-width:16rem; }.spacer { flex:1; }
+    #board { display:grid; grid-template-columns:repeat(1,minmax(14rem,1fr)); gap:var(--space-3); padding:var(--space-3); overflow:auto; align-items:start; }
+    .board-column { min-width:14rem; background:color-mix(in srgb,var(--raised) 65%,transparent); border:1px solid var(--line); border-radius:var(--radius-md); overflow:hidden; }
+    .column-head { display:flex; justify-content:space-between; align-items:center; gap:var(--space-2); padding:var(--space-2) var(--space-3); border-left:4px solid var(--stage-color,var(--accent)); }.neutral-bar { --stage-color:var(--muted); }.column-head h2 { font-size:var(--text-sm); margin:0; }.column-count { font-variant-numeric:tabular-nums; color:var(--muted); }.none { color:var(--muted); padding:var(--space-3); margin:0; }
+    .column-cards { display:grid; gap:var(--space-2); padding:var(--space-2); }.board-card { width:100%; text-align:left; border:1px solid var(--line); border-left:4px solid var(--stage-color); border-radius:var(--radius-sm); padding:var(--space-2); background:var(--surface); color:inherit; cursor:pointer; }.board-card:hover { border-color:var(--accent); }.board-card:focus-visible,.board-bar :focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+    .card-top,.card-footer { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-1); }.card-id { font:var(--text-xs) ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--muted); margin-right:auto; }.priority,.type { font-size:var(--text-xs); font-weight:700; }.priority { border-radius:var(--radius-pill); background:var(--stage-color); color:var(--chip-ink); padding:.1rem .35rem; }.card-title { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; margin:var(--space-2) 0; font-weight:650; }.card-footer .chip { font-size:var(--text-xs); }.epic-filter { cursor:pointer; }.stage-needs-you { --stage-color:var(--amber); }.stage-in-review { --stage-color:var(--violet); }.stage-verifying,.stage-building { --stage-color:var(--blue); }.stage-ready { --stage-color:var(--green); }.stage-blocked { --stage-color:var(--grey); }.stage-waiting { --stage-color:var(--waiting); }.stage-landed { --stage-color:var(--landed); }
+    @media (max-width:640px) { #board { display:block; padding:var(--space-2); overflow:visible; }.board-column { min-width:0; margin-bottom:var(--space-2); }.board-column:not(.open) .column-cards,.board-column:not(.open) .none { display:none; }.column-head { cursor:pointer; }.board-bar input { min-width:0; width:100%; } }
+  </style>
+</head>
+<body>
+  <nav class="keep-nav" aria-label="Civ Keep"><strong class="brand">Civ Keep</strong><a href="/board" aria-current="page">Board</a><a href="/graph">Graph</a><label class="fort-pick">Fort <select id="fort"><option value="all">All forts</option></select></label><span id="fort-strip" class="fort-strip"></span><span class="spacer"></span><span id="stale" class="badge" hidden>STALE</span><time id="tick">Loading</time></nav>
+  <header class="board-bar"><strong id="board-title">All forts</strong><label><input id="needs-only" type="checkbox"> needs you only</label><span role="group" aria-label="Group board by"><button data-group="stage" aria-pressed="true">Stage</button><button data-group="epic" aria-pressed="false" title="Groups by fort when All forts is selected">Epic / fort</button><button data-group="priority" aria-pressed="false">Priority</button></span><span id="epic-clear"></span><label class="spacer"><span class="sr-only">Search board</span><input id="search" placeholder="Search id or title"></label><label>Landed <select id="closed"><option value="24h">24h</option><option value="7d">7d</option></select></label></header>
+  <p id="board-summary" class="sr-only" aria-live="polite"></p><main id="board"></main><aside id="drawer" hidden aria-label="Bead details"></aside>
+  <script type="module">
+    import { openDrawer } from '/static/drawer.js';
+    import { escapeHtml, glyph, stageClass } from '/static/graph.mjs';
+    import { subscribeRefresh } from '/static/live.mjs';
+
+    const stageOrder = ['needs-you', 'in-review', 'verifying', 'building', 'ready', 'blocked', 'waiting', 'landed'];
+    const names = { 'needs-you':'needs you', 'in-review':'in review', verifying:'verifying', building:'building', ready:'ready', blocked:'blocked', waiting:'waiting', landed:'landed' };
+    const el = (id) => document.getElementById(id);
+    const short = (id) => String(id ?? '');
+
+    import { fortControls } from '/static/forts-ui.js';
+
+    const state = { needsOnly:false, group:'stage', query:'', closed:'24h', epic:null, nodes:[], selected:null, drawerVersion:null };
+    function matching() { const needle = state.query.trim().toLowerCase(); return state.nodes.filter((node) => !needle || `${node.id} ${node.title}`.toLowerCase().includes(needle)).filter((node) => !state.epic || node.epic === state.epic).filter((node) => !state.needsOnly || node.stage === 'needs-you'); }
+    function columns(nodes) {
+      if (state.group === 'stage') return stageOrder.map((key) => ({ key, title:names[key], nodes:nodes.filter((node) => stageClass(node.stage) === stageClass(key)) }));
+      if (state.group === 'epic') { const keys = [...new Set(nodes.map((node) => node.epic ?? 'none'))].sort();
+      if (forts.current() === 'all') { const fortKeys = [...new Set(nodes.map((node) => node.fortName))].sort(); return fortKeys.map((key) => ({ key, title:key, nodes:nodes.filter((node) => node.fortName === key) })); } return keys.map((key) => ({ key, title:key === 'none' ? 'no epic' : short(key), nodes:nodes.filter((node) => (node.epic ?? 'none') === key) })); }
+      const keys = [...new Set(nodes.map((node) => Number.isInteger(node.priority) ? `P${node.priority}` : 'Priority ?'))].sort(); return keys.map((key) => ({ key, title:key, nodes:nodes.filter((node) => (Number.isInteger(node.priority) ? `P${node.priority}` : 'Priority ?') === key) }));
+    }
+    function card(node) { const blockers = Number((node.stage ?? '').match(/\((\d+)\)/)?.[1] ?? 0); const labels = node.labels ?? []; return `<button class="board-card ${stageClass(node.stage)}" data-id="${escapeHtml(node.id)}"><span class="card-top"><span class="chip fort-tag">${escapeHtml(node.fortName ?? '')}</span><code class="card-id">${escapeHtml(short(node.id))}</code><span class="priority">${Number.isInteger(node.priority) ? `P${node.priority}` : '?'}</span><span class="type" title="${escapeHtml(node.type)}">${glyph(node.type)}</span></span><span class="card-title">${escapeHtml(node.title)}</span><span class="card-footer">${node.epic ? `<span class="chip epic-filter" data-epic="${escapeHtml(node.epic)}">${escapeHtml(short(node.epic))}</span>` : ''}${blockers ? `<span class="chip">blocked by ${blockers}</span>` : ''}${node.assignee ? `<span class="chip">${escapeHtml(node.assignee)}</span>` : ''}${labels.includes('fleet-safe') ? '<span class="chip">fleet-safe</span>' : ''}${labels.filter((label) => /^(human|gate-[123]|mayor-review)$/.test(label)).map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join('')}</span></button>`; }
+    const nodeVersion = (node) => JSON.stringify(node);
+    const openBoardDrawer = async (id, node = state.nodes.find((item) => item.id === id)) => {
+      state.selected = id;
+      state.drawerVersion = node ? nodeVersion(node) : null;
+      await openDrawer(id, {
+        onNavigate: (next) => { state.selected = next; const selected = state.nodes.find((item) => item.id === next); state.drawerVersion = selected ? nodeVersion(selected) : null; return { id: next }; },
+        onClose: () => { state.selected = null; state.drawerVersion = null; window.location.hash = ''; el('drawer').hidden = true; }
+      });
+    };
+    function render() { const shown = matching(); const groups = columns(shown); el('board').style.gridTemplateColumns = `repeat(${Math.max(groups.length, 1)}, minmax(14rem, 1fr))`; el('board').innerHTML = groups.map((group) => `<section class="board-column ${state.group === 'stage' ? stageClass(group.key) : 'neutral-bar'}"><header class="column-head"><h2>${escapeHtml(group.title)}</h2><span class="column-count">${group.nodes.length}</span></header>${group.nodes.length ? `<div class="column-cards">${group.nodes.map(card).join('')}</div>` : '<p class="none">none</p>'}</section>`).join(''); el('board-summary').textContent = `Showing ${shown.length} beads in ${groups.length} columns.`; el('epic-clear').innerHTML = state.epic ? `<button class="chip epic-clear" aria-label="Clear epic filter">epic: ${escapeHtml(short(state.epic))} ×</button>` : ''; document.querySelectorAll('.board-card').forEach((item) => item.addEventListener('click', (event) => { if (event.target.closest?.('.epic-filter')) return; openBoardDrawer(item.dataset.id); })); document.querySelectorAll('.epic-filter').forEach((item) => item.addEventListener('click', (event) => { event.stopPropagation(); state.epic = item.dataset.epic; state.group = 'stage'; setGroup(); render(); })); document.querySelectorAll('.epic-clear').forEach((item) => item.addEventListener('click', () => { state.epic = null; render(); })); document.querySelectorAll('.column-head').forEach((item) => item.addEventListener('click', () => item.closest('.board-column').classList.toggle('open'))); }
+    function setGroup() { document.querySelectorAll('[data-group]').forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.group === state.group))); }
+    async function load() { const response = await fetch(`/api/graph?scope=tree&closed=${state.closed}&fort=${encodeURIComponent(forts.current())}`); el('board-title').textContent = forts.label(); if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`.trim()); const graph = await response.json(); state.nodes = graph.nodes ?? []; el('stale').hidden = !graph.stale; el('tick').textContent = graph.generatedAt ? new Date(graph.generatedAt).toLocaleTimeString() : ''; render(); const selected = state.nodes.find((node) => node.id === state.selected); if (selected && !el('drawer').hidden && nodeVersion(selected) !== state.drawerVersion) await openBoardDrawer(selected.id, selected); }
+    function reportLoadFailure(error) { el('stale').hidden = false; el('tick').textContent = `Load failed: ${error.message}`; }
+    document.querySelectorAll('[data-group]').forEach((item) => item.addEventListener('click', () => { state.group = item.dataset.group; setGroup(); render(); }));
+    el('search').addEventListener('input', () => { state.query = el('search').value; render(); }); el('needs-only').addEventListener('change', () => { state.needsOnly = el('needs-only').checked; render(); }); const forts = await fortControls(() => { state.epic = null; load().catch(reportLoadFailure); }); el('closed').addEventListener('change', () => { state.closed = el('closed').value; load().catch(reportLoadFailure); }); subscribeRefresh(() => Promise.all([load(), forts.refresh()]), reportLoadFailure); await load().catch(reportLoadFailure);
+  </script>
+</body>
+</html>

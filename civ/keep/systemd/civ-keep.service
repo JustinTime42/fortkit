@@ -1,0 +1,21 @@
+# The Civ Keep: one loopback dashboard and signing desk over every fort of
+# every civilization (civ/keep/server.mjs). Installed by civ/keep/install.sh,
+# which links this file into the user unit directory.
+#
+# THIS UNIT RUNS UNMASKED AS THE USER AND CAN WRITE TO EVERY FORT'S TRACKER,
+# within the per-fort allowlist in civ/keep/lib/readers.mjs, and only on a
+# request carrying the signing token. It listens on 127.0.0.1 only.
+[Unit]
+Description=Civ Keep (all forts: board, graph, signing desk)
+
+[Service]
+Type=simple
+WorkingDirectory=%h/dev/fortkit
+ExecStart=/home/justin/.nvm/versions/node/v24.14.0/bin/node civ/keep/server.mjs
+Environment=KEEP_PORT=7780
+Environment=PATH=/home/justin/.local/bin:/home/justin/.nvm/versions/node/v24.14.0/bin:/usr/local/bin:/usr/bin:/bin
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

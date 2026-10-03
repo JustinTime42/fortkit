@@ -7,7 +7,10 @@
       "!fort/events",
       "!.beads",
       "!.claude",
-      "!.claude-flow"
+      "!.claude-flow",
+      "!civ/keep/*.html",
+      "!civ/keep/lib/drawer.js",
+      "!civ/keep/lib/graph.mjs"
     ]
   },
   "formatter": {

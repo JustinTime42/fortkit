@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Civ Keep graph</title>
+  <link rel="stylesheet" href="/static/keep.css">
+  <style>
+    :root { color-scheme:light dark; --bg:#eef0ed; --surface:#fffdf8; --raised:#f7f5ee; --ink:#20242a; --muted:#636970; --accent:#0c6170; --amber:#805000; --violet:#5d3a82; --blue:#155e9f; --green:#176b38; --grey:#5f6469; --danger:#a42b2b; --chip-ink:#fff; --control-ink:#fff; --gap:8px; }
+    @media (prefers-color-scheme:dark) { :root { --bg:#17191c; --surface:#22262b; --raised:#292e34; --ink:#edf0f2; --muted:#bac0c6; --accent:#71c8d5; --amber:#ffd166; --violet:#d4b8ff; --blue:#8bc4ff; --green:#8de1a6; --grey:#c2c7cc; --danger:#ff8f8f; --chip-ink:#17191c; --control-ink:#17191c; } }
+    * { box-sizing:border-box }
+    body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    .bar { display:flex; align-items:center; gap:var(--gap); padding:var(--gap) 16px; background:var(--surface); min-height:64px; flex-wrap:wrap; }
+    h1 { font-size:16px; margin:0 8px 0 0 }
+    button,input,select { font:inherit; color:inherit; background:transparent; border:0; padding:8px; }
+    button,select { cursor:pointer; background:var(--raised); border-radius:8px; }
+    button[aria-pressed=true] { background:var(--accent); color:var(--control-ink); font-weight:700; }
+    button:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+    input { min-width:176px; background:var(--raised); border-radius:8px; }
+    .spacer { flex:1 }
+    .badge { font-size:11px; padding:3px 6px; border:1px solid var(--amber); border-radius:99px; color:var(--ink); font-weight:700; }
+    .legend { display:flex; align-items:center; gap:4px; }
+    .legend-chip,.stage-chip { display:inline-block; padding:2px 7px; border-radius:99px; background:var(--stage-color); color:var(--chip-ink); font-size:10px; font-weight:700; white-space:nowrap; }
+    #canvas { height:calc(100vh - 64px); overflow:hidden; position:relative; cursor:grab; }
+    #canvas.dragging { cursor:grabbing; }
+    svg { width:100%; height:100%; display:block; }
+    .region { fill:color-mix(in srgb, var(--accent) 9%, var(--bg)); }
+    .region-label { fill:var(--muted); font-size:12px; font-weight:700; }
+    .edge { fill:none; stroke:var(--muted); stroke-width:1.5; marker-end:url(#arrow); transition:opacity 150ms,stroke 150ms; }
+    .edge.context { stroke-width:1; stroke-dasharray:4 4; }
+    .edge.needs { stroke:var(--danger); marker-end:url(#arrow-needs); }
+    .edge.dim { opacity:.12; }
+    .edge.highlight { stroke-width:2.5; opacity:1; }
+    .node { cursor:pointer; outline:none; transition:opacity 150ms; }
+    .node.dim { opacity:.16; }
+    .node rect.card { fill:var(--surface); }
+    .node.search-match rect.card { fill:color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+    .node.hover rect.card { fill:color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+    .node:focus-visible rect.card,.node.selected rect.card { stroke:var(--accent); stroke-width:3px; }
+    .node.stage-needs-you rect.card { filter:drop-shadow(0 0 7px var(--amber)); }
+    .id { font:11px ui-monospace,SFMono-Regular,Consolas,monospace; fill:var(--muted); }
+    .title { font-size:12px; fill:var(--ink); }
+    .chip-text { font-size:10px; font-weight:700; fill:var(--chip-ink); }
+    .stage-fill { fill:var(--stage-color); }
+    .stage-needs-you { --stage-color:var(--amber); }
+    .stage-in-review { --stage-color:var(--violet); }
+    .stage-verifying,.stage-building { --stage-color:var(--blue); }
+    .stage-ready,.stage-landed { --stage-color:var(--green); }
+    .stage-blocked { --stage-color:var(--grey); }
+    .stage-waiting { --stage-color:var(--muted); }
+    .node.stage-landed:not(.dim) { opacity:.58; }
+    #landed-strip { position:absolute; z-index:1; left:16px; bottom:16px; }
+    #phone-list { display:none; padding:var(--gap); }
+    .list-card { padding:12px; margin-bottom:var(--gap); background:var(--surface); border-left:4px solid var(--stage-color); border-radius:0 8px 8px 0; }
+    .list-card b { display:block; margin:4px 0 8px; }
+    .list-card small { color:var(--muted); }
+    @media (max-width:640px) { #canvas { display:none } #phone-list { display:block } .bar { position:sticky; top:0; z-index:2; padding:8px; } .legend { order:3; width:100%; overflow:auto; } h1 { width:100%; } }
+  </style>
+</head>
+<body>
+  <nav class="keep-nav" aria-label="Civ Keep"><strong class="brand">Civ Keep</strong><a href="/board">Board</a><a href="/graph" aria-current="page">Graph</a><label class="fort-pick">Fort <select id="fort"><option value="all">All forts</option></select></label><span id="fort-strip" class="fort-strip"></span><span class="spacer"></span><span id="stale" class="badge" hidden>STALE</span><time id="tick">Loading</time></nav>
+  <header class="bar"><h1 id="graph-title">All forts</h1><button data-scope="frontier" aria-pressed="true">Frontier</button><button data-scope="open" aria-pressed="false">All open</button><select id="epic"><option value="">Epic: all</option></select><select id="closed"><option value="24h">24h</option><option value="7d">7d</option></select><label><input id="context" type="checkbox"> context edges</label><input id="search" placeholder="Search (/)"><button id="fit">Fit</button><button id="out" aria-label="Zoom out">−</button><button id="in" aria-label="Zoom in">+</button><span class="spacer"></span><span class="legend" aria-label="Stage legend"><span class="legend-chip stage-needs-you">needs you</span><span class="legend-chip stage-in-review">review</span><span class="legend-chip stage-building">building</span><span class="legend-chip stage-ready">ready</span><span class="legend-chip stage-blocked">blocked</span></span></header>
+  <main id="canvas"><div id="landed-strip"></div><svg aria-label="Bead dependency graph" role="img"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"/></marker><marker id="arrow-needs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--danger)"/></marker></defs><g id="scene"><g id="regions"></g><g id="edges"></g><g id="nodes"></g></g></svg></main><main id="phone-list"></main><aside id="drawer" hidden aria-label="Bead details"></aside>
+  <script type="module">
+    import { openDrawer } from '/static/drawer.js';
+    import { fortControls } from '/static/forts-ui.js';
+    import { centerOn, compareNodes, contrastRatio, epicRegions, escapeHtml, fitTransform, glyph, graphOrder, layeredLayout, priority, relatedNodeIds, searchNodes, stageClass, titleLines, truncate, visibleEdges, zoomAt } from '/static/graph.mjs';
+    import { subscribeRefresh } from '/static/live.mjs';
+
+    const state = { data:null, layout:[], order:[], regions:[], scope:'frontier', zoom:1, x:24, y:32, keyboardIndex:-1, selectedId:null, hoveredId:null, needsFit:true, landedExpanded:false };
+    const el = (id) => document.getElementById(id);
+    const fill = (id, markup) => { el(id).innerHTML = markup; };
+    const label = (id) => String(id);
+    const updateTransform = () => el('scene').setAttribute('transform', `translate(${state.x} ${state.y}) scale(${state.zoom})`);
+    const card = (node, searching) => {
+      const lines = titleLines(node.title, 30);
+      const classes = ['node', stageClass(node.stage), !node.matches ? 'dim' : '', searching && node.matches ? 'search-match' : '', state.selectedId === node.id ? 'selected' : ''].filter(Boolean).join(' ');
+      return `<g class="${classes}" transform="translate(${node.column*260} ${node.row*92})" tabindex="0" data-id="${escapeHtml(node.id)}" data-match="${node.matches}"><rect class="card" width="220" height="64" rx="8"/><rect class="stage-fill" width="4" height="64" rx="2"/><text class="id" x="12" y="13">${escapeHtml(label(node.id))} · ${priority(node)} ${glyph(node.type)}${forts.current() === 'all' ? ` · ${escapeHtml(node.fortName)}` : ''}</text><text class="title" x="12" y="29"><tspan x="12">${escapeHtml(lines[0])}</tspan>${lines[1] ? `<tspan x="12" dy="13">${escapeHtml(lines[1])}</tspan>` : ''}</text><rect class="stage-fill" x="116" y="49" width="96" height="15" rx="7"/><text class="chip-text" x="122" y="60">${escapeHtml(node.stage)}</text></g>`;
+    };
+    const edgeMarkup = (item, byId) => {
+      const from = byId.get(item.from); const to = byId.get(item.to);
+      if (!from || !to) return '';
+      const classes = ['edge', item.type === 'blocks' ? '' : 'context', from.stage === 'needs-you' ? 'needs' : ''].filter(Boolean).join(' ');
+      return `<path class="${classes}" data-from="${escapeHtml(item.from)}" data-to="${escapeHtml(item.to)}" d="M${from.column*260+220} ${from.row*92+32} L${to.column*260} ${to.row*92+32}"/>`;
+    };
+    const applyHighlights = (hovered = null) => {
+      state.hoveredId = hovered;
+      const related = hovered ? relatedNodeIds(state.data.edges, hovered) : null;
+      const searching = Boolean(el('search').value.trim());
+      document.querySelectorAll('.node').forEach((node) => {
+        node.classList.toggle('hover', node.dataset.id === hovered);
+        node.classList.toggle('dim', (searching && node.dataset.match === 'false') || Boolean(related && !related.has(node.dataset.id)));
+      });
+      document.querySelectorAll('.edge').forEach((edge) => {
+        const touches = edge.dataset.from === hovered || edge.dataset.to === hovered;
+        edge.classList.toggle('highlight', Boolean(hovered && touches));
+        edge.classList.toggle('dim', Boolean(hovered && !touches));
+      });
+    };
+    const toggleSelection = (id) => {
+      state.selectedId = id;
+      document.querySelectorAll('.node').forEach((node) => node.classList.toggle('selected', node.dataset.id === id));
+    };
+    const centerNode = (id) => {
+      const node = state.order.find((item) => item.id === id);
+      if (!node) return false;
+      Object.assign(state, centerOn(state, node, { width:el('canvas').clientWidth, height:el('canvas').clientHeight }));
+      updateTransform();
+      return true;
+    };
+    const navigateDrawer = async (target) => {
+      const exists = state.data.nodes.some((node) => node.id === target);
+      let notice = '';
+      let targetBead;
+      if (!exists) {
+        const prior = { scope: state.scope, closed: el('closed').value, landedExpanded: state.landedExpanded };
+        const response = await fetch(`/api/bead/${encodeURIComponent(target)}`);
+        if (!response.ok) return null;
+        const bead = targetBead = await response.json();
+        // The closed branch intentionally overwrites the user's chosen scope while it searches for the target.
+        state.scope = bead.status === 'closed' ? 'frontier' : 'open';
+        if (bead.status === 'closed') {
+          el('closed').value = '7d';
+          state.landedExpanded = true;
+        }
+        el('epic').value = '';
+        setPressedScope(state.scope);
+        state.needsFit = false;
+        await load();
+        if (state.data.nodes.some((node) => node.id === target)) {
+          notice = bead.status === 'closed' ? 'Widened to Closed 7d to include this dependency.' : 'Widened to All open to include this dependency.';
+        } else {
+          const epic = bead.dependencies?.find((edge) => edge.type === 'parent-child')?.depends_on_id;
+          if (epic) {
+            state.scope = `epic:${epic}`;
+            setPressedScope('');
+            await load();
+            if (state.data.nodes.some((node) => node.id === target)) notice = 'Widened to this epic to include this dependency.';
+          }
+          if (!notice) {
+            Object.assign(state, { scope:prior.scope, landedExpanded:prior.landedExpanded });
+            el('closed').value = prior.closed;
+            setPressedScope(prior.scope.startsWith('epic:') ? '' : prior.scope);
+            await load();
+            notice = 'This dependency is outside every graph scope.';
+          }
+        }
+      }
+      if (state.data.nodes.find((node) => node.id === target)?.collapsed && !state.landedExpanded) { state.landedExpanded = true; render(); } toggleSelection(target); centerNode(target); return { id:target, notice, bead:targetBead };
+    };
+    const showDrawer = async (id) => { if (state.data.nodes.find((node) => node.id === id)?.collapsed && !state.landedExpanded) { state.landedExpanded = true; render(); } toggleSelection(id); centerNode(id); await openDrawer(id, { onNavigate: navigateDrawer, onClose: closeDrawer }); };
+    const closeDrawer = () => { state.selectedId = null; window.location.hash = ''; el('drawer').hidden = true; render(); };
+    const select = (event) => {
+      const id = event.currentTarget.dataset.id;
+      toggleSelection(id);
+      showDrawer(id);
+    };
+    const fit = () => {
+      if (!state.order.length) return;
+      const left = Math.min(0, ...state.regions.map((region) => region.x));
+      const top = Math.min(0, ...state.regions.map((region) => region.y));
+      const right = Math.max(...state.order.map((node) => node.column*260+220), ...state.regions.map((region) => region.x+region.width));
+      const bottom = Math.max(...state.order.map((node) => node.row*92+64), ...state.regions.map((region) => region.y+region.height));
+      const width = el('canvas').clientWidth; const height = el('canvas').clientHeight;
+      Object.assign(state, fitTransform({ left, top, right, bottom }, { width, height }));
+      updateTransform();
+    };
+    const render = () => {
+      if (!state.data) return;
+      const searching = Boolean(el('search').value.trim());
+      const allNodes = searchNodes(state.data.nodes, el('search').value);
+      const landed = allNodes.filter((node) => node.collapsed);
+      const nodes = state.landedExpanded ? allNodes : allNodes.filter((node) => !node.collapsed);
+      state.layout = layeredLayout(nodes, state.data.edges);
+      state.order = graphOrder(state.layout);
+      state.regions = epicRegions(state.data.epics, state.order);
+      const byId = new Map(state.order.map((node) => [node.id, node]));
+      fill('regions', state.regions.map((region) => `<g data-epic="${escapeHtml(region.id)}"><rect class="region" x="${region.x}" y="${region.y}" width="${region.width}" height="${region.height}" rx="12"/><text class="region-label" x="${region.x+10}" y="${region.y+18}">${escapeHtml(truncate(region.title, Math.max(8, Math.floor(region.width / 8))))}</text></g>`).join(''));
+      fill('edges', visibleEdges(state.data.edges, el('context').checked).map((item) => edgeMarkup(item, byId)).join(''));
+      fill('nodes', state.order.map((node) => card(node, searching)).join(''));
+      const landedLabel = state.scope.startsWith('epic:') ? `landed: ${landed.length}`
+        : `landed in the last ${el('closed').value.replace(/(\d+)([a-z]+)/i, '$1 $2')}: ${landed.length}`;
+      const phoneLanded = landed.length ? `<button id="landed-toggle-phone" aria-expanded="${state.landedExpanded}">${landedLabel}</button>` : '';
+      fill('phone-list', `${state.order.map((node) => `<article class="list-card ${stageClass(node.stage)}"><small>${escapeHtml(label(node.id))} · ${priority(node)} ${glyph(node.type)}</small><b>${escapeHtml(node.title)}</b><span class="stage-chip">${escapeHtml(node.stage)}</span></article>`).join('')}${phoneLanded}`);
+      fill('landed-strip', landed.length ? `<button id="landed-toggle" aria-expanded="${state.landedExpanded}">${landedLabel}</button>` : '');
+      ['landed-toggle', 'landed-toggle-phone'].forEach((id) => el(id)?.addEventListener('click', () => { state.landedExpanded = !state.landedExpanded; render(); }));
+      document.querySelectorAll('.node').forEach((node) => {
+        node.addEventListener('click', select);
+        node.addEventListener('pointerenter', () => applyHighlights(node.dataset.id));
+        node.addEventListener('pointerleave', () => applyHighlights());
+        node.addEventListener('keydown', (event) => { if (event.key === 'Enter') select(event); });
+      });
+      updateTransform();
+      applyHighlights(state.hoveredId);
+      if (state.needsFit) { state.needsFit=false; fit(); }
+    };
+    const setPressedScope = (scope) => document.querySelectorAll('[data-scope]').forEach((button) => button.setAttribute('aria-pressed', button.dataset.scope === scope));
+    const load = async () => {
+      const response = await fetch(`/api/graph?scope=${encodeURIComponent(state.scope)}&closed=${el('closed').value}&fort=${encodeURIComponent(forts.current())}`); el('graph-title').textContent = forts.label();
+      if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
+      state.data = await response.json();
+      el('stale').hidden = !state.data.stale;
+      el('tick').textContent = `Last tick: ${new Date(state.data.generatedAt).toLocaleTimeString()}`;
+      fill('epic', `<option value="">Epic: all</option>${state.data.epics.map((epic) => `<option value="${escapeHtml(epic.id)}">${escapeHtml(label(epic.id))}${forts.current() === 'all' ? ` (${escapeHtml(epic.fortName)})` : ''}</option>`).join('')}`);
+      if (state.scope.startsWith('epic:')) el('epic').value = state.scope.slice(5);
+      render();
+    };
+    const reportLoadFailure = (error) => { el('stale').hidden = false; el('tick').textContent = `Load failed: ${error.message}`; };
+    document.querySelectorAll('[data-scope]').forEach((button) => button.addEventListener('click', () => {
+      state.scope=button.dataset.scope; state.needsFit=true; el('epic').value=''; setPressedScope(state.scope); load().catch(reportLoadFailure);
+    }));
+    el('epic').addEventListener('change', () => {
+      state.scope=el('epic').value ? `epic:${el('epic').value}` : 'frontier';
+      state.needsFit=true; setPressedScope(el('epic').value ? '' : 'frontier'); load().catch(reportLoadFailure);
+    });
+    el('closed').addEventListener('change', () => { state.needsFit=true; load().catch(reportLoadFailure); });
+    el('context').addEventListener('change', render);
+    el('search').addEventListener('input', render);
+    el('fit').addEventListener('click', fit);
+    const zoomPointer = (clientX, clientY, factor) => {
+      const bounds = el('canvas').getBoundingClientRect();
+      const point = { x:clientX-bounds.left, y:clientY-bounds.top };
+      Object.assign(state, zoomAt(state, point, factor)); updateTransform();
+    };
+    const zoomFromCenter = (factor) => { const bounds=el('canvas').getBoundingClientRect(); zoomPointer(bounds.left+bounds.width/2, bounds.top+bounds.height/2, factor); };
+    el('in').addEventListener('click', () => zoomFromCenter(1.2));
+    el('out').addEventListener('click', () => zoomFromCenter(1/1.2));
+    document.addEventListener('keydown', (event) => {
+      if (event.target === el('search') && ['/', 'j', 'k'].includes(event.key)) return;
+      if (event.key === '/') { event.preventDefault(); el('search').focus(); }
+      if ((event.key === 'j' || event.key === 'k') && state.order.length) {
+        state.keyboardIndex=(state.keyboardIndex+(event.key === 'j' ? 1 : -1)+state.order.length)%state.order.length;
+        [...document.querySelectorAll('.node')].find((node) => node.dataset.id === state.order[state.keyboardIndex].id)?.focus();
+      }
+      if (event.key === 'Escape') { if (!el('drawer').hidden) closeDrawer(); else { el('search').value=''; render(); } }
+    });
+    let drag;
+    el('canvas').addEventListener('pointerdown', (event) => {
+      if (event.target.closest('.node')) return;
+      drag={ x:event.clientX, y:event.clientY }; el('canvas').classList.add('dragging');
+    });
+    window.addEventListener('pointerup', () => { drag=null; el('canvas').classList.remove('dragging'); });
+    window.addEventListener('pointermove', (event) => {
+      if (!drag) return;
+      state.x+=event.clientX-drag.x; state.y+=event.clientY-drag.y;
+      drag={x:event.clientX,y:event.clientY}; updateTransform();
+    });
+    el('canvas').addEventListener('wheel', (event) => { event.preventDefault(); zoomPointer(event.clientX, event.clientY, event.deltaY < 0 ? 1.1 : 1/1.1); }, { passive:false });
+    const forts = await fortControls(() => { state.scope = 'frontier'; state.needsFit = true; el('epic').value = ''; setPressedScope('frontier'); load().catch(reportLoadFailure); });
+    subscribeRefresh(() => Promise.all([load(), forts.refresh()]), reportLoadFailure);
+    await load().then(() => { if (window.location.hash) showDrawer(decodeURIComponent(window.location.hash.slice(1))); }).catch(reportLoadFailure);
+  </script>
+</body>
+</html>
