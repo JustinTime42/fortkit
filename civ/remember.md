@@ -5292,3 +5292,36 @@ should name the seat if it matters who learned it.
   do not rephrase and retry; hand the live-system escape measurement to the
   Overseer. Connect-and-close census and own-fixture write probes were fine;
   the recreate-while-waiting shape was not.
+
+- 2026-10-05 (sitting 62, ForgeOs-vee4w and Proofdelve's halt): **READ THE
+  BEAD'S ACCEPTANCE CRITERIA BEFORE DESIGNING THE FIX.** I designed vee4w from
+  its description and its docket entry, never opened its ACCEPTANCE section,
+  and missed criterion 6 (an unclassified bead must be treated as needing the
+  signature). The Warden caught it in round one; it cost two more rounds and an
+  Overseer ruling. `bd show <id>` prints the criteria below the description;
+  read to the end, and write the brief against the criteria, not the title.
+
+- 2026-10-05: **PROOFDELVE'S FLEET NOW READS A LANDING CLASS ON EVERY BEAD.**
+  `sign-to-land` (lands only on the Overseer's signature: gate-1 class B/C/D)
+  or `lands-on-review` (class A, or not gate 1). `dispatchable()` refuses a
+  bead with neither ("unclassified"); `land()` holds one that arrives anyway and
+  adds sign-to-land; a held bead's Warden token survives as `warden-verdict`.
+  A signed landing (`dispatchable "$bead" signed`) skips the classification
+  check. Any NEW check added to dispatchable() above the dependency branch must
+  also update `scripts/dispatch-type-harness.sh`'s baked records, or the
+  verifier goes red (it did, at 2869ad0d).
+
+- 2026-10-05: **A HALT FILE REMOVED BETWEEN SUPERVISOR FIRINGS IS SEEN ONLY AT
+  THE NEXT FIRING.** I removed it at 15:40:48, read the 15:40:01 firing, and
+  briefly reported "the supervisor started nothing". Compare the firing's
+  timestamp with the action's before reading its result.
+
+- 2026-10-05: **CONCURRENT FULL E2E RUNS IN PROOFDELVE ARE SAFE AND ARE THE
+  CHEAP LOAD TEST.** Each run's Warden results live under its own XDG work dir;
+  six at once ran clean. Useful when a Warden asks for signal-timing cases
+  "repeated under load, on both launchers, with counts".
+
+- 2026-10-05: **A POWER FAILURE MID-SITTING LOSES THE HANDOFF AND KEEPS THE
+  LAUNCHER'S EDICT MARKER** (the 2026-10-02/03 Civ Keep sitting: commit 9c51722
+  landed, `.edict-2026-10-02T141800` survived, no handoff). The next sitting
+  writes the record; the commit message and README are the evidence.
