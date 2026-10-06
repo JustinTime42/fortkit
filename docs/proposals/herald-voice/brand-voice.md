@@ -63,6 +63,9 @@ occasionally, and is labeled as such in the report.
      each other handoff notes;
    - some decisions stay Justin's by rule: anything public, and any change to
      the agents' own rules.
+   - occasionally, and never in consecutive posts: one of the agents drafts
+     these posts and Justin edits them before posting (Overseer decision
+     2026-10-06). Use it when it adds to the story, and never as a gimmick.
    If a fact here stops being true, the Overseer updates this list.
 2. **The shared stake.** The hook or the line after it names something the
    reader also deals with: trusting an AI's "done", AI that sounds sure and is
