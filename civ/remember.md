@@ -5352,3 +5352,41 @@ should name the seat if it matters who learned it.
   bytes. Silas found it with `cat -A`. And never nest a `<<'PYEOF'` heredoc
   inside another heredoc with the same delimiter: write such a patcher with
   the Write tool.
+
+- 2026-10-06 (sitting 64, Proofdelve's bar docket A-D): **THE OVERSEER STORE IS
+  `~/.local/state/civ-keep/` (civilization level, his choice), WITH
+  `proofdelve-keep/` READ-ONLY BESIDE IT.** Both are RO in every seat mask of all
+  four forts' libs (carved out of the rw `~/.local/state` grant). It holds the
+  Civ Keep's signing audit (intent + pin lines), `airlock-approvals.jsonl`, and
+  `legacy-approvals.jsonl` (the dated cutover: one host-written line). Greenlab's
+  isolation already hides it. Anything that must be "only his hand" goes there.
+- 2026-10-06: **A HASH-PINNED APPROVAL IS NOT SINGLE-USE.** After a run a seat
+  can rewrite the request back to its exact pre-run bytes (jq re-emits them
+  byte-identical), and the results/ file is seat-writable too. Consumption has
+  to be recorded where the seat cannot write, before executing. Found by the
+  replay harness case, not by reading.
+- 2026-10-06: **"PIN WHAT HE WAS SHOWN", NOT "PIN WHAT IS ON DISK AT THE
+  CLICK".** A page that sits open for hours over a seat-writable file must send
+  back the hash it displayed and refuse on mismatch (Ilva's blocker on the Civ
+  Keep airlock page). Same class, one level up: corroborate his NEWEST decision
+  in the audit, not "he once approved this sha" (Tova's A2).
+- 2026-10-06: **CODEX: A FOREGROUND COMMAND IS NOT CUT AT 30 s IN PROOFDELVE'S
+  FORGE MASK** (200 s sleep, 191 s quiet verifier both returned), and a detached
+  child is killed when its command returns. The "~30 s window" was prose with no
+  configuration behind it. Why the 09-22 quiet run was cut off is unexplained
+  (ForgeOs-9x3vj.1). Quiet mode prints NO `RESULT FAIL` line: a red run ends
+  `verify: step '<name>' FAILED (exit n). Its full output is kept at <path>`.
+- 2026-10-06: **A PROBE THAT REBUILDS A LAUNCHER'S POSTURE MUST COPY ITS WHOLE
+  `--add-dir` LIST.** My Forge arm omitted `$root/fort/events`, the verifier's
+  emit failed EROFS, and the seat honestly wrote NONE-SEEN over a green run.
+  Read the launcher's invocation line by line before building the probe.
+- 2026-10-06: **A CLAUDE CODE HOOK MATCHER: ANCHOR IT** (`^(Agent|Task)$`),
+  measured still gating Agent. Hooks bind under --dangerously-skip-permissions;
+  a hook that cannot execute does not block, so it fails open if its path goes.
+  Project `.claude/agents/` do not load under `--setting-sources ""`.
+- 2026-10-06: **DUMPING JSON BACK WITH json.dumps REFORMATS EVERY LINE AND
+  ESCAPES NON-ASCII.** Insert into a settings file as text, then json.loads to
+  validate.
+- 2026-10-06: **THE SUPERVISOR'S "DID NOTHING" IS NOW A COUNT** (`landings=N` in
+  last-run.outcome; 0 launches and 0 landings backs off), not "drained in under
+  20 s": the 10-05 empty drains took 20-28 s and ran ten times in a row.
