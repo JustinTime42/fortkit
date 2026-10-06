@@ -530,7 +530,9 @@ export function createCivKeep(options = {}) {
           },
         ],
         [
-          // THE PIN (ForgeOs-ubgx.4). The approvedSha goes into this audit, in
+          // THE PIN (ForgeOs-ubgx.4). approvedSha may be null (an Approve of a
+          // bead with no branch); that pin corroborates nothing, since the
+          // fleet needs a 40-hex sha equal to the stream's. The approvedSha goes into this audit, in
           // the Overseer store, as well as into the gate.approved payload: the
           // fleet lands a signed branch only when both name the same sha, so a
           // seat that can write the event stream cannot sign for him. Written
@@ -722,7 +724,12 @@ export function createCivKeep(options = {}) {
       return json(response, { error: "Already in flight" }, 409);
     inFlight.add(key);
     try {
-      const made = approvalLine(fort, id, { fileSystem, approvalsPath, now });
+      const made = approvalLine(fort, id, {
+        fileSystem,
+        approvalsPath,
+        now,
+        expectedSha: body.requestSha256,
+      });
       if (made.error) return json(response, { error: made.error }, made.status);
       fileSystem.mkdirSync(path.dirname(approvalsPath), {
         recursive: true,

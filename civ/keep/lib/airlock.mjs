@@ -66,6 +66,18 @@ function operations(fileSystem, fort) {
 // requiring approval, with no result, not yet approved in the store, never
 // consumed. A request whose operation needs no approval is not listed: there is
 // nothing for him to do.
+// The repo path as airlock.sh sees it: that reader matches on `git rev-parse
+// --show-toplevel`, which resolves symlinks, so the Keep writes the resolved
+// path too. A trailing slash or a symlinked registry entry would otherwise
+// fail closed and silently (Ilva, finding 3 on fortkit-h75z).
+function canonicalRepo(fileSystem, repo) {
+  try {
+    return fileSystem.realpathSync(repo);
+  } catch {
+    return repo;
+  }
+}
+
 export function pendingRequests(fort, { fileSystem, approvalsPath }) {
   const dir = path.join(fort.repo, "fort/airlock/requests");
   let names;
@@ -75,19 +87,23 @@ export function pendingRequests(fort, { fileSystem, approvalsPath }) {
     return [];
   }
   const ops = operations(fileSystem, fort);
+  const repo = canonicalRepo(fileSystem, fort.repo);
   const store = readLines(fileSystem, approvalsPath).filter(
-    (line) => line.repo === fort.repo,
+    (line) => line.repo === repo,
   );
   const out = [];
   for (const name of names.sort()) {
     if (!name.endsWith(".json")) continue;
     const id = name.slice(0, -5);
     if (!validRequestId(id)) continue;
+    // ONE READ: the bytes are hashed and parsed from the same buffer, so the
+    // hash the page shows is the hash of exactly what it displays.
     let request;
+    let requestSha256;
     try {
-      request = JSON.parse(
-        fileSystem.readFileSync(path.join(dir, name), "utf8"),
-      );
+      const bytes = fileSystem.readFileSync(path.join(dir, name));
+      requestSha256 = createHash("sha256").update(bytes).digest("hex");
+      request = JSON.parse(bytes.toString("utf8"));
     } catch {
       continue;
     }
@@ -112,15 +128,33 @@ export function pendingRequests(fort, { fileSystem, approvalsPath }) {
       requestedAt: request.requested_at ?? "",
       params: request.params ?? {},
       description: op.description ?? "",
+      repo,
+      requestSha256,
     });
   }
   return out;
 }
 
-// The store line for an approval of `id` as its file stands right now, or an
-// error naming why it cannot be approved. Pure apart from reads.
-export function approvalLine(fort, id, { fileSystem, approvalsPath, now }) {
+// The store line for an approval of `id`, or an error naming why it cannot be
+// approved. Pure apart from reads.
+// THE APPROVAL PINS WHAT HE WAS SHOWN, NOT WHAT IS ON DISK AT THE CLICK (Ilva,
+// the blocking finding on fortkit-h75z). The page can sit open for hours and
+// requests/ is seat-writable by design, so hashing the file at click time would
+// pin whatever a seat had written since. The page sends back the hash it
+// displayed; a file that no longer hashes to it is refused, and he sees the
+// new version on reload.
+export function approvalLine(
+  fort,
+  id,
+  { fileSystem, approvalsPath, now, expectedSha },
+) {
   if (!validRequestId(id)) return { error: "Invalid request id", status: 400 };
+  if (typeof expectedSha !== "string" || !/^[0-9a-f]{64}$/.test(expectedSha))
+    return {
+      error:
+        "The approval must name the request hash that was displayed (requestSha256)",
+      status: 400,
+    };
   const pending = pendingRequests(fort, { fileSystem, approvalsPath });
   const found = pending.find((item) => item.id === id);
   if (!found)
@@ -129,18 +163,21 @@ export function approvalLine(fort, id, { fileSystem, approvalsPath, now }) {
         "Not a pending airlock request that needs approval (already approved, ran, or not declared requires_approval)",
       status: 409,
     };
-  const bytes = fileSystem.readFileSync(
-    path.join(fort.repo, "fort/airlock/requests", `${id}.json`),
-  );
+  if (found.requestSha256 !== expectedSha)
+    return {
+      error:
+        "The request has CHANGED since it was displayed. Reload and read it again before approving.",
+      status: 409,
+    };
   return {
     request: found,
     line: {
       ts: new Date(now()).toISOString(),
       fort: fort.key,
-      repo: fort.repo,
+      repo: found.repo,
       id,
       operation: found.operation,
-      requestSha256: createHash("sha256").update(bytes).digest("hex"),
+      requestSha256: found.requestSha256,
       actor: "justin",
       via: "civ-keep",
     },

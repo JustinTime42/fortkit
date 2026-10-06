@@ -40,7 +40,8 @@
         <p>${escapeHtml(item.reason)}</p>
         <p class="meta">${escapeHtml(item.description)}</p>
         ${Object.keys(item.params).length ? `<pre>${escapeHtml(JSON.stringify(item.params, null, 2))}</pre>` : ''}
-        <button data-fort="${escapeHtml(item.fort)}" data-id="${escapeHtml(item.id)}">Approve</button>
+        <p class="meta">request sha256 ${escapeHtml(item.requestSha256.slice(0, 16))}… (Approve pins exactly this; an edit since loading is refused)</p>
+        <button data-fort="${escapeHtml(item.fort)}" data-id="${escapeHtml(item.id)}" data-sha="${escapeHtml(item.requestSha256)}">Approve</button>
         <output aria-live="polite"></output></section>`).join('');
     }
     el('list').addEventListener('click', async (event) => {
@@ -50,7 +51,7 @@
       const out = button.nextElementSibling;
       if (!token) { out.textContent = ' Enter the signing token.'; return; }
       button.disabled = true;
-      const response = await fetch('/api/airlock/approve', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ fort: button.dataset.fort, id: button.dataset.id }) });
+      const response = await fetch('/api/airlock/approve', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ fort: button.dataset.fort, id: button.dataset.id, requestSha256: button.dataset.sha }) });
       const body = await response.json().catch(() => ({}));
       if (response.status === 401) localStorage.removeItem(tokenKey); else if (response.ok) localStorage.setItem(tokenKey, token);
       out.textContent = response.ok ? ` Approved${body.announced ? '' : ' (stream announcement failed; the approval stands)'}. Run it on the host: fort/scripts/airlock.sh run ${button.dataset.id}` : ` ${body.error ?? response.statusText}`;

@@ -327,6 +327,7 @@ describe("civ keep overseer store", () => {
       waitingLabels: ["human"],
     };
     const calls: Call[] = [];
+    let pinAtFirstBd: boolean | null = null;
     const run = async (
       file: string,
       args: string[],
@@ -335,6 +336,13 @@ describe("civ keep overseer store", () => {
       if (file === "bd" && args[0] === "export")
         return `${JSON.stringify({ id: "proof-a1", title: "t", status: "open", labels: ["human"] })}\n`;
       calls.push({ file, args, cwd: options.cwd });
+      if (file === "bd" && pinAtFirstBd === null) {
+        let audit = "";
+        try {
+          audit = readFileSync(auditPath, "utf8");
+        } catch {}
+        pinAtFirstBd = audit.includes('"step":"pin"');
+      }
       if (file === "git") return `${"a".repeat(40)}\n`;
       return "";
     };
@@ -365,7 +373,21 @@ describe("civ keep overseer store", () => {
       });
       return { status: response.status, body: await response.json() };
     };
-    return { repo, store, auditPath, calls, base, approve };
+    const listed = async () =>
+      (await (await fetch(`${base}/api/airlock`)).json()) as {
+        id: string;
+        requestSha256: string;
+      }[];
+    return {
+      repo,
+      store,
+      auditPath,
+      calls,
+      base,
+      approve,
+      listed,
+      pinAtFirstBd: () => pinAtFirstBd,
+    };
   }
   const lines = (file: string) =>
     readFileSync(file, "utf8")
@@ -384,10 +406,15 @@ describe("civ keep overseer store", () => {
   });
 
   test("Approve writes one store line pinning the request's bytes, announces it, and cannot repeat", async () => {
-    const { repo, store, calls, approve, base } = await storeKeep();
+    const { repo, store, calls, approve, base, listed } = await storeKeep();
     const id = "20261006T090000-deploy-staging-1";
-    expect((await approve({ fort: "proof", id }, "wrong")).status).toBe(401);
-    const result = await approve({ fort: "proof", id });
+    const shown = (await listed())[0]?.requestSha256 ?? "";
+    expect(
+      (await approve({ fort: "proof", id, requestSha256: shown }, "wrong"))
+        .status,
+    ).toBe(401);
+    expect((await approve({ fort: "proof", id })).status).toBe(400);
+    const result = await approve({ fort: "proof", id, requestSha256: shown });
     expect(result.status).toBe(200);
     const [line] = lines(join(store, "airlock-approvals.jsonl"));
     const bytes = readFileSync(
@@ -410,19 +437,46 @@ describe("civ keep overseer store", () => {
     ).toEqual([
       `emit.sh airlock.approved ${id}: Overseer approves deploy-staging via the Civ Keep`,
     ]);
-    expect((await approve({ fort: "proof", id })).status).toBe(409);
+    expect(
+      (await approve({ fort: "proof", id, requestSha256: shown })).status,
+    ).toBe(409);
     expect(await (await fetch(`${base}/api/airlock`)).json()).toEqual([]);
     expect(
-      (await approve({ fort: "proof", id: "20261006T090001-feedback-scan-2" }))
-        .status,
+      (
+        await approve({
+          fort: "proof",
+          id: "20261006T090001-feedback-scan-2",
+          requestSha256: "f".repeat(64),
+        })
+      ).status,
     ).toBe(409);
     expect((await approve({ fort: "proof", id: "../../etc" })).status).toBe(
       400,
     );
   });
 
+  test("Approve refuses a request edited after it was displayed (Ilva, the blocking finding)", async () => {
+    const { repo, store, approve, listed } = await storeKeep();
+    const id = "20261006T090000-deploy-staging-1";
+    const shown = (await listed())[0]?.requestSha256 ?? "";
+    const file = join(repo, "fort/airlock/requests", `${id}.json`);
+    const edited = JSON.parse(readFileSync(file, "utf8"));
+    edited.params = { image: "something-else" };
+    writeFileSync(file, `${JSON.stringify(edited, null, 2)}\n`);
+    const result = await approve({ fort: "proof", id, requestSha256: shown });
+    expect(result.status).toBe(409);
+    expect(() =>
+      readFileSync(join(store, "airlock-approvals.jsonl")),
+    ).toThrow();
+    const fresh = (await listed())[0]?.requestSha256 ?? "";
+    expect(fresh).not.toBe(shown);
+    expect(
+      (await approve({ fort: "proof", id, requestSha256: fresh })).status,
+    ).toBe(200);
+  });
+
   test("a signing Approve pins the approvedSha in the audit, before any bd write", async () => {
-    const { auditPath, calls, base } = await storeKeep();
+    const { auditPath, calls, base, pinAtFirstBd } = await storeKeep();
     const response = await fetch(`${base}/api/sign`, {
       method: "POST",
       headers: {
@@ -442,5 +496,8 @@ describe("civ keep overseer store", () => {
     expect(calls.findIndex((call) => call.file === "bd")).toBeGreaterThan(
       calls.findIndex((call) => call.file === "git"),
     );
+    // The property itself (Ilva, finding 2): the pin line was already in the
+    // audit at the moment of the first bd call.
+    expect(pinAtFirstBd()).toBe(true);
   });
 });
