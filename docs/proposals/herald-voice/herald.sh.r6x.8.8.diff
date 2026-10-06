@@ -1,6 +1,15 @@
 --- civ/scripts/herald.sh	2026-09-01 20:13:27.551729501 -0800
-+++ docs/proposals/herald-voice/herald.sh.proposed	2026-10-06 11:14:56.769324397 -0800
-@@ -69,10 +69,13 @@
++++ docs/proposals/herald-voice/herald.sh.proposed	2026-10-06 11:18:16.639870801 -0800
+@@ -30,6 +30,8 @@
+ #   next rung. 66 = the VAULT is unwritable (pre-flight refusal, or the crash
+ #   stub itself could not land) — an incident is emitted and the caller must
+ #   NOT ladder-retry: the vault is the problem, not the model (fortkit-izz).
++#   66 also = brand-voice.md is writable inside the mask, or the kernel check
++#   could not prove otherwise (fortkit-r6x.8.8); same rule, no ladder-retry.
+ #   A missing report is never a quiet morning (fortkit-ugr.6: an
+ #   empty morning must mean the record was empty, never that he could not
+ #   see). Any other code is claude's own.
+@@ -69,10 +71,13 @@
  rm -f "$vault/reports/.preflight-$$" "$vault/drafts/.preflight-$$"
  
  # The brand-voice document is "supplied by the launcher" (his law, sect 2.2).
@@ -17,7 +26,7 @@
  else
    voice_line="NO brand-voice document exists yet (the launcher looked for $voice). Your law's section 6 defines the voice alone. Note the absence in the report's Gaps section."
  fi
-@@ -84,7 +87,7 @@
+@@ -84,7 +89,7 @@
  
  Read first: $root/civ/law/herald.md (your law: rubric, exclusions, report schema) and $root/civ/seats/herald.md (your seat). $voice_line
  
@@ -26,7 +35,7 @@
  
  CARRIED CORRECTION, ONE REPORT ONLY (fortkit-dqu5.4, added 2026-09-01): state in your next report, under Gaps and anomalies, that the two fortkit-9sa alarms you raised - the three Manyhalls constitution diffs on 2026-08-14, and bae54a8 plus 7603af6 on 2026-09-01 - were BOTH FALSE, and that the watch was broken when you raised them. Every announcing event existed and the digest had sliced it away before you saw it. You were right to escalate both times: your law obliges you to surface the unconfirmed case within a day and you did so both times. Your law's section 2 carries the same correction as durable record. This paragraph retires once it has appeared in one report (fortkit-dqu5.9).
  
-@@ -101,8 +104,26 @@
+@@ -101,8 +106,36 @@
  # turns read-only. Re-bound writable HERE, after build_mask: nothing masked
  # lies beneath it, so the ordering invariant (ForgeOs-01l) is not in play.
  mask+=(--bind "$vault" "$vault")
@@ -40,13 +49,23 @@
 +# Prove the bind at the kernel, with no model and no permission profile in the
 +# path (Warden finding 1 on r6x.8.8: a model-run probe is refused by the
 +# profile first and passes whether or not the bind exists). A zero-byte append
-+# changes no content even if the bind is missing. Success here means the doc is
-+# writable inside the mask: refuse the morning.
-+# shellcheck disable=SC2016  # $1 is meant for the inner sh, not this shell
-+if [ -f "$voice" ] && bwrap "${mask[@]}" -- sh -c ': >> "$1"' _ "$voice" 2>/dev/null; then
-+  "$civemit" incident "Herald morning REFUSED at pre-flight: brand-voice.md is writable inside the mask ($voice); the read-only bind did not hold. No session launched." \
++# changes no content even if the bind is missing. It FAILS CLOSED (Warden r2
++# finding 1): only an append refused with "Read-only file system" counts as the
++# bind holding. Success, or any other error (EACCES from a 0444 file, bwrap or
++# sh failing), refuses the morning, since none of them proves the bind.
++bind_ok=1
++if [ -f "$voice" ]; then
++  bind_ok=0
++  # shellcheck disable=SC2016  # $1 is meant for the inner sh, not this shell
++  if ! bind_err="$(bwrap "${mask[@]}" -- sh -c ': >> "$1"' _ "$voice" 2>&1 >/dev/null)" \
++     && grep -q 'Read-only file system' <<<"$bind_err"; then
++    bind_ok=1
++  fi
++fi
++if [ "$bind_ok" -ne 1 ]; then
++  "$civemit" incident "Herald morning REFUSED at pre-flight: could not prove brand-voice.md read-only inside the mask ($voice). No session launched." \
 +    -a halric -s herald -p "{\"exit\":66,\"voice\":\"$voice\"}"
-+  echo "--- herald.sh: PRE-FLIGHT FAILED: brand-voice.md writable inside the mask. Exit 66."
++  echo "--- herald.sh: PRE-FLIGHT FAILED: brand-voice.md not proven read-only inside the mask. Exit 66."
 +  exit 66
 +fi
 +

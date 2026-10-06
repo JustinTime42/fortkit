@@ -30,6 +30,8 @@
 #   next rung. 66 = the VAULT is unwritable (pre-flight refusal, or the crash
 #   stub itself could not land) — an incident is emitted and the caller must
 #   NOT ladder-retry: the vault is the problem, not the model (fortkit-izz).
+#   66 also = brand-voice.md is writable inside the mask, or the kernel check
+#   could not prove otherwise (fortkit-r6x.8.8); same rule, no ladder-retry.
 #   A missing report is never a quiet morning (fortkit-ugr.6: an
 #   empty morning must mean the record was empty, never that he could not
 #   see). Any other code is claude's own.
@@ -114,13 +116,23 @@ mask_env claude
 # Prove the bind at the kernel, with no model and no permission profile in the
 # path (Warden finding 1 on r6x.8.8: a model-run probe is refused by the
 # profile first and passes whether or not the bind exists). A zero-byte append
-# changes no content even if the bind is missing. Success here means the doc is
-# writable inside the mask: refuse the morning.
-# shellcheck disable=SC2016  # $1 is meant for the inner sh, not this shell
-if [ -f "$voice" ] && bwrap "${mask[@]}" -- sh -c ': >> "$1"' _ "$voice" 2>/dev/null; then
-  "$civemit" incident "Herald morning REFUSED at pre-flight: brand-voice.md is writable inside the mask ($voice); the read-only bind did not hold. No session launched." \
+# changes no content even if the bind is missing. It FAILS CLOSED (Warden r2
+# finding 1): only an append refused with "Read-only file system" counts as the
+# bind holding. Success, or any other error (EACCES from a 0444 file, bwrap or
+# sh failing), refuses the morning, since none of them proves the bind.
+bind_ok=1
+if [ -f "$voice" ]; then
+  bind_ok=0
+  # shellcheck disable=SC2016  # $1 is meant for the inner sh, not this shell
+  if ! bind_err="$(bwrap "${mask[@]}" -- sh -c ': >> "$1"' _ "$voice" 2>&1 >/dev/null)" \
+     && grep -q 'Read-only file system' <<<"$bind_err"; then
+    bind_ok=1
+  fi
+fi
+if [ "$bind_ok" -ne 1 ]; then
+  "$civemit" incident "Herald morning REFUSED at pre-flight: could not prove brand-voice.md read-only inside the mask ($voice). No session launched." \
     -a halric -s herald -p "{\"exit\":66,\"voice\":\"$voice\"}"
-  echo "--- herald.sh: PRE-FLIGHT FAILED: brand-voice.md writable inside the mask. Exit 66."
+  echo "--- herald.sh: PRE-FLIGHT FAILED: brand-voice.md not proven read-only inside the mask. Exit 66."
   exit 66
 fi
 

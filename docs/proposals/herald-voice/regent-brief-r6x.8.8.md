@@ -18,7 +18,7 @@ prose only (Warden finding 1 on 8.2).
 ## The change
 
 Launcher: `docs/proposals/herald-voice/herald.sh.proposed`, diff
-`herald.sh.r6x.8.8.diff` (three hunks):
+`herald.sh.r6x.8.8.diff` (four hunks; the first is the exit-code header):
 
 1. Comment and `voice_line`: the doc is approved; the prompt says it is
    read-only and never edited.
@@ -48,6 +48,12 @@ pre-flight is the proof.
     refuse): the check is not blind;
   - with it, the check is blocked (launcher proceeds), and a write elsewhere in
     the vault still succeeds; the doc's content was unchanged.
+- Round 3 (Warden r2 APPROVE-WITH-FINDINGS, both findings applied): the check
+  now FAILS CLOSED, counting only an append refused with "Read-only file
+  system" as the bind holding, and the exit-code header names the new cause of
+  66. Re-measured with the real mask lib, three arms: no ro-bind at 0644,
+  REFUSE; no ro-bind at 0444 (the Warden's two-fault case, EACCES), REFUSE;
+  ro-bind at 0644, proceed. Doc content unchanged.
 - NOT measured: the installed launcher on the live vault. That is step 4.
 
 ## Baseline
@@ -59,7 +65,8 @@ and compare against that, not against the repo file (Warden finding 4).
 
 ## Sitting steps
 
-1. Read both diffs. Warden round 2 verdict is on `fortkit-r6x.8.8`.
+1. Read both diffs. Warden verdicts (round 1 REQUEST-CHANGES, round 2
+   APPROVE-WITH-FINDINGS, findings applied in round 3) are on `fortkit-r6x.8.8`.
 2. Record the vault doc's sha256.
 3. Install: copy `herald.sh.proposed` to `civ/scripts/herald.sh` and
    `herald-settings.json.proposed` to `civ/profiles/herald-settings.json`.
