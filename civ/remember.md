@@ -5325,3 +5325,30 @@ should name the seat if it matters who learned it.
   LAUNCHER'S EDICT MARKER** (the 2026-10-02/03 Civ Keep sitting: commit 9c51722
   landed, `.edict-2026-10-02T141800` survived, no handoff). The next sitting
   writes the record; the commit message and README are the evidence.
+
+- 2026-10-05 (sitting 63, Scionhall docket: 7cl.66, .106, .87, .102): **`pgrep`
+  FROM ONE CODEX COMMAND CANNOT SEE A PROCESS ANOTHER COMMAND STARTED.** Each
+  codex command runs in its own pid namespace (`codex-linux-sandbox` is pid 1
+  in the seat's own pgrep output). A Forge read an empty pgrep as "the command
+  window killed the verifier", and I adopted that, recorded it on the bead, and
+  put a design question to the Overseer before measuring. Measured afterwards
+  (codex exec, gpt-5.6-terra, workspace-write): a 75 s foreground `sleep` and a
+  72 s, 5,000-line command both complete; `nohup x &` and `setsid nohup x &`
+  are both reaped when their command returns. The real cause was in the
+  stream: every never-paired Forge verify.run had its session.end first.
+  **Codex reaps detached children, so "detach it" is never the fix for a
+  run that must outlive a command; keeping the session alive is.**
+- 2026-10-05: **bin/regent does not announce in Greenlab forts**; a Scionhall
+  sitting emits its own `edict.begun`/`edict.ended` there under calder. That is
+  not the duplication the launcher's instruction forbids.
+- 2026-10-05: **bd in a masked seat needs only a writable dolt GLOBAL CONFIG
+  dir.** `DOLT_ROOT_PATH=<dir>` is enough (dolt writes only
+  `.dolt/config_global.json`), and the database is still the `-C` one. Under
+  codex, an env var must also go through `-c shell_environment_policy.set.X=...`
+  because this host's policy is `inherit = "core"`. Scionhall now points it at
+  the worktree's own git dir, which needs no new grant.
+- 2026-10-05: **A Python patcher that writes shell text must spell `\n` as
+  `\\n`** inside its string literals, or the shell file gets literal newline
+  bytes. Silas found it with `cat -A`. And never nest a `<<'PYEOF'` heredoc
+  inside another heredoc with the same delimiter: write such a patcher with
+  the Write tool.
