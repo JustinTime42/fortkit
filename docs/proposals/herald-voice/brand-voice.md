@@ -50,7 +50,20 @@ occasionally, and is labeled as such in the report.
    Justin is doing: he builds software with a small team of AI agents, roughly
    one that plans, one that writes code, one that reviews, and he makes the
    final calls. Vary the wording every time; it is the series' identity, and a
-   verbatim repeat goes stale.
+   verbatim repeat goes stale. Build it from these facts (Overseer request
+   2026-10-06: the setup should show more of the architecture), choosing the
+   two or three that matter to the story, in one or two sentences:
+   - four software projects, each run by a crew of AI agents;
+   - distinct jobs: one plans, one writes code, one reviews and can block a
+     merge, one researches the web;
+   - the reviewer runs on a different AI company's model than the coder;
+   - each agent is sandboxed to only the access its job needs (the reviewer
+     cannot edit code; the researcher has no shell);
+   - they work unattended, often overnight, from a shared task list, and leave
+     each other handoff notes;
+   - some decisions stay Justin's by rule: anything public, and any change to
+     the agents' own rules.
+   If a fact here stops being true, the Overseer updates this list.
 2. **The shared stake.** The hook or the line after it names something the
    reader also deals with: trusting an AI's "done", AI that sounds sure and is
    wrong, approvals that never get asked, automation that tells a confident
@@ -193,12 +206,13 @@ Report the result of each line for every draft:
 The 2026-08-25 draft "the neighbour test always passes" is 4,500 characters
 about ignore-file patterns. A first rewrite cut it to 960 and kept it about
 the plumbing; the Overseer found that version too granular for a cold reader.
-This is the version that follows section 2 (877 characters). The one
-mechanism is .json against .jsonl; the stake is trusting an AI's "I checked".
+This version follows section 2 (about 1,330 characters): a fuller setup line,
+one mechanism (.json against .jsonl), the shared stake (trusting an AI's "I
+checked"), and a fix the reader can act on.
 
 > Everyone is figuring out how much to trust AI agents right now. This is the moment that recalibrated me.
 >
-> I build software with a small team of AI agents. One writes code, one reviews it, and I make the calls.
+> I run my software projects with a crew of AI agents. One plans the work, one writes the code, and a reviewer built on a different company's AI checks every change and can block it. Some calls stay mine by rule.
 >
 > One of them told me a file of user feedback, personal data included, was safe from ending up in our code history online. It even showed me the rule that protected it.
 >
@@ -206,11 +220,17 @@ mechanism is .json against .jsonl; the stake is trusting an AI's "I checked".
 >
 > The rule covered files ending in .json. The file ended in .jsonl.
 >
-> The agent had checked, and the check passed. It just checked a file next to the real one. A reviewer agent caught it before anything shipped.
+> The agent had checked, and the check passed. It just checked a file next to the real one. The reviewer caught it before anything shipped.
 >
-> People do this all the time. AI does it faster, and sounds completely sure of itself.
+> The fix was almost boring. Nobody reasoned about the rule again. They asked git directly, one real file at a time: would you ignore this exact file?
 >
-> When a decision rests on "I checked," I now ask for proof on the exact thing. A lookalike doesn't count.
+> Three habits I kept:
+>
+> Ask for proof on the real thing. "Run it on the actual file and show me the output" beats any explanation of why it's fine.
+>
+> Raise the bar when you can't undo the decision. Personal data, deletes, deploys: proof on the exact file, every time.
+>
+> Get a second checker. The misunderstanding behind a claim also picks the test, so the author is the worst one to verify it.
 >
 > How do you decide when an AI's "I checked" is good enough?
 
