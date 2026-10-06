@@ -1,8 +1,7 @@
 # Proposed amendment: Herald law, "Postable" and declared stakes
 
 Bead: fortkit-r6x.8.2 (gate-1). Proposed by the Mayor 2026-10-06.
-Target: `civ/law/herald.md` sections 3, 4, 5, 6, and `civ/seats/herald.md`
-Laurels. Law section 10: amends "like the charter", so Warden review, then
+Target: `civ/law/herald.md` sections 3, 4, 5, 6, 7. Law section 10: amends "like the charter", so Warden review, then
 the Overseer applies or directs it applied.
 
 ## The need (law section 10 asks for one)
@@ -26,13 +25,15 @@ part of what gets posted. Frontmatter gains `invented:` (section 5) and
 
 **Section 4, add bar 5:**
 
-> 5. **Postable.** The post (excluding any long version) is at most 1,500
+> 5. **Postable.** The post (excluding any long version) is at most 1,800
 >    characters with a hook of at most 140; no paragraph exceeds three
 >    sentences; it ends on a question a practitioner could answer about their
 >    own work; zero em-dashes; zero contrastive reframes; none of the banned
 >    phrases in the brand-voice document. Thresholds other than these come
 >    from the brand-voice document. A story that clears bars 1-4 and fails 5
 >    is rewritten until it passes, or spiked with the reason in the report.
+>    The Herald never edits the brand-voice document; changes to it are
+>    Overseer decisions, like any other move of a bar.
 
 Amend the opening line "only if it clears all four bars" to "all five bars".
 
@@ -56,20 +57,22 @@ opinion...") with:
 
 **Section 6, voice constraints:** change "the 'that's not X, that's Y' reframe
 at most once per piece and preferably zero" to "zero contrastive reframes
-('not X, it's Y' in any wording); LinkedIn demotes the construction as of May
-2026".
+('not X, it's Y' in any wording)". (Reason clause dropped on Warden finding 2:
+the rule is the Overseer's decision and needs no external claim in law.)
 
 **Volume (new paragraph at the end of section 7):** "Until the weekly arc mode
 exists (fortkit-r6x.8.6), at most one draft per run, and only a story that
 would rank in the week's top three."
 
-**`civ/seats/herald.md`, Laurels:** replace "Engagement metrics on published
-posts belong to the Overseer's judgment, not this file, until a real need says
-otherwise." with "Engagement metrics on published posts are an input to the
-Herald from fortkit-r6x.8.5 onward; they inform his judgment and never move a
-rubric bar, which only the Overseer moves."
+**`civ/seats/herald.md`, Laurels:** moved to fortkit-r6x.8.5 (Warden finding
+5), where it lands together with a section 2 input entry and an untrusted-input
+note for anything ingested from LinkedIn.
 
 ## Out of scope here
+
+The launcher prompt (`civ/scripts/herald.sh:87`, "four bars") and a
+read-only bind of brand-voice.md are kernel read-only surfaces, filed
+separately for an edict (Warden findings 1 and 4).
 
 The lint script (r6x.8.3), the long-version format details (r6x.8.4), and the
 arc mode's own law section (r6x.8.6) amend separately.

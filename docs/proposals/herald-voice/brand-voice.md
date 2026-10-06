@@ -1,10 +1,10 @@
 # Brand voice: the Herald writing as Justin
 
-Status: DRAFT for Overseer sign-off (fortkit-r6x.8.1, gate-3). Drafted by the
-Mayor 2026-10-06. On approval, the Overseer copies this file to
+Status: APPROVED by the Overseer 2026-10-06 (fortkit-r6x.8.1, gate-3). Drafted by the
+Mayor 2026-10-06. The live copy is
 `~/Documents/Obsidian Vault/herald/brand-voice.md`, the path
-`civ/scripts/herald.sh` already reads. Until then the Herald runs without it,
-as it has for 54 mornings.
+`civ/scripts/herald.sh` reads; this repo file is its reviewed source. The
+Herald never edits it; changes are Overseer decisions.
 
 Sources: the Overseer's own post analysis in `Obsidian Vault/Sifa/brand-voice/`
 (`justin-deep-dive.md`, `brand-voice-analysis.md`, `playbook-quick-reference.md`,
@@ -72,7 +72,7 @@ Limits:
 
 | Thing | Target | Ceiling |
 |---|---|---|
-| Whole post | 800-1,300 characters | 1,500 |
+| Whole post | 800-1,300 characters | 1,800 |
 | Short form (one sharp beat) | 250-700 characters | |
 | Hook (above the mobile fold) | under 140 characters, ideally under 10 words | 140 |
 | Paragraph | 1-3 short sentences | 3 sentences |
@@ -137,7 +137,7 @@ agents?", two questions stacked.
 
 Report the result of each line for every draft:
 
-1. Body under 1,500 characters; hook under 140.
+1. Body under 1,800 characters (aim for 800-1,300); hook under 140.
 2. First two lines carry a number, a result, or a named failure.
 3. A stake, with its source in the record or listed under `invented:`.
 4. One lesson sentence, quotable on its own.

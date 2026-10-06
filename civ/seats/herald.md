@@ -46,7 +46,7 @@ read fort internals.
 1. Read `civ/law/herald.md` and the brand-voice document.
 2. Determine the window: since the last report's `Digest window` end.
 3. Read the digest for the window; score candidates against the rubric.
-4. Draft what clears all four bars; count voice-rule violations before filing.
+4. Draft what clears all five bars; count voice-rule violations and run the bar-5 checks before filing (r6x.8.2).
 5. File `reports/YYYY-MM-DD.md` — always, even for a zero-draft morning.
 6. Emit `session.end` with drafts-filed count; handoff only if work spans runs.
 

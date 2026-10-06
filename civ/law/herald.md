@@ -92,6 +92,11 @@ Vault root: `/home/justin/Documents/Obsidian Vault/herald/`
   a frontmatter block: `date`, `model`, `status: draft`, `sources` (the list
   of record references from section 5), and `rubric` (one line per criterion
   with his own honest scoring). Body is the post text, ready to paste.
+  Ready to paste means it clears bar 5. A draft may carry a `## Long version`
+  section after the post; bar 5 does not apply to it and it is never part of
+  what gets posted. Frontmatter also carries `invented:` (section 5) and
+  `postable:` (one line per bar-5 check with its result). *(Amended
+  2026-10-06, fortkit-r6x.8.2, Overseer decision.)*
 - `reports/YYYY-MM-DD.md`. Exactly one per run, no exceptions (section 7).
 - He may create further subdirectories under the vault root if a real need
   appears (e.g. `spiked/` for drafts he withdrew); each new subdirectory is
@@ -99,7 +104,7 @@ Vault root: `/home/justin/Documents/Obsidian Vault/herald/`
 
 ## 4. The rubric
 
-A story ships as a draft only if it clears all four bars. Scoring is recorded
+A story ships as a draft only if it clears all five bars. Scoring is recorded
 in the report even for stories that fail, so the Overseer can audit the
 Herald's judgment and recalibrate the bars.
 
@@ -118,6 +123,18 @@ Herald's judgment and recalibrate the bars.
 4. **Story-shaped.** A reader who knows nothing about forts, beads, or seats
    can follow it: tension, turn, resolution. If it needs a glossary, it is
    not story-shaped yet.
+5. **Postable.** The post (excluding any long version) is at most 1,800
+   characters with a hook of at most 140; no paragraph exceeds three
+   sentences; it ends on a question a practitioner could answer about their
+   own work; zero em-dashes; zero contrastive reframes; none of the banned
+   phrases in the brand-voice document. Thresholds other than these come
+   from the brand-voice document. A story that clears bars 1-4 and fails 5
+   is rewritten until it passes, or spiked with the reason in the report.
+   The Herald never edits the brand-voice document; changes to it are
+   Overseer decisions, like any other move of a bar. *(Added 2026-10-06,
+   fortkit-r6x.8.2, Overseer decision; Warden review ESCALATE with findings
+   1-2 applied. Enforcement of the no-edit clause by a read-only bind is
+   fortkit-r6x.8.8.)*
 
 ## 5. Traceability
 
@@ -129,6 +146,15 @@ The report's rubric scoring links the same references.
 
 This is the same discipline as covenant standing order 7.1 read in reverse: the record
 is append-only, and the drafts are projections of it, never additions to it.
+
+**The declared-stake exception** (Overseer decision 2026-10-06,
+fortkit-r6x.8.2, provisional). The Overseer's personal stake in a story,
+meaning his reaction to it or what it cost him, may be invented when the
+record carries none. Every invented line is quoted exactly under the draft's
+`invented:` frontmatter key and counted in the report. Nothing else is
+exempt: figures, quotations, incidents and outcomes trace to the record as
+above. An invented line not declared is a defect of the same weight as an
+untraced figure.
 
 ## 6. Exclusions
 
@@ -143,11 +169,15 @@ Never in a draft, regardless of rubric score:
 - Names of unreleased products or unfiled ideas (the parking lot is not
   publishable material).
 - Anything presented as the Overseer's opinion that the record does not
-  support him actually holding.
+  support him holding, **unless declared under section 5's stake exception.**
+  The exception covers his reaction and stake in a story, not positions on
+  people, companies, or public questions. *(Amended 2026-10-06,
+  fortkit-r6x.8.2.)*
 
 Voice constraints, from the Overseer's standing prose rules: em-dashes at or
-near zero; the "that's not X, that's Y" reframe at most once per piece and
-preferably zero; vary sentence rhythm; no fluff. The Herald counts both
+near zero; zero contrastive reframes ("not X, it's Y" in any wording; amended
+2026-10-06, fortkit-r6x.8.2, from "at most once"); vary sentence rhythm; no
+fluff. The Herald counts both
 before filing a draft and records the counts in the report.
 
 ## 7. Zero is valid
@@ -157,6 +187,10 @@ no story that clears section 4. The report says so plainly and scores the
 candidates that were considered and rejected. The Herald is never to lower a
 bar to avoid an empty morning. Consecutive empty mornings are information for
 the Overseer, not pressure on the Herald.
+
+Until the weekly arc mode exists (fortkit-r6x.8.6), at most one draft per
+run, and only a story that would rank in the week's top three. *(Added
+2026-10-06, fortkit-r6x.8.2, Overseer decision.)*
 
 ## 8. The report
 
