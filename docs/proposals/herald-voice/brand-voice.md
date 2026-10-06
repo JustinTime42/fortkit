@@ -28,12 +28,45 @@ Adjectives that fit: direct, plainspoken, fragmentary, dryly indignant,
 self-deprecating after a position is staked (never as a hedge), occasionally
 warm.
 
-## 2. Who is reading
+## 2. Who is reading: the cold reader
 
-Developers and engineering leads, many of them building with AI agents, plus
-Justin's existing network (developers, job seekers, parents, Alaska). Assume
-the reader knows what an AI coding agent is and knows nothing about forts,
-seats, beads or this civilization.
+(Revised 2026-10-06 by Overseer decision, after reading the first rewrites:
+they were postable in form and too granular to apply.)
+
+Someone scrolling LinkedIn who has never seen a previous post and knows
+nothing about this project. Justin's network: developers, engineering leads,
+job seekers, parents, Alaska. Most of them use AI at work. Few of them run
+agent systems.
+
+What they share with Justin is **the question of the moment: how much to
+trust, check and hand off to AI.** That is the series' real subject. Every
+story from the record is evidence about it, and no post is about the plumbing
+for its own sake. A deeper technical post for agent builders is allowed
+occasionally, and is labeled as such in the report.
+
+**The cold-reader rules:**
+
+1. **The setup line.** Within the first four lines, one sentence says what
+   Justin is doing: he builds software with a small team of AI agents, roughly
+   one that plans, one that writes code, one that reviews, and he makes the
+   final calls. Vary the wording every time; it is the series' identity, and a
+   verbatim repeat goes stale.
+2. **The shared stake.** The hook or the line after it names something the
+   reader also deals with: trusting an AI's "done", AI that sounds sure and is
+   wrong, approvals that never get asked, automation that tells a confident
+   wrong story. If the post's question only matters to someone running this
+   exact system, it fails.
+3. **One mechanism.** At most one technical detail, the one that makes the
+   story click (.json against .jsonl, a 30-second clock). Explain it in a plain
+   clause. Cut every second-order detail, however good.
+4. **The lesson for everyone.** State the lesson so it applies to someone
+   delegating work to AI, or to people, with no agent system of their own.
+5. **The cold test.** Before filing, reread the post as someone who saw none of
+   the previous ones. Any line that needs an earlier post or the record to make
+   sense gets rewritten or cut.
+6. **Some stories do not travel.** If a story cannot pass rules 2 and 4, it is
+   not a post for this audience. Spike it with the reason, or keep it for the
+   occasional builders' deep cut.
 
 ## 3. The stake rule
 
@@ -60,9 +93,12 @@ technical walkthroughs without one. Every post carries one.
 
 Every post follows this spine, compressed:
 
-1. **Hook (line 1-2):** a concrete datum or scene with a cost in it. A number,
-   a duration, a thing that broke. No setup, no context.
-2. **What broke:** the pain, in two or three short paragraphs.
+1. **Hook (line 1-2):** a concrete scene or claim the cold reader recognizes,
+   with a cost in it. Either the broad question ("Everyone is figuring out how
+   much to trust AI agents.") or the moment itself ("My AI agent told me a file
+   was safe.").
+2. **Setup and what broke:** the setup line (section 2), then the pain in two
+   or three short paragraphs, with one mechanism at most.
 3. **The turn:** what was actually true. One beat, often one line.
 4. **The lesson:** one sentence a reader could repeat to a colleague.
 5. **The close:** a question that asks the reader to reveal something specific
@@ -85,9 +121,9 @@ the two-lengths bead), not into the post.
 
 ## 5. Translating the civilization
 
-One plain line may frame the setup when the story needs it, for example: "I
-run my side projects with a crew of AI agents. One plans, one writes code, one
-reviews, and some changes need my signature." Then translate everything:
+The setup line (section 2, rule 1) frames every post, for example: "I build
+software with a small team of AI agents. One plans, one writes code, one
+reviews, and I make the final calls." Then translate everything:
 
 | Record says | Post says |
 |---|---|
@@ -146,32 +182,37 @@ Report the result of each line for every draft:
 7. Closing question meets section 6.
 8. Zero em-dashes, zero contrastive reframes, zero section-7 phrases.
 9. Read aloud, it sounds like Justin telling a peer, not a postmortem.
+10. A varied setup line within the first four lines (section 2, rule 1).
+11. The hook or the line after it names a stake the cold reader shares.
+12. At most one technical mechanism, explained in a plain clause.
+13. The lesson applies to someone with no agent system of their own.
+14. Cold test passed: no line needs an earlier post or the record.
 
 ## 9. A worked example
 
-The 2026-09-24 draft "the window was a clock" is 2,039 characters of good
-material. The same story to this standard (about 750 characters):
+The 2026-08-25 draft "the neighbour test always passes" is 4,500 characters
+about ignore-file patterns. A first rewrite cut it to 960 and kept it about
+the plumbing; the Overseer found that version too granular for a cold reader.
+This is the version that follows section 2 (877 characters). The one
+mechanism is .json against .jsonl; the stake is trusting an AI's "I checked".
 
-> My AI agents spent a week fighting a limit they had named wrong.
+> Everyone is figuring out how much to trust AI agents right now. This is the moment that recalibrated me.
 >
-> The test run kept getting cut off halfway. Every agent's notes blamed "the
-> output window." Too much text.
+> I build software with a small team of AI agents. One writes code, one reviews it, and I make the calls.
 >
-> So they built a quiet mode. 6,329 lines of output became 47. Nothing lost.
+> One of them told me a file of user feedback, personal data included, was safe from ending up in our code history online. It even showed me the rule that protected it.
 >
-> The next run got cut off at step 6 of 36.
+> So I decided not to scrub the data.
 >
-> It had printed six lines.
+> The rule covered files ending in .json. The file ended in .jsonl.
 >
-> Six lines overflow nothing. The sandbox stops watching after 30 seconds, and
-> the full run takes about 150. The limit is a clock.
+> The agent had checked, and the check passed. It just checked a file next to the real one. A reviewer agent caught it before anything shipped.
 >
-> Somebody named it before anyone timed it, and the name picked the fix.
+> People do this all the time. AI does it faster, and sounds completely sure of itself.
 >
-> Before you fix a limit, find out what unit it's in. One run that's tiny on
-> one axis and huge on the other will tell you.
+> When a decision rests on "I checked," I now ask for proof on the exact thing. A lookalike doesn't count.
 >
-> What limit in your system is still named after a guess?
+> How do you decide when an AI's "I checked" is good enough?
 
 ## 10. Overseer decisions (2026-10-06)
 
