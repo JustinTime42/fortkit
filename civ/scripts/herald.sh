@@ -30,6 +30,8 @@
 #   next rung. 66 = the VAULT is unwritable (pre-flight refusal, or the crash
 #   stub itself could not land) — an incident is emitted and the caller must
 #   NOT ladder-retry: the vault is the problem, not the model (fortkit-izz).
+#   66 also = brand-voice.md is writable inside the mask, or the kernel check
+#   could not prove otherwise (fortkit-r6x.8.8); same rule, no ladder-retry.
 #   A missing report is never a quiet morning (fortkit-ugr.6: an
 #   empty morning must mean the record was empty, never that he could not
 #   see). Any other code is claude's own.
@@ -69,10 +71,13 @@ fi
 rm -f "$vault/reports/.preflight-$$" "$vault/drafts/.preflight-$$"
 
 # The brand-voice document is "supplied by the launcher" (his law, sect 2.2).
-# None exists yet; absence is a fact he reports under Gaps, never a failure —
-# his law's section 6 defines the voice alone until the Overseer writes one.
+# The Overseer approved it 2026-10-06 (fortkit-r6x.8.1). Absence is still a
+# fact he reports under Gaps, never a failure. Bar 5 draws thresholds from it
+# and his law forbids him to edit it; the mask enforces that below with a
+# read-only bind of this one file, proved by a kernel check before launch
+# (fortkit-r6x.8.8, Warden findings on 8.2 and 8.8).
 if [ -f "$voice" ]; then
-  voice_line="The brand-voice document is at: $voice. Read it. Where it conflicts with your law's section 6, section 6 wins and you note the conflict in the report."
+  voice_line="The brand-voice document is at: $voice. Read it. It is read-only to you and you never edit it. Where it conflicts with your law's section 6, section 6 wins and you note the conflict in the report."
 else
   voice_line="NO brand-voice document exists yet (the launcher looked for $voice). Your law's section 6 defines the voice alone. Note the absence in the report's Gaps section."
 fi
@@ -84,7 +89,7 @@ else
 
 Read first: $root/civ/law/herald.md (your law: rubric, exclusions, report schema) and $root/civ/seats/herald.md (your seat). $voice_line
 
-THE MORNING: 1) Determine the window — read the newest date-named report ($vault/reports/<YYYY-MM-DD>.md; ignore any file not matching that pattern) and take its 'Digest window' end as your --since; if no report exists, use the last 24 hours. 2) Read the digest: node $root/src/cli.ts digest --since <since> --json (run from $root). The digest is your ONLY window onto the forts; you never read fort internals, and a fact you want that is not in the digest is a gap to record, not a thing to go find. 3) Check each fort's 'present' flag in the digest JSON: any fort with present:false, or any source that looks malformed, goes in the report's Gaps and anomalies section BY NAME — an empty morning must mean the record was empty, never that you could not see (fortkit-ugr.6). Check each fort's constitutionDiffs: the digest has ALREADY correlated every diff against the complete event feed, so read the verdict and never re-derive it - announced means the amendment named its bead and emitted its event, and needs no report; unannounced is the ALARM and goes in Gaps and anomalies BY NAME and is repeated under For the Overseer; indeterminate means the digest could not run the join and is a GAP, recorded in Gaps and anomalies with the cause the digest gives and NOT escalated under For the Overseer unless it persists across runs. An entry whose beadRefs is empty is flagged as before. Do NOT correlate against the events feed yourself: it is capped, the announcement is usually older than the cap, and reading a truncated feed as an absence is the defect this watch spent three weeks failing on (fortkit-9sa, the cycle-7 prose-gate watch; fortkit-dqu5 moved the join into the digest 2026-09-01; it applies on zero-draft mornings too). 4) Score candidates against the four bars of your law's section 4; record the scoring for rejected candidates too. 5) Draft what clears all four bars into $vault/drafts/$today-<slug>.md with the frontmatter your law's section 3 requires; count em-dashes and 'not X but Y' reframes before filing and record the counts. Zero drafts is a valid morning and never a reason to lower a bar. 6) File the report at $report on the schema in your law's section 8 — ALWAYS, even for a zero-draft morning. 7) Emit session.end with the drafts-filed count: $root/civ/scripts/emit.sh session.end '<one line>' -a halric -s herald -p '{\"drafts\":<n>}'
+THE MORNING: 1) Determine the window — read the newest date-named report ($vault/reports/<YYYY-MM-DD>.md; ignore any file not matching that pattern) and take its 'Digest window' end as your --since; if no report exists, use the last 24 hours. 2) Read the digest: node $root/src/cli.ts digest --since <since> --json (run from $root). The digest is your ONLY window onto the forts; you never read fort internals, and a fact you want that is not in the digest is a gap to record, not a thing to go find. 3) Check each fort's 'present' flag in the digest JSON: any fort with present:false, or any source that looks malformed, goes in the report's Gaps and anomalies section BY NAME — an empty morning must mean the record was empty, never that you could not see (fortkit-ugr.6). Check each fort's constitutionDiffs: the digest has ALREADY correlated every diff against the complete event feed, so read the verdict and never re-derive it - announced means the amendment named its bead and emitted its event, and needs no report; unannounced is the ALARM and goes in Gaps and anomalies BY NAME and is repeated under For the Overseer; indeterminate means the digest could not run the join and is a GAP, recorded in Gaps and anomalies with the cause the digest gives and NOT escalated under For the Overseer unless it persists across runs. An entry whose beadRefs is empty is flagged as before. Do NOT correlate against the events feed yourself: it is capped, the announcement is usually older than the cap, and reading a truncated feed as an absence is the defect this watch spent three weeks failing on (fortkit-9sa, the cycle-7 prose-gate watch; fortkit-dqu5 moved the join into the digest 2026-09-01; it applies on zero-draft mornings too). 4) Score candidates against the five bars of your law's section 4; record the scoring for rejected candidates too. 5) Draft what clears all five bars into $vault/drafts/$today-<slug>.md with the frontmatter your law's section 3 requires, including postable: (each bar-5 check and its result) and invented: (every invented stake line, quoted exactly, per your law's section 5); count em-dashes and contrastive reframes before filing and record the counts. At most one draft per run (your law's section 7). Zero drafts is a valid morning and never a reason to lower a bar. 6) File the report at $report on the schema in your law's section 8 — ALWAYS, even for a zero-draft morning. 7) Emit session.end with the drafts-filed count: $root/civ/scripts/emit.sh session.end '<one line>' -a halric -s herald -p '{\"drafts\":<n>}'
 
 CARRIED CORRECTION, ONE REPORT ONLY (fortkit-dqu5.4, added 2026-09-01): state in your next report, under Gaps and anomalies, that the two fortkit-9sa alarms you raised - the three Manyhalls constitution diffs on 2026-08-14, and bae54a8 plus 7603af6 on 2026-09-01 - were BOTH FALSE, and that the watch was broken when you raised them. Every announcing event existed and the digest had sliced it away before you saw it. You were right to escalate both times: your law obliges you to surface the unconfirmed case within a day and you did so both times. Your law's section 2 carries the same correction as durable record. This paragraph retires once it has appeared in one report (fortkit-dqu5.9).
 
@@ -101,7 +106,35 @@ build_mask claude "$root"
 # turns read-only. Re-bound writable HERE, after build_mask: nothing masked
 # lies beneath it, so the ordering invariant (ForgeOs-01l) is not in play.
 mask+=(--bind "$vault" "$vault")
+# ...except the brand-voice document, which bar 5 draws on and which only the
+# Overseer changes (fortkit-r6x.8.8). A later bwrap mount shadows an earlier
+# one, so this ro-bind over the writable vault bind holds; a bind-mounted file
+# also refuses rename and unlink, so it cannot be swapped out.
+[ -f "$voice" ] && mask+=(--ro-bind "$voice" "$voice")
 mask_env claude
+
+# Prove the bind at the kernel, with no model and no permission profile in the
+# path (Warden finding 1 on r6x.8.8: a model-run probe is refused by the
+# profile first and passes whether or not the bind exists). A zero-byte append
+# changes no content even if the bind is missing. It FAILS CLOSED (Warden r2
+# finding 1): only an append refused with "Read-only file system" counts as the
+# bind holding. Success, or any other error (EACCES from a 0444 file, bwrap or
+# sh failing), refuses the morning, since none of them proves the bind.
+bind_ok=1
+if [ -f "$voice" ]; then
+  bind_ok=0
+  # shellcheck disable=SC2016  # $1 is meant for the inner sh, not this shell
+  if ! bind_err="$(bwrap "${mask[@]}" -- sh -c ': >> "$1"' _ "$voice" 2>&1 >/dev/null)" \
+     && grep -q 'Read-only file system' <<<"$bind_err"; then
+    bind_ok=1
+  fi
+fi
+if [ "$bind_ok" -ne 1 ]; then
+  "$civemit" incident "Herald morning REFUSED at pre-flight: could not prove brand-voice.md read-only inside the mask ($voice). No session launched." \
+    -a halric -s herald -p "{\"exit\":66,\"voice\":\"$voice\"}"
+  echo "--- herald.sh: PRE-FLIGHT FAILED: brand-voice.md not proven read-only inside the mask. Exit 66."
+  exit 66
+fi
 
 "$civemit" session.start "Halric begins $([ "${HERALD_SMOKE:-0}" = "1" ] && echo a boundary smoke-test || echo the morning run) ($model)" -a halric -s herald -p "{\"model\":\"$model\"}"
 
