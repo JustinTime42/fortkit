@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Civ Keep airlock</title>
+  <link rel="stylesheet" href="/static/keep.css">
+  <style>
+    main { padding: var(--space-4); display: grid; gap: var(--space-3); max-width: 60rem; }
+    .request { border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-3); background: var(--surface); }
+    .request h2 { font-size: var(--text-md, 1rem); margin: 0 0 var(--space-2); }
+    .meta { color: var(--muted); font-size: var(--text-sm); }
+    pre { white-space: pre-wrap; font-size: var(--text-xs); }
+    button { font: inherit; cursor: pointer; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-2); background: var(--accent); color: var(--control-ink); font-weight: 700; }
+    label { display: block; margin: var(--space-2) 0; }
+    input { font: inherit; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-2); background: var(--raised); color: inherit; }
+  </style>
+</head>
+<body>
+  <nav class="keep-nav" aria-label="Civ Keep"><strong class="brand">Civ Keep</strong><a href="/board">Board</a><a href="/graph">Graph</a><a href="/airlock" aria-current="page">Airlock</a></nav>
+  <main>
+    <p class="meta">Airlock requests waiting on you, across every fort. Approve writes one line into the Overseer store
+      (<code>~/.local/state/civ-keep/airlock-approvals.jsonl</code>, read-only to every seat). It runs nothing: the fort's
+      <code>airlock.sh run</code> on the host does that, and refuses if the request has changed since you approved it.</p>
+    <label id="token-row">Signing token <input id="token" type="password" autocomplete="off"></label>
+    <div id="list"><p class="meta">Loading…</p></div>
+  </main>
+  <script type="module">
+    import { escapeHtml } from '/static/graph.mjs';
+    const tokenKey = 'civ-keep-signing-token';
+    const el = (id) => document.getElementById(id);
+    if (localStorage.getItem(tokenKey)) el('token-row').querySelector('input').placeholder = 'saved token in use';
+    async function load() {
+      const response = await fetch('/api/airlock');
+      const items = response.ok ? await response.json() : [];
+      if (!items.length) { el('list').innerHTML = '<p class="meta">Nothing waiting.</p>'; return; }
+      el('list').innerHTML = items.map((item) => `<section class="request">
+        <h2>${escapeHtml(item.fortName)}: ${escapeHtml(item.operation)}</h2>
+        <p class="meta">${escapeHtml(item.id)} · asked by ${escapeHtml(item.requestedBy)} (${escapeHtml(item.seat)}) at ${escapeHtml(item.requestedAt)}</p>
+        <p>${escapeHtml(item.reason)}</p>
+        <p class="meta">${escapeHtml(item.description)}</p>
+        ${Object.keys(item.params).length ? `<pre>${escapeHtml(JSON.stringify(item.params, null, 2))}</pre>` : ''}
+        <button data-fort="${escapeHtml(item.fort)}" data-id="${escapeHtml(item.id)}">Approve</button>
+        <output aria-live="polite"></output></section>`).join('');
+    }
+    el('list').addEventListener('click', async (event) => {
+      const button = event.target.closest('button[data-id]');
+      if (!button) return;
+      const token = el('token').value.trim() || localStorage.getItem(tokenKey);
+      const out = button.nextElementSibling;
+      if (!token) { out.textContent = ' Enter the signing token.'; return; }
+      button.disabled = true;
+      const response = await fetch('/api/airlock/approve', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ fort: button.dataset.fort, id: button.dataset.id }) });
+      const body = await response.json().catch(() => ({}));
+      if (response.status === 401) localStorage.removeItem(tokenKey); else if (response.ok) localStorage.setItem(tokenKey, token);
+      out.textContent = response.ok ? ` Approved${body.announced ? '' : ' (stream announcement failed; the approval stands)'}. Run it on the host: fort/scripts/airlock.sh run ${button.dataset.id}` : ` ${body.error ?? response.statusText}`;
+      if (!response.ok) button.disabled = false;
+    });
+    load();
+  </script>
+</body>
+</html>

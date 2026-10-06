@@ -11,6 +11,7 @@
 // waiting labels), so a signature for one fort can never be applied to another.
 import { execFile } from "node:child_process";
 import path from "node:path";
+import { validRequestId } from "./airlock.mjs";
 
 export function command(file, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -143,6 +144,20 @@ export function signCommand(fort, file, args, options = {}, run = command) {
     args[6] === "-t" &&
     validId(args[7]) &&
     args[1].startsWith(`${args[7]}: `);
+  // ForgeOs-72ot.1: announcing an airlock approval the desk has just written
+  // into the Overseer store. The target is a request id, never a bead.
+  const airlockEmit =
+    file === path.join(fort.repo, "fort/scripts/emit.sh") &&
+    args.length === 8 &&
+    args[0] === "airlock.approved" &&
+    typeof args[1] === "string" &&
+    args[2] === "-a" &&
+    args[3] === "justin" &&
+    args[4] === "-s" &&
+    args[5] === "overseer" &&
+    args[6] === "-t" &&
+    validRequestId(args[7]) &&
+    args[1].startsWith(`${args[7]}: `);
   const sameTree =
     path.resolve(runOptions.cwd ?? "") === path.resolve(fort.repo);
   if (
@@ -153,6 +168,7 @@ export function signCommand(fort, file, args, options = {}, run = command) {
       restoreFleetSafe ||
       routeMayorReview ||
       emit ||
+      airlockEmit ||
       revParse
     )
   ) {

@@ -21,6 +21,7 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { approvalLine, pendingRequests } from "./lib/airlock.mjs";
 import { EventTail } from "./lib/events.mjs";
 import { readFleet } from "./lib/fleet.mjs";
 import { loadForts, prefixOf } from "./lib/forts.mjs";
@@ -104,6 +105,11 @@ export function createCivKeep(options = {}) {
   const auditPath =
     options.auditPath ?? path.join(stateHome, "civ-keep/signatures.jsonl");
   const auditDirectory = path.dirname(auditPath);
+  // The airlock approvals sit beside the signature audit in the Overseer store
+  // (ForgeOs-72ot.1): read-only to every seat mask, written only from the host.
+  const approvalsPath =
+    options.approvalsPath ??
+    path.join(auditDirectory, "airlock-approvals.jsonl");
   const signRun =
     options.signRun ??
     ((fort, file, args, runOptions) =>
@@ -524,6 +530,29 @@ export function createCivKeep(options = {}) {
           },
         ],
         [
+          // THE PIN (ForgeOs-ubgx.4). The approvedSha goes into this audit, in
+          // the Overseer store, as well as into the gate.approved payload: the
+          // fleet lands a signed branch only when both name the same sha, so a
+          // seat that can write the event stream cannot sign for him. Written
+          // before any bd write, beside the audit line it belongs to.
+          "pin",
+          async () => {
+            if (action !== "approve" || !fleet) return;
+            fileSystem.appendFileSync(
+              auditPath,
+              `${JSON.stringify({
+                ts: timestamp,
+                fort: fort.key,
+                bead: id,
+                step: "pin",
+                approvedSha,
+                branch,
+              })}\n`,
+              { mode: 0o600 },
+            );
+          },
+        ],
+        [
           "comment",
           async () => {
             fileSystem.writeFileSync(commentPath, commentText(), {
@@ -663,6 +692,78 @@ export function createCivKeep(options = {}) {
     }
   }
 
+  function renderAirlock(response) {
+    const items = [];
+    for (const fort of loadFortList()) {
+      try {
+        items.push(...pendingRequests(fort, { fileSystem, approvalsPath }));
+      } catch (error) {
+        log(`Civ Keep airlock read failed for ${fort.key}:`, error);
+      }
+    }
+    return json(response, items);
+  }
+
+  // APPROVE AN AIRLOCK REQUEST (ForgeOs-72ot.1). Writes one line into the
+  // Overseer store and announces it through that fort's emit.sh. It runs
+  // nothing: `airlock.sh run` on the host does that, after checking this line
+  // against the request's bytes.
+  async function renderAirlockApprove(request, response) {
+    const token = readToken(response);
+    if (!token) return;
+    if (!bearerMatches(request.headers.authorization, token))
+      return json(response, { error: "Unauthorized" }, 401);
+    const body = await readJson(request);
+    const fort = loadFortList().find((item) => item.key === body.fort);
+    if (!fort) return json(response, { error: "Unknown fort" }, 404);
+    const id = typeof body.id === "string" ? body.id : "";
+    const key = `airlock:${fort.key}:${id}`;
+    if (inFlight.has(key))
+      return json(response, { error: "Already in flight" }, 409);
+    inFlight.add(key);
+    try {
+      const made = approvalLine(fort, id, { fileSystem, approvalsPath, now });
+      if (made.error) return json(response, { error: made.error }, made.status);
+      fileSystem.mkdirSync(path.dirname(approvalsPath), {
+        recursive: true,
+        mode: 0o700,
+      });
+      fileSystem.appendFileSync(
+        approvalsPath,
+        `${JSON.stringify({
+          ...made.line,
+          tokenFingerprint: digest(token).toString("hex").slice(0, 12),
+        })}\n`,
+        { mode: 0o600 },
+      );
+      try {
+        await signRun(
+          fort,
+          path.join(fort.repo, "fort/scripts/emit.sh"),
+          [
+            "airlock.approved",
+            `${id}: Overseer approves ${made.request.operation} via the Civ Keep`,
+            "-a",
+            "justin",
+            "-s",
+            "overseer",
+            "-t",
+            id,
+          ],
+          { cwd: fort.repo },
+        );
+      } catch (error) {
+        // The approval is in the store, which is what airlock.sh reads; the
+        // announcement failing is reported, not rolled back.
+        log(`Civ Keep airlock announcement failed for ${id}:`, error);
+        return json(response, { ok: true, announced: false, line: made.line });
+      }
+      return json(response, { ok: true, announced: true, line: made.line });
+    } finally {
+      inFlight.delete(key);
+    }
+  }
+
   function renderPage(response, name) {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     response.end(fileSystem.readFileSync(path.join(here, name), "utf8"));
@@ -718,6 +819,7 @@ export function createCivKeep(options = {}) {
     if (p.startsWith("/static/"))
       return renderStatic(response, p.slice("/static/".length));
     if (p === "/" || p === "/board") return renderPage(response, "board.html");
+    if (p === "/airlock") return renderPage(response, "airlock.html");
     if (p === "/graph" || p === "/beads")
       return renderPage(response, "graph.html");
     if (p === "/api/forts")
@@ -728,6 +830,10 @@ export function createCivKeep(options = {}) {
     if (p === "/api/sign" && request.method === "POST")
       return renderSign(request, response);
     if (p === "/api/signatures") return renderSignatures(response, url);
+    if (p === "/api/airlock" && request.method === "GET")
+      return renderAirlock(response);
+    if (p === "/api/airlock/approve" && request.method === "POST")
+      return renderAirlockApprove(request, response);
     if (p === "/events") return openEvents(request, response);
     response.writeHead(404);
     response.end("Not found");

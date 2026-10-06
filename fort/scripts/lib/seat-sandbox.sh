@@ -422,6 +422,28 @@ build_mask() {
   # says so at the top of itself.
   for t in "${rw_trees[@]}"; do RO_PATHS+=("$t/fort/scripts"); done
 
+  # THE OVERSEER STORE (ForgeOs-72ot.1 + ForgeOs-ubgx.4, Regent edict
+  # 2026-10-06, the Overseer's ruling of 2026-10-05 with the store placed at
+  # civilization level the same morning). ~/.local/state is granted rw below,
+  # so until this line every masked seat in every fort could write the Keeps'
+  # records: a signature, and from now on an airlock approval, written by the
+  # seat that wanted it. Two directories, read-only to BOTH seat types in every
+  # fort, because a record in a civilization-level file names its fort and a
+  # seat in any fort could otherwise forge one for another:
+  #   civ-keep/        the Civ Keep's signing desk (fortkit civ/keep), and the
+  #                    airlock approvals it records
+  #   proofdelve-keep/ the Proofdelve Keep's signing desk, still live
+  # Only the two Keep services write here, and they run on the host as user
+  # units, outside every mask. RO binds land after the rw grants, so they win.
+  # CREATED HERE IF ABSENT: an RO bind is existence-guarded, and a directory a
+  # seat could create first is a directory a seat could seed. A nested launch
+  # finds it already present: the outer launch created it before binding it.
+  local store
+  for store in "$HOME/.local/state/civ-keep" "$HOME/.local/state/proofdelve-keep"; do
+    [ -d "$store" ] || mkdir -m 700 "$store" 2>/dev/null || true
+    RO_PATHS+=("$store")
+  done
+
   # FILESYSTEM SCOPING (cycle 5). Before this, the sandbox was "everything
   # writable except what we masked", so a seat working in one fort could still
   # rm -rf another project or wipe ~/Documents — threat #1, agent accident, and

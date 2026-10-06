@@ -2,7 +2,8 @@
 // and what it refuses. Every process the desk starts goes through the real
 // per-fort allowlist (civ/keep/lib/readers.mjs signCommand); only the final
 // execFile is stubbed, so a write the allowlist would reject fails these tests.
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -286,5 +287,160 @@ describe("civ keep allowlist", () => {
         { id: "plot-b2.1" },
       ]),
     ).toBe("plot");
+  });
+});
+
+// The Overseer store (ForgeOs-72ot.1, ForgeOs-ubgx.4): airlock approvals and the
+// signing pin are written into the store beside the audit, and nowhere else.
+describe("civ keep overseer store", () => {
+  async function storeKeep() {
+    const repo = mkdtempSync(join(tmpdir(), "civ-keep-airlock-"));
+    mkdirSync(join(repo, "fort/airlock/requests"), { recursive: true });
+    mkdirSync(join(repo, "fort/airlock/results"), { recursive: true });
+    writeFileSync(
+      join(repo, "fort/airlock/operations.json"),
+      JSON.stringify({
+        operations: [
+          { name: "deploy-staging", requires_approval: true, description: "d" },
+          { name: "feedback-scan", requires_approval: false, description: "f" },
+        ],
+      }),
+    );
+    const request = (id: string, operation: string, status = "pending") =>
+      writeFileSync(
+        join(repo, "fort/airlock/requests", `${id}.json`),
+        `${JSON.stringify({ id, operation, reason: "why", requested_by: "marrek", seat: "mayor", status, params: {} }, null, 2)}\n`,
+      );
+    request("20261006T090000-deploy-staging-1", "deploy-staging");
+    request("20261006T090001-feedback-scan-2", "feedback-scan");
+    request("20261006T090002-deploy-staging-3", "deploy-staging", "completed");
+    const store = mkdtempSync(join(tmpdir(), "civ-keep-store-"));
+    const auditPath = join(store, "signatures.jsonl");
+    const fort = {
+      key: "proof",
+      name: "Proof",
+      project: "proof",
+      civilization: "Justin",
+      repo,
+      mode: "fleet",
+      fleetState: null,
+      waitingLabels: ["human"],
+    };
+    const calls: Call[] = [];
+    const run = async (
+      file: string,
+      args: string[],
+      options: { cwd: string },
+    ) => {
+      if (file === "bd" && args[0] === "export")
+        return `${JSON.stringify({ id: "proof-a1", title: "t", status: "open", labels: ["human"] })}\n`;
+      calls.push({ file, args, cwd: options.cwd });
+      if (file === "git") return `${"a".repeat(40)}\n`;
+      return "";
+    };
+    keep = createCivKeep({
+      env: { HOME: scratch },
+      run,
+      tokenPath,
+      auditPath,
+      loadForts: () => [fort],
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+    });
+    await keep.refresh();
+    await new Promise<void>((resolve) =>
+      keep.server.listen(0, "127.0.0.1", resolve),
+    );
+    const port = (keep.server.address() as AddressInfo).port;
+    const base = `http://127.0.0.1:${port}`;
+    const approve = async (body: object, token = "secret-token") => {
+      const response = await fetch(`${base}/api/airlock/approve`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      return { status: response.status, body: await response.json() };
+    };
+    return { repo, store, auditPath, calls, base, approve };
+  }
+  const lines = (file: string) =>
+    readFileSync(file, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+
+  test("lists only pending requests whose operation requires approval", async () => {
+    const { base } = await storeKeep();
+    const items = (await (await fetch(`${base}/api/airlock`)).json()) as {
+      id: string;
+    }[];
+    expect(items.map((item) => item.id)).toEqual([
+      "20261006T090000-deploy-staging-1",
+    ]);
+  });
+
+  test("Approve writes one store line pinning the request's bytes, announces it, and cannot repeat", async () => {
+    const { repo, store, calls, approve, base } = await storeKeep();
+    const id = "20261006T090000-deploy-staging-1";
+    expect((await approve({ fort: "proof", id }, "wrong")).status).toBe(401);
+    const result = await approve({ fort: "proof", id });
+    expect(result.status).toBe(200);
+    const [line] = lines(join(store, "airlock-approvals.jsonl"));
+    const bytes = readFileSync(
+      join(repo, "fort/airlock/requests", `${id}.json`),
+    );
+    expect(line).toMatchObject({
+      fort: "proof",
+      repo,
+      id,
+      operation: "deploy-staging",
+      actor: "justin",
+      via: "civ-keep",
+      requestSha256: createHash("sha256").update(bytes).digest("hex"),
+    });
+    expect(
+      calls.map(
+        (call) =>
+          `${call.file.split("/").pop()} ${call.args.slice(0, 2).join(" ")}`,
+      ),
+    ).toEqual([
+      `emit.sh airlock.approved ${id}: Overseer approves deploy-staging via the Civ Keep`,
+    ]);
+    expect((await approve({ fort: "proof", id })).status).toBe(409);
+    expect(await (await fetch(`${base}/api/airlock`)).json()).toEqual([]);
+    expect(
+      (await approve({ fort: "proof", id: "20261006T090001-feedback-scan-2" }))
+        .status,
+    ).toBe(409);
+    expect((await approve({ fort: "proof", id: "../../etc" })).status).toBe(
+      400,
+    );
+  });
+
+  test("a signing Approve pins the approvedSha in the audit, before any bd write", async () => {
+    const { auditPath, calls, base } = await storeKeep();
+    const response = await fetch(`${base}/api/sign`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer secret-token",
+      },
+      body: JSON.stringify({ id: "proof-a1", action: "approve", text: "" }),
+    });
+    expect(response.status).toBe(200);
+    const pin = lines(auditPath).find((line) => line.step === "pin");
+    expect(pin).toMatchObject({
+      fort: "proof",
+      bead: "proof-a1",
+      approvedSha: "a".repeat(40),
+      branch: "bead/a1",
+    });
+    expect(calls.findIndex((call) => call.file === "bd")).toBeGreaterThan(
+      calls.findIndex((call) => call.file === "git"),
+    );
   });
 });
