@@ -5390,3 +5390,12 @@ should name the seat if it matters who learned it.
 - 2026-10-06: **THE SUPERVISOR'S "DID NOTHING" IS NOW A COUNT** (`landings=N` in
   last-run.outcome; 0 launches and 0 landings backs off), not "drained in under
   20 s": the 10-05 empty drains took 20-28 s and ran ten times in a row.
+
+- 2026-10-06 (edict 65, fortkit-r6x.8.8): **THE HERALD'S `brand-voice.md` IS
+  RO-BOUND IN HIS MASK, AND herald.sh REFUSES (66) IF A ZERO-BYTE APPEND INSIDE
+  THE MASK IS NOT REFUSED WITH EROFS.** A new 66 cause beside the unwritable
+  vault; neither is ladder-retried. The cheap negative arm for any launcher
+  pre-flight: a scratch copy with `root=` pinned, the emitter stubbed, and a
+  hard `exit 99` just before `session.start`, so the copy can run against the
+  LIVE target without ever starting a session or writing a false incident.
+  Run it with and without the protection: 66 and 99.
