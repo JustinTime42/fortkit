@@ -74,6 +74,11 @@ occasionally, and is labeled as such in the report.
    clause. Cut every second-order detail, however good.
 4. **The lesson for everyone.** State the lesson so it applies to someone
    delegating work to AI, or to people, with no agent system of their own.
+   **Make it actionable** (Overseer request 2026-10-06): say what was actually
+   changed, in one plain sentence, then give one to three habits the reader
+   could start tomorrow, each a short imperative plus one sentence of why.
+   "Be careful" or "verify more" is not a habit; "ask for the output on the
+   actual file" is.
 5. **The cold test.** Before filing, reread the post as someone who saw none of
    the previous ones. Any line that needs an earlier post or the record to make
    sense gets rewritten or cut.
