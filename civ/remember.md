@@ -5399,3 +5399,29 @@ should name the seat if it matters who learned it.
   hard `exit 99` just before `session.start`, so the copy can run against the
   LIVE target without ever starting a session or writing a false incident.
   Run it with and without the protection: 66 and 99.
+
+- 2026-10-07 (edict 66, Scionhall V1 sitting part 1: 7cl.14 step 1, 7cl.91,
+  7cl.120): **A pid-namespaced bwrap under coreutils `timeout` leaves nothing
+  behind.** Measured: TERM reaches bwrap, and `--unshare-pid --die-with-parent`
+  takes the whole namespace down, TERM-ignoring grandchild included (exit 124);
+  a plain child that ignores TERM is KILLed after `--kill-after` (137).
+  `--foreground` keeps Ctrl-C reaching the child and still kills the
+  namespace. Scionhall's Forge sessions are now capped this way
+  (FLEET_FORGE_WALL_MIN=60 in its fleet.conf; 131 sessions measured, max 23.3 min).
+- 2026-10-07: **`ps | grep -c '<pattern>'` SELF-MATCHED AGAIN, seventh entry, and
+  read as "2 processes survived the timeout".** A survivor count must come from
+  /proc by argv0 (a tagged `exec -a`) in a script that cannot see its own command
+  line, and it needs a positive control: the same counter must see the processes
+  while they are alive. That pair is now a case in Scionhall's
+  scripts/forge-wallclock-harness.sh.
+- 2026-10-07: **Before appending to an event's `detail`, grep every harness for
+  the string.** Scionhall's forge-refresh-harness pwu6-f pins the ordinary
+  session.end detail with its closing quote; an appended suffix turned the
+  verifier red. Put new facts in the payload, leave the sentence alone.
+- 2026-10-07: **Scionhall has no README.md, and WARDEN_SMOKE probe 10 (owed) and
+  14(a) still aim at one**, so every Scionhall smoke reports probe 10 FAIL for the
+  instrument's reason (scionhall-u40). Read probe 10's FAIL text before treating
+  a Scionhall smoke as a boundary failure.
+- 2026-10-07: **Scionhall's verifier picks up a NEW harness from the worktree**
+  (`harness_path` falls back to the worktree copy when main lacks it), so a new
+  harness costs no extra post-commit round; a CHANGED one still does.
