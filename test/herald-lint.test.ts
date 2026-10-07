@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -60,6 +60,21 @@ describe("herald-lint", () => {
     expect(result.verdict).toBe("pass");
     expect(result.checks.map(({ id }) => id)).toEqual(CHECK_IDS);
     expect(
+      result.checks.filter(({ result: kind }) => kind !== "judgment"),
+    ).toEqual(
+      expect.arrayContaining(
+        CHECK_IDS.filter(
+          (id) =>
+            ![
+              "shared-stake",
+              "one-mechanism",
+              "actionable-lesson",
+              "cold-test",
+            ].includes(id),
+        ).map((id) => expect.objectContaining({ id, result: "pass" })),
+      ),
+    );
+    expect(
       result.checks.filter(({ result: kind }) => kind === "judgment"),
     ).toHaveLength(4);
   });
@@ -74,13 +89,44 @@ describe("herald-lint", () => {
       "em-dash",
       draft(cleanBody.replace("still be wrong.", "still be wrong — really.")),
     ],
-    [
-      "banned-phrases",
-      draft(cleanBody.replace("Yesterday", "Here's the thing. Yesterday")),
-    ],
     ["invented-declared", draft(cleanBody, '["I was annoyed."]')],
   ])("fails %s when its red fixture is present", (id, text) => {
     expect(resultFor(text, id).result).toBe("fail");
+  });
+
+  test.each(BANNED_PHRASES)(
+    "fails each banned phrase when used in normal prose: %s",
+    (phrase) => {
+      const prose = phrase.endsWith("...")
+        ? `${phrase.slice(0, -3)} liked after the review.`
+        : `${phrase} The report needed evidence.`;
+      expect(
+        resultFor(
+          draft(cleanBody.replace("Yesterday", prose)),
+          "banned-phrases",
+        ).result,
+      ).toBe("fail");
+    },
+  );
+
+  test("normalizes curly punctuation for every text matcher", () => {
+    expect(
+      resultFor(
+        draft(cleanBody.replace("Yesterday", "Here’s the thing. Yesterday")),
+        "banned-phrases",
+      ).result,
+    ).toBe("fail");
+    expect(
+      resultFor(
+        draft(
+          cleanBody.replace(
+            "Yesterday",
+            "It wasn’t a typo. It was a missing check. Yesterday",
+          ),
+        ),
+        "contrastive-reframe",
+      ).result,
+    ).toBe("flag");
   });
 
   test.each([
@@ -158,6 +204,64 @@ describe("herald-lint", () => {
     ).toBe("fail");
   });
 
+  test("rejects a banned closer at the end of a longer closing line", () => {
+    expect(
+      resultFor(
+        draft(cleanBody.replace(/Where.*$/, "So, thoughts?")),
+        "closing-question",
+      ).result,
+    ).toBe("fail");
+  });
+
+  test("parses quoted invented values and fails unsupported frontmatter", () => {
+    const quoted = draft(
+      `${cleanBody}\n\nA line, with a comma.\n\nIt's checked.`,
+      "[\"A line, with a comma.\", 'It''s checked.']",
+    );
+    expect(resultFor(quoted, "frontmatter").result).toBe("pass");
+    expect(resultFor(quoted, "invented-declared").result).toBe("pass");
+    const malformed = quoted.replace("status: draft", "  not: yaml");
+    expect(resultFor(malformed, "frontmatter")).toMatchObject({
+      result: "fail",
+      detail: expect.stringContaining('"  not: yaml"'),
+    });
+  });
+
+  test("uses the explicit spelling list without flagging ordinary American words", () => {
+    expect(
+      resultFor(
+        draft(
+          cleanBody.replace(
+            "Yesterday",
+            "Yesterday the prioritised report arrived.",
+          ),
+        ),
+        "spelling",
+      ).result,
+    ).toBe("flag");
+    for (const word of ["raised", "promised", "advertising"])
+      expect(
+        resultFor(
+          draft(
+            cleanBody.replace(
+              "Yesterday",
+              `Yesterday the ${word} report arrived.`,
+            ),
+          ),
+          "spelling",
+        ).result,
+      ).toBe("pass");
+  });
+
+  test("reports each repeated fail hit with local context", () => {
+    const body = `${cleanBody}\n\nOne. Two. Three. Four.\n\nFive. Six. Seven. Eight.\n\nA — B — C. Here's the thing. Let that sink in.`;
+    for (const id of ["paragraph-sentences", "em-dash", "banned-phrases"]) {
+      const value = resultFor(draft(body), id);
+      expect(value.result).toBe("fail");
+      expect(value.detail).toContain(",");
+    }
+  });
+
   test("keeps banned phrase constants aligned with reviewed brand voice", async () => {
     const source = await readFile(
       "docs/proposals/herald-voice/brand-voice.md",
@@ -178,20 +282,34 @@ describe("herald-lint", () => {
   });
 
   test("CLI uses documented exit codes and JSON contract", async () => {
-    const root = join(tmpdir(), `fortkit-herald-lint-${process.pid}`);
+    const root = await mkdtemp(join(tmpdir(), "fortkit-herald-lint-"));
     const passing = join(root, "pass.md");
     const failing = join(root, "fail.md");
-    await mkdir(root, { recursive: true });
     await writeFile(passing, draft(cleanBody));
     await writeFile(failing, draft(cleanBody.replace(/\?$/, ".")));
     try {
       const passed = await runCli(["herald-lint", passing, "--json"]);
       expect(passed.code).toBe(0);
-      expect(JSON.parse(passed.output)).toMatchObject({ verdict: "pass" });
+      expect(JSON.parse(passed.output)).toMatchObject({
+        verdict: "pass",
+        counts: {
+          postChars: expect.any(Number),
+          hookChars: expect.any(Number),
+          paragraphs: expect.any(Number),
+        },
+        checks: expect.arrayContaining([
+          expect.objectContaining({
+            id: "frontmatter",
+            result: "pass",
+            detail: expect.any(String),
+          }),
+        ]),
+      });
       expect((await runCli(["herald-lint", failing])).code).toBe(1);
       expect(
         (await runCli(["herald-lint", join(root, "missing.md")])).code,
       ).toBe(2);
+      expect((await runCli(["herald-lint"])).code).toBe(2);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

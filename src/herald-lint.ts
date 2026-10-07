@@ -41,12 +41,59 @@ export const CHECK_IDS = [
   "cold-test",
 ] as const;
 
-type Frontmatter = { values: Map<string, string>; invented: string[] };
+type Frontmatter = {
+  values: Map<string, string>;
+  invented: string[];
+  malformed: string[];
+};
 
 function codePoints(value: string): number {
   return Array.from(value).length;
 }
 
+function parseQuoted(value: string): string | undefined {
+  if (value.startsWith('"') && value.endsWith('"'))
+    return value.slice(1, -1).replaceAll('\\"', '"');
+  if (value.startsWith("'") && value.endsWith("'"))
+    return value.slice(1, -1).replaceAll("''", "'");
+  return value.includes('"') || value.includes("'") ? undefined : value;
+}
+
+function parseInlineList(value: string): string[] | undefined {
+  if (!value.startsWith("[") || !value.endsWith("]")) return undefined;
+  const items: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | undefined;
+  for (let index = 1; index < value.length - 1; index += 1) {
+    const character = value[index];
+    if (character === undefined) continue;
+    if (quote !== undefined) {
+      current += character;
+      if (character === quote) {
+        if (quote === "'" && value[index + 1] === "'") {
+          current += "'";
+          index += 1;
+        } else quote = undefined;
+      }
+    } else if (character === '"' || character === "'") {
+      quote = character;
+      current += character;
+    } else if (character === ",") {
+      const item = parseQuoted(current.trim());
+      if (item === undefined) return undefined;
+      items.push(item);
+      current = "";
+    } else current += character;
+  }
+  if (quote !== undefined) return undefined;
+  const item = parseQuoted(current.trim());
+  return item === undefined ? undefined : [...items, item].filter(Boolean);
+}
+
+/**
+ * Deliberately small YAML subset: scalars, block lists, and inline quoted
+ * lists. It decodes YAML's '' and \" escapes; unsupported lines fail safely.
+ */
 function parseDraft(text: string): {
   body: string;
   frontmatter: Frontmatter | null;
@@ -59,8 +106,10 @@ function parseDraft(text: string): {
   const source = normalized.slice(4, close);
   const values = new Map<string, string>();
   const invented: string[] = [];
+  const malformed: string[] = [];
   let currentKey: string | undefined;
   for (const line of source.split("\n")) {
+    if (line.trim() === "") continue;
     const key = /^([A-Za-z][\w-]*):(?:\s*(.*))?$/.exec(line);
     if (key) {
       const name = key[1];
@@ -70,9 +119,13 @@ function parseDraft(text: string): {
       continue;
     }
     const item = /^\s*-\s*(.*)$/.exec(line);
-    if (currentKey === "invented" && item?.[1] !== undefined) {
-      invented.push(item[1].replace(/^(?:"|')|(?:"|')$/g, ""));
+    if (item?.[1] === undefined || currentKey === undefined) {
+      malformed.push(line);
+      continue;
     }
+    const parsedItem = parseQuoted(item[1].trim());
+    if (parsedItem === undefined) malformed.push(line);
+    else if (currentKey === "invented") invented.push(parsedItem);
   }
   const inlineInvented = values.get("invented");
   if (
@@ -80,17 +133,14 @@ function parseDraft(text: string): {
     inlineInvented !== "" &&
     inlineInvented !== "[]"
   ) {
-    invented.push(
-      ...inlineInvented
-        .replace(/^\[|\]$/g, "")
-        .split(",")
-        .map((item) => item.trim().replace(/^(?:"|')|(?:"|')$/g, ""))
-        .filter(Boolean),
-    );
+    const parsedItems = parseInlineList(inlineInvented);
+    if (parsedItems === undefined)
+      malformed.push(`invented: ${inlineInvented}`);
+    else invented.push(...parsedItems);
   }
   return {
     body: normalized.slice(close + 5).trim(),
-    frontmatter: { values, invented },
+    frontmatter: { values, invented, malformed },
   };
 }
 
@@ -119,10 +169,22 @@ function check(id: string, result: LintResultKind, detail: string): LintCheck {
   return { id, result, detail };
 }
 
-function excerpt(value: string): string {
+function excerpt(value: string, start = 0, length = value.length): string {
+  const before = Math.max(0, start - 40);
+  const after = Math.min(value.length, start + length + 40);
   return JSON.stringify(
-    value.length > 120 ? `${value.slice(0, 117)}...` : value,
+    `${before > 0 ? "…" : ""}${value.slice(before, after)}${after < value.length ? "…" : ""}`,
   );
+}
+
+function normalizedForMatch(value: string): string {
+  return value.replace(/[\u2018\u2019\u201c\u201d]/g, (character) =>
+    character === "\u2018" || character === "\u2019" ? "'" : '"',
+  );
+}
+
+function allMatches(post: string, matcher: RegExp): RegExpExecArray[] {
+  return Array.from(post.matchAll(matcher));
 }
 
 export function lintDraft(text: string): LintResult {
@@ -147,13 +209,14 @@ export function lintDraft(text: string): LintResult {
     frontmatter === null
       ? required
       : required.filter((key) => !frontmatter.values.has(key));
+  const malformed = frontmatter?.malformed ?? [];
   checks.push(
-    missing.length === 0
+    missing.length === 0 && malformed.length === 0
       ? check("frontmatter", "pass", "Required frontmatter is present.")
       : check(
           "frontmatter",
           "fail",
-          `Missing or malformed frontmatter: ${missing.join(", ")}.`,
+          `Missing or malformed frontmatter: ${[...missing, ...malformed.map((line) => excerpt(line))].join(", ")}.`,
         ),
   );
   const postChars = codePoints(post);
@@ -176,17 +239,17 @@ export function lintDraft(text: string): LintResult {
         : `${hookChars} characters exceeds ${HOOK_CHAR_LIMIT}: ${excerpt(hook)}.`,
     ),
   );
-  const longParagraph = paragraphs.find(
+  const longParagraphs = paragraphs.filter(
     (paragraph) =>
       !isList(paragraph) && sentenceCount(paragraph) > PARAGRAPH_SENTENCE_LIMIT,
   );
   checks.push(
     check(
       "paragraph-sentences",
-      longParagraph === undefined ? "pass" : "fail",
-      longParagraph === undefined
+      longParagraphs.length === 0 ? "pass" : "fail",
+      longParagraphs.length === 0
         ? "No prose paragraph exceeds three sentences."
-        : `Overlong paragraph: ${excerpt(longParagraph)}.`,
+        : `Overlong paragraphs: ${longParagraphs.map((paragraph) => excerpt(paragraph)).join(", ")}.`,
     ),
   );
   const lastLine =
@@ -195,11 +258,18 @@ export function lintDraft(text: string): LintResult {
       .filter((line) => line.trim() !== "")
       .at(-1)
       ?.trim() ?? "";
+  const normalizedLastLine = normalizedForMatch(lastLine).toLowerCase();
   const bannedCloser =
-    BANNED_CLOSERS.find(
-      (closer) => closer.toLowerCase() === lastLine.toLowerCase(),
+    BANNED_CLOSERS.find((closer) =>
+      normalizedLastLine.endsWith(
+        normalizedForMatch(closer)
+          .replace(/\.\.\.$/, "")
+          .toLowerCase(),
+      ),
     ) ??
-    (/^comment\s+\S+\s+if/i.test(lastLine) ? "Comment X if..." : undefined);
+    (/comment\s+\S+\s+if[^?]*\?$/i.test(normalizedLastLine)
+      ? "Comment X if..."
+      : undefined);
   checks.push(
     check(
       "closing-question",
@@ -220,14 +290,14 @@ export function lintDraft(text: string): LintResult {
         : "Last paragraph has fewer than two questions.",
     ),
   );
-  const emDashCount = (post.match(/—/g) ?? []).length;
+  const emDashes = allMatches(post, /—/g);
   checks.push(
     check(
       "em-dash",
-      emDashCount === 0 ? "pass" : "fail",
-      emDashCount === 0
+      emDashes.length === 0 ? "pass" : "fail",
+      emDashes.length === 0
         ? "No em dashes."
-        : `${emDashCount} em dash(es) in ${excerpt(post)}.`,
+        : `${emDashes.length} em dash(es): ${emDashes.map((match) => excerpt(post, match.index, 1)).join(", ")}.`,
     ),
   );
   const substitute = post.match(/ – | -- /)?.[0];
@@ -240,16 +310,23 @@ export function lintDraft(text: string): LintResult {
         : `Dash substitute ${excerpt(substitute)} found.`,
     ),
   );
-  const bannedPhrase = BANNED_PHRASES.find((phrase) =>
-    post.toLowerCase().includes(phrase.toLowerCase()),
-  );
+  const normalizedPost = normalizedForMatch(post).toLowerCase();
+  const bannedPhrases = BANNED_PHRASES.flatMap((phrase) => {
+    const normalized = normalizedForMatch(phrase)
+      .toLowerCase()
+      .replace(/(?:\.\.\.|…)$/u, "");
+    return allMatches(
+      normalizedPost,
+      new RegExp(normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+    );
+  });
   checks.push(
     check(
       "banned-phrases",
-      bannedPhrase === undefined ? "pass" : "fail",
-      bannedPhrase === undefined
+      bannedPhrases.length === 0 ? "pass" : "fail",
+      bannedPhrases.length === 0
         ? "No banned phrases."
-        : `Banned phrase ${excerpt(bannedPhrase)} found.`,
+        : `Banned phrases: ${bannedPhrases.map((match) => excerpt(post, match.index, match[0].length)).join(", ")}.`,
     ),
   );
   const missingInvented = (parsed.frontmatter?.invented ?? []).find(
@@ -266,7 +343,7 @@ export function lintDraft(text: string): LintResult {
   );
   const reframe =
     /\b(?:not|isn't|wasn't)\b[^.!?]{0,100}\b(?:it's|it is|that'?s|that is)\b|\b\w+ isn't the problem, \w+ is\b|\bit wasn't [^.?!]+\.\s*it was\b/i.exec(
-      post,
+      normalizedForMatch(post),
     )?.[0];
   checks.push(
     check(
@@ -292,7 +369,7 @@ export function lintDraft(text: string): LintResult {
     ),
   );
   const spelling =
-    /\b(?:\w+ised|\w+ising|labelled|neighbour|behaviour|colour|prioritise)\b/i.exec(
+    /\b(?:labelled|labelling|neighbours?|behaviours?|colours?|favours?|honours?|centres?|catalogues?|(?:prioritis|deprioritis|organis|realis|recognis|optimis|summaris|analys|apologis|categoris|minimis|maximis)(?:e|ed|ing))\b/i.exec(
       post,
     )?.[0];
   checks.push(
