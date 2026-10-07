@@ -79,3 +79,17 @@ export type RegistryFort = {
   name: string;
   path: string;
 };
+
+export type LintResultKind = "pass" | "fail" | "flag" | "judgment";
+
+export type LintCheck = {
+  id: string;
+  result: LintResultKind;
+  detail: string;
+};
+
+export type LintResult = {
+  verdict: "pass" | "fail";
+  counts: { postChars: number; hookChars: number; paragraphs: number };
+  checks: LintCheck[];
+};
