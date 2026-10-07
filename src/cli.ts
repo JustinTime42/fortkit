@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import {
@@ -12,6 +13,7 @@ import {
   formatDigest,
   readCivilizationDigest,
 } from "./digest.ts";
+import { lintDraft } from "./herald-lint.ts";
 import { readRegistry } from "./readers/registry.ts";
 import { recall } from "./recall.ts";
 import { createWorldServer } from "./server.ts";
@@ -32,7 +34,32 @@ async function currentFortName(): Promise<string> {
   return fort.name;
 }
 
-if (command === "ambient") {
+if (command === "herald-lint") {
+  const draftPath = args.find((argument) => !argument.startsWith("--"));
+  const json = args.filter((argument) => argument === "--json").length;
+  const valid =
+    draftPath !== undefined &&
+    args.length === 1 + json &&
+    json <= 1 &&
+    args.every((argument) => argument === draftPath || argument === "--json");
+  if (!valid) {
+    console.error("Usage: fortkit herald-lint <draft.md> [--json]");
+    process.exitCode = 2;
+  } else {
+    try {
+      const result = lintDraft(await readFile(draftPath, "utf8"));
+      console.log(
+        args.includes("--json")
+          ? JSON.stringify(result, null, 2)
+          : `${result.verdict.toUpperCase()} (${result.counts.postChars} chars)\n${result.checks.map(({ id, result: checkResult, detail }) => `${checkResult.toUpperCase()} ${id}: ${detail}`).join("\n")}`,
+      );
+      process.exitCode = result.verdict === "pass" ? 0 : 1;
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 2;
+    }
+  }
+} else if (command === "ambient") {
   const sinceIndex = args.indexOf("--since");
   const onIndex = args.indexOf("--on");
   const citizen = args[0] ?? "";
@@ -243,7 +270,7 @@ if (command === "ambient") {
   args.some((argument) => argument !== "--json")
 ) {
   console.error(
-    "Usage: fortkit status [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--max-events-per-fort <positive integer>] [--fetch <id>[,<id>...]] [--json]\n       fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]\n       fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>] [--limit <positive integer>]",
+    "Usage: fortkit status [--json]\n       fortkit herald-lint <draft.md> [--json]\n       fortkit world [--port <1-65535>]\n       fortkit digest --since <timestamp> [--until <timestamp>] [--max-events-per-fort <positive integer>] [--fetch <id>[,<id>...]] [--json]\n       fortkit ambient <citizen> [--on <timestamp> | --since <timestamp>]\n       fortkit recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>] [--limit <positive integer>]",
   );
   process.exitCode = 2;
 } else {
