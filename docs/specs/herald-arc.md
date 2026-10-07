@@ -1,6 +1,7 @@
 # The Herald's weekly arc run
 
-Status: DRAFT for Overseer approval (`fortkit-r6x.8.6`). Author: Emrith
+Status: ADOPTED. Overseer approval 2026-10-07 in session, after Warden
+APPROVE-WITH-FINDINGS with all findings applied (`fortkit-r6x.8.6`).
 Cairnwright (Mayor), 2026-10-06. No Forge work: this is a law section
 (gate-1, Overseer), a launcher mode and a timer (Regent edict). The Herald's
 behavior is prompt-driven and reuses the digest and herald-lint.

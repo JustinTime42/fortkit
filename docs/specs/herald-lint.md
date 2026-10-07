@@ -1,6 +1,7 @@
 # herald-lint: the Postable bar, checked by a machine
 
-Status: DRAFT for Overseer approval (`fortkit-r6x.8.3`). Author: Emrith
+Status: ADOPTED. Overseer approval 2026-10-07 in session, after Warden
+APPROVE-WITH-FINDINGS with all findings applied (`fortkit-r6x.8.3`).
 Cairnwright (Mayor), 2026-10-06. Implementation: Forge. Wiring into the
 Herald's runs: Regent edict (`fortkit-r6x.8.10`), after this lands.
 

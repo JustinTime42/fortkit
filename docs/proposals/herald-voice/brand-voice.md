@@ -81,7 +81,11 @@ occasionally, and is labeled as such in the report.
    changed, in one plain sentence, then give one to three habits the reader
    could start tomorrow, each a short imperative plus one sentence of why.
    "Be careful" or "verify more" is not a habit; "ask for the output on the
-   actual file" is.
+   actual file" is. **Habits come from the record** (Overseer decision
+   2026-10-07, resolving the conflict the Herald raised in his 2026-10-07
+   report): each habit restates a fix or rule the record shows was actually
+   made or signed, generalized for the reader. Advice beyond what was done is
+   left out, never invented; the stake exception covers reactions only.
 5. **The cold test.** Before filing, reread the post as someone who saw none of
    the previous ones. Any line that needs an earlier post or the record to make
    sense gets rewritten or cut.
@@ -247,8 +251,9 @@ checked"), and a fix the reader can act on.
 1. **Series identity: yes.** The agent-civilization posts become a recurring
    series, and the civilization's flavor (projects run as forts, agents with
    named jobs, a reviewer with a veto) may be the hook, translated per section
-   5. No series name is chosen yet: the Herald proposes up to three candidate
-   names in its next report, and the Overseer picks one.
+   5. **Series name: "What My Agents Did Overnight"** (Overseer decision
+   2026-10-07, from the Herald's 2026-10-07 candidates). Use it sparingly, as
+   an occasional opening tag or closing line, never as a header on every post.
 2. **Place anchor: yes.** "In Palmer" or "in Alaska" may appear in a framing
    line when nothing in the record contradicts it.
 3. **Cadence: yes, raise the bar.** Until the weekly arc mode
