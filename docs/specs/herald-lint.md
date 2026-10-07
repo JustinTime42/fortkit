@@ -38,6 +38,16 @@ inside quotes respected, and the `''` and `\"` escapes decoded. Lines it cannot
 parse make `frontmatter` fail and are quoted in its detail, never silently
 ignored (Warden finding 4 on the implementation).
 
+**Widened 2026-10-07** (Warden round-2 finding 2, then measured by the Mayor:
+the merged parser failed the frontmatter of every real draft in the vault,
+including the Herald's own 2026-10-07 draft): the subset also accepts **one
+level of nested mapping**, an indented `  key: value` under a parent key, which
+is how the Herald writes `rubric:` (one line per criterion, law section 3);
+and block-list items that are double-quoted strings containing apostrophes or
+single quotes. Fixtures must reproduce the real shapes: a synthetic draft
+whose `rubric:` is a nested mapping of five criteria and whose `postable:` is
+a block list of double-quoted strings with apostrophes inside.
+
 The **post** is the body up to (not including) a line `## Long version`, if
 present (`fortkit-r6x.8.4`); everything from that line on is ignored by every
 check. Paragraphs are blocks separated by one or more blank lines.
