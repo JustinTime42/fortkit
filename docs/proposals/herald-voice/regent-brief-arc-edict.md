@@ -1,6 +1,8 @@
-# Regent sitting brief: the Herald's weekly arc (fortkit-r6x.8.6)
+# Regent sitting brief: the Herald's weekly arc and herald-lint wiring (fortkit-r6x.8.6, fortkit-r6x.8.10)
 
-Prepared by the Mayor 2026-10-07. Also carries `fortkit-r6x.8.11` (stale
+Prepared by the Mayor 2026-10-07. Also carries `fortkit-r6x.8.10` (wire
+herald-lint into both runs; folded in because it edits the same launcher, so
+one sitting installs one coherent file), `fortkit-r6x.8.11` (stale
 log-rename in `herald.service`) and `fortkit-dqu5.9` (retire the carried
 correction from the morning prompt). Gate-1: `civ/scripts/`, `civ/systemd/`
 and the user's systemd units are edict surfaces, and the law text applies in
@@ -23,6 +25,7 @@ All files in `docs/proposals/herald-voice/`.
 | Proposed file | Installs to | What |
 |---|---|---|
 | `herald.sh.arc.proposed` (diff `herald.sh.arc.diff`) | `civ/scripts/herald.sh` | `HERALD_MODE=daily\|arc`; arc writes `reports/arc-<date>.md`; arc prompt from law 9a; exclusive `flock` before `session.start` in every mode, 40-minute wait, then exit 66 with an incident; the lock file re-bound read-only in the mask and fd 9 closed on every bwrap; carried-correction paragraph removed (dqu5.9); mode in session events, incident texts and the crash stub (arc stub uses the 9a headings) |
+| `herald-settings.lint.json.proposed` | `civ/profiles/herald-settings.json` | one allow rule, `Bash(node /home/justin/dev/fortkit/src/cli.ts herald-lint*)`, plus a `$comment` line (8.10) |
 | `herald.service.proposed` | `civ/systemd/herald.service` and `~/.config/systemd/user/herald.service` | drops the no-op log move-aside and its stale comment (8.11) |
 | `herald-arc.service.proposed` | `civ/systemd/herald-arc.service` and the user unit dir | copy of the daily unit with `HERALD_MODE=arc` and `After=herald.service` |
 | `herald-arc.timer.proposed` | `civ/systemd/herald-arc.timer` and the user unit dir | `Sun *-*-* 06:00:00`, `Persistent=true` |
@@ -40,7 +43,19 @@ the lock.
 the units' `TimeoutStartSec=45min`, so a refused run still emits its incident
 and exits 66 instead of being SIGTERMed silently.
 
+**herald-lint wiring (8.10).** Both prompts now say: before filing any draft or
+rewrite, run `herald-lint <file> --json`; on fail, revise or spike; add one
+double-quoted `postable:` list item with the verdict, fails and flags; answer
+every flag and judgment item in the report. herald-lint is on main
+(`fortkit-r6x.8.3` merged `f190a7a`, `fortkit-r6x.8.13` merged `83694d3`, both
+Warden APPROVE-WITH-FINDINGS, verify green at 296 tests).
+
 ## Measured, not assumed
+
+- herald-lint against the real vault (the Mayor, 2026-10-07, after the
+  `83694d3` merge): the Herald's own 2026-10-07 draft and all 8 rewrites
+  return verdict pass, frontmatter included. Before `fortkit-r6x.8.13` every
+  one of them failed frontmatter, which is why wiring waited for it.
 
 - `bash -n` and `shellcheck -x` on the proposed launcher: clean. The carried
   correction no longer appears in it.
@@ -73,14 +88,18 @@ and exits 66 instead of being SIGTERMed silently.
    the mode, so the arc smoke proves mode parsing, the lock and the mask, and
    **never the arc prompt** (Warden finding 5); the arc prompt is first
    exercised by step 6 or by Sunday's live run.
-5. Lock, live: start a smoke run, and while it runs start a second one; the
+5. Lint, live: inside the smoke run's mask the allow rule must let
+   `node /home/justin/dev/fortkit/src/cli.ts herald-lint <any vault draft> --json`
+   run. The smoke prompt does not exercise it; run it by hand once from the
+   Herald's profile, or accept the first live morning as its proof and read
+   that report's postable: line.
+6. Lock, live: start a smoke run, and while it runs start a second one; the
    second must print nothing until the first ends, then proceed.
-6. Optional, costs one arc run: `systemctl --user start herald-arc.service`,
+7. Optional, costs one arc run: `systemctl --user start herald-arc.service`,
    then confirm `reports/arc-<date>.md` exists and NO new date-named report
    appeared. Otherwise the first live run is Sunday 2026-10-11 06:00, and the
    next daily report's window proves the daily run was untouched.
-7. Commit path-scoped, close `fortkit-r6x.8.11` and `fortkit-dqu5.9`; close
+8. Commit path-scoped, close `fortkit-r6x.8.10`, `fortkit-r6x.8.11` and
+   `fortkit-dqu5.9`; close
    `fortkit-r6x.8.6` after the first live arc report (spec acceptance 4).
 
-`fortkit-r6x.8.10` (wiring herald-lint) is not in this sitting: it waits on the
-Forge's `fortkit-r6x.8.3`.
