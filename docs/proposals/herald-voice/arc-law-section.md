@@ -5,9 +5,23 @@ adopted spec `docs/specs/herald-arc.md` (Overseer approval 2026-10-07, Warden
 APPROVE-WITH-FINDINGS, findings applied). Target: `civ/law/herald.md`. It
 amends like the charter (law section 10): Warden review of this text, then the
 Overseer's signature, then applied with `charter.amended`. The launcher mode,
-lock and timer follow by Regent edict and are not law.
+lock and timer arrive by Regent edict and are not law. **This text is applied
+in the same sitting as that edict, never before it** (Warden finding 3 on this
+text): section 9a states the lock as enforced, and the record must not claim
+an enforcement that does not exist yet.
 
-## Change 1: section 3, outputs, append to the vault layout
+## Change 1: section 3, outputs
+
+Replace the reports bullet (Warden finding 1: read literally, "one per run"
+would make the arc run write a date-named report, the very file that moves the
+daily window; its cross-reference also pointed at section 7 where section 8
+was meant):
+
+> - `reports/YYYY-MM-DD.md`. Exactly one per daily run, no exceptions
+>   (section 8). The weekly arc run writes `reports/arc-YYYY-MM-DD.md`
+>   instead (section 9a), never a date-named report.
+
+Then append to the vault layout:
 
 > - `rewrites/YYYY-MM-DD-<slug>.md`: cold-reader rewrites of older drafts,
 >   frontmatter as for any draft plus `rewrite_of:` naming the original. The
@@ -27,7 +41,16 @@ draft per run, and only a story that would rank in the week's top three."
 > Herald's own judgment of the week's top three. The cap is permanent; the arc
 > run gives it a reference. *(Amended 2026-10-07, fortkit-r6x.8.6.)*
 
-## Change 3: new section 9a, inserted after section 9
+## Change 3: section 9, first bullet, replaced (Warden finding 2)
+
+Current: "One session per morning, capped at ~50 turns."
+
+> - One session per daily run, plus one per weekly arc run (section 9a), each
+>   capped at ~50 turns.
+
+The rest of that bullet stands unchanged.
+
+## Change 4: new section 9a, inserted after section 9
 
 > ## 9a. The weekly arc
 >

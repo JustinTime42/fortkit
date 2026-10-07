@@ -256,8 +256,11 @@ checked"), and a fix the reader can act on.
    an occasional opening tag or closing line, never as a header on every post.
 2. **Place anchor: yes.** "In Palmer" or "in Alaska" may appear in a framing
    line when nothing in the record contradicts it.
-3. **Cadence: yes, raise the bar.** Until the weekly arc mode
-   (fortkit-r6x.8.6) exists, file at most one draft a day, and only a story
-   that would rank in the week's top three. A zero morning is still valid.
+3. **Cadence: yes, raise the bar.** At most one draft per daily run, and only
+   a story that would rank in the top three of the newest arc report's
+   ranking, or, before the first arc run, in the Herald's own judgment of the
+   week's top three. Permanent; it matches law section 7 as amended by
+   fortkit-r6x.8.6 (Warden finding 4 on its law text). A zero morning is still
+   valid.
 4. **Invented stakes: allowed, declared** (section 3). Provisional: the
    Overseer watches for patterns in what he edits out and refines the rule.

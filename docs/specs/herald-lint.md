@@ -2,7 +2,7 @@
 
 Status: ADOPTED. Overseer approval 2026-10-07 in session, after Warden
 APPROVE-WITH-FINDINGS with all findings applied (`fortkit-r6x.8.3`).
-Cairnwright (Mayor), 2026-10-06. Implementation: Forge. Wiring into the
+Author: Emrith Cairnwright (Mayor), 2026-10-06. Implementation: Forge. Wiring into the
 Herald's runs: Regent edict (`fortkit-r6x.8.10`), after this lands.
 
 ## 1. Why
