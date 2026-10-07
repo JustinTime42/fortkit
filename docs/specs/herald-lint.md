@@ -9,7 +9,7 @@ Herald's runs: Regent edict (`fortkit-r6x.8.10`), after this lands.
 The Herald's law gained bar 5, Postable, on 2026-10-06 (`fortkit-r6x.8.2`), and
 the brand-voice document gained the cold-reader rules the same day. Until now
 the Herald counted em-dashes and reframes by reading its own prose, and 44 of
-61 drafts went out over LinkedIn's hard limit anyway. The Overseer's standing
+61 drafts were filed over LinkedIn's 3,000-character limit anyway. The Overseer's standing
 rule applies: a constraint that keeps getting violated in prose gets encoded as
 a test. The Mayor checked the 2026-10-06 rewrites with a throwaway version of
 these checks (`docs/proposals/herald-voice/postable-checks.prototype.py`); it
@@ -51,6 +51,9 @@ export type LintCheck = {
 export type LintResult = {
   verdict: "pass" | "fail";   // "fail" iff any check is "fail"
   counts: { postChars: number; hookChars: number; paragraphs: number };
+  // Characters are Unicode code points (Array.from(s).length), never UTF-16
+  // units. LinkedIn's exact counting is unverified; the 1,800 ceiling sits far
+  // enough under its 3,000 limit that the choice cannot cross it.
   checks: LintCheck[];        // every check in section 5, in that order, always
 };
 ```
@@ -75,14 +78,16 @@ its source.
 |---|---|---|
 | `frontmatter` | fail | parses; carries `date`, `model`, `status`, `sources`, `rubric`, `invented`, `postable` |
 | `length` | fail | post at most 1,800 characters; detail also reports whether it is inside the 800-1,300 target |
-| `hook` | fail | the first line of the first paragraph is at most 140 characters |
-| `paragraph-sentences` | fail | no prose paragraph exceeds three sentences; a paragraph whose lines are separated by single newlines is a list and is exempt |
-| `closing-question` | fail | the post's last non-empty line ends with `?` |
+| `hook` | fail | the first paragraph is at most 140 characters (the mobile "see more" fold cuts by characters, line breaks included, so the whole opening block is what must fit; brand-voice section 4 lets the hook span lines 1-2, which this measures together) |
+| `paragraph-sentences` | fail | no prose paragraph exceeds three sentences. A paragraph is a **list**, and exempt, only if every line starts with a list marker (`-`, `*`, a bullet, or `1.`) or every line holds at most one sentence and ends in `.`, `!`, `?` or `:`. Hard-wrapped prose fails that test, because its lines break mid-sentence, so it is counted as prose (Warden finding 1) |
+| `closing-question` | fail | the post's last non-empty line ends with `?` (so a trailing hashtag line fails, by design: hashtags default to none), and it is none of the brand-voice section 6 banned closers ("Thoughts?", "Agree?", "Comment X if...", "What do you think about AI agents?"), matched case-insensitively (Warden finding 3) |
+| `stacked-questions` | flag | the last paragraph holds two or more questions (brand-voice section 6) |
 | `em-dash` | fail | zero U+2014 characters in the post |
+| `dash-substitute` | flag | a spaced en-dash (` – `, U+2013) or a spaced `--`, the usual stand-ins (Warden finding 7) |
 | `banned-phrases` | fail | none of the brand-voice section 7 phrases, case-insensitive |
 | `invented-declared` | fail | every line under `invented:` appears verbatim in the post |
 | `contrastive-reframe` | flag | heuristic for "not X, it's Y" in its common spellings, including "isn't X, it's Y", "X isn't the problem, Y is", and "It wasn't X. It was Y." across two sentences |
-| `setup-line` | flag | the first four paragraphs mention AI agents (cold-reader rule 1) |
+| `setup-line` | flag | the first four non-empty lines match `/\bAI agents?\b/i` (cold-reader rule 1 says "within the first four lines"; the unit follows the source, Warden finding 4). The rule asks for varied wording, so the matcher is deliberately loose and only flags |
 | `spelling` | flag | British spellings from a short list (-ised, -ising, labelled, neighbour, behaviour, colour, prioritise) |
 | `shared-stake` | judgment | cold-reader rule 2 |
 | `one-mechanism` | judgment | cold-reader rule 3 |
@@ -99,19 +104,26 @@ comment; decimals between digits must not split.
 goes into the repo**: unposted drafts are the Overseer's unpublished writing,
 and the remote may be public.
 
-- Every check id has a red arm and a green arm, so a check that cannot fail is
-  caught by its own test.
+- Every **fail** and **flag** check id has a red arm and a green arm, so a
+  check that cannot fire is caught by its own test. Judgment ids are never
+  decided and have no arms; the always-present test below covers them
+  (Warden finding 5).
 - One fully clean synthetic draft returns verdict pass, exit 0.
 - `## Long version` content over every limit does not change the result.
-- A list paragraph of five lines passes `paragraph-sentences`; a five-sentence
-  prose paragraph fails it.
+- A five-line list (markers, or one sentence per line) passes
+  `paragraph-sentences`; a five-sentence prose paragraph fails it **both
+  unwrapped and hard-wrapped at 60 columns** (Warden finding 1).
+- "Thoughts?" as the last line fails `closing-question`.
 - `6.5 seconds` does not count as a sentence break.
 - The output always contains every check id, in table order, including the
   judgment items.
-- Banned-phrase consistency: a test reads
-  `docs/proposals/herald-voice/brand-voice.md` and asserts each banned phrase
-  constant appears in its section 7, so the code and the document cannot drift
-  silently. (That file is the reviewed source of the vault copy.)
+- Banned-phrase consistency, **both directions** (Warden finding 2): a test
+  reads `docs/proposals/herald-voice/brand-voice.md`, extracts the quoted
+  phrases from section 7's stock-signpost bullet and section 6's "Banned"
+  line, and asserts the code's constants equal that set exactly. A phrase the
+  Overseer adds to the document without the code learning it turns the suite
+  red. (That file is the reviewed source of the vault copy. What the test
+  cannot see: a vault copy edited without updating the repo file.)
 - CLI: exit codes 0, 1, 2 for a passing draft, a failing draft, and a missing
   file; `--json` parses and matches `LintResult`.
 

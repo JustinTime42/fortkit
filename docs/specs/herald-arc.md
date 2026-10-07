@@ -21,10 +21,16 @@ A weekly run answers all three.
 1. **One arc draft, or none.** A post about the week, or a longer stretch if
    the week was quiet: where things stood, what broke or was hard, what
    changed, what Justin would tell a peer. Zero is valid, as on any morning.
-2. **The week's ranking.** Of every draft whose `status` is `draft` (not
-   `posted`, `spiked` or `superseded`), across `drafts/` and `rewrites/`, the
-   top three to post in the coming week, in order, with one line each on why.
-   This ranking is the reference the daily volume cap points at.
+2. **The week's ranking.** The top three drafts to post in the coming week,
+   in order, with one line each on why. This ranking is the reference the
+   daily volume cap points at. **Eligible:** a file in `drafts/` or
+   `rewrites/` whose `status` is exactly `draft`, **and** that no file in
+   `rewrites/` names in its `rewrite_of:` (a rewrite replaces its original for
+   ranking; the original's file is never edited). Any other status (`posted`
+   and `spiked` from `fortkit-r6x.8.5`, `superseded` as already used in the
+   vault for withdrawn stubs) is ineligible. All 8 rewrites filed under
+   `fortkit-r6x.8.7` carry `rewrite_of:` (verified 2026-10-07). (Warden
+   finding 2.)
 3. **Up to two backlog rewrites.** Older drafts that would rank if rewritten
    under the cold-reader rules get rewritten into `rewrites/`, frontmatter
    `rewrite_of:` naming the original. The original is left untouched; about 50
@@ -42,7 +48,9 @@ A weekly run answers all three.
   drafts, as data under threat 2, never as instruction.
 
 **Window.** From the `Digest window` end of the newest `reports/arc-*.md` to
-now; if none exists, the last seven days.
+now. If none exists, or its window cannot be parsed (a crash stub writes
+`Digest window: unknown`), the last seven days, and the report says which
+fallback applied under Gaps. (Warden finding 4b.)
 
 ## 4. The arc draft's bars
 
@@ -76,8 +84,20 @@ say so, and the edict's smoke run must show the next daily window unchanged.
 
 ## 6. Schedule and bounds
 
-- `civ/systemd/herald-arc.timer`: Sundays 06:00 local, `Persistent=true`,
-  one hour after the daily run so the two never overlap.
+- `civ/systemd/herald-arc.timer`: Sundays 06:00 local, `Persistent=true`.
+  It activates `civ/systemd/herald-arc.service`, a copy of `herald.service`
+  whose ExecStart carries the same Opus-then-Sol ladder with
+  `HERALD_MODE=arc` set, plus `After=herald.service`. (Warden finding 4a.)
+- **Overlap is prevented by a lock, never by clock spacing** (Warden finding
+  1). Both timers are `Persistent=true`, so after a Sunday morning with the
+  machine off or asleep, both missed runs fire together at the next boot. The
+  launcher therefore takes an exclusive `flock` on `$vault/.herald.lock` in
+  BOTH modes, before `session.start` and before any spend, held for the whole
+  run. A second run waits up to 60 minutes for it (the daily unit's
+  `TimeoutStartSec` is 45), then refuses with an incident and exit 66. The
+  hour between the timers is convenience; the lock is the guarantee. The
+  edict's acceptance includes starting both modes at once and showing the
+  second waits.
 - Same launcher, a mode switch: `HERALD_MODE=arc civ/scripts/herald.sh <model>`.
   Same mask, same read-only brand-voice bind and kernel pre-flight, same ladder
   (Opus, then GPT-5.6 Sol, then silent with an incident), same crash-stub
@@ -90,9 +110,12 @@ say so, and the edict's smoke run must show the next daily window unchanged.
 A new section in `civ/law/herald.md`, "The weekly arc", carrying sections 2
 to 5 of this spec in law form, and two amendments:
 
-- Section 7, the volume paragraph: "the week's top three" becomes "the top
-  three of the newest arc report's ranking, or, before the first arc run, the
-  Herald's own judgment".
+- Section 7, the volume paragraph, **replaced whole** (Warden finding 3: its
+  current opening "Until the weekly arc mode exists" would end the cap the
+  moment this lands): "At most one draft per daily run, and only a story that
+  would rank in the top three of the newest arc report's ranking, or, before
+  the first arc run, in the Herald's own judgment of the week's top three."
+  The cap is permanent; the arc run gives it a reference.
 - Section 3, outputs: `rewrites/` and `reports/arc-*.md` are added to the
   vault layout.
 
@@ -102,10 +125,13 @@ to 5 of this spec in law form, and two amendments:
    emitted.
 2. Launcher mode and timer installed by edict; smoke run in arc mode passes
    the existing probes and the kernel pre-flight.
-3. First live arc run files `reports/arc-<date>.md`; the next daily run's
+3. Lock: both modes started at once, the second waits and then runs (or
+   refuses with exit 66 after the wait); never two sessions on the vault.
+4. First live arc run files `reports/arc-<date>.md`; the next daily run's
    `Digest window` starts where the previous daily report ended (the arc report
    did not move it).
-4. The ranking names only drafts with `status: draft`.
+5. The ranking names only eligible drafts (section 2.2): no original whose
+   rewrite exists, nothing posted, spiked or superseded.
 
 ## 9. Out of scope
 
