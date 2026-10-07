@@ -213,6 +213,22 @@ describe("herald-lint", () => {
     ).toBe("fail");
   });
 
+  test("keeps prefix phrases and banned closers on word boundaries", () => {
+    for (const phrase of ["the part is useful", "the part it takes"])
+      expect(
+        resultFor(
+          draft(cleanBody.replace("Yesterday", `${phrase}. Yesterday`)),
+          "banned-phrases",
+        ).result,
+      ).toBe("pass");
+    expect(
+      resultFor(
+        draft(cleanBody.replace(/Where.*$/, "Where do you disagree?")),
+        "closing-question",
+      ).result,
+    ).toBe("pass");
+  });
+
   test("parses quoted invented values and fails unsupported frontmatter", () => {
     const quoted = draft(
       `${cleanBody}\n\nA line, with a comma.\n\nIt's checked.`,
@@ -225,6 +241,27 @@ describe("herald-lint", () => {
       result: "fail",
       detail: expect.stringContaining('"  not: yaml"'),
     });
+  });
+
+  test("parses the Herald's nested rubric and quoted postable block list", () => {
+    const realShape = `---
+date: 2026-10-07
+model: test
+status: draft
+sources: []
+rubric:
+  shared_stake: pass
+  one_mechanism: pass
+  actionable_lesson: pass
+  cold_test: pass
+  postable: pass
+invented: []
+postable:
+  - "The reader's next step is concrete."
+  - "It doesn't need a prior post."
+---
+${cleanBody}`;
+    expect(resultFor(realShape, "frontmatter").result).toBe("pass");
   });
 
   test("uses the explicit spelling list without flagging ordinary American words", () => {
@@ -255,11 +292,43 @@ describe("herald-lint", () => {
 
   test("reports each repeated fail hit with local context", () => {
     const body = `${cleanBody}\n\nOne. Two. Three. Four.\n\nFive. Six. Seven. Eight.\n\nA — B — C. Here's the thing. Let that sink in.`;
-    for (const id of ["paragraph-sentences", "em-dash", "banned-phrases"]) {
+    const expectedHits = {
+      "paragraph-sentences": 2,
+      "em-dash": 2,
+      "banned-phrases": 2,
+    } as const;
+    for (const [id, hits] of Object.entries(expectedHits)) {
       const value = resultFor(draft(body), id);
       expect(value.result).toBe("fail");
-      expect(value.detail).toContain(",");
+      expect(value.detail).toContain(String(hits));
+      expect(value.detail).toContain('"');
     }
+  });
+
+  test("quotes surrounding post context for non-failing heuristic flags", () => {
+    for (const [id, text] of [
+      ["dash-substitute", "A -- B"],
+      ["spelling", "the labelled report"],
+      ["contrastive-reframe", "It wasn't a typo. It was a missing check."],
+    ] as const) {
+      const value = resultFor(
+        draft(cleanBody.replace("Yesterday", `Yesterday ${text}`)),
+        id,
+      );
+      expect(value.result).toBe("flag");
+      expect(value.detail).toContain("Yesterday");
+    }
+  });
+
+  test("does not flag an ordinary use of not and it's", () => {
+    expect(
+      resultFor(
+        draft(
+          cleanBody.replace("Yesterday", "I'm not sure it's right. Yesterday"),
+        ),
+        "contrastive-reframe",
+      ).result,
+    ).toBe("pass");
   });
 
   test("keeps banned phrase constants aligned with reviewed brand voice", async () => {
@@ -290,21 +359,7 @@ describe("herald-lint", () => {
     try {
       const passed = await runCli(["herald-lint", passing, "--json"]);
       expect(passed.code).toBe(0);
-      expect(JSON.parse(passed.output)).toMatchObject({
-        verdict: "pass",
-        counts: {
-          postChars: expect.any(Number),
-          hookChars: expect.any(Number),
-          paragraphs: expect.any(Number),
-        },
-        checks: expect.arrayContaining([
-          expect.objectContaining({
-            id: "frontmatter",
-            result: "pass",
-            detail: expect.any(String),
-          }),
-        ]),
-      });
+      expect(JSON.parse(passed.output)).toEqual(lintDraft(draft(cleanBody)));
       expect((await runCli(["herald-lint", failing])).code).toBe(1);
       expect(
         (await runCli(["herald-lint", join(root, "missing.md")])).code,

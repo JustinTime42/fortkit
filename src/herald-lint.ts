@@ -118,6 +118,16 @@ function parseDraft(text: string): {
       values.set(name, key[2] ?? "");
       continue;
     }
+    const nestedKey = /^ {2}([A-Za-z][\w-]*):\s*(.*)$/.exec(line);
+    if (
+      nestedKey?.[1] !== undefined &&
+      currentKey !== undefined &&
+      values.get(currentKey) === ""
+    ) {
+      // The Herald's rubric is a one-level mapping. Nested values are not
+      // otherwise interpreted, but recognizing them keeps the subset strict.
+      continue;
+    }
     const item = /^\s*-\s*(.*)$/.exec(line);
     if (item?.[1] === undefined || currentKey === undefined) {
       malformed.push(line);
@@ -249,7 +259,7 @@ export function lintDraft(text: string): LintResult {
       longParagraphs.length === 0 ? "pass" : "fail",
       longParagraphs.length === 0
         ? "No prose paragraph exceeds three sentences."
-        : `Overlong paragraphs: ${longParagraphs.map((paragraph) => excerpt(paragraph)).join(", ")}.`,
+        : `${longParagraphs.length} overlong paragraph(s): ${longParagraphs.map((paragraph) => excerpt(paragraph)).join(", ")}.`,
     ),
   );
   const lastLine =
@@ -261,13 +271,14 @@ export function lintDraft(text: string): LintResult {
   const normalizedLastLine = normalizedForMatch(lastLine).toLowerCase();
   const bannedCloser =
     BANNED_CLOSERS.find((closer) =>
-      normalizedLastLine.endsWith(
-        normalizedForMatch(closer)
+      new RegExp(
+        `\\b${normalizedForMatch(closer)
           .replace(/\.\.\.$/, "")
-          .toLowerCase(),
-      ),
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+        "i",
+      ).test(normalizedLastLine),
     ) ??
-    (/comment\s+\S+\s+if[^?]*\?$/i.test(normalizedLastLine)
+    (/\bcomment\s+\S+\s+if[^?]*\?$/i.test(normalizedLastLine)
       ? "Comment X if..."
       : undefined);
   checks.push(
@@ -300,14 +311,14 @@ export function lintDraft(text: string): LintResult {
         : `${emDashes.length} em dash(es): ${emDashes.map((match) => excerpt(post, match.index, 1)).join(", ")}.`,
     ),
   );
-  const substitute = post.match(/ – | -- /)?.[0];
+  const substitute = / – | -- /.exec(post);
   checks.push(
     check(
       "dash-substitute",
-      substitute === undefined ? "pass" : "flag",
-      substitute === undefined
+      substitute === null ? "pass" : "flag",
+      substitute === null
         ? "No spaced dash substitutes."
-        : `Dash substitute ${excerpt(substitute)} found.`,
+        : `Dash substitute ${excerpt(post, substitute.index, substitute[0].length)} found.`,
     ),
   );
   const normalizedPost = normalizedForMatch(post).toLowerCase();
@@ -315,9 +326,13 @@ export function lintDraft(text: string): LintResult {
     const normalized = normalizedForMatch(phrase)
       .toLowerCase()
       .replace(/(?:\.\.\.|…)$/u, "");
+    const prefix = /(?:\.\.\.|…)$/u.test(phrase);
     return allMatches(
       normalizedPost,
-      new RegExp(normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+      new RegExp(
+        `${normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}${prefix ? "\\b" : ""}`,
+        "g",
+      ),
     );
   });
   checks.push(
@@ -326,7 +341,7 @@ export function lintDraft(text: string): LintResult {
       bannedPhrases.length === 0 ? "pass" : "fail",
       bannedPhrases.length === 0
         ? "No banned phrases."
-        : `Banned phrases: ${bannedPhrases.map((match) => excerpt(post, match.index, match[0].length)).join(", ")}.`,
+        : `${bannedPhrases.length} banned phrase(s): ${bannedPhrases.map((match) => excerpt(post, match.index, match[0].length)).join(", ")}.`,
     ),
   );
   const missingInvented = (parsed.frontmatter?.invented ?? []).find(
@@ -342,16 +357,16 @@ export function lintDraft(text: string): LintResult {
     ),
   );
   const reframe =
-    /\b(?:not|isn't|wasn't)\b[^.!?]{0,100}\b(?:it's|it is|that'?s|that is)\b|\b\w+ isn't the problem, \w+ is\b|\bit wasn't [^.?!]+\.\s*it was\b/i.exec(
+    /\b(?:not|isn't|wasn't)\b[^.!?]{0,100},\s*\b(?:it's|it is|that'?s|that is)\b|\b\w+ isn't the problem,\s*\w+ is\b|\bit wasn't [^.?!]+\.\s*it was\b/i.exec(
       normalizedForMatch(post),
-    )?.[0];
+    );
   checks.push(
     check(
       "contrastive-reframe",
-      reframe === undefined ? "pass" : "flag",
-      reframe === undefined
+      reframe === null ? "pass" : "flag",
+      reframe === null
         ? "No contrastive reframe found."
-        : `Possible contrastive reframe: ${excerpt(reframe)}.`,
+        : `Possible contrastive reframe: ${excerpt(post, reframe.index, reframe[0].length)}.`,
     ),
   );
   const firstFourLines = post
@@ -371,14 +386,14 @@ export function lintDraft(text: string): LintResult {
   const spelling =
     /\b(?:labelled|labelling|neighbours?|behaviours?|colours?|favours?|honours?|centres?|catalogues?|(?:prioritis|deprioritis|organis|realis|recognis|optimis|summaris|analys|apologis|categoris|minimis|maximis)(?:e|ed|ing))\b/i.exec(
       post,
-    )?.[0];
+    );
   checks.push(
     check(
       "spelling",
-      spelling === undefined ? "pass" : "flag",
-      spelling === undefined
+      spelling === null ? "pass" : "flag",
+      spelling === null
         ? "No listed British spellings."
-        : `Possible British spelling: ${excerpt(spelling)}.`,
+        : `Possible British spelling: ${excerpt(post, spelling.index, spelling[0].length)}.`,
     ),
   );
   for (const id of [
