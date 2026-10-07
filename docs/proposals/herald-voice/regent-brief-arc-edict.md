@@ -22,16 +22,23 @@ All files in `docs/proposals/herald-voice/`.
 
 | Proposed file | Installs to | What |
 |---|---|---|
-| `herald.sh.arc.proposed` (diff `herald.sh.arc.diff`, 8 hunks) | `civ/scripts/herald.sh` | `HERALD_MODE=daily\|arc`; arc writes `reports/arc-<date>.md`; arc prompt from law 9a; exclusive `flock` before `session.start` in every mode, 60-minute wait, then exit 66 with an incident; carried-correction paragraph removed (dqu5.9); mode in session events and the crash stub's title |
+| `herald.sh.arc.proposed` (diff `herald.sh.arc.diff`) | `civ/scripts/herald.sh` | `HERALD_MODE=daily\|arc`; arc writes `reports/arc-<date>.md`; arc prompt from law 9a; exclusive `flock` before `session.start` in every mode, 40-minute wait, then exit 66 with an incident; the lock file re-bound read-only in the mask and fd 9 closed on every bwrap; carried-correction paragraph removed (dqu5.9); mode in session events, incident texts and the crash stub (arc stub uses the 9a headings) |
 | `herald.service.proposed` | `civ/systemd/herald.service` and `~/.config/systemd/user/herald.service` | drops the no-op log move-aside and its stale comment (8.11) |
 | `herald-arc.service.proposed` | `civ/systemd/herald-arc.service` and the user unit dir | copy of the daily unit with `HERALD_MODE=arc` and `After=herald.service` |
 | `herald-arc.timer.proposed` | `civ/systemd/herald-arc.timer` and the user unit dir | `Sun *-*-* 06:00:00`, `Persistent=true` |
 
 **Deviation from the spec, on purpose:** the lock file is
-`${XDG_RUNTIME_DIR:-/tmp}/herald.lock`, not `$vault/.herald.lock`. The
-Herald can write the vault, and a lock file he deleted would let a second run
-in. Outside the vault, he cannot touch it. The launcher holds fd 9 host-side for
-the whole run.
+`/tmp/herald-<uid>.lock`, one fixed path for every launch (Warden finding 3:
+an `XDG_RUNTIME_DIR` fallback gave two different files), not
+`$vault/.herald.lock`. `/tmp` is writable inside the mask too (Warden finding
+1 corrected the round-1 claim that he "cannot touch it"), so the claim is made
+true at the kernel instead of asserted: the mask re-binds the lock file
+read-only, and every bwrap call closes fd 9 (`9>&-`) so only the launcher holds
+the lock.
+
+**Wait vs. unit timeout** (Warden finding 2): the lock wait is 40 minutes, under
+the units' `TimeoutStartSec=45min`, so a refused run still emits its incident
+and exits 66 instead of being SIGTERMed silently.
 
 ## Measured, not assumed
 
@@ -40,6 +47,11 @@ the whole run.
 - The lock, measured with `flock` on a scratch lock file, three holders: A
   takes it and holds 4 s; C (1 s wait) is refused while A holds it; B (10 s
   wait) acquires it the second A releases.
+- Round 2, measured with the REAL mask lib (`build_mask claude`), each with a
+  negative control: without the ro-bind a masked child deletes a lock-like
+  file in `/tmp` (so the bind is needed); with it, unlink is refused and a
+  write fails with "Read-only file system". Without `9>&-` the masked child
+  inherits fd 9; with it, the child has no fd 9.
 - `systemd-analyze calendar "Sun *-*-* 06:00:00"`: valid; next elapse Sun
   2026-10-11 06:00 AKDT.
 - The installed `herald.service` and `herald.timer` were byte-identical to
@@ -57,7 +69,10 @@ the whole run.
    `systemctl --user enable --now herald-arc.timer`.
 4. Smoke, both modes: `HERALD_SMOKE=1 civ/scripts/herald.sh opus`, then
    `HERALD_SMOKE=1 HERALD_MODE=arc civ/scripts/herald.sh opus`. Expect every
-   probe PASS and SMOKE-COMPLETE each time.
+   probe PASS and SMOKE-COMPLETE each time. The smoke prompt does not depend on
+   the mode, so the arc smoke proves mode parsing, the lock and the mask, and
+   **never the arc prompt** (Warden finding 5); the arc prompt is first
+   exercised by step 6 or by Sunday's live run.
 5. Lock, live: start a smoke run, and while it runs start a second one; the
    second must print nothing until the first ends, then proceed.
 6. Optional, costs one arc run: `systemctl --user start herald-arc.service`,

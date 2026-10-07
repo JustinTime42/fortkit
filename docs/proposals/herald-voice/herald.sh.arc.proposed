@@ -29,9 +29,13 @@
 #   so the daily window is untouched. Default mode is daily.
 # Lock (fortkit-r6x.8.6, Warden finding 1 on its spec): every mode takes an
 #   exclusive flock before session.start and holds it for the run; a second
-#   launcher waits up to 60 minutes, then refuses with exit 66. The lock file
-#   lives OUTSIDE the vault (the Herald can write the vault, and a deleted lock
-#   file would let a second run in).
+#   launcher waits up to 40 minutes (under the units' 45-minute
+#   TimeoutStartSec, so the refusal path is reachable under systemd), then
+#   refuses with exit 66. The lock file has ONE fixed path for every launch,
+#   /tmp/herald-<uid>.lock, and the mask re-binds it read-only so the Herald
+#   cannot unlink or replace it at the kernel; fd 9 is closed for every child,
+#   so only this launcher holds the lock (Warden findings 1-3 on the arc prep).
+#   Exit 66 also = lock not acquired in time.
 # Exit codes: 0 = report filed. 65 = the session produced no report (dead at
 #   launch, rate-limited, truncated) — a crash-stub report is filed by this
 #   launcher, an incident is emitted, and the caller must relaunch on the
@@ -39,7 +43,8 @@
 #   stub itself could not land) — an incident is emitted and the caller must
 #   NOT ladder-retry: the vault is the problem, not the model (fortkit-izz).
 #   66 also = brand-voice.md is writable inside the mask, or the kernel check
-#   could not prove otherwise (fortkit-r6x.8.8); same rule, no ladder-retry.
+#   could not prove otherwise (fortkit-r6x.8.8), or another Herald run held
+#   the lock past the wait (fortkit-r6x.8.6); same rule, no ladder-retry.
 #   A missing report is never a quiet morning (fortkit-ugr.6: an
 #   empty morning must mean the record was empty, never that he could not
 #   see). Any other code is claude's own.
@@ -59,7 +64,7 @@ case "$mode" in
   arc) report="$vault/reports/arc-$today.md" ;;
   *) echo "--- herald.sh: unknown HERALD_MODE '$mode' (daily|arc)"; exit 2 ;;
 esac
-lockfile="${XDG_RUNTIME_DIR:-/tmp}/herald.lock"
+lockfile="/tmp/herald-$(id -u).lock"
 # Per-run log naming (fortkit-izz): a date-only name let a same-day relaunch
 # truncate the prior attempt's transcript via tee — the maiden run lost two
 # composed drafts exactly that way.
@@ -75,7 +80,7 @@ max_turns="${HERALD_MAX_TURNS:-50}"
 # session.start and no session accounting noise (fortkit-1y2).
 if ! mkdir -p "$vault/drafts" "$vault/reports" 2>/dev/null \
    || ! touch "$vault/reports/.preflight-$$" "$vault/drafts/.preflight-$$" 2>/dev/null; then
-  "$civemit" incident "Herald morning REFUSED at pre-flight: vault unwritable ($vault) — no session launched, nothing spent; fix the vault, then relaunch. Not a quiet morning." \
+  "$civemit" incident "Herald $mode run REFUSED at pre-flight: vault unwritable ($vault) — no session launched, nothing spent; fix the vault, then relaunch. Not a quiet morning." \
     -a halric -s herald -p "{\"exit\":66,\"vault\":\"$vault\"}"
   rm -f "$vault/reports/.preflight-$$" "$vault/drafts/.preflight-$$" 2>/dev/null || true
   echo "--- herald.sh: PRE-FLIGHT FAILED — vault unwritable: $vault"
@@ -138,12 +143,15 @@ mask_env claude
 # hour between them is convenience and this lock is the guarantee. fd 9 is
 # held by this host-side shell for the whole run and released at exit.
 exec 9>"$lockfile"
-if ! flock -w 3600 9; then
-  "$civemit" incident "Herald $mode run REFUSED: another Herald run held the lock for 60 minutes ($lockfile). No session launched." \
+if ! flock -w 2400 9; then
+  "$civemit" incident "Herald $mode run REFUSED: another Herald run held the lock for 40 minutes ($lockfile). No session launched." \
     -a halric -s herald -p "{\"exit\":66,\"mode\":\"$mode\",\"lock\":\"$lockfile\"}"
-  echo "--- herald.sh: lock not acquired in 60 minutes ($lockfile). Exit 66."
+  echo "--- herald.sh: lock not acquired in 40 minutes ($lockfile). Exit 66."
   exit 66
 fi
+# The Herald may not touch the lock: read-only bind (unlink and rename refused
+# on a mount point, as for brand-voice.md), and fd 9 closed on every bwrap.
+mask+=(--ro-bind "$lockfile" "$lockfile")
 
 # Prove the bind at the kernel, with no model and no permission profile in the
 # path (Warden finding 1 on r6x.8.8: a model-run probe is refused by the
@@ -156,13 +164,13 @@ bind_ok=1
 if [ -f "$voice" ]; then
   bind_ok=0
   # shellcheck disable=SC2016  # $1 is meant for the inner sh, not this shell
-  if ! bind_err="$(bwrap "${mask[@]}" -- sh -c ': >> "$1"' _ "$voice" 2>&1 >/dev/null)" \
+  if ! bind_err="$(bwrap "${mask[@]}" 9>&- -- sh -c ': >> "$1"' _ "$voice" 2>&1 >/dev/null)" \
      && grep -q 'Read-only file system' <<<"$bind_err"; then
     bind_ok=1
   fi
 fi
 if [ "$bind_ok" -ne 1 ]; then
-  "$civemit" incident "Herald morning REFUSED at pre-flight: could not prove brand-voice.md read-only inside the mask ($voice). No session launched." \
+  "$civemit" incident "Herald $mode run REFUSED at pre-flight: could not prove brand-voice.md read-only inside the mask ($voice). No session launched." \
     -a halric -s herald -p "{\"exit\":66,\"voice\":\"$voice\"}"
   echo "--- herald.sh: PRE-FLIGHT FAILED: brand-voice.md not proven read-only inside the mask. Exit 66."
   exit 66
@@ -171,7 +179,7 @@ fi
 "$civemit" session.start "Halric begins $([ "${HERALD_SMOKE:-0}" = "1" ] && echo a boundary smoke-test || echo "the $mode run") ($model)" -a halric -s herald -p "{\"model\":\"$model\",\"mode\":\"$mode\"}"
 
 set +e
-(cd "$root" && printf '%s' "$prompt" | bwrap "${mask[@]}" -- claude -p \
+(cd "$root" && printf '%s' "$prompt" | bwrap "${mask[@]}" 9>&- -- claude -p \
   --model "$model" \
   --max-turns "$max_turns" \
   --tools "Bash,Read,Write,Edit,Grep,Glob" \
@@ -209,11 +217,21 @@ if [ ! -s "$report" ]; then
     echo "Digest window: unknown — the session did not complete"
     echo "Turns used: unknown of $max_turns"
     echo
-    echo "## Candidates considered"
-    echo "none — the session produced no report (claude exit $rc)"
-    echo
-    echo "## Drafts filed"
-    echo "none — crashed run"
+    if [ "$mode" = "arc" ]; then
+      echo "## Window"; echo "unknown"; echo
+      echo "## Arc candidates considered"
+      echo "none — the session produced no report (claude exit $rc)"
+      echo
+      echo "## Draft filed"; echo "none — crashed run"; echo
+      echo "## Ranking for the coming week"; echo "none — crashed run"; echo
+      echo "## Backlog rewrites"; echo "none — crashed run"
+    else
+      echo "## Candidates considered"
+      echo "none — the session produced no report (claude exit $rc)"
+      echo
+      echo "## Drafts filed"
+      echo "none — crashed run"
+    fi
     echo
     echo "## Gaps and anomalies"
     echo "The morning run itself failed. Transcript: $log ; errors: $log.err"
