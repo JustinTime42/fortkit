@@ -31,6 +31,13 @@ It judges form, never quality. It never edits a draft.
 ## 3. Input
 
 A Herald draft: a YAML frontmatter block between `---` lines, then the body.
+The frontmatter reader supports a documented YAML subset, with no YAML
+dependency (supply-chain threat 3): `key: value` scalars, block lists of
+`- "quoted"` or `- bare` items, inline lists of quoted items with commas
+inside quotes respected, and the `''` and `\"` escapes decoded. Lines it cannot
+parse make `frontmatter` fail and are quoted in its detail, never silently
+ignored (Warden finding 4 on the implementation).
+
 The **post** is the body up to (not including) a line `## Long version`, if
 present (`fortkit-r6x.8.4`); everything from that line on is ignored by every
 check. Paragraphs are blocks separated by one or more blank lines.
@@ -65,6 +72,8 @@ export type LintResult = {
 - **judgment** is listed every time and never decided by the tool. The Herald
   answers it in `postable:`.
 
+Every `fail` and `flag` detail quotes the offending text in context (about 40 characters either side), and a check that can fire several times (`paragraph-sentences`, `em-dash`, `banned-phrases`) reports every hit, not the first (Warden finding 5 on the implementation).
+
 Exit codes: `0` verdict pass (flags allowed), `1` verdict fail, `2` usage error
 or unreadable file. Malformed frontmatter is a `fail` on `frontmatter`, exit 1,
 never a crash.
@@ -81,15 +90,15 @@ its source.
 | `length` | fail | post at most 1,800 characters; detail also reports whether it is inside the 800-1,300 target |
 | `hook` | fail | the first paragraph is at most 140 characters (the mobile "see more" fold cuts by characters, line breaks included, so the whole opening block is what must fit; brand-voice section 4 lets the hook span lines 1-2, which this measures together) |
 | `paragraph-sentences` | fail | no prose paragraph exceeds three sentences. A paragraph is a **list**, and exempt, only if every line starts with a list marker (`-`, `*`, a bullet, or `1.`) or every line holds at most one sentence and ends in `.`, `!`, `?` or `:`. Hard-wrapped prose fails that test, because its lines break mid-sentence, so it is counted as prose (Warden finding 1) |
-| `closing-question` | fail | the post's last non-empty line ends with `?` (so a trailing hashtag line fails, by design: hashtags default to none), and it is none of the brand-voice section 6 banned closers ("Thoughts?", "Agree?", "Comment X if...", "What do you think about AI agents?"), matched case-insensitively (Warden finding 3) |
+| `closing-question` | fail | the post's last non-empty line ends with `?` (so a trailing hashtag line fails, by design: hashtags default to none), and it does not END with any of the brand-voice section 6 banned closers ("Thoughts?", "Agree?", "Comment X if...", "What do you think about AI agents?"), matched case-insensitively, so "So, thoughts?" fails too (Warden finding 3 on the spec; finding 6 on the implementation) |
 | `stacked-questions` | flag | the last paragraph holds two or more questions (brand-voice section 6) |
 | `em-dash` | fail | zero U+2014 characters in the post |
 | `dash-substitute` | flag | a spaced en-dash (` – `, U+2013) or a spaced `--`, the usual stand-ins (Warden finding 7) |
-| `banned-phrases` | fail | none of the brand-voice section 7 phrases, case-insensitive |
+| `banned-phrases` | fail | none of the brand-voice section 7 phrases, case-insensitive. A phrase written with a trailing `...` or `…` in the document is a **prefix**: it matches that text followed by anything ("the part I..." matches "the part I liked"). Before any matching, typographic apostrophes and quotes (U+2018, U+2019, U+201C, U+201D) are normalized to ASCII, here and in every other text check (amended 2026-10-07, Warden finding 1 on the implementation) |
 | `invented-declared` | fail | every line under `invented:` appears verbatim in the post |
 | `contrastive-reframe` | flag | heuristic for "not X, it's Y" in its common spellings, including "isn't X, it's Y", "X isn't the problem, Y is", and "It wasn't X. It was Y." across two sentences |
 | `setup-line` | flag | the first four non-empty lines match `/\bAI agents?\b/i` (cold-reader rule 1 says "within the first four lines"; the unit follows the source, Warden finding 4). The rule asks for varied wording, so the matcher is deliberately loose and only flags |
-| `spelling` | flag | British spellings from a short list (-ised, -ising, labelled, neighbour, behaviour, colour, prioritise) |
+| `spelling` | flag | British spellings from an explicit **word list**, never a suffix pattern: labelled, labelling, neighbour(s), behaviour(s), colour(s), favour(s), honour(s), centre(s), catalogue(s), and the -ise/-ised/-ising forms of a fixed list of roots (prioritis-, deprioritis-, organis-, realis-, recognis-, optimis-, summaris-, analys-, apologis-, categoris-, minimis-, maximis-). A suffix rule matched ordinary American words (raised, promised, advertising) and a flag that fires on ordinary words teaches the Herald to ignore flags (amended 2026-10-07, Warden finding 3 on the implementation) |
 | `shared-stake` | judgment | cold-reader rule 2 |
 | `one-mechanism` | judgment | cold-reader rule 3 |
 | `actionable-lesson` | judgment | cold-reader rule 4 |
