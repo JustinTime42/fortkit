@@ -43,19 +43,28 @@ the lock.
 the units' `TimeoutStartSec=45min`, so a refused run still emits its incident
 and exits 66 instead of being SIGTERMed silently.
 
-**herald-lint wiring (8.10).** Both prompts now say: before filing any draft or
-rewrite, run `herald-lint <file> --json`; on fail, revise or spike; add one
-double-quoted `postable:` list item with the verdict, fails and flags; answer
-every flag and judgment item in the report. herald-lint is on main
+**herald-lint wiring (8.10).** Both prompts now say: add one double-quoted
+`postable:` item, then run `herald-lint <file> --json` as the LAST step before
+filing so the filed file is the linted file; on fail, revise or spike; if the
+lint cannot run, write `herald-lint: not-run; <cause>` and name the gap in the
+report; answer every flag and judgment item in the report. Smoke probe 10
+proves the lint is permitted. herald-lint is on main
 (`fortkit-r6x.8.3` merged `f190a7a`, `fortkit-r6x.8.13` merged `83694d3`, both
 Warden APPROVE-WITH-FINDINGS, verify green at 296 tests).
 
 ## Measured, not assumed
 
-- herald-lint against the real vault (the Mayor, 2026-10-07, after the
-  `83694d3` merge): the Herald's own 2026-10-07 draft and all 8 rewrites
-  return verdict pass, frontmatter included. Before `fortkit-r6x.8.13` every
-  one of them failed frontmatter, which is why wiring waited for it.
+- herald-lint against real drafts (the Mayor, 2026-10-07, after the `83694d3`
+  merge). Two different causes before, stated separately (Warden finding 5):
+  - The Herald's own 2026-10-07 draft failed frontmatter under `f190a7a`
+    because he writes `rubric:` as a nested mapping; under `83694d3` it passes
+    every check. This is the evidence that wiring had to wait for
+    `fortkit-r6x.8.13`.
+  - The 8 rewrites failed for a different reason: the Mayor's generator never
+    wrote a `rubric:` key (a Mayor defect the lint caught). The Mayor
+    regenerated them WITH a rubric in the scratchpad, and those pass. The vault
+    copies change only if the Overseer re-copies them; the Mayor cannot write
+    the vault.
 
 - `bash -n` and `shellcheck -x` on the proposed launcher: clean. The carried
   correction no longer appears in it.
@@ -84,15 +93,14 @@ Warden APPROVE-WITH-FINDINGS, verify green at 296 tests).
    `systemctl --user enable --now herald-arc.timer`.
 4. Smoke, both modes: `HERALD_SMOKE=1 civ/scripts/herald.sh opus`, then
    `HERALD_SMOKE=1 HERALD_MODE=arc civ/scripts/herald.sh opus`. Expect every
-   probe PASS and SMOKE-COMPLETE each time. The smoke prompt does not depend on
-   the mode, so the arc smoke proves mode parsing, the lock and the mask, and
-   **never the arc prompt** (Warden finding 5); the arc prompt is first
-   exercised by step 6 or by Sunday's live run.
-5. Lint, live: inside the smoke run's mask the allow rule must let
-   `node /home/justin/dev/fortkit/src/cli.ts herald-lint <any vault draft> --json`
-   run. The smoke prompt does not exercise it; run it by hand once from the
-   Herald's profile, or accept the first live morning as its proof and read
-   that report's postable: line.
+   probe PASS (now ten probes) and SMOKE-COMPLETE each time. The smoke prompt
+   does not depend on the mode, so the arc smoke proves mode parsing, the lock
+   and the mask, and **never the arc prompt**; the arc prompt is first
+   exercised by the optional live arc run or by Sunday's.
+5. Lint, live: smoke probe 10 runs `herald-lint` on the smoke canary inside
+   the Herald's mask and profile; PASS means it ran and printed JSON. This is
+   `fortkit-r6x.8.10`'s acceptance, and the bead does not close without it
+   (Warden finding 1).
 6. Lock, live: start a smoke run, and while it runs start a second one; the
    second must print nothing until the first ends, then proceed.
 7. Optional, costs one arc run: `systemctl --user start herald-arc.service`,

@@ -80,7 +80,8 @@ export type LintResult = {
 - **flag** is a heuristic hit. The Herald either fixes it or says in the report
   why it is a false positive. A flag never fails the verdict.
 - **judgment** is listed every time and never decided by the tool. The Herald
-  answers it in `postable:`.
+  answers it in the report (amended 2026-10-07 to match section 7 and the
+  wiring in `fortkit-r6x.8.10`; Warden finding 4 on that wiring).
 
 Every `fail` and `flag` detail quotes the offending text in context (about 40 characters either side), and a check that can fire several times (`paragraph-sentences`, `em-dash`, `banned-phrases`) reports every hit, not the first (Warden finding 5 on the implementation).
 
@@ -149,12 +150,16 @@ and the remote may be public.
 
 ## 7. Wiring (not the Forge's work)
 
-`fortkit-r6x.8.10`, Regent edict after this merges: add
-`Bash(node /home/justin/dev/fortkit/src/cli.ts herald-lint*)` to
-`civ/profiles/herald-settings.json`, and add a step to the morning prompt in
-`civ/scripts/herald.sh`: run herald-lint on each draft before filing, paste the
-`--json` checks into `postable:`, revise or spike on fail, and answer flags and
-judgment items in the report.
+`fortkit-r6x.8.10`, by Regent edict in the arc-mode sitting: the allow rule
+`Bash(node /home/justin/dev/fortkit/src/cli.ts herald-lint*)` in
+`civ/profiles/herald-settings.json`, smoke probe 10 (the lint runs and prints
+JSON), and a step in both run prompts. The Herald adds ONE double-quoted
+`postable:` list item, `herald-lint: <verdict>; fails: <ids or none>; flags:
+<ids or none>`, then runs the lint as the last step before filing, so the file
+filed is the file linted. On fail he revises or spikes. If the lint cannot run,
+the item reads `herald-lint: not-run; <cause>` and the gap is named in the
+report. Flags and judgment items are answered in the report, not pasted into
+`postable:` (amended 2026-10-07, Warden findings on `fortkit-r6x.8.10`).
 
 ## 8. Out of scope
 
