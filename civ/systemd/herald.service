@@ -19,9 +19,10 @@ Environment=PATH=/home/justin/.local/bin:/usr/local/bin:/usr/bin:/bin
 # incident already emitted. Exit 65 = the session produced no report; the
 # launcher has filed a crash-stub report and emitted the incident, and the
 # CALLER relaunches on the next rung. Any other nonzero exit fails the unit
-# without a retry. The failed rung's transcript is moved aside first, because
-# herald.sh date-names its log and a same-day relaunch truncates it
-# (fortkit-izz); this preserves rung 1's transcript for the record.
-ExecStart=/bin/bash -c 'civ/scripts/herald.sh opus; rc=$?; if [ "$rc" -ne 65 ]; then exit "$rc"; fi; mv -f "/tmp/herald-$(date +%%F).log" "/tmp/herald-$(date +%%F).log.opus-failed" 2>/dev/null || true; mv -f "/tmp/herald-$(date +%%F).log.err" "/tmp/herald-$(date +%%F).log.err.opus-failed" 2>/dev/null || true; exec civ/scripts/herald.sh gpt-5.6-sol'
+# without a retry. Each rung keeps its own transcript: herald.sh names its log
+# /tmp/herald-<date>-<HHMMSS>.log (fortkit-izz), so a relaunch never
+# truncates the failed rung's log. (The old move-aside step matched the former
+# date-only name and had become a no-op; removed under fortkit-r6x.8.11.)
+ExecStart=/bin/bash -c 'civ/scripts/herald.sh opus; rc=$?; if [ "$rc" -ne 65 ]; then exit "$rc"; fi; exec civ/scripts/herald.sh gpt-5.6-sol'
 # A maiden-run morning took ~7 minutes; two full rungs plus headroom.
 TimeoutStartSec=45min

@@ -1,0 +1,14 @@
+# Herald weekly arc timer (fortkit-r6x.8.6, law section 9a). Drafted by the
+# Mayor 2026-10-07; installed by Regent edict. Sundays 06:00 local, one hour
+# after the daily run. Persistent=true catches up a missed Sunday at the next
+# boot; the flock in herald.sh, not this spacing, keeps the two runs apart.
+
+[Unit]
+Description=Herald weekly arc run, Sundays 06:00
+
+[Timer]
+OnCalendar=Sun *-*-* 06:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
