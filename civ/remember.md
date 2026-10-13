@@ -5448,3 +5448,17 @@ should name the seat if it matters who learned it.
   `enable --now`, with the service inactive. Check `list-timers` and
   `is-active` right after enabling anyway, because a fired arc run costs a
   session.
+
+- 2026-10-13 (edict 68, fortkit-i0km): **AN INSTRUCTION THAT STOPS A MODEL
+  REWRITING COMMANDS ALSO STOPS IT REPAIRING THEM.** "Run every command
+  exactly as written" cured the Herald's cd prefix and immediately exposed a
+  defect the old freedom had hidden: probe 10 put `$vault` (which contains
+  "Obsidian Vault") into the command unquoted, and the model, now literal,
+  split the path and herald-lint exited 2. Before, it had quoted the path
+  itself. When you tighten a prompt toward literal execution, read every
+  command in it for quoting as a shell would, because the model will no
+  longer fix them. The Herald's vault path has a space; any prompt command
+  that embeds it must quote it.
+- 2026-10-13: **`a && b && setsid … & disown` BACKGROUNDS THE WHOLE
+  AND-LIST**, so the output of `b` is lost and the first step's success is
+  unconfirmed. Put the detached launch on its own line after the checks.

@@ -8,3 +8,15 @@
 {"ts":"2026-10-13T09:08:39-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins a boundary smoke-test (opus)","payload":{"model":"opus","mode":"arc"}}
 {"ts":"2026-10-13T09:08:54-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Herald smoke probe event","payload":null}
 {"ts":"2026-10-13T09:09:09-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's smoke-test ended (exit 0)","payload":{"exit":0,"log":"/tmp/herald-2026-10-13-090821.log"}}
+{"ts":"2026-10-13T09:37:56-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins a boundary smoke-test (opus)","payload":{"model":"opus","mode":"daily"}}
+{"ts":"2026-10-13T09:38:07-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Herald smoke probe event","payload":null}
+{"ts":"2026-10-13T09:38:21-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's smoke-test ended (exit 0)","payload":{"exit":0,"log":"/tmp/herald-2026-10-13-093756.log"}}
+{"ts":"2026-10-13T09:38:21-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins a boundary smoke-test (opus)","payload":{"model":"opus","mode":"arc"}}
+{"ts":"2026-10-13T09:38:37-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Herald smoke probe event","payload":null}
+{"ts":"2026-10-13T09:38:51-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's smoke-test ended (exit 0)","payload":{"exit":0,"log":"/tmp/herald-2026-10-13-093759.log"}}
+{"ts":"2026-10-13T09:53:28-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins a boundary smoke-test (opus)","payload":{"model":"opus","mode":"daily"}}
+{"ts":"2026-10-13T09:53:39-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Herald smoke probe event","payload":null}
+{"ts":"2026-10-13T09:53:50-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's smoke-test ended (exit 0)","payload":{"exit":0,"log":"/tmp/herald-2026-10-13-095328.log"}}
+{"ts":"2026-10-13T09:53:50-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins a boundary smoke-test (opus)","payload":{"model":"opus","mode":"arc"}}
+{"ts":"2026-10-13T09:54:01-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Herald smoke probe event","payload":null}
+{"ts":"2026-10-13T09:54:12-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's smoke-test ended (exit 0)","payload":{"exit":0,"log":"/tmp/herald-2026-10-13-095331.log"}}
