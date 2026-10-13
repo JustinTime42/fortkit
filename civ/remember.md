@@ -5425,3 +5425,26 @@ should name the seat if it matters who learned it.
 - 2026-10-07: **Scionhall's verifier picks up a NEW harness from the worktree**
   (`harness_path` falls back to the worktree copy when main lacks it), so a new
   harness costs no extra post-commit round; a CHANGED one still does.
+
+- 2026-10-13 (edict 67, the Herald's weekly arc, fortkit-r6x.8.6 + .10 + .11
+  + dqu5.9): **ONE OVERLAPPING PAIR OF SMOKES TESTS BOTH MODES AND THE LOCK.**
+  Start the daily smoke, then start the arc smoke while it runs. The second must
+  print and emit nothing until the first ends, and then start in the same second.
+  That covers three brief steps with two sessions. The Herald's lock is
+  `/tmp/herald-<uid>.lock`, ro-bound in his mask, and fd 9 is closed on every
+  bwrap.
+- 2026-10-13: **"(from $root)" IN A HEADLESS PROMPT GETS SPELLED AS A
+  `cd … &&` PREFIX, AND A PREFIX ALLOW RULE REFUSES THE COMPOUND.** It happened
+  in both Herald smokes (digest, herald-lint), and both passed only on the bare
+  retry (fortkit-i0km). When the launcher already sets the cwd, a prompt should
+  say "run exactly as written" rather than name a directory.
+- 2026-10-13: **AN `edict.ended` CAN LAND DAYS AFTER ITS SITTING.** The
+  2026-10-07T100130 launcher stayed open until 2026-10-13 08:35, so its closing
+  line sits in the 10-13 day file of every fort, 30 minutes before the next
+  wake. This is the standing item's twenty-second form. Read the `session`
+  field in the payload, never the date of the file.
+- 2026-10-13: **A NEWLY ENABLED `Persistent=true` TIMER DOES NOT FIRE A
+  CATCH-UP**: herald-arc.timer showed last "-" and its next elapse after
+  `enable --now`, with the service inactive. Check `list-timers` and
+  `is-active` right after enabling anyway, because a fired arc run costs a
+  session.
