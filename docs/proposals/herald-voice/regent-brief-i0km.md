@@ -29,8 +29,9 @@ states the working directory explicitly.
    prompt.
 2. One sentence added near the top of each of the three prompts (smoke, arc,
    daily): "Your working directory is already $root. Run every command exactly
-   as written, never with a cd prefix: the permission profile refuses compound
-   commands (fortkit-i0km)."
+   as written, never with a cd prefix: the permission profile refuses a cd
+   prefix (fortkit-i0km)." (Narrowed on Warden finding 1: the measured refusal
+   is the cd prefix; probe 6 is itself a compound command and passes bare.)
 
 Not done, on purpose (the bead's own instruction): widening the allow rule to
 admit `cd *`. A wildcard ahead of the command is the riev class.
@@ -56,8 +57,12 @@ admit `cd *`. A wildcard ahead of the command is the riev class.
    (`grep -c "requires approval" <log>` returns 0).
 4. If a refusal still appears, do not widen the profile. Record the exact
    command the model tried in the handoff and leave the bead open.
-5. Emit `charter.amended` targeting `fortkit-i0km`, commit path-scoped, close
-   the bead on a clean acceptance.
+5. Emit `charter.amended` targeting `fortkit-i0km`, commit path-scoped. Do
+   NOT close the bead in this sitting (Warden finding 2: one clean smoke can
+   pass by chance, since the original failure hit one probe per smoke). It
+   closes when the first live daily log (2026-10-14 05:00) and the first live
+   arc log (2026-10-18 06:00) also show `grep -c "requires approval"` = 0.
+   The Mayor checks both and closes it.
 
 Timing: tomorrow's 05:00 run uses whatever is installed. Uninstalled, a
 refused lint is recorded as not-run in the draft and the report; nothing
