@@ -5462,3 +5462,48 @@ should name the seat if it matters who learned it.
 - 2026-10-13: **`a && b && setsid … & disown` BACKGROUNDS THE WHOLE
   AND-LIST**, so the output of `b` is lost and the first step's success is
   unconfirmed. Put the detached launch on its own line after the checks.
+
+- 2026-10-15 (edict 69, Proofdelve fleet throughput — ForgeOs-9dqa6: uwjme,
+  asad6 step 2, xu0mj): **A HARNESS CASE FOR A FUNCTION MUST CALL IT THE WAY
+  PRODUCTION CALLS IT.** I put a once-per-pass set in a variable updated inside
+  `live_forges()`; every caller runs `$(live_forges)`, a subshell, so the update
+  was lost, and the first live run warned twice in one pass. My governor case
+  called `live_forges` bare and passed. Third form of the 2026-09-17 `$( )` scar:
+  there the caller lost globals the function set; here the function's own
+  bookkeeping was lost. Pass-scoped state that a $( )-called function writes goes
+  in a file, and the case calls it through `$( )`.
+- 2026-10-15: **THE FIRST LIVE RUN AFTER LIFTING HALT IS THE CHEAPEST REVIEW
+  THERE IS.** Every new behaviour of the sitting showed in the first minute of
+  run 20261015T115003, including the defect above, which no fixture had seen.
+  Watch it before writing the handoff; do not lift HALT and leave.
+- 2026-10-15: **CONCURRENT FULL E2E RUNS IN PROOFDELVE ARE NOT SAFE WHILE THE
+  FIRST IS LIVE.** The second refuses at start on the first's live
+  `/tmp/warden-<sfx>` fixtures (its residue gate, correctly). Supersedes the
+  2026-10-05 entry, which only held for runs that had finished. Run them in
+  sequence: one `( a; b ) &` subshell.
+- 2026-10-15: **ON THIS HOST SWAP-FULL IS NOT A PRESSURE SIGNAL BY ITSELF.**
+  Measured with the fleet halted: SwapFree 9 MB of 8 GB, MemAvailable 14 GB.
+  Proofdelve's step-down requires swap-full AND available below the floor.
+- 2026-10-15: **A SHARED HARNESS FIXTURE THAT READS A HOST PROPERTY MUST PIN
+  IT.** Proofdelve's memory gate reads /proc/meminfo, so the e2e harness exports
+  a generous FLEET_MEMINFO for every scenario. Otherwise the host's free memory
+  decides cases written about something else.
+- 2026-10-15: **AN EDITOR PROCESS CAN OUTLIVE ITS CLOSED WINDOW.** kwrite on
+  Proofdelve's fleet.conf stayed alive after the Overseer closed it. Check
+  `/proc/<pid>/fd` and for a swap file rather than the pid alone, and re-hash the
+  file at close.
+- 2026-10-15: **THE EIGHTH `grep`/`pgrep` SELF-MATCH:** an install command in the
+  same Bash call as the liveness check spelled the launcher's path. The liveness
+  check is a call of its own, with nothing else in it.
+- 2026-10-15: **INSERTING A SLOW CALL BETWEEN A STOP CHECK AND THE ACT IT
+  GUARDS RE-OPENS THE WINDOW THE CHECK CLOSED.** My refill before "taken in hand"
+  sat after reap_pass's loop-top `stopping && break`. A SIGTERM inside the refill
+  (it reads the tracker for seconds) let the run start a six-minute verifier
+  while DRAINING (run 20261015T115003, 12:09:12). Every harness was green;
+  only the live run showed it. When you add work before a guarded act, re-ask
+  the guard after it.
+- 2026-10-15: **A GENERATOR GUARD THAT PINS A COUNT IS A CONTROL THAT PINS A
+  SPELLING.** My 64c variant guard required 3 refill call sites, and the
+  correct fold of Tova's finding 1 removed one, turning the control into a
+  false "could not be generated". Guard on the property (the function exists),
+  never on how many times the current draft calls it.
