@@ -5507,3 +5507,29 @@ should name the seat if it matters who learned it.
   correct fold of Tova's finding 1 removed one, turning the control into a
   false "could not be generated". Guard on the property (the function exists),
   never on how many times the current draft calls it.
+
+- 2026-10-15 (edict 70, the one-click staging deploy, ForgeOs-mbv54): **A
+  systemd PATH UNIT DROPS AN EVENT THAT ARRIVES WHILE ITS SERVICE IS RUNNING.**
+  Measured with a transient unit (`systemd-run --user
+  --path-property=PathModified=<file> -p Type=oneshot <script>`): the creation
+  of an absent file fires it, an append during the run is lost, and nothing
+  re-fires after. Anything triggered by a path unit must loop until its work
+  is gone, and needs a timer as a safety net. Proofdelve's airlock runner does
+  both.
+- 2026-10-15: **A HARNESS WIRED INTO A FORT'S VERIFIER RUNS INSIDE SEAT MASKS,
+  SO TEST IT FROM INSIDE ONE.** Both of my new harness helpers handed the
+  caller's FORT_MASKED to scripts that refuse under it. Green by hand on the
+  host, red in every masked verify. The read-only Warden caught it. The fix is
+  `env -u FORT_MASKED` in the helper (the scratch-reaper pattern). The check is
+  to run the harness under `bwrap` with the Mayor mask
+  (`build_mask claude "$REPO" ...; mask_env claude; mask+=(--setenv FORT_MASKED mayor)`).
+  Also: verify-impl copies each harness out of the repo (harness_path), so
+  `$here` is not the fort there. Resolve siblings from the subject's path.
+- 2026-10-15: **WHERE TO PUT A TREE NO SEAT MAY EDIT BETWEEN CHECKOUT AND
+  BUILD: `~/.local/share`, never `~/.cache`.** `~/.cache` and `~/.local/state`
+  are rw grants in every seat mask, and `~/.local/share` is not (only specific
+  subdirectories are granted, e.g. the Warden's). The airlock's pinned
+  worktrees live at `~/.local/share/airlock/<repo>/<id>`.
+- 2026-10-15: **`bd close` REFUSES A BEAD WHOSE DEPENDENCY IS OPEN.** zmyw and
+  89uq depend on the docket bead mbv54, so they could only close in the same
+  act as it. Do not reach for --force. Comment, then close them together.
