@@ -301,7 +301,12 @@ describe("civ keep overseer store", () => {
       join(repo, "fort/airlock/operations.json"),
       JSON.stringify({
         operations: [
-          { name: "deploy-staging", requires_approval: true, description: "d" },
+          {
+            name: "deploy-staging",
+            requires_approval: true,
+            runs_from: "pinned-commit",
+            description: "d",
+          },
           { name: "feedback-scan", requires_approval: false, description: "f" },
         ],
       }),
@@ -309,7 +314,7 @@ describe("civ keep overseer store", () => {
     const request = (id: string, operation: string, status = "pending") =>
       writeFileSync(
         join(repo, "fort/airlock/requests", `${id}.json`),
-        `${JSON.stringify({ id, operation, reason: "why", requested_by: "marrek", seat: "mayor", status, params: {} }, null, 2)}\n`,
+        `${JSON.stringify({ id, operation, reason: "why", requested_by: "marrek", seat: "mayor", commit: "c".repeat(40), status, params: {} }, null, 2)}\n`,
       );
     request("20261006T090000-deploy-staging-1", "deploy-staging");
     request("20261006T090001-feedback-scan-2", "feedback-scan");
@@ -399,10 +404,17 @@ describe("civ keep overseer store", () => {
     const { base } = await storeKeep();
     const items = (await (await fetch(`${base}/api/airlock`)).json()) as {
       id: string;
+      commit: string;
+      runsFrom: string;
     }[];
     expect(items.map((item) => item.id)).toEqual([
       "20261006T090000-deploy-staging-1",
     ]);
+    // ForgeOs-mbv54: the approve view carries the commit the run will build.
+    expect(items[0]).toMatchObject({
+      commit: "c".repeat(40),
+      runsFrom: "pinned-commit",
+    });
   });
 
   test("Approve writes one store line pinning the request's bytes, announces it, and cannot repeat", async () => {

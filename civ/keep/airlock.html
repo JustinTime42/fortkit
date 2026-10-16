@@ -39,6 +39,7 @@
         <p class="meta">${escapeHtml(item.id)} · asked by ${escapeHtml(item.requestedBy)} (${escapeHtml(item.seat)}) at ${escapeHtml(item.requestedAt)}</p>
         <p>${escapeHtml(item.reason)}</p>
         <p class="meta">${escapeHtml(item.description)}</p>
+        ${item.runsFrom === 'pinned-commit' ? `<p><strong>Deploys exactly commit <code>${escapeHtml(item.commit.slice(0, 12))}</code></strong> <span class="meta">(${escapeHtml(item.commit)}; the run builds this commit, whatever main's HEAD has become, and refuses one that is not on main)</span></p>` : (item.commit ? `<p class="meta">requested at commit ${escapeHtml(item.commit.slice(0, 12))}</p>` : '')}
         ${Object.keys(item.params).length ? `<pre>${escapeHtml(JSON.stringify(item.params, null, 2))}</pre>` : ''}
         <p class="meta">request sha256 ${escapeHtml(item.requestSha256.slice(0, 16))}… (Approve pins exactly this; an edit since loading is refused)</p>
         <button data-fort="${escapeHtml(item.fort)}" data-id="${escapeHtml(item.id)}" data-sha="${escapeHtml(item.requestSha256)}">Approve</button>

@@ -127,6 +127,11 @@ export function pendingRequests(fort, { fileSystem, approvalsPath }) {
       seat: request.seat ?? "",
       requestedAt: request.requested_at ?? "",
       params: request.params ?? {},
+      // What the run will build (ForgeOs-mbv54): for an operation declaring
+      // runs_from "pinned-commit", airlock.sh runs exactly this commit, so the
+      // page shows it beside Approve and the approval hash covers it.
+      commit: typeof request.commit === "string" ? request.commit : "",
+      runsFrom: op.runs_from ?? "",
       description: op.description ?? "",
       repo,
       requestSha256,
