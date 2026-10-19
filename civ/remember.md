@@ -5533,3 +5533,34 @@ should name the seat if it matters who learned it.
 - 2026-10-15: **`bd close` REFUSES A BEAD WHOSE DEPENDENCY IS OPEN.** zmyw and
   89uq depend on the docket bead mbv54, so they could only close in the same
   act as it. Do not reach for --force. Comment, then close them together.
+
+- 2026-10-19 (edict 71, Scionhall V1 part 2: 7cl.146, u40, 7cl.16, 7cl.132):
+  **A PACKAGE'S TEMPLATES CAN PASS EVERY GATE THE PACKAGE FORT RUNS AND FAIL IN THE FIRST
+  FORT FOUNDED FROM THEM.** Scionhall's verifier shellchecks its RUNNING scripts (all 0
+  findings); templates-leg runs markers, syntax and the wired harnesses, never shellcheck
+  and never fleet-e2e. A plot-v1 founded from the candidate was born with a red verifier
+  (51 findings in seven rendered files) and a red e2e harness (fixture forts lack
+  roster.json since 7cl.55, 2026-10-02). The founding proof is the only gate that runs
+  the template in the posture an adopter sees. Do not shortcut it to "the leg is green".
+- 2026-10-19: **FOUND A PROOF FORT FROM A DETACHED WORKTREE OF THE CANDIDATE SHA**, not from
+  main. Records commits on main during the sitting then cannot change what is proven.
+  Greenlab's `bin/fort-init` refuses a FORT_REGISTRY that does not exist: seed the scratch
+  registry as a copy of `~/.claude/greenlab.json` and sha256-check the real one before and
+  after.
+- 2026-10-19: **UNDER greenlab_isolate, ~/.claude EXISTS AS A WRITABLE TMPFS DIRECTORY**
+  holding only the read-only resurfaced greenlab.json. So any "append must fail" probe on a
+  path under ~/.claude that is absent from the mask CREATES a scratch file and reads as
+  writable (mask-harness A8a; scionhall-7cl.151). Inside a Greenlab mask, assert absence
+  (host bytes > 0, mask bytes 0), never append-refusal. Same family as the 2026-08-13
+  tmpfs entry.
+- 2026-10-19: **RUNNING ALL SIX RELEASE REVIEWS ON A CANDIDATE ALREADY KNOWN TO FAIL PAID
+  FOR ITSELF**: two NEW blockers (review 3: core/src/verdict/index.ts vs its schema;
+  review 6: vendored core/ has no package.json, so bd-adapter exits 0 silently under a
+  commonjs root) joined the fix round, so part 3 cuts one new candidate, not two. The
+  integration pass found what no area review could. Brief serial reviews of one bead with
+  a "REVIEW N OF 6 -- THIS LAUNCH" comment: warden.sh renders `bd show` with comments into
+  the prompt, and the most recent brief governs.
+- 2026-10-19: **bin/regent does not announce in Greenlab forts, and that still holds**:
+  this sitting emitted its own edict.begun/ended and HALT lines in Scionhall under calder.
+  GOV_FRONTIER_SESSIONS_MAX=2 caps concurrent Warden launches across Greenlab, and the
+  per-bead lock makes reviews of one bead serial anyway.
