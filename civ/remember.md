@@ -5564,3 +5564,42 @@ should name the seat if it matters who learned it.
   this sitting emitted its own edict.begun/ended and HALT lines in Scionhall under calder.
   GOV_FRONTIER_SESSIONS_MAX=2 caps concurrent Warden launches across Greenlab, and the
   per-bead lock makes reviews of one bead serial anyway.
+
+- 2026-10-19 (edict 72, docket ForgeOs-x7ojh: s1reg, 29j3g, enred, 4webo):
+  **A HARNESS RUN BY THE VERIFIER RUNS UNDER THE CALLER'S ENVIRONMENT, AND THE
+  POST-MERGE CALLER SETS VERIFY_REQUIRE_DOCKER=1.** My new verify-once harness
+  asserted that variable unset; green in every hand run, it went RED in the
+  sitting's own full Docker verify and would have halted the fleet at its first
+  landing. Then a pre-existing digest case failed because I ran the verifier
+  under FORT_ACTOR=calder. **Run new harnesses under a hostile environment
+  (VERIFY_REQUIRE_DOCKER=1, VERIFY_TIER, FORT_ACTOR set) before trusting them,
+  and have any harness unset what it asserts about.** verify-impl.sh now reads
+  VERIFY_TIER and VERIFY_RESULT_FILE once and unsets them.
+- 2026-10-19: **THE FULL VERIFY ON A FRESH WORKTREE AT THE COMMITTED TIP IS NOT
+  CEREMONY; IT TOOK THREE ROUNDS AND FOUND TWO REAL DEFECTS** (the env leak, and
+  digest-harness exercising flag-human.sh outside the bead's Touches). Each fix
+  is its own fold commit; the brief to the one Warden launch gets an addendum
+  per fold ("the most recent brief governs").
+- 2026-10-19: **A BEAD'S Touches CAN MISS THE SURFACE THAT MATTERS.** 29j3g
+  named Proofdelve's tools/keep; the Overseer's real board is the capital's
+  Civ Keep (civ/keep, per-fort config in lib/forts.mjs). Both Keeps restart
+  themselves on a source change, so an edit is live on his board in seconds.
+  Grep for every consumer of the signal being changed, across forts, before
+  accepting a file set.
+- 2026-10-19: **PROOFDELVE'S OVERSEER BOARD IS NOW `assignee = justin`** (Civ
+  Keep whoseMove; tools/keep needsYou). Hand-offs post one "ASK: <verb> --"
+  comment line; flag-human.sh assigns justin, unflag-human.sh assigns marrek;
+  fleet.sh holds/ESCALATE/pages assign justin, fleet-escalated assigns marrek.
+  `human` is history. tools/keep/whose-move-check.mjs checks the export.
+- 2026-10-19: **PROOFDELVE VERIFIES ONCE.** fleet.sh tiers the host verify from
+  the diff and reuses it as the post-merge pass only on tree equality with a
+  full-tier Docker run (verify.pass reused:true, verifiedTree); the backstop is
+  proofdelve-nightly-verify.timer at 03:30 (RED writes HALT). Kill switches
+  FLEET_VERIFY_TIERS/FLEET_VERIFY_REUSE=off in fleet.conf. A docs-tier verify
+  ran 30 steps with 11 skipped.
+- 2026-10-19: **A REGENT CAN EMIT A HOST verify.pass UNDER ITS OWN NAME** with
+  `FORT_ACTOR=calder FORT_SEAT=regent ./fort/scripts/verify.sh` in a fresh
+  detached worktree; push-ready accepts it (branch HEAD), and passing that
+  worktree as the Warden's candidate dir makes her HOST VERIFY find it.
+- 2026-10-19: **A `sed` OVER A TEMPLATE LINE MISLABELLED THREE BEAD COMMENTS**;
+  corrections appended. Read back every comment written by a loop.
