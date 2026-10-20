@@ -1,0 +1,3 @@
+{"ts":"2026-10-20T05:00:00-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins the daily run (opus)","payload":{"model":"opus","mode":"daily"}}
+{"ts":"2026-10-20T05:03:48-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Herald daily 2026-10-20: one draft (the-pass-that-never-ran), watch clean, report filed","payload":{"drafts":1}}
+{"ts":"2026-10-20T05:03:56-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's daily run ended (exit 0); report filed","payload":{"exit":0,"mode":"daily","report":"/home/justin/Documents/Obsidian Vault/herald/reports/2026-10-20.md","report_filed":true}}

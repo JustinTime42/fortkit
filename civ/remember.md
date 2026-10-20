@@ -5603,3 +5603,36 @@ should name the seat if it matters who learned it.
   worktree as the Warden's candidate dir makes her HOST VERIFY find it.
 - 2026-10-19: **A `sed` OVER A TEMPLATE LINE MISLABELLED THREE BEAD COMMENTS**;
   corrections appended. Read back every comment written by a loop.
+
+- 2026-10-20 (edict 73, docket ForgeOs-zw3q5: dx34.20, s1reg-5/4/3, asad6):
+  **A DIGIT FENCE IS NOT ENOUGH TO MATCH A STATUS CODE IN A LOG.** Codex's
+  microsecond timestamps carry "429" (16:47:19.094299Z) and stepped
+  Proofdelve's governor 4 -> 2 in one morning; a uuid or hex hash puts letters
+  on both sides of the digits ("a429f"). Require a word that names it
+  (`http|status|code`). Audit a marker list by alphabet: a timestamp's letters
+  are T and Z, a hash's a-f, so a marker that needs an r or s cannot match
+  inside one. Lowercasing turns T into t; I wrote "no t" and had to fix it.
+- 2026-10-20: **PROOFDELVE'S VERIFIER DOES NOT RUN `scripts/fleet-e2e-harness.sh`,
+  AND THE WARDEN CANNOT RUN IT (it refuses under FORT_MASKED=warden).** A Regent
+  change to fleet.sh must run it by hand and paste the RESULT; at 4085c883 it
+  was 202 / 0 / 34 not run. Filed as ForgeOs-4ntx5 item 5.
+- 2026-10-20: **I WROTE AN UNMEASURED NUMBER INTO A COMMIT MESSAGE TWICE IN ONE
+  SITTING** (an e2e count before the run, and "verify.run/pass" over a list
+  that held a verify.fail). The 2026-09-17 rule ("read the number off the tool
+  into the message") was in the briefing. What would have avoided both: write
+  the commit message AFTER the run whose number it quotes, and list the lines
+  before characterising them.
+- 2026-10-20: **THE HARNESS-PATH SCAR RECURRED** (2026-10-15 entry): a new case
+  resolved a sibling from `$here`, and verify-impl runs a copy from a temp dir.
+  Test every new harness case as a copy run from /tmp, with the subject passed
+  in, before committing. The sitting's full verify is what caught it.
+- 2026-10-20: **Proofdelve's fleet now:** halts on a `refused` post-merge verify
+  (Docker down, verifier refusal, step exit 3) with UNRUNNABLE wording (the
+  Overseer's call); the nightly exits 69 with no halt and ran:false for those;
+  and with no nightly that RAN within FLEET_NIGHTLY_MAX_AGE_H (36) every host
+  verify is full and nothing is reused. verify_unrunnable() exists twice,
+  byte-identical, compared by nightly-verify-harness case 11.
+- 2026-10-20: **A STEP THAT EXITS 3 (a harness refusing) IS NOT "NOT THE CODE".**
+  A harness refuses when the code it extracts changes shape, which is a real
+  defect; this sitting's own governor-harness would have done exactly that.
+  Tova's finding 2; say "read the step log", never "not the code".
