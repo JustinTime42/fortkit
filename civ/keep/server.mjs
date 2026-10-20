@@ -255,6 +255,7 @@ export function createCivKeep(options = {}) {
       entry.fleet.workers ?? [],
       now(),
       entry.fort.waitingLabels,
+      entry.fort.whoseMove,
     );
   }
 
@@ -281,6 +282,7 @@ export function createCivKeep(options = {}) {
       mode: entry.fort.mode,
       prefix: entry.fort.prefix,
       waitingLabels: entry.fort.waitingLabels,
+      whoseMove: entry.fort.whoseMove ?? null,
       open: open.length,
       needsYou: open.filter((bead) => needsYou(bead, context)).length,
       halted: Boolean(entry.fleet?.halted),
@@ -316,6 +318,7 @@ export function createCivKeep(options = {}) {
         scope,
         closedHours,
         entry.fort.waitingLabels,
+        entry.fort.whoseMove,
       );
       result.nodes.push(...part.nodes.map((node) => ({ ...node, ...tag })));
       result.edges.push(...part.edges);
@@ -587,6 +590,28 @@ export function createCivKeep(options = {}) {
                   { cwd },
                 );
             }
+          },
+        ],
+        [
+          // ANSWERED MEANS MOVED ON (ForgeOs-29j3g, criterion 4), in a fort whose
+          // board is the assignee. Before fleet-safe comes back, so the fleet
+          // never sees a fleet-safe bead still assigned to him: an approval the
+          // fleet takes (no note, a pinned branch) clears the assignee; every
+          // other answer assigns the bead to that fort's Mayor.
+          "move-assignee",
+          async () => {
+            if (action === "comment" || !fort.whoseMove) return;
+            await signRun(
+              fort,
+              "bd",
+              [
+                "update",
+                id,
+                "--assignee",
+                toMayor() ? fort.whoseMove.mayor : "",
+              ],
+              { cwd },
+            );
           },
         ],
         [

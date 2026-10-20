@@ -22,6 +22,8 @@ type Bead = {
   status: string;
   labels: string[];
   description?: string;
+  assignee?: string;
+  comments?: { text: string }[];
 };
 
 const scratch = mkdtempSync(join(tmpdir(), "civ-keep-test-"));
@@ -49,6 +51,18 @@ const forts = [
     fleetState: null,
     waitingLabels: ["gate-1", "gate-2", "gate-3", "human"],
   },
+  // ForgeOs-29j3g: a fort whose board is the ASSIGNEE, not a label set.
+  {
+    key: "whose",
+    name: "Whose",
+    project: "whose",
+    civilization: "Justin",
+    repo: "/srv/whose",
+    mode: "fleet",
+    fleetState: null,
+    waitingLabels: ["human"],
+    whoseMove: { assignee: "justin", mayor: "marrek" },
+  },
 ];
 
 const beads: Record<string, Bead[]> = {
@@ -66,6 +80,40 @@ const beads: Record<string, Bead[]> = {
   ],
   "/srv/halls": [
     { id: "halls-x1", title: "gated", status: "open", labels: ["gate-1"] },
+  ],
+  "/srv/whose": [
+    {
+      id: "whose-a1",
+      title: "held for signature",
+      status: "open",
+      labels: ["human", "sign-to-land"],
+      assignee: "justin",
+      comments: [
+        { text: "older note" },
+        { text: "ASK: sign -- the Warden returned APPROVE" },
+      ],
+    },
+    {
+      id: "whose-b2",
+      title: "parked by the Mayor",
+      status: "open",
+      labels: ["human"],
+    },
+    {
+      id: "whose-c3",
+      title: "fleet-escalated",
+      status: "open",
+      labels: ["fleet-escalated"],
+      assignee: "marrek",
+    },
+    {
+      id: "whose-d4",
+      title: "grant, no branch",
+      status: "open",
+      labels: [],
+      assignee: "justin",
+      comments: [{ text: "ASK: grant -- push after the next green merge" }],
+    },
   ],
 };
 
@@ -511,5 +559,119 @@ describe("civ keep overseer store", () => {
     // The property itself (Ilva, finding 2): the pin line was already in the
     // audit at the moment of the first bd call.
     expect(pinAtFirstBd()).toBe(true);
+  });
+});
+
+// ForgeOs-29j3g: in a fort that sets whoseMove, the board is exactly the open
+// beads assigned to the Overseer, and every answer moves the assignee on.
+describe("civ keep whose-move fort", () => {
+  test("the board is the assignee: two beads assigned to him, the parked and the Mayor's are not", async () => {
+    const { port, sign } = await start();
+    const summary = (await (
+      await fetch(`http://127.0.0.1:${port}/api/forts`)
+    ).json()) as {
+      key: string;
+      needsYou: number;
+    }[];
+    expect(summary.find((fort) => fort.key === "whose")?.needsYou).toBe(2);
+    const bead = (await (
+      await fetch(`http://127.0.0.1:${port}/api/bead/whose-a1`)
+    ).json()) as {
+      needsYou: { why: string; ask: string; detail: string };
+    };
+    expect(bead.needsYou).toMatchObject({
+      why: "assigned to you",
+      ask: "ASK: sign -- the Warden returned APPROVE",
+      detail: "ASK: sign -- the Warden returned APPROVE",
+    });
+    expect((await sign({ id: "whose-b2", action: "approve" })).status).toBe(
+      409,
+    );
+    expect((await sign({ id: "whose-c3", action: "approve" })).status).toBe(
+      409,
+    );
+  });
+
+  test("an unnoted Approve with a branch clears the assignee BEFORE fleet-safe returns", async () => {
+    const { sign, writes } = await start();
+    expect(
+      (await sign({ id: "whose-a1", action: "approve", text: "" })).status,
+    ).toBe(200);
+    const done = writes();
+    const move = done.indexOf("/srv/whose bd update whose-a1 --assignee ");
+    const safe = done.indexOf(
+      "/srv/whose bd update whose-a1 --add-label fleet-safe",
+    );
+    expect(move).toBeGreaterThanOrEqual(0);
+    expect(safe).toBeGreaterThan(move);
+    expect(done.some((line) => line.includes("--assignee marrek"))).toBe(false);
+  });
+
+  test("a Decline, and an Approve with no branch, assign the bead to the Mayor", async () => {
+    const declined = await start();
+    expect(
+      (
+        await declined.sign({
+          id: "whose-a1",
+          action: "decline",
+          text: "not this",
+        })
+      ).status,
+    ).toBe(200);
+    expect(declined.writes()).toContain(
+      "/srv/whose bd update whose-a1 --assignee marrek",
+    );
+    keep?.close();
+    keep = null;
+    const nobranch = await start();
+    expect(
+      (await nobranch.sign({ id: "whose-d4", action: "approve" })).status,
+    ).toBe(200);
+    expect(nobranch.writes()).toContain(
+      "/srv/whose bd update whose-d4 --assignee marrek",
+    );
+    expect(nobranch.writes()).toContain(
+      "/srv/whose bd update whose-d4 --add-label mayor-review",
+    );
+  });
+
+  test("a label-set fort never moves an assignee, and the allowlist admits only '' or that fort's Mayor", async () => {
+    const { sign, writes } = await start();
+    expect(
+      (await sign({ id: "proof-a1", action: "approve", text: "" })).status,
+    ).toBe(200);
+    expect(writes().some((line) => line.includes("--assignee"))).toBe(false);
+    const ok = async () => "ran";
+    const whose = { ...forts[2], prefix: "whose" };
+    const proof = { ...forts[0], prefix: "proof" };
+    for (const who of ["justin", "veyra"]) {
+      expect(() =>
+        signCommand(
+          whose,
+          "bd",
+          ["update", "whose-a1", "--assignee", who],
+          { cwd: "/srv/whose" },
+          ok,
+        ),
+      ).toThrow(/rejected/);
+    }
+    expect(() =>
+      signCommand(
+        proof,
+        "bd",
+        ["update", "proof-a1", "--assignee", ""],
+        { cwd: "/srv/proof" },
+        ok,
+      ),
+    ).toThrow(/rejected/);
+    await expect(
+      signCommand(
+        whose,
+        "bd",
+        ["update", "whose-a1", "--assignee", "marrek"],
+        { cwd: "/srv/whose" },
+        ok,
+      ),
+    ).resolves.toBe("ran");
   });
 });

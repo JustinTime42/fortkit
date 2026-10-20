@@ -11,6 +11,11 @@
 //                  Proofdelve and the Greenlab forts use `human` (their Mayor seat
 //                  file: `gate-ready` is explicitly NOT his queue). Manyhalls uses
 //                  gate-1/gate-2/gate-3 (fortkit CLAUDE.md, adopted 2026-08-08).
+//   whoseMove      null, or { assignee, mayor } for a fort whose Overseer board is
+//                  "open beads ASSIGNED to him" rather than a label set
+//                  (ForgeOs-29j3g, Proofdelve, the Overseer's approval recorded on
+//                  the bead 2026-10-19). Its waitingLabels then decide nothing about
+//                  the board; they are still removed on an answer, as history.
 //   mode           'fleet' when the fort runs fort/scripts/fleet.sh: a signature
 //                  follows Proofdelve's desk exactly (an unnoted Approve on a bead
 //                  with a bead/<suffix> branch restores fleet-safe with the branch
@@ -21,6 +26,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 const waitingOverrides = { fortkit: ["gate-1", "gate-2", "gate-3", "human"] };
+const whoseMoveOverrides = {
+  ForgeOs: { assignee: "justin", mayor: "marrek" },
+};
 
 function readRegistry(file, fileSystem) {
   try {
@@ -71,6 +79,7 @@ export function loadForts(options = {}) {
         civilization: registry.civilization ?? path.basename(file, ".json"),
         repo: entry.repo,
         waitingLabels: waitingOverrides[entry.project] ?? ["human"],
+        whoseMove: whoseMoveOverrides[entry.project] ?? null,
       };
       const { fleetScript, stateRoot } = fleetStateFor(fort, home);
       fort.mode = fileSystem.existsSync(fleetScript) ? "fleet" : "plain";

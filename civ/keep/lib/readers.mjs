@@ -104,6 +104,17 @@ export function signCommand(fort, file, args, options = {}, run = command) {
     args[0] === "update" &&
     args[2] === "--remove-label" &&
     fort.waitingLabels.includes(args[3]);
+  // ForgeOs-29j3g: in a fort whose board is the assignee, an answer moves the
+  // bead on -- cleared (the fleet takes it) or to that fort's Mayor. Never to
+  // anyone else, never to the Overseer, and in no other fort at all.
+  const moveAssignee =
+    file === "bd" &&
+    validId(id) &&
+    Boolean(fort.whoseMove) &&
+    args.length === 4 &&
+    args[0] === "update" &&
+    args[2] === "--assignee" &&
+    (args[3] === "" || args[3] === fort.whoseMove.mayor);
   const restoreFleetSafe =
     file === "bd" &&
     validId(id) &&
@@ -165,6 +176,7 @@ export function signCommand(fort, file, args, options = {}, run = command) {
     !(
       comment ||
       removeWaiting ||
+      moveAssignee ||
       restoreFleetSafe ||
       routeMayorReview ||
       emit ||

@@ -115,9 +115,11 @@ export function graphContext(
   workers,
   now,
   waitingLabels = ["human"],
+  whoseMove = null,
 ) {
   return {
     waitingLabels,
+    whoseMove,
     beads,
     byId: new Map(beads.map((bead) => [bead.id, bead])),
     verdicts: latestVerdicts(events),
@@ -128,8 +130,45 @@ export function graphContext(
   };
 }
 
+// WHOSE MOVE IS THE ASSIGNEE, in a fort that says so (ForgeOs-29j3g). The board is
+// exactly the open beads assigned to the Overseer; the reason shown is the newest
+// comment line beginning "ASK:". Neither a label nor an ESCALATE verdict event
+// puts a bead there in such a fort.
+export function askLine(bead) {
+  const comments = Array.isArray(bead.comments) ? bead.comments : [];
+  for (let index = comments.length - 1; index >= 0; index -= 1) {
+    const lines = String(comments[index]?.text ?? "").split("\n");
+    for (let line = lines.length - 1; line >= 0; line -= 1) {
+      if (/^ASK: /.test(lines[line].trim())) return lines[line].trim();
+    }
+  }
+  return null;
+}
+
+function assignedToYou(bead, context) {
+  return Boolean(context.whoseMove) && bead.assignee === context.whoseMove.assignee;
+}
+
 export function needsYou(bead, context) {
   if (!open(bead)) return null;
+  if (context.whoseMove) {
+    if (!assignedToYou(bead, context)) return null;
+    const ask = askLine(bead);
+    const raised = context.raisedDecisions.get(bead.id);
+    if (
+      raised &&
+      !(
+        Date.parse(context.decisions.get(bead.id) ?? "") > Date.parse(raised.ts)
+      )
+    ) {
+      return { why: "assigned to you", ask, ...raised };
+    }
+    return {
+      why: "assigned to you",
+      ask,
+      detail: ask ?? "assigned to you, with NO ask line",
+    };
+  }
   if (waiting(bead, context)) {
     const raised = context.raisedDecisions.get(bead.id);
     if (
@@ -183,8 +222,16 @@ export function graph(
   scope = "frontier",
   closedHours = 24,
   waitingLabels = ["human"],
+  whoseMove = null,
 ) {
-  const context = graphContext(beads, events, workers, now, waitingLabels);
+  const context = graphContext(
+    beads,
+    events,
+    workers,
+    now,
+    waitingLabels,
+    whoseMove,
+  );
   const qualifying = new Set(
     beads
       .filter(
@@ -193,7 +240,9 @@ export function graph(
           (bead.status === "in_progress" ||
             (bead.labels?.includes("fleet-safe") &&
               openBlockers(bead, context).length === 0) ||
-            waiting(bead, context) ||
+            (context.whoseMove
+              ? assignedToYou(bead, context)
+              : waiting(bead, context)) ||
             bead.labels?.includes("fleet-escalated")),
       )
       .map((bead) => bead.id),
