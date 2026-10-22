@@ -5636,3 +5636,28 @@ should name the seat if it matters who learned it.
   A harness refuses when the code it extracts changes shape, which is a real
   defect; this sitting's own governor-harness would have done exactly that.
   Tova's finding 2; say "read the step log", never "not the code".
+
+- 2026-10-21 (edict 74, docket ForgeOs-8sd4n: jfqu4.7, gvhhk, 0x25g):
+  **A HARNESS FIXTURE THAT FAILS CAN WRITE INTO WHATEVER DIRECTORY THE HARNESS
+  RUNS FROM.** My rescue fixture's `printf` failed (git tracks no empty
+  directory, so the worktree had no fort/handoffs), `r=$(mkrescue)` captured
+  git's stdout, and every later `"$r-worktrees/..."` write landed relative to
+  the cwd: Proofdelve's root, as an untracked `On branch bead/` tree. Found in
+  `git status` before staging. Harnesses run from a fort's root; a fixture
+  path must be checked absolute (`case "$r" in /*)`) or the run must cd to its
+  scratch dir first.
+- 2026-10-21: **PROOFDELVE'S COMPLETION LANE IS NOW ORDERED** (reap_order():
+  land/signed first, then priority, then finish time), **signed landings run at
+  the TOP of every pass** (dispatch_pass signed), and phase 1 tries each bead
+  once per pass (signed_tried_this_pass). Running phase 1 twice per pass without
+  that set retried a failing signed merge and spent two returns; four e2e cases
+  caught it.
+- 2026-10-21: **`git commit -- <paths>` commits a staged deletion; `git add --
+  <path>` of an already-`git rm`ed path dies on an unmatched pathspec.** Use
+  the commit's own pathspec when committing a mixed set of edits and deletions.
+- 2026-10-21: **THE e2e STUB bd STORES LABELS AS A LIST, NOT A SET**: a fixture
+  that adds a label the bead already carries leaves two, and one removal leaves
+  one. Remove before re-adding in a fixture that models a relabel.
+- 2026-10-21: **"Lint with the gate's invocation" covers the HARNESSES too.**
+  Third sighting: launchers linted, harness sed lines failed SC2016 (info) in
+  the full verify. `shellcheck -x` every changed .sh before install.
