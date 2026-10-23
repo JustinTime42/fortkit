@@ -448,6 +448,58 @@ describe("civ keep overseer store", () => {
       .filter(Boolean)
       .map((line) => JSON.parse(line));
 
+  // ForgeOs-emshb: the Airlock page links the newest preview URLs, and only
+  // local http ones from a successful preview result (results/ is seat-writable).
+  test("lists recent preview URLs and refuses any that are not a local preview", async () => {
+    const { base, repo } = await storeKeep();
+    const result = (id: string, body: object) =>
+      writeFileSync(
+        join(repo, "fort/airlock/results", `${id}.json`),
+        JSON.stringify({ id, ...body }),
+      );
+    result("20261023T100000-preview-1", {
+      operation: "preview",
+      exit_code: 0,
+      url: "http://localhost:5173",
+      commit: "d".repeat(40),
+      ended_at: "2026-10-23T10:00:05-08:00",
+    });
+    result("20261023T110000-preview-2", {
+      operation: "preview",
+      exit_code: 0,
+      url: "http://127.0.0.1:5173/",
+      ended_at: "2026-10-23T11:00:05-08:00",
+    });
+    result("20261023T100100-preview-3", {
+      operation: "preview",
+      exit_code: 0,
+      url: "http://evil.example:80/",
+      ended_at: "2026-10-23T12:00:00-08:00",
+    });
+    result("20261023T100200-preview-4", {
+      operation: "preview",
+      exit_code: 0,
+      url: "javascript:alert(1)//localhost:5173",
+    });
+    result("20261023T100300-preview-5", {
+      operation: "preview",
+      exit_code: 1,
+      url: "http://localhost:5173",
+    });
+    result("20261023T100400-host-test-6", {
+      operation: "host-test",
+      exit_code: 0,
+      url: "http://localhost:5173",
+    });
+    const items = (await (
+      await fetch(`${base}/api/airlock/previews`)
+    ).json()) as { id: string; url: string }[];
+    expect(items.map((item) => [item.id, item.url])).toEqual([
+      ["20261023T110000-preview-2", "http://127.0.0.1:5173/"],
+      ["20261023T100000-preview-1", "http://localhost:5173"],
+    ]);
+  });
+
   test("lists only pending requests whose operation requires approval", async () => {
     const { base } = await storeKeep();
     const items = (await (await fetch(`${base}/api/airlock`)).json()) as {

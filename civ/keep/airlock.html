@@ -22,6 +22,8 @@
     <p class="meta">Airlock requests waiting on you, across every fort. Approve writes one line into the Overseer store
       (<code>~/.local/state/civ-keep/airlock-approvals.jsonl</code>, read-only to every seat). It runs nothing: the fort's
       <code>airlock.sh run</code> on the host does that, and refuses if the request has changed since you approved it.</p>
+    <section id="previews" hidden><h2>Previews</h2><ul id="preview-list"></ul>
+      <p class="meta">Started by a fort's airlock <code>preview</code> run after your approval. Stop one with that fort's <code>airlock.sh request preview-stop</code>.</p></section>
     <label id="token-row">Signing token <input id="token" type="password" autocomplete="off"></label>
     <div id="list"><p class="meta">Loading…</p></div>
   </main>
@@ -45,6 +47,16 @@
         <button data-fort="${escapeHtml(item.fort)}" data-id="${escapeHtml(item.id)}" data-sha="${escapeHtml(item.requestSha256)}">Approve</button>
         <output aria-live="polite"></output></section>`).join('');
     }
+    async function loadPreviews() {
+      const response = await fetch('/api/airlock/previews');
+      const items = response.ok ? await response.json() : [];
+      // The server returns only local http URLs; checked again before a link is made.
+      const local = /^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}\/?$/;
+      const shown = items.filter((item) => local.test(item.url));
+      el('previews').hidden = !shown.length;
+      el('preview-list').innerHTML = shown.map((item) => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.url)}</a>
+        <span class="meta">${escapeHtml(item.fortName)} · ${escapeHtml(item.id)} · commit ${escapeHtml(item.commit.slice(0, 12))} · ${escapeHtml(item.endedAt)}</span></li>`).join('');
+    }
     el('list').addEventListener('click', async (event) => {
       const button = event.target.closest('button[data-id]');
       if (!button) return;
@@ -55,10 +67,11 @@
       const response = await fetch('/api/airlock/approve', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ fort: button.dataset.fort, id: button.dataset.id, requestSha256: button.dataset.sha }) });
       const body = await response.json().catch(() => ({}));
       if (response.status === 401) localStorage.removeItem(tokenKey); else if (response.ok) localStorage.setItem(tokenKey, token);
-      out.textContent = response.ok ? ` Approved${body.announced ? '' : ' (stream announcement failed; the approval stands)'}. Run it on the host: fort/scripts/airlock.sh run ${button.dataset.id}` : ` ${body.error ?? response.statusText}`;
+      out.textContent = response.ok ? ` Approved${body.announced ? '' : ' (stream announcement failed; the approval stands)'}. The fort's host runner picks it up within moments (or, on the host: fort/scripts/airlock.sh run ${button.dataset.id}).` : ` ${body.error ?? response.statusText}`;
       if (!response.ok) button.disabled = false;
     });
     load();
+    loadPreviews();
   </script>
 </body>
 </html>

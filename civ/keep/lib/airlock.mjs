@@ -188,3 +188,53 @@ export function approvalLine(
     },
   };
 }
+
+// RECENT PREVIEWS (ForgeOs-emshb, Regent docket 2026-10-22 item A). A fort's
+// `preview` operation records the URL its run announced as `url` on the result
+// (airlock.sh, operations.json `result_url`). The Airlock page shows the newest
+// few as links. results/ is seat-writable, so the URL is checked AGAIN here:
+// only a plain http URL on localhost or 127.0.0.1 with a port is ever returned,
+// and only from a result whose operation is `preview` and whose exit code is 0.
+const PREVIEW_URL = /^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}\/?$/;
+
+export function validPreviewUrl(url) {
+  return typeof url === "string" && PREVIEW_URL.test(url);
+}
+
+export function recentPreviews(fort, { fileSystem, limit = 5 }) {
+  const dir = path.join(fort.repo, "fort/airlock/results");
+  let names;
+  try {
+    names = fileSystem.readdirSync(dir);
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const name of names) {
+    if (!name.endsWith(".json")) continue;
+    const id = name.slice(0, -5);
+    if (!validRequestId(id)) continue;
+    let result;
+    try {
+      result = JSON.parse(
+        fileSystem.readFileSync(path.join(dir, name), "utf8"),
+      );
+    } catch {
+      continue;
+    }
+    if (result.id !== id || result.operation !== "preview") continue;
+    if (result.exit_code !== 0 || !validPreviewUrl(result.url)) continue;
+    out.push({
+      fort: fort.key,
+      fortName: fort.name,
+      id,
+      url: result.url,
+      commit: typeof result.commit === "string" ? result.commit : "",
+      endedAt: typeof result.ended_at === "string" ? result.ended_at : "",
+    });
+  }
+  out.sort((a, b) =>
+    a.endedAt < b.endedAt ? 1 : a.endedAt > b.endedAt ? -1 : 0,
+  );
+  return out.slice(0, limit);
+}

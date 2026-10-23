@@ -21,7 +21,11 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { approvalLine, pendingRequests } from "./lib/airlock.mjs";
+import {
+  approvalLine,
+  pendingRequests,
+  recentPreviews,
+} from "./lib/airlock.mjs";
 import { EventTail } from "./lib/events.mjs";
 import { readFleet } from "./lib/fleet.mjs";
 import { loadForts, prefixOf } from "./lib/forts.mjs";
@@ -731,6 +735,20 @@ export function createCivKeep(options = {}) {
     return json(response, items);
   }
 
+  // The newest local previews the forts' airlocks started (ForgeOs-emshb):
+  // links only, each URL re-checked by recentPreviews.
+  function renderAirlockPreviews(response) {
+    const items = [];
+    for (const fort of loadFortList()) {
+      try {
+        items.push(...recentPreviews(fort, { fileSystem }));
+      } catch (error) {
+        log(`Civ Keep preview read failed for ${fort.key}:`, error);
+      }
+    }
+    return json(response, items);
+  }
+
   // APPROVE AN AIRLOCK REQUEST (ForgeOs-72ot.1). Writes one line into the
   // Overseer store and announces it through that fort's emit.sh. It runs
   // nothing: `airlock.sh run` on the host does that, after checking this line
@@ -864,6 +882,8 @@ export function createCivKeep(options = {}) {
     if (p === "/api/signatures") return renderSignatures(response, url);
     if (p === "/api/airlock" && request.method === "GET")
       return renderAirlock(response);
+    if (p === "/api/airlock/previews" && request.method === "GET")
+      return renderAirlockPreviews(response);
     if (p === "/api/airlock/approve" && request.method === "POST")
       return renderAirlockApprove(request, response);
     if (p === "/events") return openEvents(request, response);
