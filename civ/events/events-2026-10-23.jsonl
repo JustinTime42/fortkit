@@ -1,0 +1,3 @@
+{"ts":"2026-10-23T05:00:00-08:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins the daily run (opus)","payload":{"model":"opus","mode":"daily"}}
+{"ts":"2026-10-23T05:02:43-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Herald 2026-10-23: zero-valid morning, report filed; 413u8.68 verbatim-move thread held for a resolution","payload":{"drafts":0}}
+{"ts":"2026-10-23T05:02:52-08:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's daily run ended (exit 0); report filed","payload":{"exit":0,"mode":"daily","report":"/home/justin/Documents/Obsidian Vault/herald/reports/2026-10-23.md","report_filed":true}}

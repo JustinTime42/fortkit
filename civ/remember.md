@@ -5661,3 +5661,54 @@ should name the seat if it matters who learned it.
 - 2026-10-21: **"Lint with the gate's invocation" covers the HARNESSES too.**
   Third sighting: launchers linted, harness sed lines failed SC2016 (info) in
   the full verify. `shellcheck -x` every changed .sh before install.
+
+- 2026-10-23 (edict 75, Proofdelve docket 2026-10-22: emshb, jfqu4.8+x1n09,
+  tgm5o, 4bzvk): **A BEAD THAT CALLS AN OPERATION "READ-ONLY" CAN BE WRONG
+  ABOUT WHAT RUNS.** emshb's host-test "read-only test runs need no click"
+  builds and tests a seat-writable worktree on the host, unmasked, with
+  Docker. Said to the Overseer before building, with the honest comparison
+  (the fleet's host verify already does the same); he chose to build it as
+  approved. Ask what an operation EXECUTES, not what it is called.
+- 2026-10-23: **A systemd `Type=oneshot` service kills every process left in
+  its cgroup when ExecStart exits (default KillMode=control-group).**
+  Measured with a transient oneshot: a setsid'd child dies at unit exit under
+  control-group and survives under `KillMode=process`. Anything launched by a
+  path- or timer-fired oneshot that must outlive it (a preview server) needs
+  `KillMode=process`, and the script must not inherit a lock fd (`8>&-`).
+  Cost: build-server processes (dotnet) also linger until their idle timeout.
+- 2026-10-23: **jq's `test("^...$")` lets a trailing newline through** (Perl
+  `$`). Validate untrusted values with `\A(?:pattern)\z`. And `// empty` in
+  jq turns a JSON `false` into nothing: test booleans with `== false`, never
+  by comparing op_field's text to "false".
+- 2026-10-23: **`$(cat block)` strips the trailing newline, so `"$(cat f); cmd"`
+  puts `cmd` on the block's last line; if that line is a comment, cmd never
+  runs.** Join with `$'\n'`. Cost one false RED in the node-cache harness.
+- 2026-10-23: **NODE_DISABLE_COMPILE_CACHE=1 wins over a NODE_COMPILE_CACHE
+  the parent set** (node v24.14.0: enableCompileCache() status DISABLED,
+  nothing written). typescript, eslint, vite and vitest all call
+  module.enableCompileCache(); default dir os.tmpdir()/node-compile-cache,
+  keyed by path, so it never hits across worktrees. Disabled in Proofdelve's
+  four launchers by the Overseer's choice; tsc/eslint cost ~0.3 s.
+- 2026-10-23: **A fixture repo override must not imply the real host
+  directories.** The scratch reaper's harness set REAPER_REPO but no tmp dir;
+  a new sweep over /tmp would have pruned the host from inside the verifier.
+  Same rule as the airlock's AIRLOCK_ROOT-without-AIRLOCK_STORE refusal: a
+  fixture root without its fixture sibling skips the real thing and says so.
+  And the guard-removed variant of that rule is the one RED arm NOT to run.
+- 2026-10-23: **A change that removes a failure mode upstream can make a
+  harness scenario for the downstream guard unreachable.** 4bzvk (re-ask the
+  reap order per worker) meant the e2e scenario for dx34.18's drain term never
+  reached the drain check, failing two cases for a correct change. Kept the
+  downstream guard's coverage by running that scenario on a generated
+  pre-change (snapshot) launcher. Run the fleet e2e harness by hand after any
+  fleet.sh change: the verifier does not run it.
+- 2026-10-23: **A falsifier on a bead can name a log a later run overwrote.**
+  The verify-<bead>.txt logs are per bead, rewritten every run; the kept step
+  logs /tmp/verify-fail-<step>-<pid>.log survive (until the new sweep C, 7 days)
+  and return files keep the old tail. Reconstruct from those, and SAY it is a
+  reconstruction.
+- 2026-10-23: **`grep` in this session is the ugrep wrapper and missed a
+  pattern containing `$taken"`** that sed matched at once (the 2026-09-17 fact,
+  ninth sighting of the wrapper class). `command grep` when the count matters.
+- 2026-10-23 (correction to the line above, same session): "ninth sighting"
+  is an invented count; nobody counted. Read it as "another sighting".
