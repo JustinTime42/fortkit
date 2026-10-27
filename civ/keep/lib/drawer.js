@@ -195,15 +195,17 @@ export async function openDrawer(
     bead = await response.json();
   }
   const header = `<div class="drawer-header"><div><span class="chip fort-chip">${escapeHtml(bead.fortName ?? "")}${bead.civilization && bead.civilization !== "Justin" ? ` · ${escapeHtml(bead.civilization)}` : ""}</span> <code>${escapeHtml(bead.id)}</code><h2>${escapeHtml(bead.title)}</h2><div class="meta"><span class="stage-chip ${stageClass(bead.stage)}">${escapeHtml(bead.stage)}</span><span>${escapeHtml(priority(bead))} · ${glyph(bead.issue_type)}</span>${(bead.labels ?? []).map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join("")}<span>${escapeHtml(bead.assignee ?? "Unassigned")}</span><time title="${escapeHtml(bead.created_at)}">Created ${relative(bead.created_at)}</time><time title="${escapeHtml(bead.updated_at)}">Updated ${relative(bead.updated_at)}</time></div></div><button id="drawer-close">Back</button></div>`;
+  // Newest first, with the comment box above them (Overseer, 2026-10-27).
   const comments =
-    (bead.comments ?? [])
+    [...(bead.comments ?? [])]
+      .reverse()
       .map(
         (comment) =>
           `<article class="comment"><b>${escapeHtml(comment.author ?? "Unknown")}</b> <time title="${escapeHtml(comment.created_at)}">${relative(comment.created_at)}</time><div class="pasted">${renderMarkdown(comment.text)}</div></article>`,
       )
       .join("") || "<p>None.</p>";
   el("drawer").innerHTML =
-    `${header}${notice ? `<p class="notice">${escapeHtml(notice)}</p>` : ""}${bead.needsYou ? section("Needs you", signingDesk(bead), true) : ""}${section("Description", renderMarkdown(bead.description), true)}${section("Acceptance criteria", renderMarkdown(bead.acceptance_criteria))}${section("Notes", renderMarkdown(bead.notes))}${section("Comments", comments + commentDesk(), Boolean(bead.comments?.length))}${section("Close reason", renderMarkdown(bead.close_reason))}${section("Dependencies", dependencies(bead))}`;
+    `${header}${notice ? `<p class="notice">${escapeHtml(notice)}</p>` : ""}${bead.needsYou ? section("Needs you", signingDesk(bead), true) : ""}${section("Description", renderMarkdown(bead.description), true)}${section("Acceptance criteria", renderMarkdown(bead.acceptance_criteria))}${section("Notes", renderMarkdown(bead.notes))}${section("Comments", commentDesk() + comments, Boolean(bead.comments?.length))}${section("Close reason", renderMarkdown(bead.close_reason))}${section("Dependencies", dependencies(bead))}`;
   el("drawer").hidden = false;
   if (updateHash) window.location.hash = encodeURIComponent(id);
   el("drawer-close").addEventListener("click", () => {
