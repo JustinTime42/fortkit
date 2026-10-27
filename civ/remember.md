@@ -5712,3 +5712,28 @@ should name the seat if it matters who learned it.
   ninth sighting of the wrapper class). `command grep` when the count matters.
 - 2026-10-23 (correction to the line above, same session): "ninth sighting"
   is an invented count; nobody counted. Read it as "another sighting".
+
+- 2026-10-26 (edict 76, Proofdelve secrets-only experiment, ForgeOs-yhn44):
+  **THE PATCH I APPLIED WAS NOT THE PATCH I REVIEWED.** The Mayor revised it
+  (for the better) between my review and my `patch -p1`, and I only noticed
+  because my amendment's anchor was gone. Record the sha256 of a draft when you
+  review it and compare before applying; a drafts/ file in a fort is
+  seat-writable.
+- 2026-10-26: **PROOFDELVE NOW HAS A POSTURE SWITCH**, `fort/scripts/sandbox-posture`
+  (`full` | `secrets-only`, or `FORT_SANDBOX`). Under secrets-only the only
+  differences from full are the read-only `$HOME`, the two Docker socket masks and
+  the private `/tmp` (measured by diffing build_mask's argv, both seat types).
+  Docker is root, so the secret masks hold against reads, and only prose holds
+  them against a container bind mount; the Overseer owns that residual. The
+  boundary probes fail by design in this posture.
+- 2026-10-26: **A SNAPSHOT OF A FORT MUST NOT ARCHIVE ITS SECRETS**: tar with
+  `--exclude='.env*'`, since archiving is opening. And tar over a live `.beads`
+  reports "file changed as we read it"; take a separate `cp -a` of `.beads` and
+  confirm a `find -printf '%T@ %s %p'` hash is unchanged across the copy.
+- 2026-10-26: **headless Chromium runs inside a seat mask only with
+  `--no-sandbox`** (bwrap's namespace already holds it); playwright's
+  `chromium_headless_shell-1248` wrote a screenshot under the Mayor's mask.
+- 2026-10-26: **A SAFETY CLASSIFIER STOPPED A RESPONSE** while I traced how the
+  draft's writable carve-outs reached host machinery. I did not resume it; stating
+  the concern at the level of "which records become writable", and asking, was
+  enough to get the fix.
