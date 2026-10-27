@@ -5737,3 +5737,14 @@ should name the seat if it matters who learned it.
   draft's writable carve-outs reached host machinery. I did not resume it; stating
   the concern at the level of "which records become writable", and asking, was
   enough to get the fix.
+
+- 2026-10-27 (edict 77, the Keep comment order and the Mayor summary design,
+  fortkit-t7vz): **`~/.claude/sessions/<pid>.json` NAMES EVERY LIVE CLAUDE CODE
+  SESSION** (pid, sessionId, cwd, status), so "the currently open Mayor session
+  of fort X" is a lookup, not a guess among transcripts. Never read the `*.key`
+  files beside them. A Mayor transcript's own text blocks are its highlights:
+  a full Proofdelve day was 151 text blocks, ~20k tokens, against 403 tool calls
+  in an 18.7 MB file.
+- 2026-10-27: **civ/keep IS OUTSIDE BIOME'S PATHS**: `npx biome check` on a
+  civ/keep file prints "No files were processed". Verify a Keep edit by curl
+  against the running Keep (`/static/<file>`), which serves the working tree.
