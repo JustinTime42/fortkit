@@ -11,9 +11,14 @@ import { afterEach, describe, expect, test } from "vitest";
 // @ts-expect-error JavaScript library module.
 import { prefixOf } from "../civ/keep/lib/forts.mjs";
 // @ts-expect-error JavaScript library module.
+import * as mayorSummary from "../civ/keep/lib/mayor-summary-extract.mjs";
+// @ts-expect-error JavaScript library module.
 import { signCommand } from "../civ/keep/lib/readers.mjs";
 // @ts-expect-error JavaScript server module exercised through its HTTP seam.
 import { createCivKeep } from "../civ/keep/server.mjs";
+
+const { extractHighlights, findLiveMayor, resolveBeadFacts, windowCounts } =
+  mayorSummary;
 
 type Call = { file: string; args: string[]; cwd: string };
 type Bead = {
@@ -279,6 +284,242 @@ describe("civ keep signing desk", () => {
     expect(writes().find((line) => line.includes("emit.sh"))).toContain(
       "decision.recorded proof-d4: decide B",
     );
+  });
+});
+
+describe("Mayor summary extraction", () => {
+  test("selects only a live Mayor, never opening adjacent key files", () => {
+    const root = mkdtempSync(join(tmpdir(), "mayor-sessions-"));
+    const sessions = join(root, "sessions");
+    mkdirSync(sessions);
+    writeFileSync(
+      join(sessions, "12.json"),
+      JSON.stringify({
+        pid: 12,
+        startedAt: "2026-10-27T10:00:00Z",
+        sessionId: "mayor",
+        cwd: "/srv/halls",
+      }),
+    );
+    writeFileSync(
+      join(sessions, "13.json"),
+      JSON.stringify({
+        pid: 13,
+        startedAt: "2026-10-27T11:00:00Z",
+        sessionId: "regent",
+        cwd: "/srv/halls",
+      }),
+    );
+    writeFileSync(
+      join(sessions, "14.json"),
+      JSON.stringify({
+        pid: 14,
+        startedAt: "2026-10-27T12:00:00Z",
+        sessionId: "dead",
+        cwd: "/srv/halls",
+      }),
+    );
+    writeFileSync(join(sessions, "12.key"), "must not be opened");
+    const reads: string[] = [];
+    const fileSystem = {
+      readdirSync: () => ["12.json", "12.key", "13.json", "14.json"],
+      readFileSync: (file: string) => {
+        reads.push(file);
+        if (file.endsWith("12.key")) throw new Error("secret read");
+        if (file.endsWith("12.json"))
+          return readFileSync(join(sessions, "12.json"), "utf8");
+        if (file.endsWith("13.json"))
+          return readFileSync(join(sessions, "13.json"), "utf8");
+        if (file.endsWith("14.json"))
+          return readFileSync(join(sessions, "14.json"), "utf8");
+        if (file.endsWith("12/environ"))
+          return "PATH=/x\0FORT_MASKED=mayor\0TOKEN=nope";
+        if (file.endsWith("13/environ")) return "FORT_MASKED=regent";
+        throw new Error("unexpected read");
+      },
+      existsSync: (file: string) =>
+        file.endsWith("/12") || file.endsWith("/13"),
+      readlinkSync: (file: string) =>
+        file.endsWith("/12/cwd") || file.endsWith("/13/cwd")
+          ? "/srv/halls"
+          : "",
+    };
+    expect(
+      findLiveMayor(
+        { repo: "/srv/halls" },
+        { fileSystem, sessionsDirectory: sessions, procRoot: "/proc" },
+      )?.sessionId,
+    ).toBe("mayor");
+    expect(reads.some((file) => file.endsWith(".key"))).toBe(false);
+  });
+
+  test("keeps only main-chain assistant text after the mark and computes facts", async () => {
+    const root = mkdtempSync(join(tmpdir(), "mayor-transcript-"));
+    const transcript = join(root, "mayor.jsonl");
+    writeFileSync(
+      transcript,
+      [
+        JSON.stringify({
+          type: "assistant",
+          timestamp: "2026-10-27T09:59:59Z",
+          message: { content: [{ type: "text", text: "before halls-x1" }] },
+        }),
+        JSON.stringify({
+          type: "assistant",
+          timestamp: "2026-10-27T10:01:00Z",
+          message: {
+            content: [
+              { type: "thinking", thinking: "no" },
+              {
+                type: "text",
+                text: "Ship halls-x1 and proof-a1, inspect halls-missing.",
+              },
+              { type: "tool_use", name: "bd" },
+            ],
+          },
+        }),
+        JSON.stringify({
+          type: "user",
+          timestamp: "2026-10-27T10:02:00Z",
+          message: {
+            content: [{ type: "text", text: "tool result halls-secret" }],
+          },
+        }),
+        JSON.stringify({
+          type: "system",
+          timestamp: "2026-10-27T10:03:00Z",
+          message: { content: [{ type: "text", text: "system" }] },
+        }),
+        JSON.stringify({
+          type: "assistant",
+          isSidechain: true,
+          timestamp: "2026-10-27T10:04:00Z",
+          message: { content: [{ type: "text", text: "sidechain" }] },
+        }),
+        "not json",
+      ].join("\n"),
+    );
+    const extracted = await extractHighlights(
+      transcript,
+      "2026-10-27T10:00:00Z",
+    );
+    expect(extracted).toEqual({
+      highlights: [
+        {
+          timestamp: "2026-10-27T10:01:00Z",
+          text: "Ship halls-x1 and proof-a1, inspect halls-missing.",
+        },
+      ],
+      malformedLines: 1,
+    });
+    const states = [
+      {
+        fort: { key: "halls", prefix: "halls" },
+        byId: new Map([
+          [
+            "halls-x1",
+            {
+              id: "halls-x1",
+              title: "Gated work",
+              status: "open",
+              labels: ["gate-1"],
+            },
+          ],
+        ]),
+      },
+      {
+        fort: { key: "proof", prefix: "proof" },
+        byId: new Map([
+          [
+            "proof-a1",
+            { id: "proof-a1", title: "Built", status: "closed", labels: [] },
+          ],
+        ]),
+      },
+    ];
+    expect(resolveBeadFacts(extracted.highlights, states)).toEqual([
+      {
+        id: "halls-x1",
+        fort: "halls",
+        title: "Gated work",
+        status: "open",
+        assignee: null,
+        labels: ["gate-1"],
+      },
+      {
+        id: "proof-a1",
+        fort: "proof",
+        title: "Built",
+        status: "closed",
+        assignee: null,
+        labels: [],
+      },
+      { id: "halls-missing", status: "unknown" },
+    ]);
+  });
+
+  test("computes counts from the export, full event window, and existing waiting rule", () => {
+    const root = mkdtempSync(join(tmpdir(), "mayor-counts-"));
+    const events = join(root, "fort/events");
+    mkdirSync(events, { recursive: true });
+    writeFileSync(
+      join(events, "events-2026-10-26.jsonl"),
+      [
+        JSON.stringify({ ts: "2026-10-27T10:01:00Z", category: "merge" }),
+        JSON.stringify({
+          ts: "2026-10-27T10:02:00Z",
+          category: "halt",
+          reason: "disk full",
+        }),
+        JSON.stringify({
+          ts: "2026-10-27T10:03:00Z",
+          category: "review.verdict",
+          target: "halls-x1",
+          payload: { verdict: "APPROVE" },
+        }),
+        JSON.stringify({
+          ts: "2026-10-27T10:04:00Z",
+          category: "gate.approved",
+          target: "halls-x1",
+        }),
+      ].join("\n"),
+    );
+    const beads = new Map([
+      [
+        "halls-x1",
+        {
+          id: "halls-x1",
+          status: "open",
+          labels: ["gate-1"],
+          created_at: "2026-10-27T10:01:00Z",
+        },
+      ],
+      [
+        "halls-x2",
+        {
+          id: "halls-x2",
+          status: "closed",
+          labels: [],
+          closed_at: "2026-10-27T10:02:00Z",
+        },
+      ],
+    ]);
+    expect(
+      windowCounts(
+        { repo: root, waitingLabels: ["gate-1"] },
+        beads,
+        "2026-10-27T10:00:00Z",
+        "2026-10-27T10:05:00Z",
+      ),
+    ).toEqual({
+      closed: 1,
+      filed: 1,
+      merged: 1,
+      halts: [{ reason: "disk full" }],
+      wardenVerdicts: [{ id: "halls-x1", verdict: "APPROVE" }],
+      gateDecisions: [{ category: "gate.approved", id: "halls-x1" }],
+      waitingOnOverseer: ["halls-x1"],
+    });
   });
 });
 
