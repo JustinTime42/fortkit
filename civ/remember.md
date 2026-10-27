@@ -5748,3 +5748,25 @@ should name the seat if it matters who learned it.
 - 2026-10-27: **civ/keep IS OUTSIDE BIOME'S PATHS**: `npx biome check` on a
   civ/keep file prints "No files were processed". Verify a Keep edit by curl
   against the running Keep (`/static/<file>`), which serves the working tree.
+
+- 2026-10-27 (edict 78, Proofdelve docket: v94f3, bzr1z+w5xkw, 8gmt4, writable
+  skills): **A WRITABLE CARVE BOUND AFTER `extra_ro` REOPENS A STRICTER
+  CALLER'S READ-ONLY TREE.** The drafted writable-skills patch put the project
+  `.claude/skills` carve after the extra_ro pass; the Warden passes her whole
+  checkout as extra_ro, so she became writable inside it (fixture, `[ -w ]`
+  only). The cycle-7 rule again: a grant binds BEFORE extra_ro. The draft's
+  prose said the opposite; the measurement caught it. Test any mask change with
+  each caller's OWN build_mask line, the Warden's especially
+  (`scripts/skills-carve-harness.sh` in Proofdelve evaluates it from warden.sh).
+- 2026-10-27: **PROOFDELVE'S FLEET NOW BOUNDS A REAP PASS** (FLEET_REAP_PER_PASS,
+  default 2, in fleet.conf; land/signed resumes uncounted) **AND KEYS `taken` BY
+  dir@started**, and runs stale_signature_check() after phase 1 (held beads whose
+  branch stops merging go to the Mayor, mayor-review, fingerprinted). Its
+  governor harness's order cases that take three workers per pass must set the
+  cap high, or they read as regressions.
+- 2026-10-27: **A stub `bd` that logs `-C <repo>` before the verb makes a `^update`
+  anchor match nothing**, second sighting (2026-09-10). Anchor on ` update `.
+- 2026-10-27: **The Warden returned APPROVE-WITH-FINDINGS, not ESCALATE, on a gate-6
+  Regent sitting with the Overseer present**, reasoning that his half of the gate
+  was the sitting itself; she cites ubgx, mskx, fhak, x7ojh, zw3q5 and 8sd4n as the
+  practice. Expect that, and close on it.
