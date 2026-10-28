@@ -203,9 +203,11 @@ export function windowCounts(entry, windowStart, windowEnd, options = {}) {
     gateDecisions: [],
     waitingOnOverseer: [],
   };
+  if (!Array.isArray(entry.events?.events))
+    throw new Error("entry.events.events is required");
   const context = graphContext(
     values,
-    entry.events?.events ?? [],
+    entry.events.events,
     entry.fleet?.workers ?? [],
     now(),
     entry.fort.waitingLabels,
@@ -241,7 +243,7 @@ export function windowCounts(entry, windowStart, windowEnd, options = {}) {
       if (event.category === "halt")
         result.halts.push({
           target: event.target ?? null,
-          reason: event.reason ?? event.detail ?? "",
+          reason: event.detail ?? "",
         });
       if (event.category === "review.verdict")
         result.wardenVerdicts.push({

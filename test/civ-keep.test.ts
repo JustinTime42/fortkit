@@ -3,13 +3,21 @@
 // per-fort allowlist (civ/keep/lib/readers.mjs signCommand); only the final
 // execFile is stubbed, so a write the allowlist would reject fails these tests.
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 // @ts-expect-error JavaScript library module.
 import { prefixOf } from "../civ/keep/lib/forts.mjs";
+// @ts-expect-error JavaScript library module.
+import { summariseMayor } from "../civ/keep/lib/mayor-summary.mjs";
 // @ts-expect-error JavaScript library module.
 import * as mayorSummary from "../civ/keep/lib/mayor-summary-extract.mjs";
 // @ts-expect-error JavaScript library module.
@@ -588,6 +596,124 @@ describe("Mayor summary extraction", () => {
       gateDecisions: [{ category: "gate.approved", id: "halls-x1" }],
       waitingOnOverseer: ["halls-x1", "halls-x3"],
     });
+  });
+
+  test("fails loudly when an entry has no event snapshot", () => {
+    expect(() => windowCounts({ fort: {}, byId: new Map() }, 0, 1)).toThrow(
+      "entry.events.events is required",
+    );
+  });
+});
+
+describe("Mayor summary local model", () => {
+  function input(text = "Mayor reports halls-x1 is waiting.") {
+    return {
+      fort: { key: "halls" },
+      session: { sessionId: "mayor" },
+      transcriptPath: "/private/mayor.jsonl",
+      windowStart: "2026-10-27T10:00:00Z",
+      windowEnd: "2026-10-27T11:00:00Z",
+      firstRun: true,
+      fingerprint: "fingerprint",
+      highlights: [{ timestamp: "2026-10-27T10:01:00Z", text }],
+      beadFacts: [{ id: "halls-x1", title: "Gated work", status: "open" }],
+      counts: { closed: 1, filed: 1 },
+      malformedLines: 0,
+      keepRefreshedAt: "2026-10-27T11:00:00Z",
+    };
+  }
+  test("chunks and combines oversized messages, using only the injected Ollama", async () => {
+    const calls: unknown[] = [];
+    const fetch = async (_url: string, init: RequestInit) => {
+      calls.push(JSON.parse(String(init.body)));
+      return new Response(
+        JSON.stringify({
+          prompt_eval_count: 100,
+          message: { content: `note ${calls.length}` },
+        }),
+      );
+    };
+    const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-"));
+    const record = await summariseMayor(input("x".repeat(190_000)), {
+      stateHome,
+      fetch,
+    });
+    expect(record.status).toBe("success");
+    expect(record.chunks.length).toBeGreaterThan(2);
+    expect(calls.length).toBe(record.chunks.length);
+    const latest = join(stateHome, "civ-keep/summaries/halls/latest.json");
+    expect(JSON.parse(readFileSync(latest, "utf8")).summary).toBe(
+      record.summary,
+    );
+    expect(statSync(latest).mode & 0o777).toBe(0o600);
+    expect(
+      statSync(join(stateHome, "civ-keep/summaries/halls")).mode & 0o777,
+    ).toBe(0o700);
+  });
+
+  test("records an over-window response as failure without replacing latest", async () => {
+    const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-failure-"));
+    const ok = async () =>
+      new Response(
+        JSON.stringify({
+          prompt_eval_count: 10,
+          message: { content: "good summary" },
+        }),
+      );
+    await summariseMayor(input(), { stateHome, fetch: ok });
+    await expect(
+      summariseMayor(input(), {
+        stateHome,
+        fetch: async () =>
+          new Response(
+            JSON.stringify({
+              prompt_eval_count: 30720,
+              message: { content: "bad" },
+            }),
+          ),
+      }),
+    ).rejects.toThrow("may have truncated");
+    expect(
+      JSON.parse(
+        readFileSync(
+          join(stateHome, "civ-keep/summaries/halls/latest.json"),
+          "utf8",
+        ),
+      ).summary,
+    ).toBe("good summary");
+  });
+
+  test("summary endpoints refuse unknown and Greenlab forts", async () => {
+    const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-api-"));
+    keep = createCivKeep({
+      env: { HOME: scratch, XDG_STATE_HOME: stateHome },
+      run: async () => "",
+      tokenPath,
+      loadForts: () => [
+        ...forts,
+        { ...forts[0], key: "green", civilization: "Greenlab" },
+      ],
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+    });
+    await keep.refresh();
+    await new Promise<void>((resolve) =>
+      keep?.server.listen(0, "127.0.0.1", resolve),
+    );
+    const port = (keep.server.address() as AddressInfo).port;
+    expect(
+      (await fetch(`http://127.0.0.1:${port}/api/summary?fort=missing`)).status,
+    ).toBe(404);
+    expect(
+      (await fetch(`http://127.0.0.1:${port}/api/summary/sources?fort=green`))
+        .status,
+    ).toBe(404);
+    const response = await fetch(
+      `http://127.0.0.1:${port}/api/summary?fort=halls`,
+    );
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as { latest: unknown }).latest).toBeNull();
   });
 });
 
