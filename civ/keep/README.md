@@ -28,6 +28,16 @@ Reads are one `bd export` per fort per minute, sequential across forts, plus eac
 fort's `fort/events` (today and yesterday) and, for a fleet fort, its fleet state
 directory.
 
+## Mayor summaries
+
+For production-registry forts only, the server makes a summary pass two minutes
+after boot and hourly thereafter. A pass fingerprints the live Mayor transcript,
+the Keep's export digest, and event files; unchanged forts are logged as skipped.
+Generation is globally queued (one local-model call at a time), and a repeated
+per-fort regenerate request joins the existing run. `POST
+/api/summary/regenerate?fort=<key>` requires an Origin equal to the Keep's own
+origin; it does not use the signing token or audit.
+
 ## What "needs you" means, per fort (`lib/forts.mjs`)
 
 - Proofdelve, plot, Scionhall, Farlantern, Kithmason: the `human` label, or a

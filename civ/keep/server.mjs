@@ -28,7 +28,7 @@ import {
 } from "./lib/airlock.mjs";
 import { EventTail } from "./lib/events.mjs";
 import { readFleet } from "./lib/fleet.mjs";
-import { loadForts, prefixOf } from "./lib/forts.mjs";
+import { loadForts, prefixOf, productionRegistryPath } from "./lib/forts.mjs";
 import {
   dependencyGroups,
   graph,
@@ -36,8 +36,18 @@ import {
   needsYou,
   stage,
 } from "./lib/graph.mjs";
-import { readLastFailure, readLatestSummary } from "./lib/mayor-summary.mjs";
-import { findLiveMayor } from "./lib/mayor-summary-extract.mjs";
+import {
+  readLastFailure,
+  readLatestSummary,
+  summariseMayor,
+} from "./lib/mayor-summary.mjs";
+import {
+  extractHighlights,
+  findLiveMayor,
+  mayorTranscriptPath,
+  resolveBeadFacts,
+  windowCounts,
+} from "./lib/mayor-summary-extract.mjs";
 import {
   command,
   parseExport,
@@ -102,6 +112,14 @@ export function createCivKeep(options = {}) {
   const run = options.run ?? command;
   const exit = options.exit ?? process.exit;
   const log = options.log ?? console.error;
+  const fetchImpl = options.fetch ?? globalThis.fetch;
+  const sessionsDirectory =
+    options.sessionsDirectory ?? path.join(env.HOME ?? "", ".claude/sessions");
+  const procRoot = options.procRoot ?? "/proc";
+  const setTimeoutImpl = options.setTimeout ?? setTimeout;
+  const setIntervalImpl = options.setInterval ?? setInterval;
+  const clearTimeoutImpl = options.clearTimeout ?? clearTimeout;
+  const clearIntervalImpl = options.clearInterval ?? clearInterval;
   const configHome =
     env.XDG_CONFIG_HOME || path.join(env.HOME ?? "", ".config");
   const stateHome =
@@ -133,6 +151,8 @@ export function createCivKeep(options = {}) {
     options.loadForts ?? (() => loadForts({ env, fileSystem }));
   const clients = new Set();
   const inFlight = new Set();
+  const summaryFlights = new Map();
+  let summaryQueue = Promise.resolve();
   // key -> { fort, byId, skipped, events, fleet, stale, error, refreshedAt }
   const states = new Map();
   let bootModuleMtimes;
@@ -187,6 +207,9 @@ export function createCivKeep(options = {}) {
         maxBuffer: 64 * 1024 * 1024,
       });
       const parsed = parseExport(String(text));
+      entry.exportDigest = createHash("sha256")
+        .update(String(text))
+        .digest("hex");
       const prefix = prefixOf(parsed.byId.values());
       const clash = [...states.values()].find(
         (other) =>
@@ -345,10 +368,7 @@ export function createCivKeep(options = {}) {
   // verbatim highlights; the source endpoint is an explicit, separate read.
   function summaryFort(url) {
     const key = url.searchParams.get("fort");
-    const productionRegistry = path.join(
-      env.HOME ?? "",
-      ".claude/civilization.json",
-    );
+    const productionRegistry = productionRegistryPath(env);
     const fort = loadFortList().find(
       (item) => item.key === key && item.registryPath === productionRegistry,
     );
@@ -379,7 +399,7 @@ export function createCivKeep(options = {}) {
       fort: fort.key,
       liveMayor: liveMayor(fort),
       latest: withoutHighlights,
-      running: false,
+      running: summaryFlights.has(fort.key),
       lastFailure: failure
         ? { at: failure.generatedAt ?? null, reason: failure.reason }
         : null,
@@ -392,6 +412,135 @@ export function createCivKeep(options = {}) {
     return json(
       response,
       readLatestSummary(stateHome, fort.key, { fileSystem })?.highlights ?? [],
+    );
+  }
+
+  function fingerprintFor(fort, entry, session, transcriptPath) {
+    let transcript = null;
+    try {
+      const stat = fileSystem.statSync(transcriptPath);
+      transcript = { size: stat.size, mtimeMs: stat.mtimeMs };
+    } catch {}
+    const events = [];
+    try {
+      for (const name of fileSystem.readdirSync(
+        path.join(fort.repo, "fort/events"),
+      )) {
+        if (!/^events-.*\.jsonl$/.test(name)) continue;
+        const stat = fileSystem.statSync(
+          path.join(fort.repo, "fort/events", name),
+        );
+        events.push({ name, size: stat.size, mtimeMs: stat.mtimeMs });
+      }
+    } catch {}
+    events.sort((left, right) => left.name.localeCompare(right.name));
+    return {
+      sessionId: session.sessionId,
+      transcript,
+      exportDigest: entry.exportDigest ?? null,
+      events,
+    };
+  }
+
+  async function generateSummary(fort, { force = false } = {}) {
+    const entry = stateFor(fort);
+    const session = findLiveMayor(fort, {
+      fileSystem,
+      sessionsDirectory,
+      procRoot,
+    });
+    if (!session) {
+      log(`summary ${fort.key}: skipped, no live Mayor`);
+      return { status: "skipped", reason: "no live Mayor" };
+    }
+    const latest = readLatestSummary(stateHome, fort.key, { fileSystem });
+    const end = new Date(now()).toISOString();
+    const firstRun = !latest?.windowEnd;
+    const windowStart = firstRun
+      ? new Date(now() - 12 * 60 * 60 * 1000).toISOString()
+      : latest.windowEnd;
+    const transcriptPath = mayorTranscriptPath(session, {
+      home: env.HOME ?? "",
+    });
+    if (!transcriptPath)
+      return { status: "skipped", reason: "no live Mayor transcript" };
+    const fingerprint = fingerprintFor(fort, entry, session, transcriptPath);
+    if (
+      !force &&
+      latest?.fingerprint &&
+      JSON.stringify(latest.fingerprint) === JSON.stringify(fingerprint)
+    ) {
+      log(
+        `summary ${fort.key}: skipped, unchanged since ${latest.generatedAt}`,
+      );
+      return { status: "skipped", reason: "unchanged" };
+    }
+    const extracted = await extractHighlights(transcriptPath, windowStart, {
+      fileSystem,
+    });
+    if (extracted.reason) {
+      log(`summary ${fort.key}: skipped, ${extracted.reason}`);
+      return { status: "skipped", reason: extracted.reason };
+    }
+    return summariseMayor(
+      {
+        fort,
+        session,
+        transcriptPath,
+        windowStart,
+        windowEnd: end,
+        firstRun,
+        fingerprint,
+        highlights: extracted.highlights,
+        beadFacts: resolveBeadFacts(extracted.highlights, states.values()),
+        counts: windowCounts(entry, windowStart, end, { fileSystem, now }),
+        malformedLines: extracted.malformedLines,
+        keepRefreshedAt: entry.refreshedAt ?? null,
+      },
+      { fileSystem, fetch: fetchImpl, now, stateHome },
+    );
+  }
+
+  function queueSummary(fort, options = {}) {
+    const current = summaryFlights.get(fort.key);
+    if (current) return current;
+    const task = summaryQueue.then(() => generateSummary(fort, options));
+    summaryQueue = task.catch(() => {});
+    const shared = task.finally(() => summaryFlights.delete(fort.key));
+    summaryFlights.set(fort.key, shared);
+    return shared;
+  }
+
+  async function runSummaryPass() {
+    await refresh();
+    const production = loadFortList().filter(
+      (fort) => fort.registryPath === productionRegistryPath(env),
+    );
+    for (const fort of production) {
+      try {
+        await queueSummary(fort);
+      } catch (error) {
+        log(`summary ${fort.key}: failed`, error);
+      }
+    }
+  }
+
+  function renderRegenerate(request, response, url) {
+    const fort = summaryFort(url);
+    if (!fort) return json(response, { error: "Unknown fort" }, 404);
+    const expectedOrigin = request.headers.host
+      ? `http://${request.headers.host}`
+      : null;
+    if (!expectedOrigin || request.headers.origin !== expectedOrigin)
+      return json(response, { error: "Forbidden" }, 403);
+    const joined = summaryFlights.has(fort.key);
+    queueSummary(fort, { force: true }).catch((error) =>
+      log(`summary ${fort.key}: failed`, error),
+    );
+    return json(
+      response,
+      { fort: fort.key, status: joined ? "running" : "queued" },
+      202,
     );
   }
 
@@ -934,6 +1083,8 @@ export function createCivKeep(options = {}) {
       return renderSummary(response, url);
     if (p === "/api/summary/sources" && request.method === "GET")
       return renderSummarySources(response, url);
+    if (p === "/api/summary/regenerate" && request.method === "POST")
+      return renderRegenerate(request, response, url);
     if (p === "/api/graph") return renderGraph(response, url);
     if (p.startsWith("/api/bead/"))
       return renderApiBead(response, p.slice("/api/bead/".length));
@@ -959,12 +1110,33 @@ export function createCivKeep(options = {}) {
     });
   });
 
+  const initialSummaryTimer = setTimeoutImpl(
+    () => {
+      runSummaryPass().catch((error) => log("summary pass failed", error));
+    },
+    2 * 60 * 1000,
+  );
+  initialSummaryTimer.unref?.();
+  const summaryTimer = setIntervalImpl(
+    () => {
+      runSummaryPass().catch((error) => log("summary pass failed", error));
+    },
+    60 * 60 * 1000,
+  );
+  summaryTimer.unref?.();
+
   return {
     server,
     states,
     refresh,
+    runSummaryPass,
+    regenerateSummary(fort) {
+      return queueSummary(fort, { force: true });
+    },
     close() {
       for (const entry of states.values()) entry.events.close?.();
+      clearTimeoutImpl(initialSummaryTimer);
+      clearIntervalImpl(summaryTimer);
       server.close();
     },
   };
