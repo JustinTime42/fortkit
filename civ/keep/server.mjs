@@ -447,6 +447,7 @@ export function createCivKeep(options = {}) {
     transcriptPath,
     windowStart,
     windowEnd,
+    readMark,
   ) {
     let transcript = null;
     try {
@@ -471,8 +472,7 @@ export function createCivKeep(options = {}) {
       sessionId: session.sessionId,
       transcript,
       exportDigest: entry.exportDigest ?? null,
-      readMarkUpTo:
-        readSummaryReadMark(stateHome, fort.key, { fileSystem })?.upTo ?? null,
+      readMarkUpTo: readMark?.upTo ?? null,
       events,
     };
   }
@@ -519,6 +519,7 @@ export function createCivKeep(options = {}) {
       transcriptPath,
       windowStart,
       end,
+      readMark,
     );
     if (
       !flight.force &&
@@ -615,7 +616,10 @@ export function createCivKeep(options = {}) {
     const fort = summaryFort(url);
     if (!fort) return json(response, { error: "Unknown fort" }, 404);
     const body = await readJson(request);
-    const upTo = typeof body.upTo === "string" ? body.upTo : null;
+    const upTo =
+      body && typeof body === "object" && typeof body.upTo === "string"
+        ? body.upTo
+        : null;
     if (
       !upTo ||
       !Number.isFinite(Date.parse(upTo)) ||

@@ -1063,6 +1063,16 @@ describe("Mayor summary local model", () => {
         highlights: [{ text: "The Mayor said 250, then 551957." }],
       }),
     ).toEqual([]);
+    expect(
+      unverifiedNumbers("4. The Mayor closed 54 beads.", {
+        highlights: [{ text: "No counts were supplied." }],
+      }),
+    ).toEqual(["54"]);
+    expect(
+      unverifiedNumbers("The Mayor closed 37 beads.", {
+        highlights: [{ timestamp: "2026-10-27T12:37:00Z", text: "No counts." }],
+      }),
+    ).toEqual(["37"]);
   });
 
   test("rejects an output truncated at its length limit", async () => {
@@ -1344,6 +1354,14 @@ describe("Mayor summary local model", () => {
       (
         await fetch(
           `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
+          { method: "POST", headers: { Origin: "https://foreign.example" } },
+        )
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await fetch(
+          `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
           {
             method: "POST",
             headers: {
@@ -1355,6 +1373,23 @@ describe("Mayor summary local model", () => {
         )
       ).status,
     ).toBe(400);
+    for (const body of ["null", "[]"]) {
+      expect(
+        (
+          await fetch(
+            `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
+            {
+              method: "POST",
+              headers: {
+                Origin: `http://localhost:${port}`,
+                "content-type": "application/json",
+              },
+              body,
+            },
+          )
+        ).status,
+      ).toBe(400);
+    }
     expect(
       (await fetch(`http://127.0.0.1:${port}/api/summary/sources?fort=green`))
         .status,
@@ -1562,6 +1597,15 @@ describe("Mayor summary local model", () => {
     );
     const port = (keep.server.address() as AddressInfo).port;
     const firstEnd = latest.windowEnd;
+    clock += 60_000;
+    await keep.regenerateSummary(fort);
+    latest = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/latest.json"),
+        "utf8",
+      ),
+    );
+    expect(latest.windowStart).toBe("2026-10-27T00:01:00.000Z");
     const marked = await fetch(
       `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
       {
@@ -1576,7 +1620,7 @@ describe("Mayor summary local model", () => {
     expect(marked.status).toBe(200);
     expect(((await marked.json()) as { upTo: string }).upTo).toBe(firstEnd);
     clock += 60_000;
-    await keep.regenerateSummary(fort);
+    await keep.runSummaryPass();
     latest = JSON.parse(
       readFileSync(
         join(stateHome, "civ-keep/summaries/halls/latest.json"),
@@ -1585,6 +1629,16 @@ describe("Mayor summary local model", () => {
     );
     expect(latest.windowStart).toBe(firstEnd);
     expect(latest.windowReason).toBe("read mark");
+    expect(calls).toBe(3);
+    clock += 60_000;
+    await keep.regenerateSummary(fort);
+    latest = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/latest.json"),
+        "utf8",
+      ),
+    );
+    expect(latest.windowStart).toBe(firstEnd);
     const advanced = await fetch(
       `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
       {
@@ -1621,18 +1675,18 @@ describe("Mayor summary local model", () => {
         "utf8",
       ),
     );
-    expect(latest.windowStart).toBe("2026-10-28T12:01:00.000Z");
+    expect(latest.windowStart).toBe("2026-10-28T12:03:00.000Z");
     expect(latest.windowReason).toBe("read mark capped: last 48 hours");
     clock += 60_000;
     await keep.runSummaryPass();
-    expect(calls).toBe(3);
+    expect(calls).toBe(5);
     expect(logs).toContain(
-      "summary halls: skipped, unchanged since 2026-10-30T12:01:00.000Z",
+      "summary halls: skipped, unchanged since 2026-10-30T12:03:00.000Z",
     );
     appendFileSync(transcript, " ");
     clock += 60_000;
     await keep.runSummaryPass();
-    expect(calls).toBe(4);
+    expect(calls).toBe(6);
     nodeFs.rmSync(join(sessions, "41.json"));
     await keep.runSummaryPass();
     expect(logs).toContain("summary halls: skipped, no live Mayor");

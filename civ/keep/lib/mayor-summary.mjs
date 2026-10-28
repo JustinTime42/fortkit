@@ -264,7 +264,15 @@ export async function ask(fetchImpl, prompt, messages) {
   };
 }
 export function unverifiedNumbers(summary, facts) {
-  const supplied = new Set(JSON.stringify(facts ?? {}).match(/\d+/g) ?? []);
+  const { highlights, ...otherFacts } = facts ?? {};
+  // Highlight timestamps are transport metadata, not facts supplied to the model.
+  const suppliedFacts = {
+    ...otherFacts,
+    highlights: Array.isArray(highlights)
+      ? highlights.map((highlight) => highlight?.text ?? "")
+      : highlights,
+  };
+  const supplied = new Set(JSON.stringify(suppliedFacts).match(/\d+/g) ?? []);
   const protectedRanges = [];
   const protectedPattern =
     /\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?Z?)?\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g;
@@ -277,7 +285,9 @@ export function unverifiedNumbers(summary, facts) {
       continue;
     // Markdown-style list markers are structure, not model-supplied facts.
     const lineStart = summary.lastIndexOf("\n", index - 1) + 1;
-    if (/^\d+[.)]\s/.test(summary.slice(lineStart))) continue;
+    const listMarker = /^\s*\d+[.)]\s/.exec(summary.slice(lineStart));
+    if (listMarker && index === lineStart + (listMarker[0].search(/\d/) ?? 0))
+      continue;
     if (!supplied.has(match[0])) unverified.push(match[0]);
   }
   return unverified;
