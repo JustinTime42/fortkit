@@ -214,8 +214,11 @@ markers, and chunk notes are labelled as data in the combine step too.
   are the window's `review.verdict` events whose verdict is `ESCALATE`, deduped
   by bead, with the title from the Keep's state.
 - **Number check.** After the summary returns, every digit run in it that is
-  not part of a bead id, a time or a date is compared with the numbers in the
-  supplied facts. Each one not found is recorded in the run as
+  not part of a time or a date is looked for in the serialised facts the model
+  was given (`beadFacts` and `factsBlock`). Digits inside a supplied bead id
+  are found there by construction, so no separate id exemption exists; digits
+  in an id the facts do not contain (another fort's, unloaded) ARE flagged,
+  which is correct: the model was not given them. Each one not found is recorded in the run as
   `unverifiedNumbers: [string]`. The run still succeeds; the UI marks them.
 
 ## 6. Window and change detection (bead `.4`)
@@ -394,3 +397,6 @@ Under the Keep's state home, beside the signature audit:
   narrative only; a code-rendered facts block (5.4) leads the overlay; numbers
   absent from the facts are recorded and marked. Known limit: a decision
   recorded only in a bead comment still reads as the bead's status.
+- 2026-10-28, after Warden review r2 of `.11`: the number check has no
+  bead-id exemption, because a supplied id's digits are already in the
+  supplied facts; the rule is stated as it behaves.
