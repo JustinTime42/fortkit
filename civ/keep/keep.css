@@ -287,3 +287,108 @@ body {
 .board-bar input[type="checkbox"] {
   min-width: 0;
 }
+.summary-backdrop {
+  position: fixed;
+  z-index: 5;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: #0008;
+}
+.summary-overlay {
+  width: min(46rem, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 8px 24px #0005;
+}
+.summary-overlay > header,
+.summary-actions {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.summary-overlay h2,
+.summary-overlay h3 {
+  margin: 0;
+}
+.summary-provenance,
+.summary-no-live {
+  color: var(--muted);
+}
+.summary-failure {
+  color: var(--danger);
+  font-weight: 700;
+}
+.summary-facts-block {
+  display: grid;
+  gap: var(--space-3);
+  border-block: 1px solid var(--line);
+  padding-block: var(--space-3);
+}
+.summary-facts ul {
+  margin: var(--space-1) 0;
+  padding-left: var(--space-4);
+}
+.summary-facts dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-1) 0;
+}
+.summary-facts dl div {
+  display: flex;
+  gap: var(--space-1);
+}
+.summary-facts dt {
+  font-weight: 700;
+}
+.summary-facts dd {
+  margin: 0;
+}
+.summary-bead {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+.summary-unverified {
+  background: var(--amber);
+  color: var(--chip-ink);
+}
+.summary-body {
+  white-space: pre-wrap;
+}
+.summary-actions {
+  margin-top: var(--space-3);
+  justify-content: flex-start;
+}
+.summary-overlay button {
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  padding: var(--space-2);
+}
+.summary-overlay button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.summary-overlay details {
+  margin-top: var(--space-3);
+}
+.summary-overlay details article {
+  border-top: 1px solid var(--line);
+}
+.summary-overlay details p {
+  white-space: pre-wrap;
+}
