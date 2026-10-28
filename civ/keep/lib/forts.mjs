@@ -77,6 +77,7 @@ export function loadForts(options = {}) {
         name,
         project: entry.project,
         civilization: registry.civilization ?? path.basename(file, ".json"),
+        registryPath: file,
         repo: entry.repo,
         waitingLabels: waitingOverrides[entry.project] ?? ["human"],
         whoseMove: whoseMoveOverrides[entry.project] ?? null,

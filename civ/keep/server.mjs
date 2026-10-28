@@ -345,8 +345,12 @@ export function createCivKeep(options = {}) {
   // verbatim highlights; the source endpoint is an explicit, separate read.
   function summaryFort(url) {
     const key = url.searchParams.get("fort");
+    const productionRegistry = path.join(
+      env.HOME ?? "",
+      ".claude/civilization.json",
+    );
     const fort = loadFortList().find(
-      (item) => item.key === key && item.civilization !== "Greenlab",
+      (item) => item.key === key && item.registryPath === productionRegistry,
     );
     return fort ?? null;
   }
@@ -377,7 +381,7 @@ export function createCivKeep(options = {}) {
       latest: withoutHighlights,
       running: false,
       lastFailure: failure
-        ? { at: failure.windowEnd ?? null, reason: failure.reason }
+        ? { at: failure.generatedAt ?? null, reason: failure.reason }
         : null,
     });
   }

@@ -3,9 +3,10 @@
 // per-fort allowlist (civ/keep/lib/readers.mjs signCommand); only the final
 // execFile is stubbed, so a write the allowlist would reject fails these tests.
 import { createHash } from "node:crypto";
-import {
+import nodeFs, {
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   statSync,
   writeFileSync,
@@ -17,7 +18,7 @@ import { afterEach, describe, expect, test } from "vitest";
 // @ts-expect-error JavaScript library module.
 import { prefixOf } from "../civ/keep/lib/forts.mjs";
 // @ts-expect-error JavaScript library module.
-import { summariseMayor } from "../civ/keep/lib/mayor-summary.mjs";
+import * as mayorSummaryModel from "../civ/keep/lib/mayor-summary.mjs";
 // @ts-expect-error JavaScript library module.
 import * as mayorSummary from "../civ/keep/lib/mayor-summary-extract.mjs";
 // @ts-expect-error JavaScript library module.
@@ -32,6 +33,7 @@ const {
   resolveBeadFacts,
   windowCounts,
 } = mayorSummary;
+const { readLastFailure, summariseMayor } = mayorSummaryModel;
 
 type Call = { file: string; args: string[]; cwd: string };
 type Bead = {
@@ -400,6 +402,12 @@ describe("Mayor summary extraction", () => {
     });
   });
 
+  test("rejects a non-finite numeric transcript window", async () => {
+    await expect(
+      extractHighlights("/missing-transcript.jsonl", Number.NaN),
+    ).rejects.toThrow("windowStart must be a valid timestamp");
+  });
+
   test("keeps only main-chain assistant text after the mark and computes facts", async () => {
     const root = mkdtempSync(join(tmpdir(), "mayor-transcript-"));
     const transcript = join(root, "mayor.jsonl");
@@ -641,11 +649,21 @@ describe("Mayor summary local model", () => {
     expect(record.status).toBe("success");
     expect(record.chunks.length).toBeGreaterThan(2);
     expect(calls.length).toBe(record.chunks.length);
+    expect(calls[0]).toMatchObject({
+      model: "greenlab-qwen2.5:7b-instruct-32k",
+      stream: false,
+      truncate: false,
+      options: { num_ctx: 32768, num_predict: 2048 },
+      messages: [{ role: "system" }, { role: "user" }],
+    });
     const latest = join(stateHome, "civ-keep/summaries/halls/latest.json");
     expect(JSON.parse(readFileSync(latest, "utf8")).summary).toBe(
       record.summary,
     );
     expect(statSync(latest).mode & 0o777).toBe(0o600);
+    expect(
+      statSync(join(stateHome, "civ-keep/summaries/halls/runs")).mode & 0o777,
+    ).toBe(0o700);
     expect(
       statSync(join(stateHome, "civ-keep/summaries/halls")).mode & 0o777,
     ).toBe(0o700);
@@ -683,6 +701,134 @@ describe("Mayor summary local model", () => {
     ).toBe("good summary");
   });
 
+  test("refuses before sending an over-context facts block", async () => {
+    const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-presend-"));
+    let calls = 0;
+    await expect(
+      summariseMayor(
+        {
+          ...input(),
+          beadFacts: [{ id: "halls-x1", detail: "x".repeat(100_000) }],
+        },
+        {
+          stateHome,
+          fetch: async () => {
+            calls += 1;
+            throw new Error("fetch should not be called");
+          },
+        },
+      ),
+    ).rejects.toThrow("facts exceed model context");
+    expect(calls).toBe(0);
+    const [run] = readdirSync(join(stateHome, "civ-keep/summaries/halls/runs"));
+    if (!run) throw new Error("failed run record was not written");
+    const record = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/runs", run),
+        "utf8",
+      ),
+    );
+    expect(record).toMatchObject({
+      status: "failed",
+      reason: "facts exceed model context",
+    });
+  });
+
+  test("records completed chunks when a later response lacks prompt usage", async () => {
+    const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-usage-"));
+    let calls = 0;
+    await expect(
+      summariseMayor(
+        input(`first paragraph\n\nsecond paragraph\n\n${"x".repeat(190_000)}`),
+        {
+          stateHome,
+          fetch: async () => {
+            calls += 1;
+            return new Response(
+              JSON.stringify(
+                calls === 1
+                  ? {
+                      prompt_eval_count: 10,
+                      message: { content: "first note" },
+                    }
+                  : { message: { content: "missing usage" } },
+              ),
+            );
+          },
+        },
+      ),
+    ).rejects.toThrow("may have truncated");
+    const run = readdirSync(
+      join(stateHome, "civ-keep/summaries/halls/runs"),
+    )[0];
+    if (!run) throw new Error("failed run record was not written");
+    const record = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/runs", run),
+        "utf8",
+      ),
+    );
+    expect(record.status).toBe("failed");
+    expect(record.chunks).toHaveLength(1);
+  });
+
+  test("only reports an unbroken most-recent failed run", () => {
+    const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-failures-"));
+    const runs = join(stateHome, "civ-keep/summaries/halls/runs");
+    mkdirSync(runs, { recursive: true });
+    writeFileSync(
+      join(runs, "2026-10-27T10:00:00.000Z.json"),
+      JSON.stringify({
+        status: "failed",
+        generatedAt: "failed-at",
+        reason: "nope",
+      }),
+    );
+    writeFileSync(
+      join(runs, "2026-10-27T11:00:00.000Z.json"),
+      JSON.stringify({ status: "success" }),
+    );
+    expect(readLastFailure(stateHome, "halls")).toBeNull();
+    writeFileSync(join(runs, "2026-10-27T12:00:00.000Z.json"), "not json");
+    expect(readLastFailure(stateHome, "halls")).toEqual({
+      reason: "unreadable run record",
+    });
+  });
+
+  test("records failure when writing latest.json fails", async () => {
+    const stateHome = mkdtempSync(
+      join(tmpdir(), "mayor-summary-latest-write-"),
+    );
+    const fileSystem = Object.create(nodeFs) as typeof nodeFs;
+    fileSystem.renameSync = ((from: string, to: string) => {
+      if (to.endsWith("/latest.json")) throw new Error("latest write failed");
+      return nodeFs.renameSync(from, to);
+    }) as typeof nodeFs.renameSync;
+    await expect(
+      summariseMayor(input(), {
+        stateHome,
+        fileSystem,
+        fetch: async () =>
+          new Response(
+            JSON.stringify({
+              prompt_eval_count: 10,
+              message: { content: "summary" },
+            }),
+          ),
+      }),
+    ).rejects.toThrow("latest write failed");
+    const [run] = readdirSync(join(stateHome, "civ-keep/summaries/halls/runs"));
+    if (!run) throw new Error("failed run record was not written");
+    expect(
+      JSON.parse(
+        readFileSync(
+          join(stateHome, "civ-keep/summaries/halls/runs", run),
+          "utf8",
+        ),
+      ),
+    ).toMatchObject({ status: "failed", reason: "latest write failed" });
+  });
+
   test("summary endpoints refuse unknown and Greenlab forts", async () => {
     const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-api-"));
     keep = createCivKeep({
@@ -690,8 +836,16 @@ describe("Mayor summary local model", () => {
       run: async () => "",
       tokenPath,
       loadForts: () => [
-        ...forts,
-        { ...forts[0], key: "green", civilization: "Greenlab" },
+        ...forts.map((fort) => ({
+          ...fort,
+          registryPath: join(scratch, ".claude/civilization.json"),
+        })),
+        {
+          ...forts[0],
+          key: "green",
+          civilization: "Greenlab",
+          registryPath: join(scratch, ".claude/greenlab.json"),
+        },
       ],
       eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
       exit: () => {},

@@ -88,8 +88,7 @@ export async function extractHighlights(
   options = {},
 ) {
   const fileSystem = options.fileSystem ?? fs;
-  const start =
-    typeof windowStart === "number" ? windowStart : dateValue(windowStart);
+  const start = dateValue(windowStart);
   if (start === null) throw new Error("windowStart must be a valid timestamp");
   const highlights = [];
   let malformedLines = 0;
