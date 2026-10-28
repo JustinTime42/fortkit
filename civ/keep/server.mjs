@@ -46,6 +46,7 @@ import {
   findLiveMayor,
   mayorTranscriptPath,
   resolveBeadFacts,
+  summaryFactsBlock,
   windowCounts,
 } from "./lib/mayor-summary-extract.mjs";
 import {
@@ -524,6 +525,7 @@ export function createCivKeep(options = {}) {
       log(`summary ${fort.key}: skipped, ${extracted.reason}`);
       return { status: "skipped", reason: extracted.reason };
     }
+    const counts = windowCounts(entry, windowStart, end, { fileSystem, now });
     return summariseMayor(
       {
         fort,
@@ -534,8 +536,13 @@ export function createCivKeep(options = {}) {
         firstRun,
         fingerprint,
         highlights: extracted.highlights,
-        beadFacts: resolveBeadFacts(extracted.highlights, states.values()),
-        counts: windowCounts(entry, windowStart, end, { fileSystem, now }),
+        beadFacts: resolveBeadFacts(
+          extracted.highlights,
+          states.values(),
+          entry,
+        ),
+        counts,
+        factsBlock: summaryFactsBlock(entry, counts),
         malformedLines: extracted.malformedLines,
         keepRefreshedAt: entry.refreshedAt ?? null,
       },

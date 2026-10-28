@@ -33,6 +33,7 @@ const {
   findLiveMayor,
   mayorTranscriptPath,
   resolveBeadFacts,
+  summaryFactsBlock,
   windowCounts,
 } = mayorSummary;
 const { loadForts, prefixOf, productionRegistryPath } = fortsModel;
@@ -44,6 +45,7 @@ const {
   readLastFailure,
   splitText,
   summariseMayor,
+  unverifiedNumbers,
 } = mayorSummaryModel;
 
 type Call = { file: string; args: string[]; cwd: string };
@@ -655,6 +657,43 @@ describe("Mayor summary extraction", () => {
     ]);
   });
 
+  test("resolves an exact bare suffix only in the speaking fort", () => {
+    const halls = {
+      fort: { key: "halls", prefix: "ForgeOs" },
+      byId: new Map([
+        [
+          "ForgeOs-hird0",
+          { id: "ForgeOs-hird0", title: "Forge work", status: "open" },
+        ],
+      ]),
+    };
+    const other = {
+      fort: { key: "other", prefix: "other" },
+      byId: new Map([
+        ["other-hird0", { id: "other-hird0", title: "Other", status: "open" }],
+      ]),
+    };
+    expect(
+      resolveBeadFacts(
+        [{ text: "Review hird0, not hird01." }],
+        [halls, other],
+        halls,
+      ),
+    ).toEqual([
+      {
+        id: "ForgeOs-hird0",
+        fort: "halls",
+        title: "Forge work",
+        status: "open",
+        assignee: null,
+        labels: [],
+      },
+    ]);
+    expect(
+      resolveBeadFacts([{ text: "Review hird0." }], [other], other),
+    ).toEqual([]);
+  });
+
   test("computes counts from the export, full event window, and existing waiting rule", () => {
     const root = mkdtempSync(join(tmpdir(), "mayor-counts-"));
     const events = join(root, "fort/events");
@@ -745,6 +784,33 @@ describe("Mayor summary extraction", () => {
       "entry.events.events is required",
     );
   });
+
+  test("renders facts from code, including deduplicated ESCALATE verdicts", () => {
+    const entry = {
+      byId: new Map([
+        ["halls-x1", { id: "halls-x1", title: "Needs approval" }],
+        ["halls-x2", { id: "halls-x2", title: "Escalated review" }],
+      ]),
+    };
+    expect(
+      summaryFactsBlock(entry, {
+        closed: 2,
+        filed: 3,
+        merged: 4,
+        halts: [{}, {}],
+        wardenVerdicts: [
+          { id: "halls-x2", verdict: "ESCALATE" },
+          { id: "halls-x2", verdict: "ESCALATE" },
+          { id: "halls-x1", verdict: "APPROVE" },
+        ],
+        waitingOnOverseer: ["halls-x1"],
+      }),
+    ).toEqual({
+      waitingOnOverseer: [{ id: "halls-x1", title: "Needs approval" }],
+      escalations: [{ id: "halls-x2", title: "Escalated review" }],
+      counts: { closed: 2, filed: 3, merged: 4, halts: 2, verdicts: 3 },
+    });
+  });
 });
 
 describe("Mayor summary local model", () => {
@@ -760,6 +826,11 @@ describe("Mayor summary local model", () => {
       highlights: [{ timestamp: "2026-10-27T10:01:00Z", text }],
       beadFacts: [{ id: "halls-x1", title: "Gated work", status: "open" }],
       counts: { closed: 1, filed: 1 },
+      factsBlock: {
+        waitingOnOverseer: [],
+        escalations: [],
+        counts: { closed: 1, filed: 1, merged: 0, halts: 0, verdicts: 0 },
+      },
       malformedLines: 0,
       keepRefreshedAt: "2026-10-27T11:00:00Z",
     };
@@ -889,6 +960,26 @@ describe("Mayor summary local model", () => {
         ),
       ).summary,
     ).toBe("good summary");
+  });
+
+  test("records model numbers absent from the supplied facts without failing", async () => {
+    const record = await summariseMayor(input(), {
+      stateHome: mkdtempSync(join(tmpdir(), "mayor-summary-numbers-")),
+      fetch: async () =>
+        new Response(
+          JSON.stringify({
+            prompt_eval_count: 10,
+            message: {
+              content: "The model says 54 items were completed at 10:30.",
+            },
+          }),
+        ),
+    });
+    expect(record.status).toBe("success");
+    expect(record.unverifiedNumbers).toEqual(["54"]);
+    expect(
+      unverifiedNumbers("Bead halls-x1 at 10:30 on 2026-10-27", {}),
+    ).toEqual([]);
   });
 
   test("rejects an output truncated at its length limit", async () => {
