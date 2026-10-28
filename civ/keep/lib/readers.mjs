@@ -12,6 +12,9 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { validRequestId } from "./airlock.mjs";
+import { escapeRegExp, idPattern } from "./id-pattern.js";
+
+export { escapeRegExp, idPattern };
 
 export function command(file, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -48,14 +51,6 @@ export const signEvents = Object.freeze({
   decline: "gate.declined",
   decide: "decision.recorded",
 });
-
-export function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-export function idPattern(prefix) {
-  return new RegExp(`^${escapeRegExp(prefix)}-[\\w.-]+$`);
-}
 
 // The only payload a sign event may carry: the approval pin (ForgeOs-ubgx).
 function approvalPayload(text) {

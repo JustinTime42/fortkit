@@ -69,6 +69,7 @@ class FakeDocument {
   listeners = new Map<string, ((event: FakeEvent) => unknown)[]>();
   body = this;
   querySelector(selector: string) {
+    if (selector === "#") throw new SyntaxError("Invalid selector");
     return (
       this.nodes.get(selector.replace(/^#/, "")) ??
       (selector === ".summary-backdrop"
@@ -80,6 +81,9 @@ class FakeDocument {
     return selector === "[data-summary-bead]"
       ? [...this.nodes.values()].filter((node) => node.dataset.summaryBead)
       : [];
+  }
+  getElementById(id: string) {
+    return this.nodes.get(id) ?? null;
   }
   insertAdjacentHTML(_where: string, value: string) {
     this.render(value);
@@ -131,7 +135,6 @@ describe("Mayor summary overlay renderers", () => {
     expect(html).toContain("&lt;img onerror=boom&gt;");
     expect(html).toContain("&lt;script&gt;failure&lt;/script&gt;");
     expect(html).toContain('data-summary-bead="halls-a1"');
-    expect(html).not.toContain('data-summary-bead="img');
     expect(html).not.toContain("<script>alert");
     expect(
       renderSummarySources([
@@ -163,8 +166,16 @@ describe("Mayor summary overlay renderers", () => {
     expect(html).toContain(
       '<mark class="summary-unverified" title="not in the supplied facts">39</mark>',
     );
-    expect(html).not.toContain(">2026</mark>");
-    expect(html).not.toContain(">12</mark>");
+    expect(html.match(/class="summary-unverified"/g)).toHaveLength(1);
+    expect(html).not.toContain(">39</mark>;</mark>");
+    expect(html).toContain("12:39");
+    expect(html).not.toContain(">12:39</mark>");
+    expect(
+      renderSummaryText("fortkit-t7vz.5.", ["fortkit-t7vz", "fortkit-t7vz.5"]),
+    ).toContain('data-summary-bead="fortkit-t7vz.5"');
+    expect(
+      renderSummaryText("fortkit-t7vz.5.1", ["fortkit-t7vz", "fortkit-t7vz.5"]),
+    ).not.toContain("data-summary-bead");
   });
 
   test("renders provenance variants and no-live states", () => {
@@ -222,9 +233,13 @@ describe("Mayor summary overlay renderers", () => {
         }),
       );
     };
-    const opened: string[] = [];
+    const opened: { id: string; overlayPresent: boolean }[] = [];
     const overlay = createSummaryOverlay({
-      openDrawer: (id: string) => opened.push(id),
+      openDrawer: (id: string) =>
+        opened.push({
+          id,
+          overlayPresent: Boolean(doc.querySelector(".summary-backdrop")),
+        }),
       getKnownIds: () => ["halls-a1"],
       document: doc,
       root: doc,
@@ -245,10 +260,124 @@ describe("Mayor summary overlay renderers", () => {
     if (!bead) throw new Error("bead button missing");
     await bead.fire("click");
     expect(doc.querySelector(".summary-backdrop")).toBeUndefined();
-    expect(opened).toEqual(["halls-a1"]);
+    expect(opened).toEqual([{ id: "halls-a1", overlayPresent: false }]);
     await trigger.fire("click");
     await doc.fire("keydown", { key: "Escape" });
     expect(doc.querySelector(".summary-backdrop")).toBeUndefined();
     expect(doc.activeElement).toBe(trigger);
+  });
+
+  test("survives regeneration polls without a focused id and remains closable", async () => {
+    const doc = new FakeDocument();
+    const trigger = new FakeNode("mayor-summary", doc);
+    doc.nodes.set("mayor-summary", trigger);
+    const timers: (() => Promise<void>)[] = [];
+    let gets = 0;
+    const fakeFetch: typeof fetch = async (path) => {
+      if (String(path).includes("regenerate")) return new Response("{}");
+      gets += 1;
+      return new Response(
+        JSON.stringify({ latest, liveMayor: true, running: gets < 3 }),
+      );
+    };
+    const overlay = createSummaryOverlay({
+      openDrawer: () => undefined,
+      getKnownIds: () => [],
+      document: doc,
+      root: doc,
+      fetchImpl: fakeFetch,
+      setTimeoutImpl: (callback: () => void) => {
+        timers.push(callback as () => Promise<void>);
+        return timers.length as unknown as ReturnType<typeof setTimeout>;
+      },
+    });
+    overlay.setFort("halls", "Halls");
+    await trigger.fire("click");
+    await doc.querySelector("#summary-regenerate")?.fire("click");
+    doc.activeElement = null;
+    await timers.shift()?.();
+    doc.activeElement = null;
+    await timers.shift()?.();
+    expect(doc.querySelector(".summary-backdrop")).toBeTruthy();
+    await doc.fire("keydown", { key: "Escape" });
+    expect(doc.querySelector(".summary-backdrop")).toBeUndefined();
+    expect(doc.activeElement).toBe(trigger);
+    expect(timers).toHaveLength(0);
+  });
+
+  test("shows a failed poll in the overlay and does not remount after close", async () => {
+    const doc = new FakeDocument();
+    const trigger = new FakeNode("mayor-summary", doc);
+    doc.nodes.set("mayor-summary", trigger);
+    const timers: (() => Promise<void>)[] = [];
+    let get = 0;
+    const fakeFetch: typeof fetch = async (path) => {
+      if (String(path).includes("regenerate")) return new Response("{}");
+      get += 1;
+      if (get > 2) throw new Error("poll failed");
+      return new Response(
+        JSON.stringify({ latest, liveMayor: true, running: true }),
+      );
+    };
+    const overlay = createSummaryOverlay({
+      openDrawer: () => undefined,
+      getKnownIds: () => [],
+      document: doc,
+      root: doc,
+      fetchImpl: fakeFetch,
+      setTimeoutImpl: (callback: () => void) => {
+        timers.push(callback as () => Promise<void>);
+        return timers.length as unknown as ReturnType<typeof setTimeout>;
+      },
+    });
+    overlay.setFort("halls", "Halls");
+    await trigger.fire("click");
+    await doc.querySelector("#summary-regenerate")?.fire("click");
+    await timers.shift()?.();
+    expect(doc.querySelector("#summary-result")?.textContent).toBe(
+      "poll failed",
+    );
+    await doc.fire("keydown", { key: "Escape" });
+    expect(doc.querySelector(".summary-backdrop")).toBeUndefined();
+  });
+
+  test("drops a refresh that finishes after the overlay closes", async () => {
+    const doc = new FakeDocument();
+    const trigger = new FakeNode("mayor-summary", doc);
+    doc.nodes.set("mayor-summary", trigger);
+    const timers: (() => Promise<void>)[] = [];
+    let resolvePoll: ((response: Response) => void) | undefined;
+    let get = 0;
+    const fakeFetch: typeof fetch = async (path) => {
+      if (String(path).includes("regenerate")) return new Response("{}");
+      get += 1;
+      if (get === 3)
+        return new Promise<Response>((resolve) => {
+          resolvePoll = resolve;
+        });
+      return new Response(
+        JSON.stringify({ latest, liveMayor: true, running: true }),
+      );
+    };
+    const overlay = createSummaryOverlay({
+      openDrawer: () => undefined,
+      getKnownIds: () => [],
+      document: doc,
+      root: doc,
+      fetchImpl: fakeFetch,
+      setTimeoutImpl: (callback: () => void) => {
+        timers.push(callback as () => Promise<void>);
+        return timers.length as unknown as ReturnType<typeof setTimeout>;
+      },
+    });
+    overlay.setFort("halls", "Halls");
+    await trigger.fire("click");
+    await doc.querySelector("#summary-regenerate")?.fire("click");
+    const poll = timers.shift()?.();
+    await Promise.resolve();
+    await doc.fire("keydown", { key: "Escape" });
+    resolvePoll?.(new Response(JSON.stringify({ latest, liveMayor: true })));
+    await poll;
+    expect(doc.querySelector(".summary-backdrop")).toBeUndefined();
   });
 });

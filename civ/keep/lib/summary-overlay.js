@@ -1,13 +1,13 @@
 // Per-fort Mayor summary overlay. Rendering stays pure so hostile transcript
 // and model text can be covered without a browser in the test suite.
 import { escapeHtml } from "./graph.mjs";
+import { idPattern } from "./id-pattern.js";
 
 const date = (value) =>
   value ? new Date(value).toLocaleString() : "unknown time";
 const button = (id, label, extra = "") =>
   `<button type="button" ${id ? `id="${id}"` : ""} ${extra}>${label}</button>`;
-const beadCandidate =
-  /(?<![a-z0-9.-])(?=[a-z0-9.]*[a-z])(?:[a-z0-9]+-[a-z0-9]{2,8}(?:\.\d+)*|[a-z0-9]{2,8}(?:\.\d+)*)(?![a-z0-9.-])/gi;
+const bareCandidate = "[a-z0-9]{2,8}(?:\\.\\d+)*";
 const datesAndTimes =
   /\b\d{1,4}(?:[-/:]\d{1,2}){1,2}(?:T\d{1,2}:\d{2}(?::\d{2})?)?\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g;
 
@@ -46,6 +46,21 @@ export function renderSummaryText(
   );
   const unverified = new Set(unverifiedNumbers.map(String));
   const value = String(text);
+  // Keep the full-id grammar tied to the Keep's resolver. The bare form is
+  // deliberately narrower because it is only a suffix already resolved by this
+  // fort's bead facts.
+  const prefixes = [
+    ...new Set(
+      [...full].map((id) => id.slice(0, id.indexOf("-"))).filter(Boolean),
+    ),
+  ];
+  const fullCandidate = prefixes
+    .map((prefix) => `(?:${idPattern(prefix).source.slice(1, -1)}(?<!\\.))`)
+    .join("|");
+  const beadCandidate = new RegExp(
+    `(?<![a-z0-9.-])(?=[a-z0-9.]*[a-z])(?:${fullCandidate || "(?!)"}|${bareCandidate})(?![a-z0-9-]|\\.[a-z0-9])`,
+    "gi",
+  );
   let html = "",
     cursor = 0;
   for (const match of value.matchAll(beadCandidate)) {
@@ -146,8 +161,12 @@ export function createSummaryOverlay({
     displayed = null,
     returnFocus = null,
     poll = null,
-    keydown = null;
+    keydown = null,
+    open = false,
+    generation = 0;
   const close = () => {
+    open = false;
+    generation += 1;
     clearTimeoutImpl(poll);
     if (keydown) documentImpl.removeEventListener("keydown", keydown);
     find(".summary-backdrop")?.remove();
@@ -179,7 +198,11 @@ export function createSummaryOverlay({
     sources.open = previous.sourcesOpen;
     if (previous.sourcesLoaded) sources.dataset.loaded = previous.sourcesLoaded;
     find("#summary-source-list").innerHTML = previous.sourceHtml;
-    find(`#${previous.focusId}`)?.focus();
+  };
+  const restoreFocus = (previous) => {
+    const restored =
+      previous?.focusId && documentImpl.getElementById?.(previous.focusId);
+    (restored ?? find("#summary-close") ?? find("#summary-overlay"))?.focus();
   };
   const wire = () => {
     const overlay = find("#summary-overlay"),
@@ -251,29 +274,35 @@ export function createSummaryOverlay({
       }
     });
   };
-  const refresh = async (again = false) => {
+  const refresh = async (again = false, expectedGeneration = generation) => {
     const previous = preserve();
     displayed = await request(`/api/summary?fort=${encodeURIComponent(fort)}`);
+    if (!open || expectedGeneration !== generation) return false;
     if (keydown) documentImpl.removeEventListener("keydown", keydown);
     mount(
       renderSummaryOverlay(displayed, { fortName, knownIds: getKnownIds() }),
       previous,
     );
     wire();
+    restoreFocus(previous);
     if (again && displayed.running)
       poll = setTimeoutImpl(async () => {
         try {
-          await refresh(true);
+          await refresh(true, expectedGeneration);
         } catch (error) {
-          find("#summary-result").textContent = error.message;
+          if (open && expectedGeneration === generation)
+            find("#summary-result").textContent = error.message;
         }
       }, 1000);
+    return true;
   };
   trigger.addEventListener("click", async () => {
     if (fort === "all") return;
     returnFocus = trigger;
+    open = true;
+    generation += 1;
     try {
-      await refresh();
+      await refresh(false, generation);
       find("#summary-close").focus();
     } catch (error) {
       trigger.title = error.message;
