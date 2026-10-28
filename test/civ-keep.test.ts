@@ -17,7 +17,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 // @ts-expect-error JavaScript library module.
-import { prefixOf, productionRegistryPath } from "../civ/keep/lib/forts.mjs";
+import * as fortsModel from "../civ/keep/lib/forts.mjs";
 // @ts-expect-error JavaScript library module.
 import * as mayorSummaryModel from "../civ/keep/lib/mayor-summary.mjs";
 // @ts-expect-error JavaScript library module.
@@ -25,7 +25,7 @@ import * as mayorSummary from "../civ/keep/lib/mayor-summary-extract.mjs";
 // @ts-expect-error JavaScript library module.
 import { signCommand } from "../civ/keep/lib/readers.mjs";
 // @ts-expect-error JavaScript server module exercised through its HTTP seam.
-import { createCivKeep } from "../civ/keep/server.mjs";
+import { createCivKeep, eventFileNamesForWindow } from "../civ/keep/server.mjs";
 
 const {
   extractHighlights,
@@ -34,10 +34,14 @@ const {
   resolveBeadFacts,
   windowCounts,
 } = mayorSummary;
+const { loadForts, prefixOf, productionRegistryPath } = fortsModel;
 const {
   MAYOR_SUMMARY_CONTEXT,
   MAYOR_SUMMARY_RESERVE,
+  ask,
+  packNotes,
   readLastFailure,
+  splitText,
   summariseMayor,
 } = mayorSummaryModel;
 
@@ -636,6 +640,26 @@ describe("Mayor summary local model", () => {
       keepRefreshedAt: "2026-10-27T11:00:00Z",
     };
   }
+  test("uses adjacent local-date event shards but excludes files two days away", () => {
+    const names = [
+      "events-2026-10-26.jsonl",
+      "events-2026-10-27.jsonl",
+      "events-2026-10-28.jsonl",
+      "events-2026-10-29.jsonl",
+      "events-2026-10-30.jsonl",
+    ];
+    expect(
+      eventFileNamesForWindow(
+        names,
+        "2026-10-28T01:00:00.000Z",
+        "2026-10-28T03:00:00.000Z",
+      ),
+    ).toEqual([
+      "events-2026-10-27.jsonl",
+      "events-2026-10-28.jsonl",
+      "events-2026-10-29.jsonl",
+    ]);
+  });
   test("chunks and combines oversized messages, using only the injected Ollama", async () => {
     const calls: unknown[] = [];
     const fetch = async (_url: string, init: RequestInit) => {
@@ -813,6 +837,38 @@ describe("Mayor summary local model", () => {
     });
   });
 
+  test("ask itself refuses an over-context request before fetch", async () => {
+    let calls = 0;
+    await expect(
+      ask(
+        async () => {
+          calls += 1;
+          throw new Error("must not fetch");
+        },
+        "p".repeat(90_000),
+        "m".repeat(10_000),
+      ),
+    ).rejects.toThrow("request exceeds context");
+    expect(calls).toBe(0);
+  });
+
+  test("splits oversized text at paragraph boundaries and preserves note order", () => {
+    const text = "first paragraph\n\nsecond paragraph\n\nthird paragraph";
+    const pieces = splitText(text, (value: string) => value.length <= 34);
+    expect(pieces.map((piece: { text: string }) => piece.text)).toEqual([
+      "first paragraph\n\nsecond paragraph",
+      "third paragraph",
+    ]);
+    const prompt = "p";
+    const groups = packNotes(["first", "second", "third"], input(), prompt);
+    expect(groups.join("\n")).toContain('"chunk":1,"notes":"first"');
+    expect(groups.join("\n")).toContain('"chunk":2,"notes":"second"');
+    expect(groups.join("\n")).toContain('"chunk":3,"notes":"third"');
+    expect(groups.join("\n").indexOf("first")).toBeLessThan(
+      groups.join("\n").indexOf("second"),
+    );
+  });
+
   test("records completed chunks when a later response lacks prompt usage", async () => {
     const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-usage-"));
     let calls = 0;
@@ -908,6 +964,39 @@ describe("Mayor summary local model", () => {
     ).toMatchObject({ status: "failed", reason: "latest write failed" });
   });
 
+  test("keeps the original error when latest and failed-run writes both fail", async () => {
+    const stateHome = mkdtempSync(
+      join(tmpdir(), "mayor-summary-double-fault-"),
+    );
+    const fileSystem = Object.create(nodeFs) as typeof nodeFs;
+    fileSystem.renameSync = ((_from: string, to: string) => {
+      if (to.endsWith("latest.json") || to.includes("/runs/"))
+        throw new Error(
+          to.endsWith("latest.json")
+            ? "latest write failed"
+            : "run write failed",
+        );
+    }) as typeof nodeFs.renameSync;
+    await expect(
+      summariseMayor(input(), {
+        stateHome,
+        fileSystem,
+        fetch: async () =>
+          new Response(
+            JSON.stringify({
+              prompt_eval_count: 10,
+              message: { content: "summary" },
+            }),
+          ),
+        log: () => {},
+      }),
+    ).rejects.toThrow("latest write failed");
+    const runs = join(stateHome, "civ-keep/summaries/halls/runs");
+    expect(readdirSync(runs).filter((name) => name.endsWith(".json"))).toEqual(
+      [],
+    );
+  });
+
   test("summary endpoints refuse unknown and Greenlab forts", async () => {
     const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-api-"));
     keep = createCivKeep({
@@ -929,6 +1018,13 @@ describe("Mayor summary local model", () => {
       eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
       exit: () => {},
       log: () => {},
+      fetch: async () =>
+        new Response(
+          JSON.stringify({
+            prompt_eval_count: 10,
+            message: { content: "summary" },
+          }),
+        ),
     });
     await keep.refresh();
     await new Promise<void>((resolve) =>
@@ -938,6 +1034,14 @@ describe("Mayor summary local model", () => {
     expect(
       (await fetch(`http://127.0.0.1:${port}/api/summary?fort=missing`)).status,
     ).toBe(404);
+    expect(
+      (
+        await fetch(
+          `http://127.0.0.1:${port}/api/summary/regenerate?fort=halls`,
+          { method: "POST", headers: { Origin: "https://foreign.example" } },
+        )
+      ).status,
+    ).toBe(403);
     expect(
       (await fetch(`http://127.0.0.1:${port}/api/summary/sources?fort=green`))
         .status,
@@ -971,10 +1075,79 @@ describe("Mayor summary local model", () => {
       },
     );
     expect(queued.status).toBe(202);
-    expect(await queued.json()).toMatchObject({
-      fort: "halls",
-      status: expect.any(String),
+    expect(await queued.json()).toEqual({ fort: "halls", status: "queued" });
+  });
+
+  test("summary GET reports a regenerate flight while its model call is running", async () => {
+    const home = mkdtempSync(join(tmpdir(), "mayor-summary-running-"));
+    const repo = join(home, "fort");
+    const sessions = join(home, ".claude/sessions");
+    const proc = join(home, "proc");
+    const fort = {
+      ...forts[1],
+      repo,
+      registryPath: productionRegistryPath({ HOME: home }),
+    };
+    mkdirSync(join(proc, "7"), { recursive: true });
+    mkdirSync(sessions, { recursive: true });
+    writeFileSync(join(proc, "7/environ"), "FORT_MASKED=mayor\0");
+    writeFileSync(
+      join(sessions, "7.json"),
+      JSON.stringify({ pid: 7, sessionId: "mayor", cwd: repo, startedAt: 1 }),
+    );
+    const transcript = mayorTranscriptPath(
+      { sessionId: "mayor", cwd: repo },
+      { home },
+    );
+    if (!transcript) throw new Error("transcript path missing");
+    mkdirSync(join(transcript, ".."), { recursive: true });
+    writeFileSync(transcript, "");
+    let release: (() => void) | undefined;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
     });
+    keep = createCivKeep({
+      env: { HOME: home, XDG_STATE_HOME: join(home, "state") },
+      sessionsDirectory: sessions,
+      procRoot: proc,
+      loadForts: () => [fort],
+      run: async () => "",
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+      fetch: async () => {
+        await waiting;
+        return new Response(
+          JSON.stringify({
+            prompt_eval_count: 10,
+            message: { content: "summary" },
+          }),
+        );
+      },
+    });
+    await keep.refresh();
+    await new Promise<void>((resolve) =>
+      keep?.server.listen(0, "127.0.0.1", resolve),
+    );
+    const port = (keep.server.address() as AddressInfo).port;
+    const queued = await fetch(
+      `http://127.0.0.1:${port}/api/summary/regenerate?fort=halls`,
+      {
+        method: "POST",
+        headers: { Origin: `http://localhost:${port}` },
+      },
+    );
+    expect(await queued.json()).toEqual({ fort: "halls", status: "queued" });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(
+      (
+        (await (
+          await fetch(`http://127.0.0.1:${port}/api/summary?fort=halls`)
+        ).json()) as { running: boolean }
+      ).running,
+    ).toBe(true);
+    release?.();
+    await new Promise((resolve) => setImmediate(resolve));
   });
 
   test("scheduler skips unchanged production forts and shares a regenerate flight", async () => {
@@ -1014,7 +1187,13 @@ describe("Mayor summary local model", () => {
     let clock = Date.parse("2026-10-27T12:00:00Z");
     const logs: string[] = [];
     let calls = 0;
-    const timers: (() => void)[] = [];
+    const timers: {
+      fn: () => void;
+      delay: number;
+      kind: string;
+      handle: object;
+    }[] = [];
+    const clears: object[] = [];
     keep = createCivKeep({
       env: { HOME: home, XDG_STATE_HOME: stateHome },
       sessionsDirectory: sessions,
@@ -1034,18 +1213,24 @@ describe("Mayor summary local model", () => {
         );
       },
       log: (message: string) => logs.push(message),
-      setTimeout: (fn: () => void) => {
-        timers.push(fn);
-        return { unref() {} };
+      setTimeout: (fn: () => void, delay: number) => {
+        const handle = { unref() {} };
+        timers.push({ fn, delay, kind: "timeout", handle });
+        return handle;
       },
-      setInterval: (fn: () => void) => {
-        timers.push(fn);
-        return { unref() {} };
+      setInterval: (fn: () => void, delay: number) => {
+        const handle = { unref() {} };
+        timers.push({ fn, delay, kind: "interval", handle });
+        return handle;
       },
-      clearTimeout: () => {},
-      clearInterval: () => {},
+      clearTimeout: (handle: object) => clears.push(handle),
+      clearInterval: (handle: object) => clears.push(handle),
     });
     await keep.refresh();
+    expect(timers.map((timer) => [timer.kind, timer.delay])).toEqual([
+      ["timeout", 120_000],
+      ["interval", 3_600_000],
+    ]);
     const first = keep.regenerateSummary(fort);
     const joined = keep.regenerateSummary(fort);
     expect(joined).toBe(first);
@@ -1061,6 +1246,13 @@ describe("Mayor summary local model", () => {
     clock += 60_000;
     await keep.runSummaryPass();
     expect(calls).toBe(2);
+    nodeFs.rmSync(join(sessions, "41.json"));
+    await keep.runSummaryPass();
+    expect(logs).toContain("summary halls: skipped, no live Mayor");
+    keep.close();
+    keep = null;
+    expect(clears).toHaveLength(2);
+    expect(clears).toEqual(timers.map((timer) => timer.handle));
   });
 });
 
@@ -1127,6 +1319,35 @@ describe("civ keep allowlist", () => {
     expect(productionRegistryPath({ HOME: home })).not.toBe(
       "/home/tester/.claude/greenlab.json",
     );
+  });
+
+  test("production scope follows civilization.json source, not its label", () => {
+    const home = "/home/tester";
+    const production = productionRegistryPath({ HOME: home });
+    const greenlab = join(home, ".claude/greenlab.json");
+    const files: Record<string, string> = {
+      [production]: JSON.stringify({
+        civilization: "not-production",
+        forts: [{ repo: "/srv/in", project: "in" }],
+      }),
+      [greenlab]: JSON.stringify({
+        civilization: "production",
+        forts: [{ repo: "/srv/out", project: "out" }],
+      }),
+    };
+    const loaded = loadForts({
+      env: { HOME: home },
+      fileSystem: {
+        readFileSync: (file: string) => files[file],
+        existsSync: () => false,
+      },
+    });
+    expect(
+      loaded.find((fort: { key: string }) => fort.key === "in")?.registryPath,
+    ).toBe(production);
+    expect(
+      loaded.find((fort: { key: string }) => fort.key === "out")?.registryPath,
+    ).toBe(greenlab);
   });
 });
 

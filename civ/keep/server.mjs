@@ -103,6 +103,22 @@ export function decisionOptions(bead) {
   }));
 }
 
+// Event filenames use the writer's local date. They are only a shard hint, so
+// a UTC summary window must include adjacent local-date shards.
+export function eventFileNamesForWindow(names, windowStart, windowEnd) {
+  const firstDay = new Date(windowStart).setUTCHours(0, 0, 0, 0);
+  const lastDay = new Date(windowEnd).setUTCHours(0, 0, 0, 0);
+  return names.filter((name) => {
+    const match = /^events-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(name);
+    if (!match) return false;
+    const eventDay = Date.parse(`${match[1]}T00:00:00.000Z`);
+    return (
+      eventDay >= firstDay - 24 * 60 * 60 * 1000 &&
+      eventDay <= lastDay + 24 * 60 * 60 * 1000
+    );
+  });
+}
+
 const actions = new Set([...Object.keys(signEvents), "comment"]);
 
 export function createCivKeep(options = {}) {
@@ -430,17 +446,11 @@ export function createCivKeep(options = {}) {
     } catch {}
     const events = [];
     try {
-      for (const name of fileSystem.readdirSync(
-        path.join(fort.repo, "fort/events"),
+      for (const name of eventFileNamesForWindow(
+        fileSystem.readdirSync(path.join(fort.repo, "fort/events")),
+        windowStart,
+        windowEnd,
       )) {
-        const match = /^events-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(name);
-        if (!match) continue;
-        const eventDay = Date.parse(`${match[1]}T00:00:00.000Z`);
-        if (
-          eventDay < new Date(windowStart).setUTCHours(0, 0, 0, 0) ||
-          eventDay > new Date(windowEnd).setUTCHours(0, 0, 0, 0)
-        )
-          continue;
         const stat = fileSystem.statSync(
           path.join(fort.repo, "fort/events", name),
         );
@@ -456,7 +466,7 @@ export function createCivKeep(options = {}) {
     };
   }
 
-  async function generateSummary(fort, { force = false } = {}) {
+  async function generateSummary(fort, flight) {
     const entry = stateFor(fort);
     const session = findLiveMayor(fort, {
       fileSystem,
@@ -489,10 +499,14 @@ export function createCivKeep(options = {}) {
       end,
     );
     if (
-      !force &&
+      !flight.force &&
       latest?.fingerprint &&
       JSON.stringify(latest.fingerprint) === JSON.stringify(fingerprint)
     ) {
+      // A forced request can join while this flight is running. Yield once
+      // before deciding to skip, then honour the flight's live force flag.
+      await Promise.resolve();
+      if (flight.force) return generateSummary(fort, { force: true });
       log(
         `summary ${fort.key}: skipped, unchanged since ${latest.generatedAt}`,
       );
@@ -532,9 +546,7 @@ export function createCivKeep(options = {}) {
       return current.promise;
     }
     const flight = { force: Boolean(options.force), promise: null };
-    const task = summaryQueue.then(() =>
-      generateSummary(fort, { force: flight.force }),
-    );
+    const task = summaryQueue.then(() => generateSummary(fort, flight));
     summaryQueue = task.catch(() => {});
     const shared = task.finally(() => summaryFlights.delete(fort.key));
     flight.promise = shared;

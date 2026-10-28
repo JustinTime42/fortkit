@@ -84,7 +84,7 @@ function factsBlock(input) {
 function jsonData(label, value) {
   return `${label} (authoritative JSON data):\n${JSON.stringify(value)}`;
 }
-function splitText(text, fits) {
+export function splitText(text, fits) {
   if (fits(text)) return [{ text, split: false }];
   const pieces = [];
   let remaining = text;
@@ -146,7 +146,7 @@ function chunksFor(input, prompt) {
   if (current || !chunks.length) chunks.push(current);
   return chunks;
 }
-function packNotes(notes, input, prompt) {
+export function packNotes(notes, input, prompt) {
   if (!fitsRequest(prompt, notesRequest(input, "", false)))
     throw new Error("facts exceed model context");
   const pieces = notes.flatMap((note, index) =>
@@ -170,7 +170,7 @@ function packNotes(notes, input, prompt) {
   if (current) groups.push(current);
   return groups;
 }
-async function ask(fetchImpl, prompt, messages) {
+export async function ask(fetchImpl, prompt, messages) {
   const chars = prompt.length + messages.length;
   const estTokens = estimate(prompt + messages);
   if (estTokens + MAYOR_SUMMARY_RESERVE > MAYOR_SUMMARY_CONTEXT)
