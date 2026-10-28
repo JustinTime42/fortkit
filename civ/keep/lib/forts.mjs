@@ -46,6 +46,13 @@ export function slug(value) {
     .replace(/^-|-$/g, "");
 }
 
+// Summary generation is deliberately restricted by where a fort was loaded
+// from, not by its display civilization (which is user-controlled registry
+// data). Keep this path construction in one place for the server and tests.
+export function productionRegistryPath(env = process.env) {
+  return path.join(env.HOME ?? "", ".claude/civilization.json");
+}
+
 export function fleetStateFor(fort, home) {
   const fleetScript = path.join(fort.repo, "fort/scripts/fleet.sh");
   return {
@@ -62,7 +69,7 @@ export function loadForts(options = {}) {
   const home = env.HOME ?? "";
   const fileSystem = options.fileSystem ?? fs;
   const registries = options.registries ?? [
-    path.join(home, ".claude/civilization.json"),
+    productionRegistryPath(env),
     path.join(home, ".claude/greenlab.json"),
   ];
   const forts = [];

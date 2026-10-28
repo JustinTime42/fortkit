@@ -28,7 +28,7 @@ import {
 } from "./lib/airlock.mjs";
 import { EventTail } from "./lib/events.mjs";
 import { readFleet } from "./lib/fleet.mjs";
-import { loadForts, prefixOf } from "./lib/forts.mjs";
+import { loadForts, prefixOf, productionRegistryPath } from "./lib/forts.mjs";
 import {
   dependencyGroups,
   graph,
@@ -36,8 +36,18 @@ import {
   needsYou,
   stage,
 } from "./lib/graph.mjs";
-import { readLastFailure, readLatestSummary } from "./lib/mayor-summary.mjs";
-import { findLiveMayor } from "./lib/mayor-summary-extract.mjs";
+import {
+  readLastFailure,
+  readLatestSummary,
+  summariseMayor,
+} from "./lib/mayor-summary.mjs";
+import {
+  extractHighlights,
+  findLiveMayor,
+  mayorTranscriptPath,
+  resolveBeadFacts,
+  windowCounts,
+} from "./lib/mayor-summary-extract.mjs";
 import {
   command,
   parseExport,
@@ -93,6 +103,22 @@ export function decisionOptions(bead) {
   }));
 }
 
+// Event filenames use the writer's local date. They are only a shard hint, so
+// a UTC summary window must include adjacent local-date shards.
+export function eventFileNamesForWindow(names, windowStart, windowEnd) {
+  const firstDay = new Date(windowStart).setUTCHours(0, 0, 0, 0);
+  const lastDay = new Date(windowEnd).setUTCHours(0, 0, 0, 0);
+  return names.filter((name) => {
+    const match = /^events-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(name);
+    if (!match) return false;
+    const eventDay = Date.parse(`${match[1]}T00:00:00.000Z`);
+    return (
+      eventDay >= firstDay - 24 * 60 * 60 * 1000 &&
+      eventDay <= lastDay + 24 * 60 * 60 * 1000
+    );
+  });
+}
+
 const actions = new Set([...Object.keys(signEvents), "comment"]);
 
 export function createCivKeep(options = {}) {
@@ -102,6 +128,14 @@ export function createCivKeep(options = {}) {
   const run = options.run ?? command;
   const exit = options.exit ?? process.exit;
   const log = options.log ?? console.error;
+  const fetchImpl = options.fetch ?? globalThis.fetch;
+  const sessionsDirectory =
+    options.sessionsDirectory ?? path.join(env.HOME ?? "", ".claude/sessions");
+  const procRoot = options.procRoot ?? "/proc";
+  const setTimeoutImpl = options.setTimeout ?? setTimeout;
+  const setIntervalImpl = options.setInterval ?? setInterval;
+  const clearTimeoutImpl = options.clearTimeout ?? clearTimeout;
+  const clearIntervalImpl = options.clearInterval ?? clearInterval;
   const configHome =
     env.XDG_CONFIG_HOME || path.join(env.HOME ?? "", ".config");
   const stateHome =
@@ -133,6 +167,8 @@ export function createCivKeep(options = {}) {
     options.loadForts ?? (() => loadForts({ env, fileSystem }));
   const clients = new Set();
   const inFlight = new Set();
+  const summaryFlights = new Map();
+  let summaryQueue = Promise.resolve();
   // key -> { fort, byId, skipped, events, fleet, stale, error, refreshedAt }
   const states = new Map();
   let bootModuleMtimes;
@@ -187,6 +223,9 @@ export function createCivKeep(options = {}) {
         maxBuffer: 64 * 1024 * 1024,
       });
       const parsed = parseExport(String(text));
+      entry.exportDigest = createHash("sha256")
+        .update(String(text))
+        .digest("hex");
       const prefix = prefixOf(parsed.byId.values());
       const clash = [...states.values()].find(
         (other) =>
@@ -345,10 +384,7 @@ export function createCivKeep(options = {}) {
   // verbatim highlights; the source endpoint is an explicit, separate read.
   function summaryFort(url) {
     const key = url.searchParams.get("fort");
-    const productionRegistry = path.join(
-      env.HOME ?? "",
-      ".claude/civilization.json",
-    );
+    const productionRegistry = productionRegistryPath(env);
     const fort = loadFortList().find(
       (item) => item.key === key && item.registryPath === productionRegistry,
     );
@@ -379,7 +415,7 @@ export function createCivKeep(options = {}) {
       fort: fort.key,
       liveMayor: liveMayor(fort),
       latest: withoutHighlights,
-      running: false,
+      running: summaryFlights.has(fort.key),
       lastFailure: failure
         ? { at: failure.generatedAt ?? null, reason: failure.reason }
         : null,
@@ -392,6 +428,165 @@ export function createCivKeep(options = {}) {
     return json(
       response,
       readLatestSummary(stateHome, fort.key, { fileSystem })?.highlights ?? [],
+    );
+  }
+
+  function fingerprintFor(
+    fort,
+    entry,
+    session,
+    transcriptPath,
+    windowStart,
+    windowEnd,
+  ) {
+    let transcript = null;
+    try {
+      const stat = fileSystem.statSync(transcriptPath);
+      transcript = { size: stat.size, mtimeMs: stat.mtimeMs };
+    } catch {}
+    const events = [];
+    try {
+      for (const name of eventFileNamesForWindow(
+        fileSystem.readdirSync(path.join(fort.repo, "fort/events")),
+        windowStart,
+        windowEnd,
+      )) {
+        const stat = fileSystem.statSync(
+          path.join(fort.repo, "fort/events", name),
+        );
+        events.push({ name, size: stat.size, mtimeMs: stat.mtimeMs });
+      }
+    } catch {}
+    events.sort((left, right) => left.name.localeCompare(right.name));
+    return {
+      sessionId: session.sessionId,
+      transcript,
+      exportDigest: entry.exportDigest ?? null,
+      events,
+    };
+  }
+
+  async function generateSummary(fort, flight) {
+    const entry = stateFor(fort);
+    const session = findLiveMayor(fort, {
+      fileSystem,
+      sessionsDirectory,
+      procRoot,
+    });
+    if (!session) {
+      log(`summary ${fort.key}: skipped, no live Mayor`);
+      return { status: "skipped", reason: "no live Mayor" };
+    }
+    const latest = readLatestSummary(stateHome, fort.key, { fileSystem });
+    const end = new Date(now()).toISOString();
+    const firstRun = !latest?.windowEnd;
+    const windowStart = firstRun
+      ? new Date(now() - 12 * 60 * 60 * 1000).toISOString()
+      : latest.windowEnd;
+    const transcriptPath = mayorTranscriptPath(session, {
+      home: env.HOME ?? "",
+    });
+    if (!transcriptPath) {
+      log(`summary ${fort.key}: skipped, no live Mayor transcript`);
+      return { status: "skipped", reason: "no live Mayor transcript" };
+    }
+    const fingerprint = fingerprintFor(
+      fort,
+      entry,
+      session,
+      transcriptPath,
+      windowStart,
+      end,
+    );
+    if (
+      !flight.force &&
+      latest?.fingerprint &&
+      JSON.stringify(latest.fingerprint) === JSON.stringify(fingerprint)
+    ) {
+      // A forced request can join while this flight is running. Yield once
+      // before deciding to skip, then honour the flight's live force flag.
+      await Promise.resolve();
+      if (flight.force) return generateSummary(fort, { force: true });
+      log(
+        `summary ${fort.key}: skipped, unchanged since ${latest.generatedAt}`,
+      );
+      return { status: "skipped", reason: "unchanged" };
+    }
+    const extracted = await extractHighlights(transcriptPath, windowStart, {
+      fileSystem,
+      windowEnd: end,
+    });
+    if (extracted.reason) {
+      log(`summary ${fort.key}: skipped, ${extracted.reason}`);
+      return { status: "skipped", reason: extracted.reason };
+    }
+    return summariseMayor(
+      {
+        fort,
+        session,
+        transcriptPath,
+        windowStart,
+        windowEnd: end,
+        firstRun,
+        fingerprint,
+        highlights: extracted.highlights,
+        beadFacts: resolveBeadFacts(extracted.highlights, states.values()),
+        counts: windowCounts(entry, windowStart, end, { fileSystem, now }),
+        malformedLines: extracted.malformedLines,
+        keepRefreshedAt: entry.refreshedAt ?? null,
+      },
+      { fileSystem, fetch: fetchImpl, now, stateHome, log },
+    );
+  }
+
+  function queueSummary(fort, options = {}) {
+    const current = summaryFlights.get(fort.key);
+    if (current) {
+      if (options.force) current.force = true;
+      return current.promise;
+    }
+    const flight = { force: Boolean(options.force), promise: null };
+    const task = summaryQueue.then(() => generateSummary(fort, flight));
+    summaryQueue = task.catch(() => {});
+    const shared = task.finally(() => summaryFlights.delete(fort.key));
+    flight.promise = shared;
+    summaryFlights.set(fort.key, flight);
+    return shared;
+  }
+
+  async function runSummaryPass() {
+    await refresh();
+    const production = loadFortList().filter(
+      (fort) => fort.registryPath === productionRegistryPath(env),
+    );
+    for (const fort of production) {
+      try {
+        await queueSummary(fort);
+      } catch (error) {
+        log(`summary ${fort.key}: failed`, error);
+      }
+    }
+  }
+
+  function renderRegenerate(request, response, url) {
+    const fort = summaryFort(url);
+    if (!fort) return json(response, { error: "Unknown fort" }, 404);
+    const address = server.address();
+    const port = typeof address === "object" && address ? address.port : null;
+    const origins =
+      port === null
+        ? []
+        : [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
+    if (!origins.includes(request.headers.origin ?? ""))
+      return json(response, { error: "Forbidden" }, 403);
+    const joined = summaryFlights.has(fort.key);
+    queueSummary(fort, { force: true }).catch((error) =>
+      log(`summary ${fort.key}: failed`, error),
+    );
+    return json(
+      response,
+      { fort: fort.key, status: joined ? "running" : "queued" },
+      202,
     );
   }
 
@@ -934,6 +1129,8 @@ export function createCivKeep(options = {}) {
       return renderSummary(response, url);
     if (p === "/api/summary/sources" && request.method === "GET")
       return renderSummarySources(response, url);
+    if (p === "/api/summary/regenerate" && request.method === "POST")
+      return renderRegenerate(request, response, url);
     if (p === "/api/graph") return renderGraph(response, url);
     if (p.startsWith("/api/bead/"))
       return renderApiBead(response, p.slice("/api/bead/".length));
@@ -959,12 +1156,33 @@ export function createCivKeep(options = {}) {
     });
   });
 
+  const initialSummaryTimer = setTimeoutImpl(
+    () => {
+      runSummaryPass().catch((error) => log("summary pass failed", error));
+    },
+    2 * 60 * 1000,
+  );
+  initialSummaryTimer.unref?.();
+  const summaryTimer = setIntervalImpl(
+    () => {
+      runSummaryPass().catch((error) => log("summary pass failed", error));
+    },
+    60 * 60 * 1000,
+  );
+  summaryTimer.unref?.();
+
   return {
     server,
     states,
     refresh,
+    runSummaryPass,
+    regenerateSummary(fort) {
+      return queueSummary(fort, { force: true });
+    },
     close() {
       for (const entry of states.values()) entry.events.close?.();
+      clearTimeoutImpl(initialSummaryTimer);
+      clearIntervalImpl(summaryTimer);
       server.close();
     },
   };
