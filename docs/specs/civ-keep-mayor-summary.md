@@ -46,10 +46,13 @@ All three are required. Measured 2026-10-27:
   from. The live Manyhalls Mayor's ancestry was `claude -> bwrap -> bash ->
   konsole`.
 - cwd alone is not enough: Regent sessions run from the fortkit root too.
-- `FORT_MASKED=mayor` was present in the live Mayor's environ. The other
-  production forts' `mayor.sh` carry the same `FORT_MASKED` logic; `.2` must
-  confirm the value per fort by test against a recorded environ shape, not
-  assume it.
+- `FORT_MASKED=mayor` was present in the live Mayor's environ. Every
+  production fort sets the same value, read from source on 2026-10-27:
+  `fortkit/fort/scripts/mayor.sh:65`, `longburn/fort/scripts/mayor.sh:66`,
+  `WWWW/fort/scripts/mayor.sh:73` (`--setenv FORT_MASKED mayor`), and
+  Proofdelve through `ForgeOs/fort/scripts/lib/seat-sandbox.sh:843`. The test
+  fixture records that environ shape (NUL-separated, other entries present
+  and ignored).
 
 Rules:
 
@@ -58,11 +61,16 @@ Rules:
 - **Never open the `*.key` files** beside the session json. Select files by the
   exact pattern `^\d+\.json$`.
 - Two live Mayors for one fort (should not happen; `mayor.sh` refuses nested
-  launches): pick the most recent `startedAt` and say so in the run record.
+  launches): pick the most recent `startedAt` and say so in the run record,
+  so the selection returns the candidate count, not only the winner.
+  `startedAt` is an integer of epoch milliseconds (measured 2026-10-27); accept
+  an ISO string too, but never sort a numeric value as 0.
 - The transcript is `~/.claude/projects/<slug>/<sessionId>.jsonl`, where
-  `<slug>` is the cwd with every `/` replaced by `-` (measured:
-  `/home/justin/dev/fortkit` -> `-home-justin-dev-fortkit`). A missing file is
-  "no live Mayor transcript", reported as such.
+  `<slug>` is the cwd with every character outside `[A-Za-z0-9]` replaced by
+  `-` (measured: `/home/justin/dev/fortkit` -> `-home-justin-dev-fortkit`, and
+  `/home/justin/.local/share/...` -> `-home-justin--local-share-...`). A missing file is
+  "no live Mayor transcript", reported as such: a defined result, never an
+  ENOENT left to the caller. Bead `.2` owns the slug derivation.
 
 No live Mayor: no run happens; the overlay says "No live Mayor session for
 <fort>" and shows the last summary with its time (AC7).
@@ -97,7 +105,11 @@ file as a stream; do not load 18 MB into one string.
   forts' beads too). Each resolves from the Keep's in-memory per-fort state
   (the minute-by-minute `bd export` it already holds) to
   `{ id, fort, title, status, assignee, labels }`. An id that resolves nowhere
-  is passed as `{ id, status: "unknown" }`, never dropped and never invented.
+  is passed as `{ id, status: "unknown" }`, never dropped and never invented,
+  provided its suffix has the shape of a bead id: `^[a-z0-9]{2,8}(\.\d+)*$`.
+  A candidate failing that shape (a path fragment such as `fortkit-worktrees`)
+  is not a bead mention and is not passed. Escape prefixes with the Keep's
+  existing `escapeRegExp` (`lib/readers.mjs`), exported for reuse.
 - No new `bd` invocations. The Keep's state is the source; its `refreshedAt`
   goes in the run record.
 
@@ -111,12 +123,16 @@ window (not only today and yesterday: the window can be longer):
 | closed | export: `closed_at` inside the window |
 | filed | export: `created_at` inside the window |
 | merged | events: category `merge` |
-| halts, with reasons | events: category `halt`, its reason field verbatim |
+| halts, with reasons | events: category `halt`, its `detail` verbatim, and its `target` |
 | Warden verdicts | events: category `review.verdict`, bead id and verdict |
 | gate decisions | events: `gate.approved`, `gate.declined`, `decision.recorded` |
-| waiting on the Overseer now | the Keep's existing needs-you rule for that fort (`waitingLabels`, or `whoseMove`) |
+| waiting on the Overseer now | the Keep's existing needs-you rule for that fort, applied through the Keep's own context for that fort (labels or `whoseMove`, AND a latest ESCALATE verdict with no later decision), never re-implemented from labels alone |
 
 The model receives these as facts. It never computes a number (AC2).
+
+`halt` is emitted (Proofdelve, measured 2026-10-21: `target` the bead, `detail`
+the reason) but is not listed in `schema/events.md`. That gap belongs to
+`fortkit-dq0l`; a fort that never halts reports zero halts, which is true.
 
 ## 5. Summariser (bead `.3`)
 
@@ -295,3 +311,16 @@ Under the Keep's state home, beside the signature audit:
 | 6 button, centred overlay, label, links, Regenerate, toggle | `.5` |
 | 7 no live Mayor state | `.5` |
 | 8 escaping | `.5`, test 7 |
+
+## 13. Amendments
+
+- 2026-10-27, after Warden review r1 of `.2` (verdict on `fortkit-t7vz.2`):
+  the needs-you count goes through the Keep's own context (finding 1); prefix
+  escaping reuses `escapeRegExp` (finding 2); selection reports the candidate
+  count (3); `startedAt` is epoch ms, measured (4); `halt` exists and its reason
+  is `detail`, measured (5, the review's "no such category" held for Manyhalls
+  only); per-fort `FORT_MASKED` values measured and the missing-transcript
+  result defined (6); bead-id shape filter for unresolved candidates (7).
+- 2026-10-27, after Warden review r2 of `.2`: the transcript slug replaces
+  every non-alphanumeric character, not only `/` (finding 4, measured from
+  `~/.claude/projects`; no production fort path is affected today).
