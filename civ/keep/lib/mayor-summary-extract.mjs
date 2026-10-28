@@ -143,7 +143,7 @@ function validUnknownId(id, prefix) {
   );
 }
 
-export function resolveBeadFacts(highlights, states) {
+export function resolveBeadFacts(highlights, states, ownState = null) {
   const entries = [...states];
   const prefixes = entries.map((entry) => entry.fort.prefix).filter(Boolean);
   const candidate = prefixes.length
@@ -180,6 +180,38 @@ export function resolveBeadFacts(highlights, states) {
         assignee: bead.assignee ?? null,
         labels: bead.labels ?? [],
       });
+    }
+  }
+  // A bare suffix is meaningful only in the speaking fort's own state.  Do
+  // not search every loaded fort: identical suffixes are common across forts.
+  if (ownState?.fort?.prefix && ownState?.byId) {
+    const bareFacts = new Map();
+    for (const bead of ownState.byId.values()) {
+      const prefix = `${ownState.fort.prefix}-`;
+      if (!String(bead.id).startsWith(prefix)) continue;
+      const suffix = bead.id.slice(prefix.length);
+      if (!/^[a-z0-9]{2,8}(?:\.\d+)*$/.test(suffix)) continue;
+      bareFacts.set(suffix, bead);
+    }
+    for (const highlight of highlights) {
+      // A suffix token permits ordinary prose punctuation and hyphens after it.
+      // The optional child suffix is consumed as one token, so `hird0.1` can
+      // resolve only to its child and never to `hird0`.
+      for (const match of String(highlight.text).matchAll(
+        /(?<![A-Za-z0-9.-])[a-z0-9]{2,8}(?:\.\d+)*(?![A-Za-z0-9]|\.\d)/g,
+      )) {
+        const bead = bareFacts.get(match[0]);
+        if (!bead || seen.has(bead.id)) continue;
+        seen.add(bead.id);
+        facts.push({
+          id: bead.id,
+          fort: ownState.fort.key,
+          title: bead.title,
+          status: bead.status,
+          assignee: bead.assignee ?? null,
+          labels: bead.labels ?? [],
+        });
+      }
     }
   }
   return facts;
@@ -270,4 +302,37 @@ export function windowCounts(entry, windowStart, windowEnd, options = {}) {
     }
   }
   return result;
+}
+
+export function summaryFactsBlock(entry, counts) {
+  const byId = entry?.byId;
+  if (!byId) throw new Error("entry.byId is required");
+  const beadFact = (id) => {
+    const bead = byId.get(id);
+    return bead ? { id, title: bead.title } : null;
+  };
+  const escalations = [];
+  const seen = new Set();
+  for (const verdict of counts.wardenVerdicts ?? []) {
+    if (verdict.verdict !== "ESCALATE" || !verdict.id || seen.has(verdict.id))
+      continue;
+    const fact = beadFact(verdict.id);
+    seen.add(verdict.id);
+    escalations.push(fact ?? { id: verdict.id, title: null });
+  }
+  return {
+    waitingOnOverseer: (counts.waitingOnOverseer ?? [])
+      .map(beadFact)
+      .filter(Boolean),
+    escalations,
+    counts: {
+      closed: counts.closed ?? 0,
+      filed: counts.filed ?? 0,
+      merged: counts.merged ?? 0,
+      halts: Array.isArray(counts.halts) ? counts.halts.length : 0,
+      verdicts: Array.isArray(counts.wardenVerdicts)
+        ? counts.wardenVerdicts.length
+        : 0,
+    },
+  };
 }

@@ -79,7 +79,7 @@ function promptAndHash(fileSystem) {
   return { prompt, sha256: createHash("sha256").update(prompt).digest("hex") };
 }
 function factsBlock(input) {
-  return `FACTS (authoritative JSON):\n${JSON.stringify({ beadFacts: input.beadFacts, counts: input.counts })}`;
+  return `FACTS (authoritative JSON):\n${JSON.stringify({ beadFacts: input.beadFacts, factsBlock: input.factsBlock })}`;
 }
 function jsonData(label, value) {
   return `${label} (authoritative JSON data):\n${JSON.stringify(value)}`;
@@ -209,6 +209,22 @@ export async function ask(fetchImpl, prompt, messages) {
     notes: text,
   };
 }
+export function unverifiedNumbers(summary, facts) {
+  const supplied = new Set(JSON.stringify(facts ?? {}).match(/\d+/g) ?? []);
+  const protectedRanges = [];
+  const protectedPattern =
+    /\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?Z?)?\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g;
+  for (const match of summary.matchAll(protectedPattern))
+    protectedRanges.push([match.index, (match.index ?? 0) + match[0].length]);
+  const unverified = [];
+  for (const match of summary.matchAll(/\d+/g)) {
+    const index = match.index ?? 0;
+    if (protectedRanges.some(([start, end]) => index >= start && index < end))
+      continue;
+    if (!supplied.has(match[0])) unverified.push(match[0]);
+  }
+  return unverified;
+}
 export async function summariseMayor(input, options = {}) {
   const fileSystem = options.fileSystem ?? fs;
   const fetchImpl = options.fetch ?? globalThis.fetch;
@@ -232,6 +248,7 @@ export async function summariseMayor(input, options = {}) {
     highlights: input.highlights,
     beadFacts: input.beadFacts,
     counts: input.counts,
+    factsBlock: input.factsBlock,
     chunks: [],
     malformedLines: input.malformedLines ?? 0,
     keepRefreshedAt: input.keepRefreshedAt ?? null,
@@ -273,6 +290,10 @@ export async function summariseMayor(input, options = {}) {
     }
     const summary = currentNotes[0];
     record.summary = summary;
+    record.unverifiedNumbers = unverifiedNumbers(summary, {
+      beadFacts: input.beadFacts,
+      factsBlock: input.factsBlock,
+    });
     record.durationMs = now() - started;
     const successRecord = { ...record, status: "success" };
     writePrivate(
