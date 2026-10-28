@@ -2,6 +2,7 @@ export function renderSummaryText(
   text: string,
   knownIds?: string[],
   unverifiedNumbers?: string[],
+  bareIds?: string[],
 ): string;
 export function renderSummaryFacts(factsBlock?: object): string;
 export function renderSummarySources(sources?: object[]): string;
