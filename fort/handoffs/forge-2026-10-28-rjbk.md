@@ -1,4 +1,4 @@
-# Handoff: Forge 2026-10-28T10:40:56-08:00
+# Handoff: Forge 2026-10-28T10:41:35-08:00
 Model: gpt-5.6-terra
 
 Bead: fortkit-rjbk
@@ -30,3 +30,25 @@ Validation:
 
 No bead status was changed. `.beads/issues.jsonl` was exported before handoff
 and commit but is intentionally unstaged and uncommitted.
+
+## Launcher-observed verifier result
+
+fort/scripts/verify.sh --no-emit, run by forge.sh after the session at 2026-10-28T10:42:18-08:00: exit 1
+
+```
+    2093|   );
+    2094|
+    2095|   test.skipIf(!foundingSmokeToolsAvailable)(
+       |                                            ^
+    2096|     "refuses to report a founding whose distilled view failed to gener…
+    2097|     async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 19 passed (21)
+      Tests  2 failed | 324 passed (326)
+   Start at  10:41:39
+   Duration  38.21s (transform 3.77s, setup 0ms, import 5.69s, tests 60.55s, environment 2ms)
+
+```
