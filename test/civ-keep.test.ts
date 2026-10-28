@@ -155,6 +155,7 @@ afterEach(() => {
 
 async function start() {
   const calls: Call[] = [];
+  const auditPath = join(scratch, `audit-${Math.random()}`, "signatures.jsonl");
   const run = async (
     file: string,
     args: string[],
@@ -174,7 +175,7 @@ async function start() {
     env: { HOME: scratch },
     run,
     tokenPath,
-    auditPath: join(scratch, `audit-${Math.random()}`, "signatures.jsonl"),
+    auditPath,
     loadForts: () => forts,
     eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
     exit: () => {},
@@ -191,6 +192,7 @@ async function start() {
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${token}`,
+        Origin: `http://127.0.0.1:${port}`,
       },
       body: JSON.stringify(body),
     });
@@ -206,10 +208,80 @@ async function start() {
         (call) =>
           `${call.cwd} ${call.file.split("/").pop()} ${call.args.join(" ")}`,
       );
-  return { port, sign, calls, writes };
+  return { port, sign, calls, writes, auditPath };
 }
 
 describe("civ keep signing desk", () => {
+  test("refuses foreign authorities before every route can read or write", async () => {
+    const { port, auditPath } = await start();
+    const base = `http://127.0.0.1:${port}`;
+    const request = (pathname: string, init: RequestInit = {}) =>
+      fetch(`${base}${pathname}`, {
+        ...init,
+        headers: { ...init.headers, Host: `evil.example:${port}` },
+      });
+
+    expect((await request("/")).status).toBe(403);
+    expect((await request("/api/forts")).status).toBe(403);
+    expect(
+      (
+        await request("/api/sign", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "Bearer secret-token",
+            Origin: `http://127.0.0.1:${port}`,
+          },
+          body: JSON.stringify({ id: "proof-a1", action: "approve", text: "" }),
+        })
+      ).status,
+    ).toBe(403);
+    expect(() => readFileSync(auditPath, "utf8")).toThrow();
+    expect(
+      (
+        await request("/api/summary/regenerate?fort=halls", {
+          method: "POST",
+          headers: { Origin: `http://127.0.0.1:${port}` },
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (await fetch(`${base}/`, { headers: { Host: `127.0.0.1:${port}` } }))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        await fetch(`${base}/api/forts`, {
+          headers: { Host: `localhost:${port}` },
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (await fetch(`${base}/`, { headers: { Host: "127.0.0.1:7780" } })).status,
+    ).toBe(403);
+    expect(
+      (
+        await fetch(`${base}/api/sign`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: "Bearer secret-token",
+            Origin: "https://foreign.example",
+          },
+          body: JSON.stringify({ id: "proof-a1", action: "approve", text: "" }),
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await fetch(`${base}/api/summary/regenerate?fort=halls`, {
+          method: "POST",
+          headers: { Origin: "https://foreign.example" },
+        })
+      ).status,
+    ).toBe(403);
+  });
+
   test("fleet fort, unnoted Approve with a branch: fleet-safe restored, sha pinned", async () => {
     const { sign, writes } = await start();
     const result = await sign({ id: "proof-a1", action: "approve", text: "" });
@@ -1434,6 +1506,7 @@ describe("civ keep overseer store", () => {
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${token}`,
+          Origin: base,
         },
         body: JSON.stringify(body),
       });
@@ -1607,6 +1680,7 @@ describe("civ keep overseer store", () => {
       headers: {
         "content-type": "application/json",
         authorization: "Bearer secret-token",
+        Origin: base,
       },
       body: JSON.stringify({ id: "proof-a1", action: "approve", text: "" }),
     });

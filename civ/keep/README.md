@@ -36,7 +36,11 @@ the Keep's export digest, and event files; unchanged forts are logged as skipped
 Generation is globally queued (one local-model call at a time), and a repeated
 per-fort regenerate request joins the existing run. `POST
 /api/summary/regenerate?fort=<key>` requires an Origin equal to the Keep's own
-origin; it does not use the signing token or audit.
+origin; it does not use the signing token or audit. Every route accepts only
+`127.0.0.1:<port>` or `localhost:<port>` as its Host, and every POST also
+requires one of their HTTP origins. Other authorities are refused before any
+read or write, preventing DNS rebinding from exposing the verbatim Mayor
+transcript text served by the summary sources endpoint.
 
 ## What "needs you" means, per fort (`lib/forts.mjs`)
 
