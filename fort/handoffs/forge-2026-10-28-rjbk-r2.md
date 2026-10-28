@@ -1,4 +1,4 @@
-# Handoff: Forge 2026-10-28T10:46:27-08:00
+# Handoff: Forge 2026-10-28T10:50:02-08:00
 Model: gpt-5.6-terra
 
 ## State of work
@@ -47,3 +47,25 @@ was found in the Host guard: it precedes every dispatch path in
 The first implementation test used `fetch(..., { headers: { Host: ... } })`.
 Node's Fetch client did not send that foreign Host, so the assertion expected
 403 while the server correctly received the URL authority and returned 200.
+
+## Launcher-observed verifier result
+
+fort/scripts/verify.sh --no-emit, run by forge.sh after the session at 2026-10-28T10:51:19-08:00: exit 1
+
+```
+    2096|     "refuses to report a founding whose distilled view failed to gener…
+    2097|     async () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  test/shell.test.ts > fort-init > refuses to report a founding whose distilled view failed to generate (fortkit-byhp)
+Error: ENOTEMPTY: directory not empty, rmdir '/tmp/fortkit-shell-iASi3b/fort/scripts'
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+
+
+ Test Files  1 failed | 20 passed (21)
+      Tests  8 failed | 318 passed (326)
+   Start at  10:50:10
+   Duration  68.70s (transform 9.32s, setup 0ms, import 12.56s, tests 126.36s, environment 2ms)
+
+```
