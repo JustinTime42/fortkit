@@ -37,9 +37,12 @@ import {
   stage,
 } from "./lib/graph.mjs";
 import {
+  hasSuccessfulSummaryWindowEnd,
   readLastFailure,
   readLatestSummary,
+  readSummaryReadMark,
   summariseMayor,
+  writeSummaryReadMark,
 } from "./lib/mayor-summary.mjs";
 import {
   extractHighlights,
@@ -424,6 +427,7 @@ export function createCivKeep(options = {}) {
       lastFailure: failure
         ? { at: failure.generatedAt ?? null, reason: failure.reason }
         : null,
+      readMark: readSummaryReadMark(stateHome, fort.key, { fileSystem }),
     });
   }
 
@@ -467,6 +471,8 @@ export function createCivKeep(options = {}) {
       sessionId: session.sessionId,
       transcript,
       exportDigest: entry.exportDigest ?? null,
+      readMarkUpTo:
+        readSummaryReadMark(stateHome, fort.key, { fileSystem })?.upTo ?? null,
       events,
     };
   }
@@ -482,12 +488,23 @@ export function createCivKeep(options = {}) {
       log(`summary ${fort.key}: skipped, no live Mayor`);
       return { status: "skipped", reason: "no live Mayor" };
     }
-    const latest = readLatestSummary(stateHome, fort.key, { fileSystem });
     const end = new Date(now()).toISOString();
+    const latest = readLatestSummary(stateHome, fort.key, { fileSystem });
+    const readMark = readSummaryReadMark(stateHome, fort.key, { fileSystem });
+    const maximumWindowMs = 48 * 60 * 60 * 1000;
+    let windowReason;
+    let windowStart;
+    if (!readMark) {
+      windowStart = new Date(now() - 12 * 60 * 60 * 1000).toISOString();
+      windowReason = "no read mark: last 12 hours";
+    } else if (now() - Date.parse(readMark.upTo) > maximumWindowMs) {
+      windowStart = new Date(now() - maximumWindowMs).toISOString();
+      windowReason = "read mark capped: last 48 hours";
+    } else {
+      windowStart = readMark.upTo;
+      windowReason = "read mark";
+    }
     const firstRun = !latest?.windowEnd;
-    const windowStart = firstRun
-      ? new Date(now() - 12 * 60 * 60 * 1000).toISOString()
-      : latest.windowEnd;
     const transcriptPath = mayorTranscriptPath(session, {
       home: env.HOME ?? "",
     });
@@ -534,6 +551,7 @@ export function createCivKeep(options = {}) {
         windowStart,
         windowEnd: end,
         firstRun,
+        windowReason,
         fingerprint,
         highlights: extracted.highlights,
         beadFacts: resolveBeadFacts(
@@ -590,6 +608,35 @@ export function createCivKeep(options = {}) {
       response,
       { fort: fort.key, status: joined ? "running" : "queued" },
       202,
+    );
+  }
+
+  async function renderMarkSummaryRead(request, response, url) {
+    const fort = summaryFort(url);
+    if (!fort) return json(response, { error: "Unknown fort" }, 404);
+    const body = await readJson(request);
+    const upTo = typeof body.upTo === "string" ? body.upTo : null;
+    if (
+      !upTo ||
+      !Number.isFinite(Date.parse(upTo)) ||
+      !hasSuccessfulSummaryWindowEnd(stateHome, fort.key, upTo, { fileSystem })
+    )
+      return json(
+        response,
+        { error: "upTo is not a successful summary window end" },
+        400,
+      );
+    const existing = readSummaryReadMark(stateHome, fort.key, { fileSystem });
+    if (existing && Date.parse(upTo) < Date.parse(existing.upTo))
+      return json(response, { error: "read mark cannot move backwards" }, 409);
+    return json(
+      response,
+      writeSummaryReadMark(
+        stateHome,
+        fort.key,
+        { markedAt: new Date(now()).toISOString(), upTo },
+        { fileSystem },
+      ),
     );
   }
 
@@ -1159,6 +1206,8 @@ export function createCivKeep(options = {}) {
       return renderSummarySources(response, url);
     if (p === "/api/summary/regenerate" && request.method === "POST")
       return renderRegenerate(response, url);
+    if (p === "/api/summary/mark-read" && request.method === "POST")
+      return renderMarkSummaryRead(request, response, url);
     if (p === "/api/graph") return renderGraph(response, url);
     if (p.startsWith("/api/bead/"))
       return renderApiBead(response, p.slice("/api/bead/".length));

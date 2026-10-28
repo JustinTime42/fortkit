@@ -35,6 +35,60 @@ function writePrivate(fileSystem, file, value) {
   fileSystem.renameSync(temporary, file);
   fileSystem.chmodSync(file, 0o600);
 }
+export function readSummaryReadMark(stateHome, fort, options = {}) {
+  const fileSystem = options.fileSystem ?? fs;
+  try {
+    const mark = JSON.parse(
+      fileSystem.readFileSync(
+        path.join(summaryDirectory(stateHome, fort), "read-mark.json"),
+        "utf8",
+      ),
+    );
+    if (
+      typeof mark.markedAt !== "string" ||
+      typeof mark.upTo !== "string" ||
+      !Number.isFinite(Date.parse(mark.markedAt)) ||
+      !Number.isFinite(Date.parse(mark.upTo))
+    )
+      return null;
+    return { markedAt: mark.markedAt, upTo: mark.upTo };
+  } catch {
+    return null;
+  }
+}
+export function writeSummaryReadMark(stateHome, fort, mark, options = {}) {
+  const fileSystem = options.fileSystem ?? fs;
+  writePrivate(
+    fileSystem,
+    path.join(summaryDirectory(stateHome, fort), "read-mark.json"),
+    mark,
+  );
+  return mark;
+}
+export function hasSuccessfulSummaryWindowEnd(
+  stateHome,
+  fort,
+  upTo,
+  options = {},
+) {
+  const fileSystem = options.fileSystem ?? fs;
+  const runs = path.join(summaryDirectory(stateHome, fort), "runs");
+  try {
+    return fileSystem.readdirSync(runs).some((name) => {
+      if (!name.endsWith(".json")) return false;
+      try {
+        const record = JSON.parse(
+          fileSystem.readFileSync(path.join(runs, name), "utf8"),
+        );
+        return record.status === "success" && record.windowEnd === upTo;
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    return false;
+  }
+}
 export function readLatestSummary(stateHome, fort, options = {}) {
   const fileSystem = options.fileSystem ?? fs;
   try {
@@ -221,6 +275,9 @@ export function unverifiedNumbers(summary, facts) {
     const index = match.index ?? 0;
     if (protectedRanges.some(([start, end]) => index >= start && index < end))
       continue;
+    // Markdown-style list markers are structure, not model-supplied facts.
+    const lineStart = summary.lastIndexOf("\n", index - 1) + 1;
+    if (/^\d+[.)]\s/.test(summary.slice(lineStart))) continue;
     if (!supplied.has(match[0])) unverified.push(match[0]);
   }
   return unverified;
@@ -241,6 +298,7 @@ export async function summariseMayor(input, options = {}) {
     windowStart: input.windowStart,
     windowEnd: input.windowEnd,
     firstRun: Boolean(input.firstRun),
+    windowReason: input.windowReason ?? null,
     fingerprint: input.fingerprint ?? null,
     model: MAYOR_SUMMARY_MODEL,
     promptSha256: null,
@@ -293,6 +351,7 @@ export async function summariseMayor(input, options = {}) {
     record.unverifiedNumbers = unverifiedNumbers(summary, {
       beadFacts: input.beadFacts,
       factsBlock: input.factsBlock,
+      highlights: input.highlights,
     });
     record.durationMs = now() - started;
     const successRecord = { ...record, status: "success" };

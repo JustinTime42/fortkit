@@ -155,6 +155,8 @@ sha256 goes in every run record. Its instructions, in substance:
   count or a cause. Say "unclear" rather than guess. No speculation about
   intent.
 - Plain prose, short (a target under 250 words for the final summary).
+- Attribute every action to the person who takes it. The Mayor's own next
+  steps are reported as the Mayor's, never as instructions to the Overseer.
 - **The model writes the narrative only.** The facts block (section 5.4) is
   rendered by code above it, so the prompt tells the model not to restate
   counts, lists of waiting beads or verdicts, and to write no numbers at all
@@ -215,7 +217,8 @@ markers, and chunk notes are labelled as data in the combine step too.
   by bead, with the title from the Keep's state.
 - **Number check.** After the summary returns, every digit run in it that is
   not part of a time or a date is looked for in the serialised facts the model
-  was given (`beadFacts` and `factsBlock`). Digits inside a supplied bead id
+  was given (`highlights`, `beadFacts` and `factsBlock`). A line-start list
+  marker (`digits.` or `digits)`) is skipped. Digits inside a supplied bead id
   are found there by construction, so no separate id exemption exists; digits
   in an id the facts do not contain (another fort's, unloaded) ARE flagged,
   which is correct: the model was not given them. Each one not found is recorded in the run as
@@ -223,15 +226,17 @@ markers, and chunk notes are labelled as data in the combine step too.
 
 ## 6. Window and change detection (bead `.4`)
 
-- **Window:** from the previous successful run's `windowEnd` for that fort to
-  now. First run for a fort: the last 12 hours, and the overlay says "first
-  summary: last 12 hours".
+- **Window:** from that fort's read mark `upTo` to now. Without a read mark,
+  use the last 12 hours and record and show "no read mark: last 12 hours".
+  If the mark is older than 48 hours, cap the start at 48 hours before now and
+  record that it was capped. Every regeneration covers this whole span.
 - **Fingerprint** of a fort: live Mayor `sessionId`, transcript size and mtime,
   the digest of the fort's latest export the Keep holds, and the size and mtime
   of each event file in the window. An event file's name is the WRITER'S LOCAL
   date and only a shard key (`schema/events.md`), so "in the window" means
   every file whose name date falls within one day either side of the window's
-  UTC dates; never compare a filename date as a UTC day. Stored in the run record.
+  UTC dates; never compare a filename date as a UTC day. The mark's `upTo` is
+  also in the fingerprint. Stored in the run record.
 - **Moved** = fingerprint differs from the last successful run's.
 
 ### 6.1 The hourly loop (Overseer decision: inside the Keep server)
@@ -268,6 +273,9 @@ Under the Keep's state home, beside the signature audit:
   directory, leaves a `runs/` record with status "failed" and its reason, plus
   every chunk call completed before the failure.
 - `latest.json`: a copy of the last SUCCESSFUL run, renamed into place.
+- `read-mark.json`: `{ markedAt, upTo }`, written temp-then-rename with mode
+  0600. `upTo` is the `windowEnd` of the summary the Overseer viewed, never
+  the click time.
 - Files are mode 0600 and the directory 0700: highlights are verbatim Mayor
   text, and a transcript can carry a credential that reached a model's context
   (threat 4). Nothing here is ever served except through the API below.
@@ -279,7 +287,8 @@ Under the Keep's state home, beside the signature audit:
 - `GET /api/summary?fort=<key>` returns `{ fort, liveMayor: { sessionId,
   startedAt } | null, latest: <latest.json without highlights, with factsBlock
   and unverifiedNumbers> | null,
-  running: boolean, lastFailure: { at, reason } | null }`. Unknown or
+  running: boolean, lastFailure: { at, reason } | null, readMark: { markedAt,
+  upTo } | null }`. Unknown or
   out-of-scope fort: 404. `lastFailure` is the newest failed run NEWER than
   `latest` (null when the last run succeeded), and `at` is that run's
   `generatedAt`, not its window end. It is found from file names (the ISO
@@ -293,6 +302,10 @@ Under the Keep's state home, beside the signature audit:
   the Keep's own origin, else 403: this endpoint costs only local compute, so it
   does not take the signing token, but a foreign page must not be able to fire
   it. It never touches the signing token or the signature audit.
+- `POST /api/summary/mark-read?fort=<key>` accepts `{ upTo }`, subject to the
+  same Host and Origin guards. `upTo` must equal a successful run's `windowEnd`
+  for this fort (400 otherwise); it never moves the mark backwards (409). It
+  returns the stored mark.
 
 ## 9. UI (bead `.5`)
 
@@ -302,7 +315,7 @@ Under the Keep's state home, beside the signature audit:
   closed by Escape and by its close button, focus trapped while open and
   returned to the button on close.
 - **Header label:** "Local-model summary, <model>, <generated time>, window
-  <start> to <end>", plus "first summary: last 12 hours" when it applies, and
+  <start> to <end>", plus the recorded no-mark or cap reason when it applies, and
   "running" while a run is in progress.
 - **Facts block** above the summary, from `latest.factsBlock`: "Waiting on
   you" (id and title, linked), "Escalated" (same), and the counts. This block,
