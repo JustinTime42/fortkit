@@ -23,7 +23,7 @@ export function mayorTranscriptPath(session, options = {}) {
   return path.join(
     home,
     ".claude/projects",
-    session.cwd.replaceAll("/", "-"),
+    session.cwd.replace(/[^A-Za-z0-9]/g, "-"),
     `${session.sessionId}.jsonl`,
   );
 }
@@ -182,27 +182,16 @@ function inWindow(value, start, end) {
   return timestamp !== null && timestamp > start && timestamp <= end;
 }
 
-export function windowCounts(
-  fortOrEntry,
-  beadsOrStart,
-  startOrEnd,
-  endOrOptions,
-  options = {},
-) {
-  const entry = fortOrEntry?.byId ? fortOrEntry : null;
-  const fort = entry?.fort ?? fortOrEntry;
-  const beads = entry?.byId ?? beadsOrStart;
-  const windowStart = entry ? beadsOrStart : startOrEnd;
-  const windowEnd = entry ? startOrEnd : endOrOptions;
-  const callOptions = entry ? (endOrOptions ?? {}) : options;
-  const fileSystem = callOptions.fileSystem ?? fs;
-  const now = callOptions.now ?? (() => Date.now());
-  const start =
-    typeof windowStart === "number" ? windowStart : dateValue(windowStart);
-  const end = typeof windowEnd === "number" ? windowEnd : dateValue(windowEnd);
+export function windowCounts(entry, windowStart, windowEnd, options = {}) {
+  if (!entry?.byId || !entry.fort)
+    throw new Error("entry with fort and byId is required");
+  const fileSystem = options.fileSystem ?? fs;
+  const now = options.now ?? (() => Date.now());
+  const start = dateValue(windowStart);
+  const end = dateValue(windowEnd);
   if (start === null || end === null)
     throw new Error("window bounds must be valid timestamps");
-  const values = [...(beads.values ? beads.values() : beads)];
+  const values = [...entry.byId.values()];
   const result = {
     closed: values.filter((bead) => inWindow(bead.closed_at, start, end))
       .length,
@@ -216,15 +205,15 @@ export function windowCounts(
   };
   const context = graphContext(
     values,
-    entry?.events?.events ?? [],
-    entry?.fleet?.workers ?? [],
+    entry.events?.events ?? [],
+    entry.fleet?.workers ?? [],
     now(),
-    fort.waitingLabels,
-    fort.whoseMove,
+    entry.fort.waitingLabels,
+    entry.fort.whoseMove,
   );
   for (const bead of values)
     if (needsYou(bead, context)) result.waitingOnOverseer.push(bead.id);
-  const directory = path.join(fort.repo, "fort/events");
+  const directory = path.join(entry.fort.repo, "fort/events");
   let names = [];
   try {
     names = fileSystem.readdirSync(directory);
@@ -257,8 +246,7 @@ export function windowCounts(
       if (event.category === "review.verdict")
         result.wardenVerdicts.push({
           id: event.target ?? null,
-          verdict:
-            event.payload?.verdict ?? event.verdict ?? event.detail ?? null,
+          verdict: event.payload?.verdict ?? null,
         });
       if (
         ["gate.approved", "gate.declined", "decision.recorded"].includes(

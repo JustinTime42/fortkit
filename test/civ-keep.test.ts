@@ -319,7 +319,7 @@ describe("Mayor summary extraction", () => {
       join(sessions, "14.json"),
       JSON.stringify({
         pid: 14,
-        startedAt: "2026-10-27T12:00:00Z",
+        startedAt: 1793200000000,
         sessionId: "dead",
         cwd: "/srv/halls",
       }),
@@ -360,6 +360,7 @@ describe("Mayor summary extraction", () => {
       readlinkSync: (file: string) =>
         file.endsWith("/12/cwd") ||
         file.endsWith("/13/cwd") ||
+        file.endsWith("/14/cwd") ||
         file.endsWith("/15/cwd")
           ? "/srv/halls"
           : "",
@@ -375,11 +376,11 @@ describe("Mayor summary extraction", () => {
 
   test("derives the Claude transcript path and reports a missing transcript", async () => {
     const transcript = mayorTranscriptPath(
-      { cwd: "/srv/halls", sessionId: "mayor" },
+      { cwd: "/srv/halls.with_name", sessionId: "mayor" },
       { home: "/home/tester" },
     );
     expect(transcript).toBe(
-      "/home/tester/.claude/projects/-srv-halls/mayor.jsonl",
+      "/home/tester/.claude/projects/-srv-halls-with-name/mayor.jsonl",
     );
     if (!transcript) throw new Error("transcript path was not derived");
     await expect(
@@ -410,7 +411,7 @@ describe("Mayor summary extraction", () => {
               { type: "thinking", thinking: "no" },
               {
                 type: "text",
-                text: "Ship halls-x1 and proof-a1, inspect halls-missing and fortkit-worktrees.",
+                text: "Ship halls-x1 and proof-a1, inspect halls-missing and halls-worktrees.",
               },
               { type: "tool_use", name: "bd" },
             ],
@@ -453,7 +454,7 @@ describe("Mayor summary extraction", () => {
       highlights: [
         {
           timestamp: "2026-10-27T10:01:00Z",
-          text: "Ship halls-x1 and proof-a1, inspect halls-missing and fortkit-worktrees.",
+          text: "Ship halls-x1 and proof-a1, inspect halls-missing and halls-worktrees.",
         },
       ],
       malformedLines: 1,
@@ -525,6 +526,12 @@ describe("Mayor summary extraction", () => {
           payload: { verdict: "APPROVE" },
         }),
         JSON.stringify({
+          ts: "2026-10-27T10:03:15Z",
+          category: "review.verdict",
+          target: "halls-x2",
+          detail: "free-form review note, not a verdict",
+        }),
+        JSON.stringify({
           ts: "2026-10-27T10:04:00Z",
           category: "gate.approved",
           target: "halls-x1",
@@ -574,7 +581,10 @@ describe("Mayor summary extraction", () => {
       filed: 1,
       merged: 1,
       halts: [{ target: "halls-x2", reason: "disk full" }],
-      wardenVerdicts: [{ id: "halls-x1", verdict: "APPROVE" }],
+      wardenVerdicts: [
+        { id: "halls-x1", verdict: "APPROVE" },
+        { id: "halls-x2", verdict: null },
+      ],
       gateDecisions: [{ category: "gate.approved", id: "halls-x1" }],
       waitingOnOverseer: ["halls-x1", "halls-x3"],
     });
