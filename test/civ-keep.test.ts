@@ -34,7 +34,12 @@ const {
   resolveBeadFacts,
   windowCounts,
 } = mayorSummary;
-const { readLastFailure, summariseMayor } = mayorSummaryModel;
+const {
+  MAYOR_SUMMARY_CONTEXT,
+  MAYOR_SUMMARY_RESERVE,
+  readLastFailure,
+  summariseMayor,
+} = mayorSummaryModel;
 
 type Call = { file: string; args: string[]; cwd: string };
 type Bead = {
@@ -676,6 +681,36 @@ describe("Mayor summary local model", () => {
     ).toBe(0o700);
   });
 
+  test("accounts for JSON escaping while chunking realistic Mayor text", async () => {
+    const calls: { messages: { content: string }[] }[] = [];
+    const record = await summariseMayor(
+      input('"quoted" \\ path\n\n'.repeat(14_000)),
+      {
+        stateHome: mkdtempSync(join(tmpdir(), "mayor-summary-escaped-")),
+        fetch: async (_url: string, init: RequestInit) => {
+          const request = JSON.parse(String(init.body));
+          calls.push(request);
+          return new Response(
+            JSON.stringify({
+              prompt_eval_count: 10,
+              message: { content: "note" },
+            }),
+          );
+        },
+      },
+    );
+    expect(record.status).toBe("success");
+    expect(calls.length).toBeGreaterThan(2);
+    for (const call of calls) {
+      const [system, user] = call.messages;
+      if (!system || !user) throw new Error("missing Ollama messages");
+      expect(
+        Math.ceil((system.content.length + user.content.length) / 3) +
+          MAYOR_SUMMARY_RESERVE,
+      ).toBeLessThanOrEqual(MAYOR_SUMMARY_CONTEXT);
+    }
+  });
+
   test("records an over-window response as failure without replacing latest", async () => {
     const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-failure-"));
     const ok = async () =>
@@ -912,6 +947,34 @@ describe("Mayor summary local model", () => {
     );
     expect(response.status).toBe(200);
     expect(((await response.json()) as { latest: unknown }).latest).toBeNull();
+    expect(
+      (
+        await fetch(
+          `http://127.0.0.1:${port}/api/summary/regenerate?fort=halls`,
+          { method: "POST" },
+        )
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await fetch(
+          `http://127.0.0.1:${port}/api/summary/regenerate?fort=green`,
+          { method: "POST", headers: { Origin: `http://localhost:${port}` } },
+        )
+      ).status,
+    ).toBe(404);
+    const queued = await fetch(
+      `http://127.0.0.1:${port}/api/summary/regenerate?fort=halls`,
+      {
+        method: "POST",
+        headers: { Origin: `http://localhost:${port}` },
+      },
+    );
+    expect(queued.status).toBe(202);
+    expect(await queued.json()).toMatchObject({
+      fort: "halls",
+      status: expect.any(String),
+    });
   });
 
   test("scheduler skips unchanged production forts and shares a regenerate flight", async () => {

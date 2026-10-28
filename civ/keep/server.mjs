@@ -415,7 +415,14 @@ export function createCivKeep(options = {}) {
     );
   }
 
-  function fingerprintFor(fort, entry, session, transcriptPath) {
+  function fingerprintFor(
+    fort,
+    entry,
+    session,
+    transcriptPath,
+    windowStart,
+    windowEnd,
+  ) {
     let transcript = null;
     try {
       const stat = fileSystem.statSync(transcriptPath);
@@ -426,7 +433,14 @@ export function createCivKeep(options = {}) {
       for (const name of fileSystem.readdirSync(
         path.join(fort.repo, "fort/events"),
       )) {
-        if (!/^events-.*\.jsonl$/.test(name)) continue;
+        const match = /^events-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(name);
+        if (!match) continue;
+        const eventDay = Date.parse(`${match[1]}T00:00:00.000Z`);
+        if (
+          eventDay < new Date(windowStart).setUTCHours(0, 0, 0, 0) ||
+          eventDay > new Date(windowEnd).setUTCHours(0, 0, 0, 0)
+        )
+          continue;
         const stat = fileSystem.statSync(
           path.join(fort.repo, "fort/events", name),
         );
@@ -462,9 +476,18 @@ export function createCivKeep(options = {}) {
     const transcriptPath = mayorTranscriptPath(session, {
       home: env.HOME ?? "",
     });
-    if (!transcriptPath)
+    if (!transcriptPath) {
+      log(`summary ${fort.key}: skipped, no live Mayor transcript`);
       return { status: "skipped", reason: "no live Mayor transcript" };
-    const fingerprint = fingerprintFor(fort, entry, session, transcriptPath);
+    }
+    const fingerprint = fingerprintFor(
+      fort,
+      entry,
+      session,
+      transcriptPath,
+      windowStart,
+      end,
+    );
     if (
       !force &&
       latest?.fingerprint &&
@@ -477,6 +500,7 @@ export function createCivKeep(options = {}) {
     }
     const extracted = await extractHighlights(transcriptPath, windowStart, {
       fileSystem,
+      windowEnd: end,
     });
     if (extracted.reason) {
       log(`summary ${fort.key}: skipped, ${extracted.reason}`);
@@ -497,17 +521,24 @@ export function createCivKeep(options = {}) {
         malformedLines: extracted.malformedLines,
         keepRefreshedAt: entry.refreshedAt ?? null,
       },
-      { fileSystem, fetch: fetchImpl, now, stateHome },
+      { fileSystem, fetch: fetchImpl, now, stateHome, log },
     );
   }
 
   function queueSummary(fort, options = {}) {
     const current = summaryFlights.get(fort.key);
-    if (current) return current;
-    const task = summaryQueue.then(() => generateSummary(fort, options));
+    if (current) {
+      if (options.force) current.force = true;
+      return current.promise;
+    }
+    const flight = { force: Boolean(options.force), promise: null };
+    const task = summaryQueue.then(() =>
+      generateSummary(fort, { force: flight.force }),
+    );
     summaryQueue = task.catch(() => {});
     const shared = task.finally(() => summaryFlights.delete(fort.key));
-    summaryFlights.set(fort.key, shared);
+    flight.promise = shared;
+    summaryFlights.set(fort.key, flight);
     return shared;
   }
 
@@ -528,10 +559,13 @@ export function createCivKeep(options = {}) {
   function renderRegenerate(request, response, url) {
     const fort = summaryFort(url);
     if (!fort) return json(response, { error: "Unknown fort" }, 404);
-    const expectedOrigin = request.headers.host
-      ? `http://${request.headers.host}`
-      : null;
-    if (!expectedOrigin || request.headers.origin !== expectedOrigin)
+    const address = server.address();
+    const port = typeof address === "object" && address ? address.port : null;
+    const origins =
+      port === null
+        ? []
+        : [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
+    if (!origins.includes(request.headers.origin ?? ""))
       return json(response, { error: "Forbidden" }, 403);
     const joined = summaryFlights.has(fort.key);
     queueSummary(fort, { force: true }).catch((error) =>

@@ -89,7 +89,11 @@ export async function extractHighlights(
 ) {
   const fileSystem = options.fileSystem ?? fs;
   const start = dateValue(windowStart);
+  const end =
+    options.windowEnd === undefined ? null : dateValue(options.windowEnd);
   if (start === null) throw new Error("windowStart must be a valid timestamp");
+  if (options.windowEnd !== undefined && end === null)
+    throw new Error("windowEnd must be a valid timestamp");
   const highlights = [];
   let malformedLines = 0;
   let input;
@@ -112,7 +116,12 @@ export async function extractHighlights(
       }
       if (record.type !== "assistant" || record.isSidechain === true) continue;
       const timestamp = dateValue(record.timestamp);
-      if (timestamp === null || timestamp <= start) continue;
+      if (
+        timestamp === null ||
+        timestamp <= start ||
+        (end !== null && timestamp > end)
+      )
+        continue;
       const blocks = record.message?.content;
       if (!Array.isArray(blocks)) continue;
       for (const block of blocks) {

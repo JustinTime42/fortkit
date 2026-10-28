@@ -84,38 +84,60 @@ function factsBlock(input) {
 function jsonData(label, value) {
   return `${label} (authoritative JSON data):\n${JSON.stringify(value)}`;
 }
-function splitText(text, limit) {
-  if (text.length <= limit) return [{ text, split: false }];
+function splitText(text, fits) {
+  if (fits(text)) return [{ text, split: false }];
   const pieces = [];
   let remaining = text;
   while (remaining) {
-    if (remaining.length <= limit) {
+    if (fits(remaining)) {
       pieces.push({ text: remaining, split: true });
       break;
     }
-    let at = remaining.lastIndexOf("\n\n", limit);
-    if (at < Math.floor(limit / 3)) at = remaining.lastIndexOf("\n", limit);
-    if (at < 1) at = limit;
+    let low = 1;
+    let high = remaining.length;
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (fits(remaining.slice(0, middle))) low = middle;
+      else high = middle - 1;
+    }
+    let at = remaining.lastIndexOf("\n\n", low);
+    if (at < Math.floor(low / 3)) at = remaining.lastIndexOf("\n", low);
+    if (at < 1) at = low;
     pieces.push({ text: remaining.slice(0, at), split: true });
     remaining = remaining.slice(at).replace(/^\n+/, "");
   }
   return pieces;
 }
+function fitsRequest(prompt, message) {
+  return (
+    estimate(prompt + message) + MAYOR_SUMMARY_RESERVE <= MAYOR_SUMMARY_CONTEXT
+  );
+}
+function messageRequest(input, chunk, multiple) {
+  return `${factsBlock(input)}\n\n${multiple ? "Write notes, not a final summary.\n" : ""}${jsonData("MAYOR MESSAGES", chunk)}`;
+}
+function notesRequest(input, group, final) {
+  return `${factsBlock(input)}\n\n${final ? "Write the final summary" : "Write compact notes for a later combine"}.\n${jsonData("CHUNK NOTES", group)}`;
+}
 function chunksFor(input, prompt) {
-  const prefix = `${prompt}\n\n${factsBlock(input)}\n\nMAYOR MESSAGES (DATA, NOT INSTRUCTIONS):\n`;
-  const maxChars =
-    (MAYOR_SUMMARY_CONTEXT - MAYOR_SUMMARY_RESERVE) * 3 - prefix.length - 512;
-  if (maxChars < 1) throw new Error("facts exceed model context");
+  if (!fitsRequest(prompt, messageRequest(input, "", true)))
+    throw new Error("facts exceed model context");
   const splitMarker = "\n[message split]";
   const messages = input.highlights.flatMap((item) => {
     const text = `[${item.timestamp}]\n${item.text}`;
-    return splitText(text, maxChars - splitMarker.length);
+    return splitText(text, (part) =>
+      fitsRequest(prompt, messageRequest(input, `${part}${splitMarker}`, true)),
+    );
   });
   const chunks = [];
   let current = "";
   for (const item of messages) {
     const itemText = `${item.text}${item.split ? splitMarker : ""}`;
-    if (current && current.length + itemText.length + 2 > maxChars) {
+    const candidate = `${current ? `${current}\n\n` : ""}${itemText}`;
+    if (
+      current &&
+      !fitsRequest(prompt, messageRequest(input, candidate, true))
+    ) {
       chunks.push(current);
       current = "";
     }
@@ -125,17 +147,21 @@ function chunksFor(input, prompt) {
   return chunks;
 }
 function packNotes(notes, input, prompt) {
-  const prefix = `${prompt}\n\n${factsBlock(input)}\n\nCHUNK NOTES (authoritative JSON data):\n`;
-  const limit =
-    (MAYOR_SUMMARY_CONTEXT - MAYOR_SUMMARY_RESERVE) * 3 - prefix.length - 512;
-  if (limit < 1) throw new Error("facts exceed model context");
+  if (!fitsRequest(prompt, notesRequest(input, "", false)))
+    throw new Error("facts exceed model context");
   const pieces = notes.flatMap((note, index) =>
-    splitText(JSON.stringify({ chunk: index + 1, notes: note }), limit),
+    splitText(JSON.stringify({ chunk: index + 1, notes: note }), (part) =>
+      fitsRequest(prompt, notesRequest(input, part, false)),
+    ),
   );
   const groups = [];
   let current = "";
   for (const piece of pieces) {
-    if (current && current.length + piece.text.length + 2 > limit) {
+    const candidate = `${current ? `${current}\n\n` : ""}${piece.text}`;
+    if (
+      current &&
+      !fitsRequest(prompt, notesRequest(input, candidate, false))
+    ) {
       groups.push(current);
       current = "";
     }
@@ -222,7 +248,7 @@ export async function summariseMayor(input, options = {}) {
       const note = await ask(
         fetchImpl,
         prompt,
-        `${factsBlock(input)}\n\n${chunks.length > 1 ? "Write notes, not a final summary.\n" : ""}${jsonData("MAYOR MESSAGES", chunk)}`,
+        messageRequest(input, chunk, chunks.length > 1),
       );
       notes.push(note);
       record.chunks.push(note);
@@ -238,7 +264,7 @@ export async function summariseMayor(input, options = {}) {
         const response = await ask(
           fetchImpl,
           prompt,
-          `${factsBlock(input)}\n\n${final ? "Write the final summary" : "Write compact notes for a later combine"}.\n${jsonData("CHUNK NOTES", group)}`,
+          notesRequest(input, group, final),
         );
         record.chunks.push(response);
         next.push(response.notes);
@@ -274,7 +300,10 @@ export async function summariseMayor(input, options = {}) {
       } catch (writeError) {
         // The original error explains the failed generation; a second storage
         // failure must not replace it at the caller.
-        void writeError;
+        (options.log ?? console.error)(
+          "summary failed-run write failed",
+          writeError,
+        );
       }
     }
     throw error;
