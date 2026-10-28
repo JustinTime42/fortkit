@@ -20,8 +20,9 @@ summary can be diagnosed rather than argued about.
 
 - **Forts:** the production registry only, `~/.claude/civilization.json`
   (Overseer decision). Greenlab forts (`~/.claude/greenlab.json`) are excluded
-  until a later bead adds them. The Keep's `loadForts()` already tags each fort
-  with its `civilization`; the summary filters on it.
+  until a later bead adds them. In scope means loaded FROM the
+  `civilization.json` registry (an allowlist by source), never "any
+  civilization except Greenlab".
 - **Per fort only.** There is no combined all-forts summary. Under "All forts"
   the button is disabled.
 - **Read-only toward every fort.** The feature never writes to a fort's tree,
@@ -183,6 +184,12 @@ If the highlights do not fit one request:
 
 Each chunk's input size, output and `prompt_eval_count` go in the run record.
 
+Bounds, so no run can hang: every Ollama call has a timeout (5 minutes) and
+`options.num_predict` of 2048 (the output reserve); a combine round that does
+not reduce the number of notes fails the run loudly. The per-chunk budget
+counts any split markers it adds. The data block has explicit begin and end
+markers, and chunk notes are labelled as data in the combine step too.
+
 ## 6. Window and change detection (bead `.4`)
 
 - **Window:** from the previous successful run's `windowEnd` for that fort to
@@ -216,10 +223,16 @@ Under the Keep's state home, beside the signature audit:
 `~/.local/state/civ-keep/summaries/<fort-key>/`).
 
 - `runs/<ISO timestamp>.json`, one per run, success or failure:
-  `{ fort, status, reason?, sessionId, transcriptPath, windowStart, windowEnd,
+  `{ fort, status, reason?, generatedAt, sessionId, transcriptPath,
+  windowStart, windowEnd,
   firstRun, fingerprint, model, promptSha256, highlights, beadFacts, counts,
   chunks: [{ chars, estTokens, promptEvalCount, notes }], summary?,
   durationMs, malformedLines, keepRefreshedAt }`.
+- `generatedAt` is when the run started (ISO). A run's `status` is set to
+  "success" only after both its `runs/` record and `latest.json` are written;
+  any failure at any step, including reading the prompt or creating the
+  directory, leaves a `runs/` record with status "failed" and its reason, plus
+  every chunk call completed before the failure.
 - `latest.json`: a copy of the last SUCCESSFUL run, renamed into place.
 - Files are mode 0600 and the directory 0700: highlights are verbatim Mayor
   text, and a transcript can carry a credential that reached a model's context
@@ -232,7 +245,12 @@ Under the Keep's state home, beside the signature audit:
 - `GET /api/summary?fort=<key>` returns `{ fort, liveMayor: { sessionId,
   startedAt } | null, latest: <latest.json without highlights> | null,
   running: boolean, lastFailure: { at, reason } | null }`. Unknown or
-  out-of-scope fort: 404.
+  out-of-scope fort: 404. `lastFailure` is the newest failed run NEWER than
+  `latest` (null when the last run succeeded), and `at` is that run's
+  `generatedAt`, not its window end. It is found from file names (the ISO
+  timestamp) newest first, stopping at the first success, never by parsing
+  every run file. A corrupt run file is reported as a failure with reason
+  "unreadable run record", never as null.
 - `GET /api/summary/sources?fort=<key>` returns `latest.highlights` (the
   source-messages toggle; fetched only when opened).
 - `POST /api/summary/regenerate?fort=<key>` queues a run (single-flight) and
@@ -324,3 +342,9 @@ Under the Keep's state home, beside the signature audit:
 - 2026-10-27, after Warden review r2 of `.2`: the transcript slug replaces
   every non-alphanumeric character, not only `/` (finding 4, measured from
   `~/.claude/projects`; no production fort path is affected today).
+- 2026-10-27, after Warden review r1 of `.3`: `generatedAt` in the run
+  record; `lastFailure` means a failure newer than the latest success; status
+  "success" only after both writes; every failure path leaves a record with
+  its completed chunks; call timeout, `num_predict`, combine progress guard;
+  split markers inside the budget; closed data markers. Production scope is
+  the `civilization.json` registry by source, not "not Greenlab".
