@@ -169,6 +169,10 @@ export function createCivKeep(options = {}) {
   const inFlight = new Set();
   const summaryFlights = new Map();
   let summaryQueue = Promise.resolve();
+  // Initialized from the listener, never from an untrusted request. Tests bind
+  // an ephemeral port; production binds KEEP_PORT (7780).
+  let allowedHosts;
+  let allowedOrigins;
   // key -> { fort, byId, skipped, events, fleet, stale, error, refreshedAt }
   const states = new Map();
   let bootModuleMtimes;
@@ -568,17 +572,9 @@ export function createCivKeep(options = {}) {
     }
   }
 
-  function renderRegenerate(request, response, url) {
+  function renderRegenerate(response, url) {
     const fort = summaryFort(url);
     if (!fort) return json(response, { error: "Unknown fort" }, 404);
-    const address = server.address();
-    const port = typeof address === "object" && address ? address.port : null;
-    const origins =
-      port === null
-        ? []
-        : [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
-    if (!origins.includes(request.headers.origin ?? ""))
-      return json(response, { error: "Forbidden" }, 403);
     const joined = summaryFlights.has(fort.key);
     queueSummary(fort, { force: true }).catch((error) =>
       log(`summary ${fort.key}: failed`, error),
@@ -1115,6 +1111,31 @@ export function createCivKeep(options = {}) {
   }
 
   async function route(request, response) {
+    // A loopback-only bind does not prevent DNS rebinding. Refuse a foreign
+    // authority before a renderer, audit writer, event stream, or queue runs.
+    if (!allowedHosts) {
+      const address = server.address();
+      const port = typeof address === "object" && address ? address.port : null;
+      if (port === null) throw new Error("Civ Keep listener is not bound");
+      allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
+      allowedOrigins = new Set([
+        `http://127.0.0.1:${port}`,
+        `http://localhost:${port}`,
+      ]);
+    }
+    if (!allowedHosts.has(request.headers.host ?? "")) {
+      response.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Forbidden\n");
+      return;
+    }
+    if (
+      request.method === "POST" &&
+      !allowedOrigins.has(request.headers.origin ?? "")
+    ) {
+      response.writeHead(403, { "content-type": "text/plain; charset=utf-8" });
+      response.end("Forbidden\n");
+      return;
+    }
     const url = new URL(request.url, "http://civ-keep.local");
     const p = url.pathname;
     if (p.startsWith("/static/"))
@@ -1130,7 +1151,7 @@ export function createCivKeep(options = {}) {
     if (p === "/api/summary/sources" && request.method === "GET")
       return renderSummarySources(response, url);
     if (p === "/api/summary/regenerate" && request.method === "POST")
-      return renderRegenerate(request, response, url);
+      return renderRegenerate(response, url);
     if (p === "/api/graph") return renderGraph(response, url);
     if (p.startsWith("/api/bead/"))
       return renderApiBead(response, p.slice("/api/bead/".length));
