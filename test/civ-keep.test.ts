@@ -292,6 +292,7 @@ describe("civ keep signing desk", () => {
       "/api/sign",
       "/api/airlock/approve",
       "/api/summary/regenerate?fort=halls",
+      "/api/summary/mark-read?fort=halls",
     ]) {
       const response = await requestWithHost(port, path, {
         host: foreignHost,
@@ -1057,6 +1058,21 @@ describe("Mayor summary local model", () => {
         factsBlock: { waitingOnOverseer: [], escalations: [], counts: {} },
       }),
     ).toEqual([]);
+    expect(
+      unverifiedNumbers("Mayor quoted 250 and 551957.\n4. Next item", {
+        highlights: [{ text: "The Mayor said 250, then 551957." }],
+      }),
+    ).toEqual([]);
+    expect(
+      unverifiedNumbers("4. The Mayor closed 54 beads.", {
+        highlights: [{ text: "No counts were supplied." }],
+      }),
+    ).toEqual(["54"]);
+    expect(
+      unverifiedNumbers("The Mayor closed 37 beads.", {
+        highlights: [{ timestamp: "2026-10-27T12:37:00Z", text: "No counts." }],
+      }),
+    ).toEqual(["37"]);
   });
 
   test("rejects an output truncated at its length limit", async () => {
@@ -1335,6 +1351,46 @@ describe("Mayor summary local model", () => {
       ).status,
     ).toBe(403);
     expect(
+      (
+        await fetch(
+          `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
+          { method: "POST", headers: { Origin: "https://foreign.example" } },
+        )
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await fetch(
+          `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
+          {
+            method: "POST",
+            headers: {
+              Origin: `http://localhost:${port}`,
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ upTo: "2026-10-27T11:00:00.000Z" }),
+          },
+        )
+      ).status,
+    ).toBe(400);
+    for (const body of ["null", "[]"]) {
+      expect(
+        (
+          await fetch(
+            `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
+            {
+              method: "POST",
+              headers: {
+                Origin: `http://localhost:${port}`,
+                "content-type": "application/json",
+              },
+              body,
+            },
+          )
+        ).status,
+      ).toBe(400);
+    }
+    expect(
       (await fetch(`http://127.0.0.1:${port}/api/summary/sources?fort=green`))
         .status,
     ).toBe(404);
@@ -1528,16 +1584,109 @@ describe("Mayor summary local model", () => {
     expect(joined).toBe(first);
     await Promise.all([first, joined]);
     expect(calls).toBe(1);
+    let latest = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/latest.json"),
+        "utf8",
+      ),
+    );
+    expect(latest.windowStart).toBe("2026-10-27T00:00:00.000Z");
+    expect(latest.windowReason).toBe("no read mark: last 12 hours");
+    await new Promise<void>((resolve) =>
+      keep?.server.listen(0, "127.0.0.1", resolve),
+    );
+    const port = (keep.server.address() as AddressInfo).port;
+    const firstEnd = latest.windowEnd;
+    clock += 60_000;
+    await keep.regenerateSummary(fort);
+    latest = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/latest.json"),
+        "utf8",
+      ),
+    );
+    expect(latest.windowStart).toBe("2026-10-27T00:01:00.000Z");
+    const marked = await fetch(
+      `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
+      {
+        method: "POST",
+        headers: {
+          Origin: `http://localhost:${port}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ upTo: firstEnd }),
+      },
+    );
+    expect(marked.status).toBe(200);
+    expect(((await marked.json()) as { upTo: string }).upTo).toBe(firstEnd);
     clock += 60_000;
     await keep.runSummaryPass();
-    expect(calls).toBe(1);
+    latest = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/latest.json"),
+        "utf8",
+      ),
+    );
+    expect(latest.windowStart).toBe(firstEnd);
+    expect(latest.windowReason).toBe("read mark");
+    expect(calls).toBe(3);
+    clock += 60_000;
+    await keep.regenerateSummary(fort);
+    latest = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/latest.json"),
+        "utf8",
+      ),
+    );
+    expect(latest.windowStart).toBe(firstEnd);
+    const advanced = await fetch(
+      `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
+      {
+        method: "POST",
+        headers: {
+          Origin: `http://localhost:${port}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ upTo: latest.windowEnd }),
+      },
+    );
+    expect(advanced.status).toBe(200);
+    const backwards = await fetch(
+      `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
+      {
+        method: "POST",
+        headers: {
+          Origin: `http://localhost:${port}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ upTo: firstEnd }),
+      },
+    );
+    expect(backwards.status).toBe(409);
+    clock += 3 * 24 * 60 * 60 * 1000;
+    writeFileSync(
+      join(stateHome, "civ-keep/summaries/halls/read-mark.json"),
+      JSON.stringify({ markedAt: firstEnd, upTo: firstEnd }),
+    );
+    await keep.regenerateSummary(fort);
+    latest = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/latest.json"),
+        "utf8",
+      ),
+    );
+    expect(latest.windowStart).toBe("2026-10-28T12:03:00.000Z");
+    expect(latest.windowReason).toBe("read mark capped: last 48 hours");
+    clock += 60_000;
+    await keep.runSummaryPass();
+    expect(calls).toBe(5);
     expect(logs).toContain(
-      "summary halls: skipped, unchanged since 2026-10-27T12:00:00.000Z",
+      "summary halls: skipped, unchanged since 2026-10-30T12:03:00.000Z",
     );
     appendFileSync(transcript, " ");
     clock += 60_000;
     await keep.runSummaryPass();
-    expect(calls).toBe(2);
+    expect(calls).toBe(6);
     nodeFs.rmSync(join(sessions, "41.json"));
     await keep.runSummaryPass();
     expect(logs).toContain("summary halls: skipped, no live Mayor");
