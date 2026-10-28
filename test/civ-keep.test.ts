@@ -12,6 +12,7 @@ import nodeFs, {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { request as httpRequest } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -153,6 +154,48 @@ afterEach(() => {
   keep = null;
 });
 
+function requestWithHost(
+  port: number,
+  path: string,
+  {
+    host,
+    method = "GET",
+    headers = {},
+    body,
+  }: {
+    host: string;
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  },
+) {
+  return new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const request = httpRequest(
+      {
+        hostname: "127.0.0.1",
+        port,
+        path,
+        method,
+        // Unlike fetch, node:http sends this explicit authority unchanged.
+        headers: { host, ...headers },
+      },
+      (response) => {
+        let responseBody = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          responseBody += chunk;
+        });
+        response.on("end", () =>
+          resolve({ status: response.statusCode ?? 0, body: responseBody }),
+        );
+      },
+    );
+    request.on("error", reject);
+    if (body) request.write(body);
+    request.end();
+  });
+}
+
 async function start() {
   const calls: Call[] = [];
   const auditPath = join(scratch, `audit-${Math.random()}`, "signatures.jsonl");
@@ -214,72 +257,81 @@ async function start() {
 describe("civ keep signing desk", () => {
   test("refuses foreign authorities before every route can read or write", async () => {
     const { port, auditPath } = await start();
-    const base = `http://127.0.0.1:${port}`;
-    const request = (pathname: string, init: RequestInit = {}) =>
-      fetch(`${base}${pathname}`, {
-        ...init,
-        headers: { ...init.headers, Host: `evil.example:${port}` },
-      });
+    const foreignHost = `evil.example:${port}`;
+    const refusedRoutes = [
+      "/",
+      "/board",
+      "/airlock",
+      "/graph",
+      "/beads",
+      "/static/keep.css",
+      "/api/forts",
+      "/api/summary?fort=halls",
+      "/api/summary/sources?fort=halls",
+      "/api/graph",
+      "/api/bead/proof-a1",
+      "/api/signatures",
+      "/api/airlock",
+      "/api/airlock/previews",
+      "/events",
+    ];
+    for (const path of refusedRoutes) {
+      const response = await requestWithHost(port, path, { host: foreignHost });
+      expect(response.status, path).toBe(403);
+      expect(response.body, path).toBe("Forbidden\n");
+    }
 
-    expect((await request("/")).status).toBe(403);
-    expect((await request("/api/forts")).status).toBe(403);
-    expect(
-      (
-        await request("/api/sign", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            authorization: "Bearer secret-token",
-            Origin: `http://127.0.0.1:${port}`,
-          },
-          body: JSON.stringify({ id: "proof-a1", action: "approve", text: "" }),
-        })
-      ).status,
-    ).toBe(403);
+    const signBody = JSON.stringify({
+      id: "proof-a1",
+      action: "approve",
+      text: "",
+    });
+    for (const path of [
+      "/api/sign",
+      "/api/airlock/approve",
+      "/api/summary/regenerate?fort=halls",
+    ]) {
+      const response = await requestWithHost(port, path, {
+        host: foreignHost,
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer secret-token",
+          origin: `http://127.0.0.1:${port}`,
+        },
+        body: signBody,
+      });
+      expect(response.status, path).toBe(403);
+      expect(response.body, path).toBe("Forbidden\n");
+    }
     expect(() => readFileSync(auditPath, "utf8")).toThrow();
     expect(
-      (
-        await request("/api/summary/regenerate?fort=halls", {
-          method: "POST",
-          headers: { Origin: `http://127.0.0.1:${port}` },
-        })
-      ).status,
-    ).toBe(403);
+      (await requestWithHost(port, "/", { host: `127.0.0.1:${port}` })).status,
+    ).toBe(200);
     expect(
-      (await fetch(`${base}/`, { headers: { Host: `127.0.0.1:${port}` } }))
+      (await requestWithHost(port, "/api/forts", { host: `localhost:${port}` }))
         .status,
     ).toBe(200);
     expect(
-      (
-        await fetch(`${base}/api/forts`, {
-          headers: { Host: `localhost:${port}` },
-        })
-      ).status,
-    ).toBe(200);
-    expect(
-      (await fetch(`${base}/`, { headers: { Host: "127.0.0.1:7780" } })).status,
+      (await requestWithHost(port, "/", { host: "127.0.0.1:7780" })).status,
     ).toBe(403);
-    expect(
-      (
-        await fetch(`${base}/api/sign`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            authorization: "Bearer secret-token",
-            Origin: "https://foreign.example",
-          },
-          body: JSON.stringify({ id: "proof-a1", action: "approve", text: "" }),
-        })
-      ).status,
-    ).toBe(403);
-    expect(
-      (
-        await fetch(`${base}/api/summary/regenerate?fort=halls`, {
-          method: "POST",
-          headers: { Origin: "https://foreign.example" },
-        })
-      ).status,
-    ).toBe(403);
+    for (const path of ["/api/sign", "/api/summary/regenerate?fort=halls"]) {
+      expect(
+        (
+          await requestWithHost(port, path, {
+            host: `127.0.0.1:${port}`,
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              authorization: "Bearer secret-token",
+              origin: "https://foreign.example",
+            },
+            body: signBody,
+          })
+        ).status,
+        path,
+      ).toBe(403);
+    }
   });
 
   test("fleet fort, unnoted Approve with a branch: fleet-safe restored, sha pinned", async () => {
