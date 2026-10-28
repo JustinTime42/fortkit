@@ -159,6 +159,11 @@ sha256 goes in every run record. Its instructions, in substance:
   rendered by code above it, so the prompt tells the model not to restate
   counts, lists of waiting beads or verdicts, and to write no numbers at all
   except bead ids and times quoted from the Mayor's messages.
+- **Attribute every action to whoever takes it.** The summary is about the
+  Mayor's work, written for the Overseer. A step the Mayor says it will take is
+  reported as the Mayor's ("the Mayor will rerun verify"), never turned into an
+  instruction to the Overseer. Only something the supplied facts or the
+  Mayor's messages say awaits the Overseer is addressed to him.
 
 Why (first live runs, 2026-10-28, recorded on `fortkit-t7vz`): asked to
 restate facts, the 7B model invented a count (54 against a supplied 78),
@@ -218,21 +223,40 @@ markers, and chunk notes are labelled as data in the combine step too.
   was given (`beadFacts` and `factsBlock`). Digits inside a supplied bead id
   are found there by construction, so no separate id exemption exists; digits
   in an id the facts do not contain (another fort's, unloaded) ARE flagged,
-  which is correct: the model was not given them. Each one not found is recorded in the run as
+  which is correct: the model was not given them. A number that appears in the
+  supplied highlights (the Mayor's own messages) is not unverified: the model
+  was given it. A list marker the model writes (a number followed by `.` or `)`
+  at the start of a line) is not a number claim and is skipped. Each one not found is recorded in the run as
   `unverifiedNumbers: [string]`. The run still succeeds; the UI marks them.
 
 ## 6. Window and change detection (bead `.4`)
 
-- **Window:** from the previous successful run's `windowEnd` for that fort to
-  now. First run for a fort: the last 12 hours, and the overlay says "first
-  summary: last 12 hours".
+- **Window: since the Overseer last marked that fort's summary read**
+  (Overseer decision, 2026-10-28). Window start = the fort's read mark; window
+  end = now. Every regeneration, hourly or on demand, covers the whole span
+  from the mark, so after a night away the summary covers the night.
+  - **The mark** is stored per fort as `read-mark.json` (`{ markedAt,
+    upTo }`) beside `latest.json`, written temp-then-rename, 0600.
+  - **`upTo` is the `windowEnd` of the summary the Overseer was looking at**,
+    never the click time: events after that summary was generated and before
+    the click must stay inside the next window.
+  - **No mark yet:** the last 12 hours, and the overlay says "no read mark:
+    last 12 hours".
+  - **Cap:** a window longer than 48 hours starts 48 hours before now, and the
+    run records and the overlay say "window capped at 48 hours". Chunking
+    (5.3) carries the size.
+  - Why: the first design ran each window from the previous summary, and the
+    hourly loop made every summary cover about an hour (measured 2026-10-28:
+    35 minutes), which defeats "an overview since I left".
 - **Fingerprint** of a fort: live Mayor `sessionId`, transcript size and mtime,
   the digest of the fort's latest export the Keep holds, and the size and mtime
   of each event file in the window. An event file's name is the WRITER'S LOCAL
   date and only a shard key (`schema/events.md`), so "in the window" means
   every file whose name date falls within one day either side of the window's
   UTC dates; never compare a filename date as a UTC day. Stored in the run record.
-- **Moved** = fingerprint differs from the last successful run's.
+- **Moved** = fingerprint differs from the last successful run's. The read
+  mark's `upTo` is part of the fingerprint, so marking read causes the next
+  pass to regenerate over the new, shorter window.
 
 ### 6.1 The hourly loop (Overseer decision: inside the Keep server)
 
@@ -293,6 +317,12 @@ Under the Keep's state home, beside the signature audit:
   the Keep's own origin, else 403: this endpoint costs only local compute, so it
   does not take the signing token, but a foreign page must not be able to fire
   it. It never touches the signing token or the signature audit.
+- `POST /api/summary/mark-read?fort=<key>` with JSON `{ upTo }` sets the
+  fort's read mark. `upTo` must equal the `windowEnd` of an existing
+  successful run for that fort (else 400), and a mark never moves backwards
+  (an earlier `upTo` than the current mark is 409). Same Host and Origin
+  guards as every POST. Returns 200 with the stored mark. `GET /api/summary`
+  adds `readMark: { markedAt, upTo } | null`.
 
 ## 9. UI (bead `.5`)
 
@@ -312,6 +342,9 @@ Under the Keep's state home, beside the signature audit:
   facts".
 - **Body:** the summary text. Every bead id in it that resolves to a known bead
   becomes a link that opens that bead's drawer (`openDrawer`).
+- **Mark read** button: posts the DISPLAYED summary's `windowEnd` as `upTo`.
+  After it succeeds the overlay says "Marked read up to <time>". Shown
+  disabled when there is no summary.
 - **Regenerate** button, disabled while a run is in progress. A failure shows
   "Last attempt failed at <time>: <reason>" above the previous summary.
 - **Toggle** "Show the Mayor's messages this was built from": loads
@@ -400,3 +433,9 @@ Under the Keep's state home, beside the signature audit:
 - 2026-10-28, after Warden review r2 of `.11`: the number check has no
   bead-id exemption, because a supplied id's digits are already in the
   supplied facts; the rule is stated as it behaves.
+- 2026-10-28, Overseer decision after the first runs under `.11` (bead
+  `.12`): the window runs from the fort's read mark, set by a Mark read button
+  to the displayed summary's window end, 12 hours with no mark, capped at 48;
+  the mark is in the fingerprint; numbers from the Mayor's own messages and
+  list markers are not unverified; actions are attributed to whoever takes
+  them.
