@@ -185,18 +185,23 @@ export function resolveBeadFacts(highlights, states, ownState = null) {
   // A bare suffix is meaningful only in the speaking fort's own state.  Do
   // not search every loaded fort: identical suffixes are common across forts.
   if (ownState?.fort?.prefix && ownState?.byId) {
+    const bareFacts = new Map();
     for (const bead of ownState.byId.values()) {
       const prefix = `${ownState.fort.prefix}-`;
       if (!String(bead.id).startsWith(prefix)) continue;
       const suffix = bead.id.slice(prefix.length);
       if (!/^[a-z0-9]{2,8}(?:\.\d+)*$/.test(suffix)) continue;
-      const exactToken = new RegExp(
-        `(?<![A-Za-z0-9.-])${escapeRegExp(suffix)}(?![A-Za-z0-9.-])`,
-      );
-      if (
-        !seen.has(bead.id) &&
-        highlights.some((highlight) => exactToken.test(String(highlight.text)))
-      ) {
+      bareFacts.set(suffix, bead);
+    }
+    for (const highlight of highlights) {
+      // A suffix token permits ordinary prose punctuation and hyphens after it.
+      // The optional child suffix is consumed as one token, so `hird0.1` can
+      // resolve only to its child and never to `hird0`.
+      for (const match of String(highlight.text).matchAll(
+        /(?<![A-Za-z0-9])[a-z0-9]{2,8}(?:\.\d+)*(?![A-Za-z0-9]|\.\d)/g,
+      )) {
+        const bead = bareFacts.get(match[0]);
+        if (!bead || seen.has(bead.id)) continue;
         seen.add(bead.id);
         facts.push({
           id: bead.id,
@@ -312,9 +317,8 @@ export function summaryFactsBlock(entry, counts) {
     if (verdict.verdict !== "ESCALATE" || !verdict.id || seen.has(verdict.id))
       continue;
     const fact = beadFact(verdict.id);
-    if (!fact) continue;
     seen.add(verdict.id);
-    escalations.push(fact);
+    escalations.push(fact ?? { id: verdict.id, title: null });
   }
   return {
     waitingOnOverseer: (counts.waitingOnOverseer ?? [])

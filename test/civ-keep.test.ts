@@ -657,13 +657,17 @@ describe("Mayor summary extraction", () => {
     ]);
   });
 
-  test("resolves an exact bare suffix only in the speaking fort", () => {
+  test("resolves exact bare suffixes with prose punctuation only in the speaking fort", () => {
     const halls = {
       fort: { key: "halls", prefix: "ForgeOs" },
       byId: new Map([
         [
           "ForgeOs-hird0",
           { id: "ForgeOs-hird0", title: "Forge work", status: "open" },
+        ],
+        [
+          "ForgeOs-hird0.1",
+          { id: "ForgeOs-hird0.1", title: "Child work", status: "open" },
         ],
       ]),
     };
@@ -675,7 +679,11 @@ describe("Mayor summary extraction", () => {
     };
     expect(
       resolveBeadFacts(
-        [{ text: "Review hird0, not hird01." }],
+        [
+          {
+            text: "Review hird0. (hird0) hird0: hird0, hird0-related, not hird01.",
+          },
+        ],
         [halls, other],
         halls,
       ),
@@ -690,7 +698,24 @@ describe("Mayor summary extraction", () => {
       },
     ]);
     expect(
-      resolveBeadFacts([{ text: "Review hird0." }], [other], other),
+      resolveBeadFacts([{ text: "Review hird0.1." }], [halls, other], halls),
+    ).toEqual([
+      {
+        id: "ForgeOs-hird0.1",
+        fort: "halls",
+        title: "Child work",
+        status: "open",
+        assignee: null,
+        labels: [],
+      },
+    ]);
+    const noSuffix = { fort: { key: "none", prefix: "none" }, byId: new Map() };
+    expect(
+      resolveBeadFacts(
+        [{ text: "Review hird0." }],
+        [other, noSuffix],
+        noSuffix,
+      ),
     ).toEqual([]);
   });
 
@@ -801,14 +826,18 @@ describe("Mayor summary extraction", () => {
         wardenVerdicts: [
           { id: "halls-x2", verdict: "ESCALATE" },
           { id: "halls-x2", verdict: "ESCALATE" },
+          { id: "missing-x3", verdict: "ESCALATE" },
           { id: "halls-x1", verdict: "APPROVE" },
         ],
         waitingOnOverseer: ["halls-x1"],
       }),
     ).toEqual({
       waitingOnOverseer: [{ id: "halls-x1", title: "Needs approval" }],
-      escalations: [{ id: "halls-x2", title: "Escalated review" }],
-      counts: { closed: 2, filed: 3, merged: 4, halts: 2, verdicts: 3 },
+      escalations: [
+        { id: "halls-x2", title: "Escalated review" },
+        { id: "missing-x3", title: null },
+      ],
+      counts: { closed: 2, filed: 3, merged: 4, halts: 2, verdicts: 4 },
     });
   });
 });
@@ -882,12 +911,20 @@ describe("Mayor summary local model", () => {
       messages: [{ role: "system" }, { role: "user" }],
     });
     const latest = join(stateHome, "civ-keep/summaries/halls/latest.json");
-    expect(JSON.parse(readFileSync(latest, "utf8")).summary).toBe(
-      record.summary,
-    );
+    const latestRecord = JSON.parse(readFileSync(latest, "utf8"));
+    expect(latestRecord.summary).toBe(record.summary);
+    expect(latestRecord.factsBlock).toEqual(input().factsBlock);
     expect(statSync(latest).mode & 0o777).toBe(0o600);
     const [run] = readdirSync(join(stateHome, "civ-keep/summaries/halls/runs"));
     if (!run) throw new Error("run record missing");
+    expect(
+      JSON.parse(
+        readFileSync(
+          join(stateHome, "civ-keep/summaries/halls/runs", run),
+          "utf8",
+        ),
+      ).factsBlock,
+    ).toEqual(input().factsBlock);
     expect(
       statSync(join(stateHome, "civ-keep/summaries/halls/runs", run)).mode &
         0o777,
@@ -962,7 +999,7 @@ describe("Mayor summary local model", () => {
     ).toBe("good summary");
   });
 
-  test("records model numbers absent from the supplied facts without failing", async () => {
+  test("records model numbers absent from the exact supplied model facts without failing", async () => {
     const record = await summariseMayor(input(), {
       stateHome: mkdtempSync(join(tmpdir(), "mayor-summary-numbers-")),
       fetch: async () =>
@@ -978,7 +1015,29 @@ describe("Mayor summary local model", () => {
     expect(record.status).toBe("success");
     expect(record.unverifiedNumbers).toEqual(["54"]);
     expect(
-      unverifiedNumbers("Bead halls-x1 at 10:30 on 2026-10-27", {}),
+      unverifiedNumbers("Bead halls-x1 at 10:30 on 2026-10-27", {
+        beadFacts: [{ id: "halls-x1" }],
+      }),
+    ).toEqual([]);
+    const supplied = {
+      beadFacts: [{ id: "halls-x1", title: "Round 11 work" }],
+      factsBlock: {
+        waitingOnOverseer: [],
+        escalations: [],
+        counts: { closed: 78, filed: 0, merged: 0, halts: 0, verdicts: 0 },
+      },
+    };
+    expect(
+      unverifiedNumbers("78 and title 11, for halls-x1.", supplied),
+    ).toEqual([]);
+    expect(
+      unverifiedNumbers("54 items; top-10 and items-54 remain.", supplied),
+    ).toEqual(["54", "10", "54"]);
+    expect(
+      unverifiedNumbers("The related bead is x1.", {
+        beadFacts: [{ id: "halls-x1", title: "Gated work" }],
+        factsBlock: { waitingOnOverseer: [], escalations: [], counts: {} },
+      }),
     ).toEqual([]);
   });
 
