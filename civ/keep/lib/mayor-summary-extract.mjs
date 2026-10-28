@@ -198,7 +198,7 @@ export function resolveBeadFacts(highlights, states, ownState = null) {
       // The optional child suffix is consumed as one token, so `hird0.1` can
       // resolve only to its child and never to `hird0`.
       for (const match of String(highlight.text).matchAll(
-        /(?<![A-Za-z0-9])[a-z0-9]{2,8}(?:\.\d+)*(?![A-Za-z0-9]|\.\d)/g,
+        /(?<![A-Za-z0-9.-])[a-z0-9]{2,8}(?:\.\d+)*(?![A-Za-z0-9]|\.\d)/g,
       )) {
         const bead = bareFacts.get(match[0]);
         if (!bead || seen.has(bead.id)) continue;

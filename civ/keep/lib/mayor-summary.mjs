@@ -212,24 +212,8 @@ export async function ask(fetchImpl, prompt, messages) {
 export function unverifiedNumbers(summary, facts) {
   const supplied = new Set(JSON.stringify(facts ?? {}).match(/\d+/g) ?? []);
   const protectedRanges = [];
-  const ids = [
-    ...(facts?.beadFacts ?? []).map((fact) => fact?.id),
-    ...(facts?.factsBlock?.waitingOnOverseer ?? []).map((fact) => fact?.id),
-    ...(facts?.factsBlock?.escalations ?? []).map((fact) => fact?.id),
-  ].filter((id) => typeof id === "string");
-  const protectedIds = new Set(ids);
-  for (const id of ids) {
-    const separator = id.indexOf("-");
-    if (separator !== -1) protectedIds.add(id.slice(separator + 1));
-  }
-  const identifierPattern = [...protectedIds]
-    .sort((left, right) => right.length - left.length)
-    .map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .join("|");
-  const protectedPattern = new RegExp(
-    `${identifierPattern ? `(?<![A-Za-z0-9])(?:${identifierPattern})(?![A-Za-z0-9])|` : ""}\\b\\d{4}-\\d{2}-\\d{2}(?:T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?Z?)?\\b|\\b\\d{1,2}:\\d{2}(?::\\d{2})?\\b`,
-    "g",
-  );
+  const protectedPattern =
+    /\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?Z?)?\b|\b\d{1,2}:\d{2}(?::\d{2})?\b/g;
   for (const match of summary.matchAll(protectedPattern))
     protectedRanges.push([match.index, (match.index ?? 0) + match[0].length]);
   const unverified = [];

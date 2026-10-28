@@ -657,67 +657,85 @@ describe("Mayor summary extraction", () => {
     ]);
   });
 
-  test("resolves exact bare suffixes with prose punctuation only in the speaking fort", () => {
-    const halls = {
-      fort: { key: "halls", prefix: "ForgeOs" },
-      byId: new Map([
-        [
-          "ForgeOs-hird0",
-          { id: "ForgeOs-hird0", title: "Forge work", status: "open" },
-        ],
-        [
-          "ForgeOs-hird0.1",
-          { id: "ForgeOs-hird0.1", title: "Child work", status: "open" },
-        ],
-      ]),
-    };
-    const other = {
-      fort: { key: "other", prefix: "other" },
-      byId: new Map([
-        ["other-hird0", { id: "other-hird0", title: "Other", status: "open" }],
-      ]),
-    };
-    expect(
-      resolveBeadFacts(
-        [
-          {
-            text: "Review hird0. (hird0) hird0: hird0, hird0-related, not hird01.",
-          },
-        ],
-        [halls, other],
-        halls,
-      ),
-    ).toEqual([
-      {
+  test.each(["hird0.", "(hird0)", "hird0:", "hird0,", "hird0-related"])(
+    "resolves exact bare suffix %s with prose punctuation only in the speaking fort",
+    (text) => {
+      const halls = {
+        fort: { key: "halls", prefix: "ForgeOs" },
+        byId: new Map([
+          [
+            "ForgeOs-hird0",
+            { id: "ForgeOs-hird0", title: "Forge work", status: "open" },
+          ],
+          [
+            "ForgeOs-hird0.1",
+            { id: "ForgeOs-hird0.1", title: "Child work", status: "open" },
+          ],
+        ]),
+      };
+      const other = {
+        fort: { key: "other", prefix: "other" },
+        byId: new Map([
+          [
+            "other-hird0",
+            { id: "other-hird0", title: "Other", status: "open" },
+          ],
+        ]),
+      };
+      const forgeWork = {
         id: "ForgeOs-hird0",
         fort: "halls",
         title: "Forge work",
         status: "open",
         assignee: null,
         labels: [],
-      },
-    ]);
-    expect(
-      resolveBeadFacts([{ text: "Review hird0.1." }], [halls, other], halls),
-    ).toEqual([
-      {
-        id: "ForgeOs-hird0.1",
-        fort: "halls",
-        title: "Child work",
-        status: "open",
-        assignee: null,
-        labels: [],
-      },
-    ]);
-    const noSuffix = { fort: { key: "none", prefix: "none" }, byId: new Map() };
-    expect(
-      resolveBeadFacts(
-        [{ text: "Review hird0." }],
-        [other, noSuffix],
-        noSuffix,
-      ),
-    ).toEqual([]);
-  });
+      };
+      expect(resolveBeadFacts([{ text }], [halls, other], halls)).toEqual([
+        forgeWork,
+      ]);
+      expect(
+        resolveBeadFacts([{ text: "Review hird0.1." }], [halls, other], halls),
+      ).toEqual([
+        {
+          id: "ForgeOs-hird0.1",
+          fort: "halls",
+          title: "Child work",
+          status: "open",
+          assignee: null,
+          labels: [],
+        },
+      ]);
+      const noSuffix = {
+        fort: { key: "none", prefix: "none" },
+        byId: new Map(),
+      };
+      expect(
+        resolveBeadFacts(
+          [{ text: "Review hird0." }],
+          [other, noSuffix],
+          noSuffix,
+        ),
+      ).toEqual([]);
+      expect(
+        resolveBeadFacts([{ text: "See other-hird0." }], [halls, other], halls),
+      ).toEqual([
+        {
+          id: "other-hird0",
+          fort: "other",
+          title: "Other",
+          status: "open",
+          assignee: null,
+          labels: [],
+        },
+      ]);
+      expect(
+        resolveBeadFacts([{ text: "See Zed-hird0." }], [halls, other], halls),
+      ).toEqual([]);
+      expect(
+        resolveBeadFacts([{ text: "Review hird01." }], [halls, other], halls),
+      ).toEqual([]);
+    },
+  );
 
   test("computes counts from the export, full event window, and existing waiting rule", () => {
     const root = mkdtempSync(join(tmpdir(), "mayor-counts-"));
