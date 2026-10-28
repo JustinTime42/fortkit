@@ -197,7 +197,10 @@ markers, and chunk notes are labelled as data in the combine step too.
   summary: last 12 hours".
 - **Fingerprint** of a fort: live Mayor `sessionId`, transcript size and mtime,
   the digest of the fort's latest export the Keep holds, and the size and mtime
-  of each event file in the window. Stored in the run record.
+  of each event file in the window. An event file's name is the WRITER'S LOCAL
+  date and only a shard key (`schema/events.md`), so "in the window" means
+  every file whose name date falls within one day either side of the window's
+  UTC dates; never compare a filename date as a UTC day. Stored in the run record.
 - **Moved** = fingerprint differs from the last successful run's.
 
 ### 6.1 The hourly loop (Overseer decision: inside the Keep server)
@@ -348,3 +351,6 @@ Under the Keep's state home, beside the signature audit:
   its completed chunks; call timeout, `num_predict`, combine progress guard;
   split markers inside the budget; closed data markers. Production scope is
   the `civilization.json` registry by source, not "not Greenlab".
+- 2026-10-27, after Warden review r2 of `.4`: event files in the fingerprint
+  are selected with one day of slack either side, because their names carry
+  the writer's local date, not a UTC day.
