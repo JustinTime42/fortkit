@@ -36,6 +36,8 @@ import {
   needsYou,
   stage,
 } from "./lib/graph.mjs";
+import { readLastFailure, readLatestSummary } from "./lib/mayor-summary.mjs";
+import { findLiveMayor } from "./lib/mayor-summary-extract.mjs";
 import {
   command,
   parseExport,
@@ -337,6 +339,60 @@ export function createCivKeep(options = {}) {
       ...result,
       generatedAt: new Date(now()).toISOString(),
     });
+  }
+
+  // Summary files are private evidence. The regular endpoint deliberately omits
+  // verbatim highlights; the source endpoint is an explicit, separate read.
+  function summaryFort(url) {
+    const key = url.searchParams.get("fort");
+    const productionRegistry = path.join(
+      env.HOME ?? "",
+      ".claude/civilization.json",
+    );
+    const fort = loadFortList().find(
+      (item) => item.key === key && item.registryPath === productionRegistry,
+    );
+    return fort ?? null;
+  }
+
+  function liveMayor(fort) {
+    const session = findLiveMayor(fort, {
+      fileSystem,
+      sessionsDirectory: path.join(env.HOME ?? "", ".claude/sessions"),
+    });
+    return session
+      ? { sessionId: session.sessionId, startedAt: session.startedAt }
+      : null;
+  }
+
+  function renderSummary(response, url) {
+    const fort = summaryFort(url);
+    if (!fort) return json(response, { error: "Unknown fort" }, 404);
+    const latest = readLatestSummary(stateHome, fort.key, { fileSystem });
+    const withoutHighlights = latest
+      ? Object.fromEntries(
+          Object.entries(latest).filter(([key]) => key !== "highlights"),
+        )
+      : null;
+    const failure = readLastFailure(stateHome, fort.key, { fileSystem });
+    return json(response, {
+      fort: fort.key,
+      liveMayor: liveMayor(fort),
+      latest: withoutHighlights,
+      running: false,
+      lastFailure: failure
+        ? { at: failure.generatedAt ?? null, reason: failure.reason }
+        : null,
+    });
+  }
+
+  function renderSummarySources(response, url) {
+    const fort = summaryFort(url);
+    if (!fort) return json(response, { error: "Unknown fort" }, 404);
+    return json(
+      response,
+      readLatestSummary(stateHome, fort.key, { fileSystem })?.highlights ?? [],
+    );
   }
 
   function renderApiBead(response, encodedId) {
@@ -874,6 +930,10 @@ export function createCivKeep(options = {}) {
       return renderPage(response, "graph.html");
     if (p === "/api/forts")
       return json(response, [...states.values()].map(fortSummary));
+    if (p === "/api/summary" && request.method === "GET")
+      return renderSummary(response, url);
+    if (p === "/api/summary/sources" && request.method === "GET")
+      return renderSummarySources(response, url);
     if (p === "/api/graph") return renderGraph(response, url);
     if (p.startsWith("/api/bead/"))
       return renderApiBead(response, p.slice("/api/bead/".length));
