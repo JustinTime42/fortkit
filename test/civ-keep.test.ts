@@ -17,8 +17,13 @@ import { signCommand } from "../civ/keep/lib/readers.mjs";
 // @ts-expect-error JavaScript server module exercised through its HTTP seam.
 import { createCivKeep } from "../civ/keep/server.mjs";
 
-const { extractHighlights, findLiveMayor, resolveBeadFacts, windowCounts } =
-  mayorSummary;
+const {
+  extractHighlights,
+  findLiveMayor,
+  mayorTranscriptPath,
+  resolveBeadFacts,
+  windowCounts,
+} = mayorSummary;
 
 type Call = { file: string; args: string[]; cwd: string };
 type Bead = {
@@ -296,7 +301,7 @@ describe("Mayor summary extraction", () => {
       join(sessions, "12.json"),
       JSON.stringify({
         pid: 12,
-        startedAt: "2026-10-27T10:00:00Z",
+        startedAt: 1793095200000,
         sessionId: "mayor",
         cwd: "/srv/halls",
       }),
@@ -319,10 +324,19 @@ describe("Mayor summary extraction", () => {
         cwd: "/srv/halls",
       }),
     );
+    writeFileSync(
+      join(sessions, "15.json"),
+      JSON.stringify({
+        pid: 15,
+        startedAt: 1793098800000,
+        sessionId: "newer-mayor",
+        cwd: "/srv/halls",
+      }),
+    );
     writeFileSync(join(sessions, "12.key"), "must not be opened");
     const reads: string[] = [];
     const fileSystem = {
-      readdirSync: () => ["12.json", "12.key", "13.json", "14.json"],
+      readdirSync: () => ["12.json", "12.key", "13.json", "14.json", "15.json"],
       readFileSync: (file: string) => {
         reads.push(file);
         if (file.endsWith("12.key")) throw new Error("secret read");
@@ -332,25 +346,49 @@ describe("Mayor summary extraction", () => {
           return readFileSync(join(sessions, "13.json"), "utf8");
         if (file.endsWith("14.json"))
           return readFileSync(join(sessions, "14.json"), "utf8");
+        if (file.endsWith("15.json"))
+          return readFileSync(join(sessions, "15.json"), "utf8");
         if (file.endsWith("12/environ"))
           return "PATH=/x\0FORT_MASKED=mayor\0TOKEN=nope";
         if (file.endsWith("13/environ")) return "FORT_MASKED=regent";
+        if (file.endsWith("14/environ")) return "FORT_MASKED=mayor";
+        if (file.endsWith("15/environ")) return "NOISE=x\0FORT_MASKED=mayor";
         throw new Error("unexpected read");
       },
       existsSync: (file: string) =>
-        file.endsWith("/12") || file.endsWith("/13"),
+        file.endsWith("/12") || file.endsWith("/13") || file.endsWith("/15"),
       readlinkSync: (file: string) =>
-        file.endsWith("/12/cwd") || file.endsWith("/13/cwd")
+        file.endsWith("/12/cwd") ||
+        file.endsWith("/13/cwd") ||
+        file.endsWith("/15/cwd")
           ? "/srv/halls"
           : "",
     };
-    expect(
-      findLiveMayor(
-        { repo: "/srv/halls" },
-        { fileSystem, sessionsDirectory: sessions, procRoot: "/proc" },
-      )?.sessionId,
-    ).toBe("mayor");
+    const mayor = findLiveMayor(
+      { repo: "/srv/halls" },
+      { fileSystem, sessionsDirectory: sessions, procRoot: "/proc" },
+    );
+    expect(mayor?.sessionId).toBe("newer-mayor");
+    expect(mayor?.candidateCount).toBe(2);
     expect(reads.some((file) => file.endsWith(".key"))).toBe(false);
+  });
+
+  test("derives the Claude transcript path and reports a missing transcript", async () => {
+    const transcript = mayorTranscriptPath(
+      { cwd: "/srv/halls", sessionId: "mayor" },
+      { home: "/home/tester" },
+    );
+    expect(transcript).toBe(
+      "/home/tester/.claude/projects/-srv-halls/mayor.jsonl",
+    );
+    if (!transcript) throw new Error("transcript path was not derived");
+    await expect(
+      extractHighlights(transcript, "2026-10-27T10:00:00Z"),
+    ).resolves.toEqual({
+      highlights: [],
+      malformedLines: 0,
+      reason: "no live Mayor transcript",
+    });
   });
 
   test("keeps only main-chain assistant text after the mark and computes facts", async () => {
@@ -372,7 +410,7 @@ describe("Mayor summary extraction", () => {
               { type: "thinking", thinking: "no" },
               {
                 type: "text",
-                text: "Ship halls-x1 and proof-a1, inspect halls-missing.",
+                text: "Ship halls-x1 and proof-a1, inspect halls-missing and fortkit-worktrees.",
               },
               { type: "tool_use", name: "bd" },
             ],
@@ -391,6 +429,14 @@ describe("Mayor summary extraction", () => {
           message: { content: [{ type: "text", text: "system" }] },
         }),
         JSON.stringify({
+          type: "attachment",
+          timestamp: "2026-10-27T10:03:30Z",
+        }),
+        JSON.stringify({
+          type: "file-history-snapshot",
+          timestamp: "2026-10-27T10:03:40Z",
+        }),
+        JSON.stringify({
           type: "assistant",
           isSidechain: true,
           timestamp: "2026-10-27T10:04:00Z",
@@ -407,7 +453,7 @@ describe("Mayor summary extraction", () => {
       highlights: [
         {
           timestamp: "2026-10-27T10:01:00Z",
-          text: "Ship halls-x1 and proof-a1, inspect halls-missing.",
+          text: "Ship halls-x1 and proof-a1, inspect halls-missing and fortkit-worktrees.",
         },
       ],
       malformedLines: 1,
@@ -469,7 +515,8 @@ describe("Mayor summary extraction", () => {
         JSON.stringify({
           ts: "2026-10-27T10:02:00Z",
           category: "halt",
-          reason: "disk full",
+          target: "halls-x2",
+          detail: "disk full",
         }),
         JSON.stringify({
           ts: "2026-10-27T10:03:00Z",
@@ -503,22 +550,33 @@ describe("Mayor summary extraction", () => {
           closed_at: "2026-10-27T10:02:00Z",
         },
       ],
+      ["halls-x3", { id: "halls-x3", status: "open", labels: [] }],
     ]);
+    const entry = {
+      fort: { repo: root, waitingLabels: ["gate-1"] },
+      byId: beads,
+      events: {
+        events: [
+          {
+            ts: "2026-10-27T10:03:30Z",
+            category: "review.verdict",
+            target: "halls-x3",
+            payload: { verdict: "ESCALATE" },
+          },
+        ],
+      },
+      fleet: { workers: [] },
+    };
     expect(
-      windowCounts(
-        { repo: root, waitingLabels: ["gate-1"] },
-        beads,
-        "2026-10-27T10:00:00Z",
-        "2026-10-27T10:05:00Z",
-      ),
+      windowCounts(entry, "2026-10-27T10:00:00Z", "2026-10-27T10:05:00Z"),
     ).toEqual({
       closed: 1,
       filed: 1,
       merged: 1,
-      halts: [{ reason: "disk full" }],
+      halts: [{ target: "halls-x2", reason: "disk full" }],
       wardenVerdicts: [{ id: "halls-x1", verdict: "APPROVE" }],
       gateDecisions: [{ category: "gate.approved", id: "halls-x1" }],
-      waitingOnOverseer: ["halls-x1"],
+      waitingOnOverseer: ["halls-x1", "halls-x3"],
     });
   });
 });

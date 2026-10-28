@@ -4,15 +4,28 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { graphContext, needsYou } from "./graph.mjs";
-import { idPattern } from "./readers.mjs";
+import { escapeRegExp, idPattern } from "./readers.mjs";
 
 function samePath(left, right) {
   return path.resolve(left) === path.resolve(right);
 }
 
 function dateValue(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
   const result = Date.parse(value ?? "");
   return Number.isNaN(result) ? null : result;
+}
+
+export function mayorTranscriptPath(session, options = {}) {
+  const home = options.home;
+  if (!home) throw new Error("home is required");
+  if (!session?.sessionId || typeof session.cwd !== "string") return null;
+  return path.join(
+    home,
+    ".claude/projects",
+    session.cwd.replaceAll("/", "-"),
+    `${session.sessionId}.jsonl`,
+  );
 }
 
 // `sessions` contains adjacent secret key files. Listing only numeric json names
@@ -65,7 +78,8 @@ export function findLiveMayor(fort, options = {}) {
     (left, right) =>
       (dateValue(right.startedAt) ?? 0) - (dateValue(left.startedAt) ?? 0),
   );
-  return candidates[0] ?? null;
+  const selected = candidates[0];
+  return selected ? { ...selected, candidateCount: candidates.length } : null;
 }
 
 export async function extractHighlights(
@@ -79,29 +93,46 @@ export async function extractHighlights(
   if (start === null) throw new Error("windowStart must be a valid timestamp");
   const highlights = [];
   let malformedLines = 0;
-  const input = fileSystem.createReadStream(transcriptPath, {
-    encoding: "utf8",
-  });
+  let input;
+  try {
+    input = fileSystem.createReadStream(transcriptPath, { encoding: "utf8" });
+  } catch (error) {
+    if (error?.code === "ENOENT")
+      return { highlights, malformedLines, reason: "no live Mayor transcript" };
+    throw error;
+  }
   const lines = readline.createInterface({ input, crlfDelay: Infinity });
-  for await (const line of lines) {
-    let record;
-    try {
-      record = JSON.parse(line);
-    } catch {
-      malformedLines += 1;
-      continue;
+  try {
+    for await (const line of lines) {
+      let record;
+      try {
+        record = JSON.parse(line);
+      } catch {
+        malformedLines += 1;
+        continue;
+      }
+      if (record.type !== "assistant" || record.isSidechain === true) continue;
+      const timestamp = dateValue(record.timestamp);
+      if (timestamp === null || timestamp <= start) continue;
+      const blocks = record.message?.content;
+      if (!Array.isArray(blocks)) continue;
+      for (const block of blocks) {
+        if (block?.type === "text" && typeof block.text === "string")
+          highlights.push({ timestamp: record.timestamp, text: block.text });
+      }
     }
-    if (record.type !== "assistant" || record.isSidechain === true) continue;
-    const timestamp = dateValue(record.timestamp);
-    if (timestamp === null || timestamp <= start) continue;
-    const blocks = record.message?.content;
-    if (!Array.isArray(blocks)) continue;
-    for (const block of blocks) {
-      if (block?.type === "text" && typeof block.text === "string")
-        highlights.push({ timestamp: record.timestamp, text: block.text });
-    }
+  } catch (error) {
+    if (error?.code === "ENOENT")
+      return { highlights, malformedLines, reason: "no live Mayor transcript" };
+    throw error;
   }
   return { highlights, malformedLines };
+}
+
+function validUnknownId(id, prefix) {
+  return new RegExp(`^${escapeRegExp(prefix)}-[a-z0-9]{2,8}(?:\\.\\d+)*$`).test(
+    id,
+  );
 }
 
 export function resolveBeadFacts(highlights, states) {
@@ -109,7 +140,7 @@ export function resolveBeadFacts(highlights, states) {
   const prefixes = entries.map((entry) => entry.fort.prefix).filter(Boolean);
   const candidate = prefixes.length
     ? new RegExp(
-        `\\b(?:${prefixes.map((prefix) => String(prefix).replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")).join("|")})-[\\w.-]+\\b`,
+        `\\b(?:${prefixes.map((prefix) => escapeRegExp(String(prefix))).join("|")})-[\\w.-]+\\b`,
         "g",
       )
     : null;
@@ -126,7 +157,11 @@ export function resolveBeadFacts(highlights, states) {
       );
       const bead = entry?.byId.get(id);
       if (!bead) {
-        facts.push({ id, status: "unknown" });
+        const prefix = entries.find((item) =>
+          id.startsWith(`${item.fort.prefix}-`),
+        )?.fort.prefix;
+        if (prefix && validUnknownId(id, prefix))
+          facts.push({ id, status: "unknown" });
         continue;
       }
       facts.push({
@@ -148,14 +183,20 @@ function inWindow(value, start, end) {
 }
 
 export function windowCounts(
-  fort,
-  beads,
-  windowStart,
-  windowEnd,
+  fortOrEntry,
+  beadsOrStart,
+  startOrEnd,
+  endOrOptions,
   options = {},
 ) {
-  const fileSystem = options.fileSystem ?? fs;
-  const now = options.now ?? (() => Date.now());
+  const entry = fortOrEntry?.byId ? fortOrEntry : null;
+  const fort = entry?.fort ?? fortOrEntry;
+  const beads = entry?.byId ?? beadsOrStart;
+  const windowStart = entry ? beadsOrStart : startOrEnd;
+  const windowEnd = entry ? startOrEnd : endOrOptions;
+  const callOptions = entry ? (endOrOptions ?? {}) : options;
+  const fileSystem = callOptions.fileSystem ?? fs;
+  const now = callOptions.now ?? (() => Date.now());
   const start =
     typeof windowStart === "number" ? windowStart : dateValue(windowStart);
   const end = typeof windowEnd === "number" ? windowEnd : dateValue(windowEnd);
@@ -175,8 +216,8 @@ export function windowCounts(
   };
   const context = graphContext(
     values,
-    [],
-    [],
+    entry?.events?.events ?? [],
+    entry?.fleet?.workers ?? [],
     now(),
     fort.waitingLabels,
     fort.whoseMove,
@@ -209,7 +250,10 @@ export function windowCounts(
       if (!inWindow(event.ts, start, end)) continue;
       if (event.category === "merge") result.merged += 1;
       if (event.category === "halt")
-        result.halts.push({ reason: event.reason ?? event.detail ?? "" });
+        result.halts.push({
+          target: event.target ?? null,
+          reason: event.reason ?? event.detail ?? "",
+        });
       if (event.category === "review.verdict")
         result.wardenVerdicts.push({
           id: event.target ?? null,

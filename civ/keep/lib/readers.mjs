@@ -49,7 +49,7 @@ export const signEvents = Object.freeze({
   decide: "decision.recorded",
 });
 
-function escapeRegExp(value) {
+export function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
