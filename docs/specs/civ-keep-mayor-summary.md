@@ -93,7 +93,32 @@ tool results), `system`, `attachment`, `api-request*`, `file-history-snapshot`,
 guessed at. Malformed lines are counted and skipped; the count goes in the run
 record.
 
-Each highlight is `{ timestamp, text }`, in transcript order.
+Each highlight is `{ timestamp, speaker, text }`, in transcript order, where
+`speaker` is `"Mayor"` for the records above.
+
+### 4.1a The Overseer's own messages (Overseer decision, 2026-10-29)
+
+The Overseer's replies are part of the conversation, interleaved with the
+Mayor's by timestamp, so the summariser can see which questions he answered
+and when. A record is an Overseer message only if ALL hold, measured on the
+Proofdelve transcript 2026-10-29 (11 such records in a 12-hour window):
+
+- `type === "user"`, `isSidechain !== true`, `isMeta !== true`;
+- `origin.kind === "human"` and `promptSource === "typed"`;
+- its timestamp is inside the window.
+
+Excluded, by that rule and never by guessing: tool results (374 in the same
+window), the Mayor's loop prompt re-injected by the harness (`promptSource:
+"system"`, 36), task notifications (`origin.kind: "task-notification"`, 11),
+image notes and harness commands such as `/compact`. From a kept record keep
+its text (a string, or its `text` blocks); an image block becomes the literal
+`[image attached]`. Each is `{ timestamp, speaker: "Overseer", text }`.
+
+Why: the first comparison against the Mayor's own overview (2026-10-29,
+recorded on `fortkit-t7vz`) found the summary presenting four of the
+Overseer's decisions as still open. His answers were user records, which the
+Mayor-only extraction dropped; the Mayor's acknowledgement ("I've recorded
+your four answers") did not restate them.
 
 Scale, measured on Proofdelve 2026-10-27, 07:43-18:49Z: 18.7 MB transcript, 403
 tool calls, 151 text messages, 79,486 characters (about 20k tokens). Read the
@@ -190,9 +215,38 @@ supplied ESCALATE verdicts.
 - A failed run is recorded as failed, with its reason, and the previous
   summary stays displayed. Nothing partial is ever shown as a summary.
 
-### 5.3 Chunking
+### 5.3 Two passes: recent in full, earlier as background (Overseer decision, 2026-10-29)
 
-If the highlights do not fit one request:
+The conversation (Mayor and Overseer messages together, section 4.1a) is
+split at a **recent boundary**:
+
+- **Recent** = the newest messages covering at most the last 2 hours of the
+  window, and at most what fits one request alongside the facts block and the
+  background notes. If the last 2 hours do not fit, the boundary moves later
+  until they do; whatever is cut becomes background. If the whole window is
+  recent, there is no background pass.
+- **Background pass**: the earlier messages are summarised into notes (chunked
+  as below if they do not fit one request). The instruction says these notes
+  describe EARLIER state that later messages may have changed.
+- **Final pass**: one request with the facts block, the background notes
+  (labelled earlier and possibly superseded), and the recent messages in full,
+  in time order. The instruction: describe the state at the END of the window;
+  a later message supersedes an earlier one; a question the Overseer answered
+  is resolved, and is reported as decided (with his answer if it is in the
+  messages), never as waiting on him.
+- Every message carries its timestamp and speaker in the data, so order is
+  explicit, not inferred from position.
+
+The run record stores `recentBoundary` (the timestamp the split fell at),
+`recentMessages`, `backgroundMessages`, and the background notes.
+
+Why: a single pass over 12 hours let early, repeated questions outweigh their
+later resolution (on 2026-10-29 the two E12a questions appeared in 9 Mayor
+messages and their resolution in 2).
+
+### 5.3a Chunking
+
+If the background messages do not fit one request:
 
 1. Split the highlights, in order, on message boundaries, into chunks each
    under the per-request budget. A single message larger than a chunk is split
@@ -220,7 +274,8 @@ markers, and chunk notes are labelled as data in the combine step too.
   by bead, with the title from the Keep's state.
 - **Number check.** After the summary returns, every digit run in it that is
   not part of a time or a date is looked for in the serialised facts the model
-  was given (`beadFacts` and `factsBlock`). Digits inside a supplied bead id
+  was given (`beadFacts` and `factsBlock`) and in the text of the supplied
+  messages, the Overseer's as well as the Mayor's. Digits inside a supplied bead id
   are found there by construction, so no separate id exemption exists; digits
   in an id the facts do not contain (another fort's, unloaded) ARE flagged,
   which is correct: the model was not given them. A number that appears in the
@@ -228,6 +283,19 @@ markers, and chunk notes are labelled as data in the combine step too.
   was given it. A list marker the model writes (a number followed by `.` or `)`
   at the start of a line) is not a number claim and is skipped. Each one not found is recorded in the run as
   `unverifiedNumbers: [string]`. The run still succeeds; the UI marks them.
+
+### 5.5 Replay: a fixed past window, for comparison only
+
+`node civ/keep/scripts/replay-summary.mjs --fort <key> --session <sessionId>
+--start <ISO> --end <ISO> --out <file>` runs the same extraction and
+summariser over that exact window of that session's transcript and writes the
+whole run record (inputs, notes, summary, timings) to `--out`. It never writes
+under the Keep's state directory, never touches a read mark or `latest.json`,
+and needs no running Keep. Bead state comes from the fort's own
+`.beads/issues.jsonl` export, read-only, and the record says so with that
+file's mtime, because it is a projection and may differ from the state at the
+window's end. It exists so a summary can be compared with the Mayor's own
+overview on the SAME window, before and after a change.
 
 ## 6. Window and change detection (bead `.4`)
 
@@ -244,7 +312,7 @@ markers, and chunk notes are labelled as data in the combine step too.
     last 12 hours".
   - **Cap:** a window longer than 48 hours starts 48 hours before now, and the
     run records and the overlay say "window capped at 48 hours". Chunking
-    (5.3) carries the size.
+    (5.3a) carries the size.
   - Why: the first design ran each window from the previous summary, and the
     hourly loop made every summary cover about an hour (measured 2026-10-28:
     35 minutes), which defeats "an overview since I left".
@@ -439,3 +507,9 @@ Under the Keep's state home, beside the signature audit:
   the mark is in the fingerprint; numbers from the Mayor's own messages and
   list markers are not unverified; actions are attributed to whoever takes
   them.
+- 2026-10-29, Overseer decision after the first comparison with the Mayor's
+  overview (bead `.16`): the Overseer's typed messages join the conversation
+  with timestamps (4.1a); summaries are built in two passes, recent messages
+  in full and earlier ones as background notes, with later messages
+  superseding earlier ones (5.3); the number check also reads the messages;
+  a replay tool reruns a fixed past window for comparison (5.5).
