@@ -200,9 +200,14 @@ export function createSummaryOverlay({
     find("#summary-source-list").innerHTML = previous.sourceHtml;
   };
   const restoreFocus = (previous) => {
-    const restored =
-      previous?.focusId && documentImpl.getElementById?.(previous.focusId);
-    (restored ?? find("#summary-close") ?? find("#summary-overlay"))?.focus();
+    const restored = previous?.focusId
+      ? documentImpl.getElementById(previous.focusId)
+      : null;
+    const target =
+      restored && !restored.disabled
+        ? restored
+        : (find("#summary-close") ?? find("#summary-overlay"));
+    if (typeof target?.focus === "function") target.focus();
   };
   const wire = () => {
     const overlay = find("#summary-overlay"),
@@ -302,8 +307,7 @@ export function createSummaryOverlay({
     open = true;
     generation += 1;
     try {
-      await refresh(false, generation);
-      find("#summary-close").focus();
+      if (await refresh(false, generation)) find("#summary-close")?.focus();
     } catch (error) {
       trigger.title = error.message;
     }

@@ -50,6 +50,7 @@ class FakeNode {
     for (const handler of this.listeners.get(type) ?? []) await handler(event);
   }
   focus() {
+    if (this.disabled) return;
     this.doc.activeElement = this;
   }
   remove() {
@@ -65,9 +66,10 @@ class FakeNode {
 
 class FakeDocument {
   nodes = new Map<string, FakeNode>();
-  activeElement: FakeNode | null = null;
+  readonly body = new FakeNode("", this);
+  activeElement: FakeNode = this.body;
   listeners = new Map<string, ((event: FakeEvent) => unknown)[]>();
-  body = this;
+  lastHtml = "";
   querySelector(selector: string) {
     if (selector === "#") throw new SyntaxError("Invalid selector");
     return (
@@ -102,13 +104,18 @@ class FakeDocument {
   }
   clear() {
     this.nodes.clear();
+    this.activeElement = this.body;
   }
   render(html: string) {
+    this.lastHtml = html;
     this.clear();
-    for (const id of [...html.matchAll(/id="([^"]+)"/g)].flatMap((match) =>
-      match[1] ? [match[1]] : [],
-    ))
-      this.nodes.set(id, new FakeNode(id, this));
+    for (const match of html.matchAll(/<[^>]+id="([^"]+)"[^>]*>/g)) {
+      const id = match[1];
+      if (!id) continue;
+      const node = new FakeNode(id, this);
+      node.disabled = /\sdisabled(?:\s|>)/.test(match[0]);
+      this.nodes.set(id, node);
+    }
     const backdrop = new FakeNode("backdrop", this);
     backdrop.dataset.summaryClose = "";
     this.nodes.set("backdrop", backdrop);
@@ -267,7 +274,7 @@ describe("Mayor summary overlay renderers", () => {
     expect(doc.activeElement).toBe(trigger);
   });
 
-  test("survives regeneration polls without a focused id and remains closable", async () => {
+  test("survives regeneration polls from body focus and remains closable", async () => {
     const doc = new FakeDocument();
     const trigger = new FakeNode("mayor-summary", doc);
     doc.nodes.set("mayor-summary", trigger);
@@ -294,15 +301,24 @@ describe("Mayor summary overlay renderers", () => {
     overlay.setFort("halls", "Halls");
     await trigger.fire("click");
     await doc.querySelector("#summary-regenerate")?.fire("click");
-    doc.activeElement = null;
+    doc.activeElement = doc.body;
     await timers.shift()?.();
-    doc.activeElement = null;
+    expect(doc.querySelector("#summary-result")?.textContent).toBe("");
+    expect(doc.activeElement.id).toBe("summary-close");
+    doc.activeElement = doc.body;
     await timers.shift()?.();
+    expect(gets).toBe(3);
+    expect(doc.lastHtml).toContain("The &lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(doc.lastHtml).not.toContain("running</span>");
+    expect(doc.querySelector("#summary-result")?.textContent).toBe("");
     expect(doc.querySelector(".summary-backdrop")).toBeTruthy();
-    await doc.fire("keydown", { key: "Escape" });
+    await doc.querySelector("#summary-close")?.fire("click");
     expect(doc.querySelector(".summary-backdrop")).toBeUndefined();
     expect(doc.activeElement).toBe(trigger);
     expect(timers).toHaveLength(0);
+    await trigger.fire("click");
+    await doc.fire("keydown", { key: "Escape" });
+    expect(doc.querySelector(".summary-backdrop")).toBeUndefined();
   });
 
   test("shows a failed poll in the overlay and does not remount after close", async () => {
