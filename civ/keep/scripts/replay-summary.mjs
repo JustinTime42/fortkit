@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadForts, prefixOf } from "../lib/forts.mjs";
-import { summariseMayor, unverifiedNumbers } from "../lib/mayor-summary.mjs";
+import { summariseMayor } from "../lib/mayor-summary.mjs";
 import {
   extractHighlights,
   mayorTranscriptPath,
@@ -115,16 +115,9 @@ export async function replaySummary(argv, options = {}) {
       fileSystem,
       fetch: options.fetch ?? globalThis.fetch,
       now: options.now,
-      stateHome: "unused-in-replay",
       persist: false,
     },
   );
-  // Recheck against the complete supplied conversation, including Overseer text.
-  record.unverifiedNumbers = unverifiedNumbers(record.summary, {
-    beadFacts: record.beadFacts,
-    factsBlock: record.factsBlock,
-    highlights: record.highlights,
-  });
   fileSystem.writeFileSync(args.out, `${JSON.stringify(record, null, 2)}\n`, {
     mode: 0o600,
     flag: "wx",

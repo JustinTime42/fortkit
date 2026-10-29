@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 export const MAYOR_SUMMARY_MODEL = "greenlab-qwen2.5:7b-instruct-32k";
 export const MAYOR_SUMMARY_CONTEXT = 32768;
 export const MAYOR_SUMMARY_RESERVE = 2048;
+const BACKGROUND_NOTES_RESERVE_CHARS = MAYOR_SUMMARY_RESERVE * 3;
 const here = path.dirname(fileURLToPath(import.meta.url));
 const promptPath = path.join(here, "../prompts/mayor-summary.md");
 
@@ -174,7 +175,7 @@ function notesRequest(input, group) {
   return `${factsBlock(input)}\n\nCombine these background notes into fewer compact notes for a later final pass. They describe EARLIER state that later messages may have changed.\n${jsonData("BACKGROUND NOTES", group)}`;
 }
 function finalRequest(input, backgroundNotes, recentMessages) {
-  return `${factsBlock(input)}\n\nWrite the final summary. Describe the state at the END of the window. A later message supersedes an earlier one. A question the Overseer answered is resolved and must be reported as decided, with his answer when supplied, never as waiting on him.\n${jsonData("BACKGROUND NOTES (EARLIER AND POSSIBLY SUPERSEDED)", backgroundNotes)}\n\n${jsonData("RECENT CONVERSATION (FULL, IN TIME ORDER)", recentMessages)}`;
+  return `${factsBlock(input)}\n\nWrite the final summary. Describe the state at the END of the window. A later message supersedes an earlier one. A proposal, recommendation, or question is NOT done or decided unless a later message says it was done or answered. A question the Overseer answered is resolved and must be reported as decided, with his actual answer when supplied, never as waiting on him. Attribute each statement to its actual speaker (Mayor, Overseer, Warden, or Forge) as the messages name them.\n${jsonData("BACKGROUND NOTES (EARLIER AND POSSIBLY SUPERSEDED)", backgroundNotes)}\n\n${jsonData("RECENT CONVERSATION (FULL, IN TIME ORDER)", recentMessages)}`;
 }
 function chunksFor(messages, input, prompt) {
   if (!fitsRequest(prompt, backgroundRequest(input, [])))
@@ -260,7 +261,14 @@ export async function ask(fetchImpl, prompt, messages) {
     notes: text,
   };
 }
-async function summariseBackground(messages, input, prompt, fetchImpl, record) {
+async function summariseBackground(
+  messages,
+  input,
+  prompt,
+  fetchImpl,
+  record,
+  attempt,
+) {
   if (!messages.length) return [];
   const chunks = chunksFor(messages, input, prompt);
   const notes = [];
@@ -271,7 +279,7 @@ async function summariseBackground(messages, input, prompt, fetchImpl, record) {
       backgroundRequest(input, chunk),
     );
     notes.push(response.notes);
-    record.chunks.push(response);
+    record.chunks.push({ ...response, phase: "background", attempt });
   }
   let current = notes;
   while (current.length > 1) {
@@ -281,7 +289,7 @@ async function summariseBackground(messages, input, prompt, fetchImpl, record) {
     const next = [];
     for (const group of groups) {
       const response = await ask(fetchImpl, prompt, notesRequest(input, group));
-      record.chunks.push(response);
+      record.chunks.push({ ...response, phase: "background-combine", attempt });
       next.push(response.notes);
     }
     current = next;
@@ -352,7 +360,8 @@ export async function summariseMayor(input, options = {}) {
     beadExport: input.beadExport ?? null,
   };
   try {
-    directory = summaryDirectory(options.stateHome, input.fort.key);
+    if (options.persist !== false)
+      directory = summaryDirectory(options.stateHome, input.fort.key);
     const promptAndDigest = promptAndHash(fileSystem);
     prompt = promptAndDigest.prompt;
     record.promptSha256 = promptAndDigest.sha256;
@@ -364,26 +373,55 @@ export async function summariseMayor(input, options = {}) {
     if (split < 0) split = input.highlights.length;
     let backgroundMessages = input.highlights.slice(0, split);
     let recentMessages = input.highlights.slice(split);
+    const reservedNotes = ["x".repeat(BACKGROUND_NOTES_RESERVE_CHARS)];
+    while (
+      recentMessages.length &&
+      !fitsRequest(prompt, finalRequest(input, reservedNotes, recentMessages))
+    ) {
+      backgroundMessages.push(recentMessages[0]);
+      recentMessages = recentMessages.slice(1);
+    }
+    let attempt = 1;
     let backgroundNotes = await summariseBackground(
       backgroundMessages,
       input,
       prompt,
       fetchImpl,
       record,
+      attempt,
     );
     while (
       recentMessages.length &&
       !fitsRequest(prompt, finalRequest(input, backgroundNotes, recentMessages))
     ) {
-      backgroundMessages = [...backgroundMessages, recentMessages[0]];
-      recentMessages = recentMessages.slice(1);
+      const firstChunk = record.chunks.length;
+      let move = 1;
+      while (
+        move < recentMessages.length &&
+        !fitsRequest(
+          prompt,
+          finalRequest(input, backgroundNotes, recentMessages.slice(move)),
+        )
+      )
+        move += 1;
+      for (const chunk of record.chunks)
+        if (chunk.attempt === attempt) chunk.discarded = true;
+      backgroundMessages = [
+        ...backgroundMessages,
+        ...recentMessages.slice(0, move),
+      ];
+      recentMessages = recentMessages.slice(move);
+      attempt += 1;
       backgroundNotes = await summariseBackground(
         backgroundMessages,
         input,
         prompt,
         fetchImpl,
         record,
+        attempt,
       );
+      if (record.chunks.length === firstChunk)
+        throw new Error("background retry produced no run-record chunks");
     }
     const request = finalRequest(input, backgroundNotes, recentMessages);
     if (!fitsRequest(prompt, request))
@@ -393,7 +431,7 @@ export async function summariseMayor(input, options = {}) {
     record.backgroundNotes = backgroundNotes;
     record.recentBoundary = recentMessages[0]?.timestamp ?? input.windowEnd;
     const final = await ask(fetchImpl, prompt, request);
-    record.chunks.push(final);
+    record.chunks.push({ ...final, phase: "final", attempt });
     const summary = final.notes;
     record.summary = summary;
     record.unverifiedNumbers = unverifiedNumbers(summary, {

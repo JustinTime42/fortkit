@@ -17,5 +17,8 @@ EARLIER state that later messages may have changed. Do not write the final
 summary.
 
 For the final pass, describe the state at the END of the window. A later message
-supersedes an earlier one. A question the Overseer answered is resolved and must
-be reported as decided, with his answer when supplied, never as waiting on him.
+supersedes an earlier one. A proposal, recommendation, or question is NOT done
+or decided unless a later message says it was done or answered. A question the
+Overseer answered is resolved and must be reported as decided, with his actual
+answer when supplied, never as waiting on him. Attribute each statement to its
+actual speaker (Mayor, Overseer, Warden, or Forge) as the messages name them.

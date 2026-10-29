@@ -129,14 +129,29 @@ export async function extractHighlights(
         (end !== null && timestamp > end)
       )
         continue;
-      const blocks = record.message?.content;
-      if (!Array.isArray(blocks)) continue;
+      const content = record.message?.content;
+      if (typeof content === "string") {
+        highlights.push({
+          timestamp: record.timestamp,
+          speaker: mayor ? "Mayor" : "Overseer",
+          text: content,
+        });
+        continue;
+      }
+      if (!Array.isArray(content)) continue;
+      const blocks = content;
       for (const block of blocks) {
-        if (block?.type === "text" && typeof block.text === "string")
+        const text =
+          block?.type === "text" && typeof block.text === "string"
+            ? block.text
+            : block?.type === "image"
+              ? "[image attached]"
+              : null;
+        if (text !== null)
           highlights.push({
             timestamp: record.timestamp,
             speaker: mayor ? "Mayor" : "Overseer",
-            text: block.text,
+            text,
           });
       }
     }

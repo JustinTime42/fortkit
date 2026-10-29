@@ -577,23 +577,29 @@ describe("Mayor summary extraction", () => {
           timestamp: "2026-10-27T10:02:00Z",
           origin: { kind: "human" },
           promptSource: "typed",
-          message: {
-            content: [{ type: "text", text: "Approved halls-x1." }],
-          },
+          message: { content: "Approved halls-x1 with 86 workers." },
+        }),
+        JSON.stringify({
+          type: "user",
+          timestamp: "2026-10-27T10:02:05Z",
+          origin: { kind: "human" },
+          promptSource: "typed",
+          message: { content: [{ type: "image", source: "redacted" }] },
         }),
         JSON.stringify({
           type: "user",
           timestamp: "2026-10-27T10:02:10Z",
           origin: { kind: "task-notification", taskId: "task-1" },
-          promptSource: "typed",
-          message: { content: [{ type: "text", text: "task notification" }] },
+          promptSource: "system",
+          message: { content: "task notification" },
         }),
         JSON.stringify({
           type: "user",
           timestamp: "2026-10-27T10:02:20Z",
           origin: { kind: "human" },
           promptSource: "system",
-          message: { content: [{ type: "text", text: "loop prompt" }] },
+          isMeta: true,
+          message: { content: "loop prompt" },
         }),
         JSON.stringify({
           type: "user",
@@ -607,7 +613,7 @@ describe("Mayor summary extraction", () => {
         JSON.stringify({
           type: "user",
           timestamp: "2026-10-27T10:02:40Z",
-          message: { content: [{ type: "text", text: "/compact" }] },
+          message: { content: "/compact" },
         }),
         JSON.stringify({
           type: "system",
@@ -645,7 +651,12 @@ describe("Mayor summary extraction", () => {
         {
           timestamp: "2026-10-27T10:02:00Z",
           speaker: "Overseer",
-          text: "Approved halls-x1.",
+          text: "Approved halls-x1 with 86 workers.",
+        },
+        {
+          timestamp: "2026-10-27T10:02:05Z",
+          speaker: "Overseer",
+          text: "[image attached]",
         },
       ],
       malformedLines: 1,
@@ -1056,12 +1067,112 @@ describe("Mayor summary local model", () => {
     expect(finalRequest).toContain("RECENT ANSWER VERBATIM");
     expect(finalRequest).not.toContain("EARLY QUESTION");
     expect(finalRequest).toContain("A later message supersedes an earlier one");
+    expect(finalRequest).toContain(
+      "A proposal, recommendation, or question is NOT done or decided",
+    );
+    expect(finalRequest).toContain("his actual answer");
+    expect(finalRequest).toContain(
+      "Attribute each statement to its actual speaker",
+    );
     expect(record).toMatchObject({
       recentBoundary: "2026-10-27T11:00:00Z",
       backgroundMessages: [twelveHours.highlights[0]],
       recentMessages: [twelveHours.highlights[1]],
       backgroundNotes: ["EARLIER-NOTE"],
     });
+  });
+
+  test("moves the recent boundary later before the background pass when the two-hour tail is too large", async () => {
+    const calls: { messages: { content: string }[] }[] = [];
+    const largeTail = {
+      ...input(),
+      windowStart: "2026-10-27T08:00:00Z",
+      windowEnd: "2026-10-27T12:00:00Z",
+      highlights: [
+        {
+          timestamp: "2026-10-27T10:15:00Z",
+          speaker: "Mayor",
+          text: `MOVE-TO-BACKGROUND ${"a".repeat(60_000)}`,
+        },
+        {
+          timestamp: "2026-10-27T11:15:00Z",
+          speaker: "Overseer",
+          text: `KEEP-RECENT ${"b".repeat(40_000)}`,
+        },
+      ],
+    };
+    const record = await summariseMayor(largeTail, {
+      persist: false,
+      fetch: async (_url: string, init: RequestInit) => {
+        const request = JSON.parse(String(init.body));
+        calls.push(request);
+        return new Response(
+          JSON.stringify({
+            prompt_eval_count: 10,
+            message: {
+              content: calls.length === 1 ? "COMPACT NOTE" : "final",
+            },
+          }),
+        );
+      },
+    });
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.messages[1]?.content).toContain("MOVE-TO-BACKGROUND");
+    expect(calls[1]?.messages[1]?.content).not.toContain("MOVE-TO-BACKGROUND");
+    expect(calls[1]?.messages[1]?.content).toContain("KEEP-RECENT");
+    expect(record.backgroundMessages).toEqual([largeTail.highlights[0]]);
+    expect(record.recentMessages).toEqual([largeTail.highlights[1]]);
+    expect(record.recentBoundary).toBe("2026-10-27T11:15:00Z");
+  });
+
+  test("marks an intermediate background pass discarded when actual notes force a later boundary", async () => {
+    let calls = 0;
+    const record = await summariseMayor(
+      {
+        ...input(),
+        windowStart: "2026-10-27T00:00:00Z",
+        windowEnd: "2026-10-27T12:00:00Z",
+        highlights: [
+          {
+            timestamp: "2026-10-27T01:00:00Z",
+            speaker: "Mayor",
+            text: "EARLIER",
+          },
+          {
+            timestamp: "2026-10-27T11:00:00Z",
+            speaker: "Overseer",
+            text: `LARGE RECENT ${"r".repeat(70_000)}`,
+          },
+        ],
+      },
+      {
+        persist: false,
+        fetch: async () => {
+          calls += 1;
+          return new Response(
+            JSON.stringify({
+              prompt_eval_count: 10,
+              message: {
+                content: calls === 1 ? "n".repeat(30_000) : "compact note",
+              },
+            }),
+          );
+        },
+      },
+    );
+    expect(calls).toBe(3);
+    expect(record.recentMessages).toEqual([]);
+    expect(record.backgroundMessages).toHaveLength(2);
+    expect(record.chunks[0]).toMatchObject({
+      phase: "background",
+      attempt: 1,
+      discarded: true,
+    });
+    expect(record.chunks[1]).toMatchObject({
+      phase: "background",
+      attempt: 2,
+    });
+    expect(record.chunks[1]).not.toHaveProperty("discarded");
   });
 
   test("replay reads the fixed transcript and bead projection and writes only --out", async () => {
@@ -1255,6 +1366,11 @@ describe("Mayor summary local model", () => {
     expect(
       unverifiedNumbers("Mayor quoted 250 and 551957.\n4. Next item", {
         highlights: [{ text: "The Mayor said 250, then 551957." }],
+      }),
+    ).toEqual([]);
+    expect(
+      unverifiedNumbers("The Overseer supplied 86 workers.", {
+        highlights: [{ speaker: "Overseer", text: "There are 86 workers." }],
       }),
     ).toEqual([]);
     expect(
