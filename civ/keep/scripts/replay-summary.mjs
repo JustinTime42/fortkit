@@ -5,7 +5,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadForts, prefixOf } from "../lib/forts.mjs";
-import { summariseMayor } from "../lib/mayor-summary.mjs";
+import {
+  MAYOR_SUMMARY_PASS_INSTRUCTIONS,
+  summariseMayor,
+} from "../lib/mayor-summary.mjs";
 import {
   extractHighlights,
   mayorTranscriptPath,
@@ -20,9 +23,14 @@ function argumentsOf(argv) {
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index];
     const value = argv[index + 1];
-    if (!/^--(?:fort|session|start|end|out)$/.test(flag ?? "") || !value)
+    if (
+      !/^--(?:fort|session|start|end|out|model|temperature|prompt|pass-instructions)$/.test(
+        flag ?? "",
+      ) ||
+      !value
+    )
       throw new Error(
-        "usage: replay-summary.mjs --fort KEY --session ID --start ISO --end ISO --out FILE",
+        "usage: replay-summary.mjs --fort KEY --session ID --start ISO --end ISO --out FILE [--model NAME] [--temperature N] [--prompt FILE] [--pass-instructions FILE]",
       );
     result[flag.slice(2)] = value;
   }
@@ -34,13 +42,34 @@ function argumentsOf(argv) {
     throw new Error("--end must be an ISO timestamp");
   if (Date.parse(result.start) >= Date.parse(result.end))
     throw new Error("--start must precede --end");
+  if (
+    result.temperature !== undefined &&
+    !Number.isFinite(Number(result.temperature))
+  )
+    throw new Error("--temperature must be a number");
   return result;
+}
+
+function passInstructions(fileSystem, file) {
+  if (!file) return undefined;
+  const parsed = JSON.parse(fileSystem.readFileSync(file, "utf8"));
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object")
+    throw new Error("--pass-instructions must contain a JSON object");
+  const allowed = new Set(Object.keys(MAYOR_SUMMARY_PASS_INSTRUCTIONS));
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!allowed.has(key))
+      throw new Error(`unknown pass-instructions key: ${key}`);
+    if (typeof value !== "string")
+      throw new Error(`pass-instructions ${key} must be a string`);
+  }
+  return parsed;
 }
 
 export async function replaySummary(argv, options = {}) {
   const args = argumentsOf(argv);
   const fileSystem = options.fileSystem ?? fs;
   const env = options.env ?? process.env;
+  const instructions = passInstructions(fileSystem, args["pass-instructions"]);
   const fort = (options.loadForts ?? loadForts)({ env, fileSystem }).find(
     (candidate) => candidate.key === args.fort,
   );
@@ -116,6 +145,11 @@ export async function replaySummary(argv, options = {}) {
       fetch: options.fetch ?? globalThis.fetch,
       now: options.now,
       persist: false,
+      model: args.model,
+      temperature:
+        args.temperature === undefined ? undefined : Number(args.temperature),
+      promptPath: args.prompt,
+      passInstructions: instructions,
     },
   );
   fileSystem.writeFileSync(args.out, `${JSON.stringify(record, null, 2)}\n`, {
