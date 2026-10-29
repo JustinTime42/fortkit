@@ -145,9 +145,18 @@ describe("Mayor summary overlay renderers", () => {
     expect(html).not.toContain("<script>alert");
     expect(
       renderSummarySources([
-        { timestamp: windowEnd, text: "<img onerror=boom>" },
+        {
+          timestamp: windowEnd,
+          speaker: "Overseer",
+          text: "<img onerror=boom>",
+        },
       ]),
     ).toContain("&lt;img onerror=boom&gt;");
+    expect(
+      renderSummarySources([
+        { timestamp: windowEnd, speaker: "Overseer", text: "answer" },
+      ]),
+    ).toContain("<strong>Overseer</strong>");
   });
 
   test("marks only unverified numbers", () => {

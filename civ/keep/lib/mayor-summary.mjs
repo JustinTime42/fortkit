@@ -167,31 +167,31 @@ function fitsRequest(prompt, message) {
     estimate(prompt + message) + MAYOR_SUMMARY_RESERVE <= MAYOR_SUMMARY_CONTEXT
   );
 }
-function messageRequest(input, chunk, multiple) {
-  return `${factsBlock(input)}\n\n${multiple ? "Write notes, not a final summary.\n" : ""}${jsonData("MAYOR MESSAGES", chunk)}`;
+function backgroundRequest(input, chunk) {
+  return `${factsBlock(input)}\n\nWrite compact background notes for a later final pass. These messages are EARLIER state that later messages may have changed.\n${jsonData("EARLIER CONVERSATION", chunk)}`;
 }
-function notesRequest(input, group, final) {
-  return `${factsBlock(input)}\n\n${final ? "Write the final summary" : "Write compact notes for a later combine"}.\n${jsonData("CHUNK NOTES", group)}`;
+function notesRequest(input, group) {
+  return `${factsBlock(input)}\n\nCombine these background notes into fewer compact notes for a later final pass. They describe EARLIER state that later messages may have changed.\n${jsonData("BACKGROUND NOTES", group)}`;
 }
-function chunksFor(input, prompt) {
-  if (!fitsRequest(prompt, messageRequest(input, "", true)))
+function finalRequest(input, backgroundNotes, recentMessages) {
+  return `${factsBlock(input)}\n\nWrite the final summary. Describe the state at the END of the window. A later message supersedes an earlier one. A question the Overseer answered is resolved and must be reported as decided, with his answer when supplied, never as waiting on him.\n${jsonData("BACKGROUND NOTES (EARLIER AND POSSIBLY SUPERSEDED)", backgroundNotes)}\n\n${jsonData("RECENT CONVERSATION (FULL, IN TIME ORDER)", recentMessages)}`;
+}
+function chunksFor(messages, input, prompt) {
+  if (!fitsRequest(prompt, backgroundRequest(input, [])))
     throw new Error("facts exceed model context");
   const splitMarker = "\n[message split]";
-  const messages = input.highlights.flatMap((item) => {
-    const text = `[${item.timestamp}]\n${item.text}`;
+  const pieces = messages.flatMap((item) => {
+    const text = JSON.stringify(item);
     return splitText(text, (part) =>
-      fitsRequest(prompt, messageRequest(input, `${part}${splitMarker}`, true)),
+      fitsRequest(prompt, backgroundRequest(input, `${part}${splitMarker}`)),
     );
   });
   const chunks = [];
   let current = "";
-  for (const item of messages) {
+  for (const item of pieces) {
     const itemText = `${item.text}${item.split ? splitMarker : ""}`;
     const candidate = `${current ? `${current}\n\n` : ""}${itemText}`;
-    if (
-      current &&
-      !fitsRequest(prompt, messageRequest(input, candidate, true))
-    ) {
+    if (current && !fitsRequest(prompt, backgroundRequest(input, candidate))) {
       chunks.push(current);
       current = "";
     }
@@ -201,21 +201,18 @@ function chunksFor(input, prompt) {
   return chunks;
 }
 export function packNotes(notes, input, prompt) {
-  if (!fitsRequest(prompt, notesRequest(input, "", false)))
+  if (!fitsRequest(prompt, notesRequest(input, "")))
     throw new Error("facts exceed model context");
   const pieces = notes.flatMap((note, index) =>
     splitText(JSON.stringify({ chunk: index + 1, notes: note }), (part) =>
-      fitsRequest(prompt, notesRequest(input, part, false)),
+      fitsRequest(prompt, notesRequest(input, part)),
     ),
   );
   const groups = [];
   let current = "";
   for (const piece of pieces) {
     const candidate = `${current ? `${current}\n\n` : ""}${piece.text}`;
-    if (
-      current &&
-      !fitsRequest(prompt, notesRequest(input, candidate, false))
-    ) {
+    if (current && !fitsRequest(prompt, notesRequest(input, candidate))) {
       groups.push(current);
       current = "";
     }
@@ -262,6 +259,34 @@ export async function ask(fetchImpl, prompt, messages) {
     promptEvalCount: body.prompt_eval_count,
     notes: text,
   };
+}
+async function summariseBackground(messages, input, prompt, fetchImpl, record) {
+  if (!messages.length) return [];
+  const chunks = chunksFor(messages, input, prompt);
+  const notes = [];
+  for (const chunk of chunks) {
+    const response = await ask(
+      fetchImpl,
+      prompt,
+      backgroundRequest(input, chunk),
+    );
+    notes.push(response.notes);
+    record.chunks.push(response);
+  }
+  let current = notes;
+  while (current.length > 1) {
+    const groups = packNotes(current, input, prompt);
+    if (groups.length >= current.length)
+      throw new Error("combine round did not reduce note count");
+    const next = [];
+    for (const group of groups) {
+      const response = await ask(fetchImpl, prompt, notesRequest(input, group));
+      record.chunks.push(response);
+      next.push(response.notes);
+    }
+    current = next;
+  }
+  return current;
 }
 export function unverifiedNumbers(summary, facts) {
   const { highlights, ...otherFacts } = facts ?? {};
@@ -317,9 +342,14 @@ export async function summariseMayor(input, options = {}) {
     beadFacts: input.beadFacts,
     counts: input.counts,
     factsBlock: input.factsBlock,
+    recentBoundary: null,
+    recentMessages: [],
+    backgroundMessages: [],
+    backgroundNotes: [],
     chunks: [],
     malformedLines: input.malformedLines ?? 0,
     keepRefreshedAt: input.keepRefreshedAt ?? null,
+    beadExport: input.beadExport ?? null,
   };
   try {
     directory = summaryDirectory(options.stateHome, input.fort.key);
@@ -327,36 +357,44 @@ export async function summariseMayor(input, options = {}) {
     prompt = promptAndDigest.prompt;
     record.promptSha256 = promptAndDigest.sha256;
     if (typeof fetchImpl !== "function") throw new Error("fetch is required");
-    const chunks = chunksFor(input, prompt);
-    const notes = [];
-    for (const chunk of chunks) {
-      const note = await ask(
-        fetchImpl,
+    const twoHoursAgo = Date.parse(input.windowEnd) - 2 * 60 * 60 * 1000;
+    let split = input.highlights.findIndex(
+      (message) => Date.parse(message.timestamp) >= twoHoursAgo,
+    );
+    if (split < 0) split = input.highlights.length;
+    let backgroundMessages = input.highlights.slice(0, split);
+    let recentMessages = input.highlights.slice(split);
+    let backgroundNotes = await summariseBackground(
+      backgroundMessages,
+      input,
+      prompt,
+      fetchImpl,
+      record,
+    );
+    while (
+      recentMessages.length &&
+      !fitsRequest(prompt, finalRequest(input, backgroundNotes, recentMessages))
+    ) {
+      backgroundMessages = [...backgroundMessages, recentMessages[0]];
+      recentMessages = recentMessages.slice(1);
+      backgroundNotes = await summariseBackground(
+        backgroundMessages,
+        input,
         prompt,
-        messageRequest(input, chunk, chunks.length > 1),
+        fetchImpl,
+        record,
       );
-      notes.push(note);
-      record.chunks.push(note);
     }
-    let currentNotes = notes.map((note) => note.notes);
-    while (currentNotes.length > 1) {
-      const groups = packNotes(currentNotes, input, prompt);
-      if (groups.length >= currentNotes.length)
-        throw new Error("combine round did not reduce note count");
-      const next = [];
-      for (const group of groups) {
-        const final = groups.length === 1;
-        const response = await ask(
-          fetchImpl,
-          prompt,
-          notesRequest(input, group, final),
-        );
-        record.chunks.push(response);
-        next.push(response.notes);
-      }
-      currentNotes = next;
-    }
-    const summary = currentNotes[0];
+    const request = finalRequest(input, backgroundNotes, recentMessages);
+    if (!fitsRequest(prompt, request))
+      throw new Error("facts and background notes exceed model context");
+    record.backgroundMessages = backgroundMessages;
+    record.recentMessages = recentMessages;
+    record.backgroundNotes = backgroundNotes;
+    record.recentBoundary = recentMessages[0]?.timestamp ?? input.windowEnd;
+    const final = await ask(fetchImpl, prompt, request);
+    record.chunks.push(final);
+    const summary = final.notes;
     record.summary = summary;
     record.unverifiedNumbers = unverifiedNumbers(summary, {
       beadFacts: input.beadFacts,
@@ -365,22 +403,24 @@ export async function summariseMayor(input, options = {}) {
     });
     record.durationMs = now() - started;
     const successRecord = { ...record, status: "success" };
-    writePrivate(
-      fileSystem,
-      path.join(directory, "latest.json"),
-      successRecord,
-    );
-    writePrivate(
-      fileSystem,
-      path.join(directory, "runs", `${at}.json`),
-      successRecord,
-    );
+    if (options.persist !== false) {
+      writePrivate(
+        fileSystem,
+        path.join(directory, "latest.json"),
+        successRecord,
+      );
+      writePrivate(
+        fileSystem,
+        path.join(directory, "runs", `${at}.json`),
+        successRecord,
+      );
+    }
     record.status = "success";
     return record;
   } catch (error) {
     record.reason = String(error?.message ?? error);
     record.durationMs = now() - started;
-    if (directory) {
+    if (directory && options.persist !== false) {
       try {
         writePrivate(
           fileSystem,

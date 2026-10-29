@@ -86,7 +86,7 @@ export function renderSummarySources(sources = []) {
     sources
       .map(
         (source) =>
-          `<article><time>${escapeHtml(date(source.timestamp))}</time><p>${escapeHtml(source.text)}</p></article>`,
+          `<article><time>${escapeHtml(date(source.timestamp))}</time><strong>${escapeHtml(source.speaker ?? "Mayor")}</strong><p>${escapeHtml(source.text)}</p></article>`,
       )
       .join("") || "<p>None.</p>"
   );
@@ -128,7 +128,7 @@ export function renderSummaryOverlay(data, { fortName, knownIds = [] } = {}) {
         latest.beadFacts?.map((fact) => fact.id),
       )}</p></section>`
     : '<p class="summary-empty">No summary yet.</p>';
-  return `<div class="summary-backdrop" data-summary-close><section id="summary-overlay" class="summary-overlay" role="dialog" aria-modal="true" aria-labelledby="summary-title" tabindex="-1"><header><div><h2 id="summary-title">Mayor summary</h2>${labels.length ? `<p class="summary-provenance">${labels.join(" · ")}</p>` : ""}</div>${button("summary-close", "Close", 'aria-label="Close Mayor summary"')}</header>${failure}${live}${content}<div class="summary-actions">${button("summary-regenerate", "Regenerate", data.running ? "disabled" : "")}${button("summary-mark-read", "Mark read", latest ? "" : "disabled")}</div><p id="summary-result" aria-live="polite"></p><details id="summary-sources"><summary>Show the Mayor's messages this was built from</summary><div id="summary-source-list"></div></details></section></div>`;
+  return `<div class="summary-backdrop" data-summary-close><section id="summary-overlay" class="summary-overlay" role="dialog" aria-modal="true" aria-labelledby="summary-title" tabindex="-1"><header><div><h2 id="summary-title">Mayor summary</h2>${labels.length ? `<p class="summary-provenance">${labels.join(" · ")}</p>` : ""}</div>${button("summary-close", "Close", 'aria-label="Close Mayor summary"')}</header>${failure}${live}${content}<div class="summary-actions">${button("summary-regenerate", "Regenerate", data.running ? "disabled" : "")}${button("summary-mark-read", "Mark read", latest ? "" : "disabled")}</div><p id="summary-result" aria-live="polite"></p><details id="summary-sources"><summary>Show the source messages this was built from</summary><div id="summary-source-list"></div></details></section></div>`;
 }
 
 export async function markDisplayedRead(fort, windowEnd, fetchImpl = fetch) {

@@ -42,6 +42,26 @@ requires one of their HTTP origins. Other authorities are refused before any
 read or write, preventing DNS rebinding from exposing the verbatim Mayor
 transcript text served by the summary sources endpoint.
 
+Summary input interleaves the Mayor's main-chain text with typed human
+Overseer messages. The newest two hours are supplied verbatim to the final
+model pass; earlier messages are reduced to explicitly historical background
+notes first. Run records retain the boundary, both message sets, and the notes.
+The source-message disclosure labels each message with its speaker.
+
+To compare the summariser against a fixed historical Mayor window without a
+running Keep:
+
+```bash
+node civ/keep/scripts/replay-summary.mjs \
+  --fort fortkit --session SESSION_ID \
+  --start 2026-10-29T08:00:00Z --end 2026-10-29T20:00:00Z \
+  --out /tmp/fortkit-summary-replay.json
+```
+
+Replay reads the fort's transcript, events, and `.beads/issues.jsonl` in place,
+records the export mtime, and writes only the requested output file. It does not
+read or update the Keep's summary state.
+
 ## What "needs you" means, per fort (`lib/forts.mjs`)
 
 - Proofdelve, plot, Scionhall, Farlantern, Kithmason: the `human` label, or a

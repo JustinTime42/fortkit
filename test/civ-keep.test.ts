@@ -25,6 +25,8 @@ import * as mayorSummaryModel from "../civ/keep/lib/mayor-summary.mjs";
 import * as mayorSummary from "../civ/keep/lib/mayor-summary-extract.mjs";
 // @ts-expect-error JavaScript library module.
 import { signCommand } from "../civ/keep/lib/readers.mjs";
+// @ts-expect-error JavaScript replay module exercised through its injectable seam.
+import { replaySummary } from "../civ/keep/scripts/replay-summary.mjs";
 // @ts-expect-error JavaScript server module exercised through its HTTP seam.
 import { createCivKeep, eventFileNamesForWindow } from "../civ/keep/server.mjs";
 
@@ -545,7 +547,7 @@ describe("Mayor summary extraction", () => {
     ).rejects.toThrow("windowStart must be a valid timestamp");
   });
 
-  test("keeps only main-chain assistant text after the mark and computes facts", async () => {
+  test("interleaves Mayor and typed Overseer text and excludes synthetic user records", async () => {
     const root = mkdtempSync(join(tmpdir(), "mayor-transcript-"));
     const transcript = join(root, "mayor.jsonl");
     writeFileSync(
@@ -573,9 +575,39 @@ describe("Mayor summary extraction", () => {
         JSON.stringify({
           type: "user",
           timestamp: "2026-10-27T10:02:00Z",
+          origin: { kind: "human" },
+          promptSource: "typed",
           message: {
-            content: [{ type: "text", text: "tool result halls-secret" }],
+            content: [{ type: "text", text: "Approved halls-x1." }],
           },
+        }),
+        JSON.stringify({
+          type: "user",
+          timestamp: "2026-10-27T10:02:10Z",
+          origin: { kind: "task-notification", taskId: "task-1" },
+          promptSource: "typed",
+          message: { content: [{ type: "text", text: "task notification" }] },
+        }),
+        JSON.stringify({
+          type: "user",
+          timestamp: "2026-10-27T10:02:20Z",
+          origin: { kind: "human" },
+          promptSource: "system",
+          message: { content: [{ type: "text", text: "loop prompt" }] },
+        }),
+        JSON.stringify({
+          type: "user",
+          timestamp: "2026-10-27T10:02:30Z",
+          origin: { kind: "human" },
+          promptSource: "typed",
+          message: {
+            content: [{ type: "tool_result", content: "tool result" }],
+          },
+        }),
+        JSON.stringify({
+          type: "user",
+          timestamp: "2026-10-27T10:02:40Z",
+          message: { content: [{ type: "text", text: "/compact" }] },
         }),
         JSON.stringify({
           type: "system",
@@ -607,7 +639,13 @@ describe("Mayor summary extraction", () => {
       highlights: [
         {
           timestamp: "2026-10-27T10:01:00Z",
+          speaker: "Mayor",
           text: "Ship halls-x1 and proof-a1, inspect halls-missing and halls-worktrees.",
+        },
+        {
+          timestamp: "2026-10-27T10:02:00Z",
+          speaker: "Overseer",
+          text: "Approved halls-x1.",
         },
       ],
       malformedLines: 1,
@@ -871,7 +909,9 @@ describe("Mayor summary local model", () => {
       windowEnd: "2026-10-27T11:00:00Z",
       firstRun: true,
       fingerprint: "fingerprint",
-      highlights: [{ timestamp: "2026-10-27T10:01:00Z", text }],
+      highlights: [
+        { timestamp: "2026-10-27T10:01:00Z", speaker: "Mayor", text },
+      ],
       beadFacts: [{ id: "halls-x1", title: "Gated work", status: "open" }],
       counts: { closed: 1, filed: 1 },
       factsBlock: {
@@ -954,6 +994,160 @@ describe("Mayor summary local model", () => {
     expect(
       statSync(join(stateHome, "civ-keep/summaries/halls")).mode & 0o777,
     ).toBe(0o700);
+  });
+
+  test("uses one final pass when the whole window is under two hours", async () => {
+    const calls: { messages: { content: string }[] }[] = [];
+    const record = await summariseMayor(input(), {
+      stateHome: mkdtempSync(join(tmpdir(), "mayor-summary-recent-")),
+      fetch: async (_url: string, init: RequestInit) => {
+        calls.push(JSON.parse(String(init.body)));
+        return new Response(
+          JSON.stringify({
+            prompt_eval_count: 10,
+            message: { content: "final" },
+          }),
+        );
+      },
+    });
+    expect(calls).toHaveLength(1);
+    expect(record.backgroundMessages).toEqual([]);
+    expect(record.recentMessages).toEqual(input().highlights);
+    expect(record.recentBoundary).toBe("2026-10-27T10:01:00Z");
+  });
+
+  test("summarises earlier messages then sends only notes plus recent messages to the final pass", async () => {
+    const calls: { messages: { content: string }[] }[] = [];
+    const twelveHours = {
+      ...input(),
+      windowStart: "2026-10-27T00:00:00Z",
+      windowEnd: "2026-10-27T12:00:00Z",
+      highlights: [
+        {
+          timestamp: "2026-10-27T01:00:00Z",
+          speaker: "Mayor",
+          text: "EARLY QUESTION",
+        },
+        {
+          timestamp: "2026-10-27T11:00:00Z",
+          speaker: "Overseer",
+          text: "RECENT ANSWER VERBATIM",
+        },
+      ],
+    };
+    const record = await summariseMayor(twelveHours, {
+      stateHome: mkdtempSync(join(tmpdir(), "mayor-summary-two-pass-")),
+      fetch: async (_url: string, init: RequestInit) => {
+        const request = JSON.parse(String(init.body));
+        calls.push(request);
+        return new Response(
+          JSON.stringify({
+            prompt_eval_count: 10,
+            message: {
+              content: calls.length === 1 ? "EARLIER-NOTE" : "final summary",
+            },
+          }),
+        );
+      },
+    });
+    expect(calls).toHaveLength(2);
+    const finalRequest = calls[1]?.messages[1]?.content ?? "";
+    expect(finalRequest).toContain("EARLIER-NOTE");
+    expect(finalRequest).toContain("RECENT ANSWER VERBATIM");
+    expect(finalRequest).not.toContain("EARLY QUESTION");
+    expect(finalRequest).toContain("A later message supersedes an earlier one");
+    expect(record).toMatchObject({
+      recentBoundary: "2026-10-27T11:00:00Z",
+      backgroundMessages: [twelveHours.highlights[0]],
+      recentMessages: [twelveHours.highlights[1]],
+      backgroundNotes: ["EARLIER-NOTE"],
+    });
+  });
+
+  test("replay reads the fixed transcript and bead projection and writes only --out", async () => {
+    const root = mkdtempSync(join(tmpdir(), "mayor-summary-replay-"));
+    const home = join(root, "home");
+    const repo = join(root, "fort");
+    const out = join(root, "replay.json");
+    const transcriptDirectory = join(
+      home,
+      ".claude/projects",
+      repo.replace(/[^A-Za-z0-9]/g, "-"),
+    );
+    mkdirSync(join(repo, ".beads"), { recursive: true });
+    mkdirSync(transcriptDirectory, { recursive: true });
+    writeFileSync(
+      join(repo, ".beads/issues.jsonl"),
+      `${JSON.stringify({
+        id: "halls-x1",
+        title: "Gated work",
+        status: "open",
+        labels: ["gate-1"],
+        created_at: "2026-10-27T09:00:00Z",
+      })}\n`,
+    );
+    writeFileSync(
+      join(transcriptDirectory, "past-session.jsonl"),
+      `${JSON.stringify({
+        type: "user",
+        timestamp: "2026-10-27T10:30:00Z",
+        origin: { kind: "human" },
+        promptSource: "typed",
+        message: { content: [{ type: "text", text: "Approved halls-x1" }] },
+      })}\n`,
+    );
+    const before = readdirSync(root, { recursive: true }).map(String).sort();
+    const record = await replaySummary(
+      [
+        "--fort",
+        "halls",
+        "--session",
+        "past-session",
+        "--start",
+        "2026-10-27T10:00:00Z",
+        "--end",
+        "2026-10-27T11:00:00Z",
+        "--out",
+        out,
+      ],
+      {
+        env: { HOME: home },
+        loadForts: () => [
+          {
+            key: "halls",
+            name: "Halls",
+            project: "halls",
+            civilization: "Justin",
+            registryPath: join(home, ".claude/civilization.json"),
+            repo,
+            waitingLabels: ["gate-1"],
+            whoseMove: null,
+            mode: "plain",
+            fleetState: null,
+          },
+        ],
+        fetch: async () =>
+          new Response(
+            JSON.stringify({
+              prompt_eval_count: 10,
+              message: { content: "The decision is resolved." },
+            }),
+          ),
+      },
+    );
+    const after = readdirSync(root, { recursive: true }).map(String).sort();
+    expect(after.filter((name) => !before.includes(name))).toEqual([
+      "replay.json",
+    ]);
+    expect(record.beadExport).toMatchObject({
+      path: join(repo, ".beads/issues.jsonl"),
+      readOnly: true,
+    });
+    expect(record.beadExport.mtime).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(record.highlights[0]).toMatchObject({
+      speaker: "Overseer",
+      text: "Approved halls-x1",
+    });
   });
 
   test("accounts for JSON escaping while chunking realistic Mayor text", async () => {
