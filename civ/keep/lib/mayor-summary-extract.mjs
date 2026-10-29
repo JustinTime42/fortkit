@@ -114,7 +114,14 @@ export async function extractHighlights(
         malformedLines += 1;
         continue;
       }
-      if (record.type !== "assistant" || record.isSidechain === true) continue;
+      const mayor = record.type === "assistant";
+      const overseer =
+        record.type === "user" &&
+        record.isSidechain !== true &&
+        record.isMeta !== true &&
+        record.origin?.kind === "human" &&
+        record.promptSource === "typed";
+      if ((!mayor && !overseer) || record.isSidechain === true) continue;
       const timestamp = dateValue(record.timestamp);
       if (
         timestamp === null ||
@@ -122,11 +129,30 @@ export async function extractHighlights(
         (end !== null && timestamp > end)
       )
         continue;
-      const blocks = record.message?.content;
-      if (!Array.isArray(blocks)) continue;
+      const content = record.message?.content;
+      if (typeof content === "string") {
+        highlights.push({
+          timestamp: record.timestamp,
+          speaker: mayor ? "Mayor" : "Overseer",
+          text: content,
+        });
+        continue;
+      }
+      if (!Array.isArray(content)) continue;
+      const blocks = content;
       for (const block of blocks) {
-        if (block?.type === "text" && typeof block.text === "string")
-          highlights.push({ timestamp: record.timestamp, text: block.text });
+        const text =
+          block?.type === "text" && typeof block.text === "string"
+            ? block.text
+            : block?.type === "image"
+              ? "[image attached]"
+              : null;
+        if (text !== null)
+          highlights.push({
+            timestamp: record.timestamp,
+            speaker: mayor ? "Mayor" : "Overseer",
+            text,
+          });
       }
     }
   } catch (error) {
@@ -134,6 +160,9 @@ export async function extractHighlights(
       return { highlights, malformedLines, reason: "no live Mayor transcript" };
     throw error;
   }
+  highlights.sort(
+    (left, right) => dateValue(left.timestamp) - dateValue(right.timestamp),
+  );
   return { highlights, malformedLines };
 }
 
