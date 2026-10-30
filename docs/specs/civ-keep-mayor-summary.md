@@ -238,14 +238,30 @@ the messages since that summary's `windowEnd`, and a fresh facts block, and
 asks for the updated summary of the whole window. A full rebuild (every message
 in the window) runs instead when any of these hold:
 - there is no previous successful summary;
-- the read mark changed since it (the window start moved);
+- the read mark changed since it (its `upTo`, or "none", differs);
+- the window would exceed the 48-hour cap (the start re-anchors);
 - the provider, model or prompt sha256 differs from it;
 - it is the 6th incremental run since the last full rebuild;
 - the Overseer pressed Regenerate (always a full rebuild).
 The incremental instruction says: keep what is still true, remove what the new
 messages resolve, add what is new, and apply every rule of 5.1 and 5.3 to the
-result. The run record stores `mode: "full" | "incremental"`, `baseRun` (the
-previous run's `generatedAt`) and `incrementalCount`. The previous summary's
+result. The run record stores `mode: "full" | "incremental"`, `fullReason` (which
+trigger caused a full rebuild), `baseRun` (the previous run's `generatedAt`)
+and `incrementalCount`. A Regenerate that joins a scheduled run that is already
+in flight makes that run full (the force flag is read when the mode is
+chosen, and a late force re-runs it in full). The run's `highlights` always
+hold every message in the whole window, so the source-messages toggle shows
+what the summary covers, not only the newest hour. On the two-pass fallback the
+previous summary stays labelled as the previous summary, with the incremental
+instruction, and is never dropped on a retry.
+
+**With no read mark the window is anchored, not sliding** (Mayor's choice,
+2026-10-29, open to the Overseer's veto): it starts 12 hours before the first
+summary and grows from there until the Overseer marks it read; reaching the
+48-hour cap rebuilds and re-anchors at 48 hours before that run. A sliding
+"last 12 hours" would move the start every run and make every run a full
+rebuild (Warden finding 8 on `.22`). The overlay says "no read mark: since
+<start>". The previous summary's
 text counts as supplied for the number check.
 
 Why: a full 12-hour window is about 35,000-40,000 input tokens; an hourly
@@ -253,6 +269,10 @@ incremental update is a fraction of that, and the window grows until the
 Overseer marks it read.
 
 ### 5.2b The local provider (fallback, not live)
+
+Selecting it restores its own pass rule: the local provider always runs the
+two passes of 5.3 (a single pass misled the 7B model), and never runs
+incrementally (it compounded its own errors in the experiments).
 
 - Ollama native `POST http://127.0.0.1:11434/api/chat`, `stream: false`.
 - Model: one constant, `greenlab-qwen2.5:7b-instruct-32k` (Overseer decision;
@@ -363,8 +383,9 @@ overview on the SAME window, before and after a change.
   - **`upTo` is the `windowEnd` of the summary the Overseer was looking at**,
     never the click time: events after that summary was generated and before
     the click must stay inside the next window.
-  - **No mark yet:** the last 12 hours, and the overlay says "no read mark:
-    last 12 hours".
+  - **No mark yet:** the window starts 12 hours before the fort's first
+    summary and stays anchored there, growing, until a mark is set (5.2a);
+    the overlay says "no read mark: since <start>".
   - **Cap:** a window longer than 48 hours starts 48 hours before now, and the
     run records and the overlay say "window capped at 48 hours". Chunking
     (5.3a) carries the size.
@@ -457,7 +478,7 @@ Under the Keep's state home, beside the signature audit:
 - **Header label:** "<Provider> summary, <model actually used>, <generated
   time>, window <start> to <end>, <full | incremental>, <input tokens> in /
   <output tokens> out", where Provider is "Claude" or "Local-model" from the
-  run record; plus the window reason ("no read mark: last 12 hours", "window
+  run record; plus the window reason ("no read mark: since <start>", "window
   capped at 48 hours") when it applies, and "running" while a run is in
   progress.
 - **Facts block** above the summary, from `latest.factsBlock`: "Waiting on
@@ -576,3 +597,9 @@ Under the Keep's state home, beside the signature audit:
   (5.2), with incremental hourly updates and full rebuilds on Regenerate, a
   changed read mark, model or prompt, or every 6th run (5.2a); no silent
   fallback; the local Ollama path is kept as a selectable fallback (5.2b).
+- 2026-10-29, after Warden review r1 of `.22`: full-rebuild triggers by read
+  mark identity and the 48-hour cap, `fullReason` recorded, a late Regenerate
+  forces full, highlights cover the whole window, the previous summary
+  survives a two-pass retry; with no read mark the window is anchored at the
+  first summary and grows (Mayor's choice, open to veto); the local provider
+  keeps two passes and no incremental mode.
