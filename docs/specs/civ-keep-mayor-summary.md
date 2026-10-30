@@ -609,3 +609,11 @@ Under the Keep's state home, beside the signature audit:
   several full-rebuild triggers hold, `fullReason` names the one that changed
   the window (read mark, then the cap), else the listed order;
   `fullReasons` lists them all.
+- 2026-10-29, Mayor's ruling on Warden r2 finding 1 on `.22` (bead `.23`):
+  the 48-hour cap re-anchors WITH HEADROOM. When a window would exceed 48
+  hours, its start moves to 36 hours before that run, in both branches (read
+  mark and no mark). A window is therefore never longer than 48 hours, and a
+  re-anchor is followed by up to 12 incremental runs. This replaces "re-anchors
+  at 48 hours before that run" in 5.2a and "starts 48 hours before now" in 6,
+  which together forced either a full rebuild every hour or a window that
+  outgrew its label.
