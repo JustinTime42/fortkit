@@ -246,7 +246,9 @@ in the window) runs instead when any of these hold:
 The incremental instruction says: keep what is still true, remove what the new
 messages resolve, add what is new, and apply every rule of 5.1 and 5.3 to the
 result. The run record stores `mode: "full" | "incremental"`, `fullReason` (which
-trigger caused a full rebuild), `baseRun` (the previous run's `generatedAt`)
+trigger caused a full rebuild; when several hold, the one that changed the
+window wins, read mark before the 48-hour cap, and otherwise the order listed
+above; `fullReasons` lists every trigger that held), `baseRun` (the previous run's `generatedAt`)
 and `incrementalCount`. A Regenerate that joins a scheduled run that is already
 in flight makes that run full (the force flag is read when the mode is
 chosen, and a late force re-runs it in full). The run's `highlights` always
@@ -603,3 +605,7 @@ Under the Keep's state home, beside the signature audit:
   survives a two-pass retry; with no read mark the window is anchored at the
   first summary and grows (Mayor's choice, open to veto); the local provider
   keeps two passes and no incremental mode.
+- 2026-10-29, after `.22` round 3 (a Regenerate at the 48-hour cap): when
+  several full-rebuild triggers hold, `fullReason` names the one that changed
+  the window (read mark, then the cap), else the listed order;
+  `fullReasons` lists them all.
