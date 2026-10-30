@@ -24,13 +24,13 @@ function argumentsOf(argv) {
     const flag = argv[index];
     const value = argv[index + 1];
     if (
-      !/^--(?:fort|session|start|end|out|model|temperature|prompt|pass-instructions)$/.test(
+      !/^--(?:fort|session|start|end|out|model|temperature|prompt|pass-instructions|provider|passes)$/.test(
         flag ?? "",
       ) ||
       !value
     )
       throw new Error(
-        "usage: replay-summary.mjs --fort KEY --session ID --start ISO --end ISO --out FILE [--model NAME] [--temperature N] [--prompt FILE] [--pass-instructions FILE]",
+        "usage: replay-summary.mjs --fort KEY --session ID --start ISO --end ISO --out FILE [--provider ollama|claude] [--passes 1|2] [--model NAME] [--temperature N] [--prompt FILE] [--pass-instructions FILE]",
       );
     result[flag.slice(2)] = value;
   }
@@ -47,6 +47,13 @@ function argumentsOf(argv) {
     !Number.isFinite(Number(result.temperature))
   )
     throw new Error("--temperature must be a number");
+  result.provider ??= "ollama";
+  result.passes ??= "2";
+  if (!/^(?:ollama|claude)$/.test(result.provider))
+    throw new Error("--provider must be ollama or claude");
+  if (!/^[12]$/.test(result.passes)) throw new Error("--passes must be 1 or 2");
+  if (result.provider === "claude" && !result.model)
+    throw new Error("--model is required with --provider claude");
   return result;
 }
 
@@ -150,6 +157,9 @@ export async function replaySummary(argv, options = {}) {
         args.temperature === undefined ? undefined : Number(args.temperature),
       promptPath: args.prompt,
       passInstructions: instructions,
+      provider: args.provider,
+      passes: Number(args.passes),
+      spawn: options.spawn,
     },
   );
   fileSystem.writeFileSync(args.out, `${JSON.stringify(record, null, 2)}\n`, {
