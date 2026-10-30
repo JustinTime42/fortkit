@@ -1609,6 +1609,36 @@ describe("Mayor summary local model", () => {
       baseRun: null,
       incrementalCount: 0,
       fullReason,
+      fullReasons: [fullReason],
+    });
+  });
+
+  test("prioritises window-changing reasons and records every full trigger", () => {
+    const current = {
+      readMarkId: "new-mark",
+      provider: "claude",
+      model: "sonnet",
+      promptSha256: "prompt",
+      fullReason: "48-hour cap",
+    };
+    const previous = {
+      ...current,
+      readMarkId: "old-mark",
+      generatedAt: "base",
+      incrementalCount: 5,
+      fullReason: null,
+    };
+    expect(summaryMode(previous, current, true)).toEqual({
+      mode: "full",
+      baseRun: null,
+      incrementalCount: 0,
+      fullReason: "read mark changed",
+      fullReasons: [
+        "read mark changed",
+        "48-hour cap",
+        "sixth incremental",
+        "regenerate",
+      ],
     });
   });
 
@@ -2796,7 +2826,11 @@ describe("Mayor summary local model", () => {
         "utf8",
       ),
     );
-    expect(latest).toMatchObject({ mode: "full", fullReason: "regenerate" });
+    expect(latest).toMatchObject({
+      mode: "full",
+      fullReason: "regenerate",
+      fullReasons: ["regenerate"],
+    });
     expect(calls).toHaveLength(4);
     const marked = await fetch(
       `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
@@ -2869,6 +2903,7 @@ describe("Mayor summary local model", () => {
     );
     expect(latest.windowStart).toBe("2026-10-28T12:04:00.000Z");
     expect(latest.fullReason).toBe("48-hour cap");
+    expect(latest.fullReasons).toEqual(["48-hour cap", "regenerate"]);
     expect(latest.windowReason).toBe("read mark capped: last 48 hours");
     clock += 60_000;
     await keep.runSummaryPass();

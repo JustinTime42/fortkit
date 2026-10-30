@@ -493,28 +493,34 @@ export function unverifiedNumbers(summary, facts) {
   return unverified;
 }
 export function summaryMode(previous, current, force = false) {
-  const full = (fullReason) => ({
+  const full = (fullReasons) => ({
     mode: "full",
     baseRun: null,
     incrementalCount: 0,
-    fullReason,
+    fullReason: fullReasons[0],
+    fullReasons,
   });
-  if (force) return full("regenerate");
-  if (!previous) return full("no previous summary");
-  if (current.fullReason) return full(current.fullReason);
-  if (previous.readMarkId !== current.readMarkId)
-    return full("read mark changed");
-  if (previous.provider !== current.provider) return full("provider changed");
-  if (previous.model !== current.model) return full("model changed");
-  if (previous.promptSha256 !== current.promptSha256)
-    return full("prompt changed");
-  if (Number(previous.incrementalCount ?? 0) >= 5)
-    return full("sixth incremental");
+  const fullReasons = [];
+  if (previous && previous.readMarkId !== current.readMarkId)
+    fullReasons.push("read mark changed");
+  if (current.fullReason) fullReasons.push(current.fullReason);
+  if (previous && previous.provider !== current.provider)
+    fullReasons.push("provider changed");
+  if (previous && previous.model !== current.model)
+    fullReasons.push("model changed");
+  if (previous && previous.promptSha256 !== current.promptSha256)
+    fullReasons.push("prompt changed");
+  if (previous && Number(previous.incrementalCount ?? 0) >= 5)
+    fullReasons.push("sixth incremental");
+  if (force) fullReasons.push("regenerate");
+  if (!previous) fullReasons.push("no previous summary");
+  if (fullReasons.length) return full(fullReasons);
   return {
     mode: "incremental",
     baseRun: previous.generatedAt,
     incrementalCount: Number(previous.incrementalCount ?? 0) + 1,
     fullReason: null,
+    fullReasons: [],
   };
 }
 function addClaudeTotals(record) {
@@ -597,6 +603,7 @@ export async function summariseMayor(input, options = {}) {
     baseRun: null,
     incrementalCount: 0,
     fullReason: null,
+    fullReasons: [],
     readMarkId: input.readMarkId ?? "none",
   };
   try {
@@ -613,6 +620,7 @@ export async function summariseMayor(input, options = {}) {
             baseRun: null,
             incrementalCount: 0,
             fullReason: "local provider",
+            fullReasons: ["local provider"],
           }
         : summaryMode(
             options.previousSummary,
