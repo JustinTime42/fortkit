@@ -8,7 +8,7 @@ of Manyhalls, 2026-10-27. Overseer decisions of the same day are recorded on
 
 After time away the Overseer asks each fort's Mayor for "an overview since I
 left", and the Mayor builds it from its own transcript plus its beads. The Civ
-Keep (http://127.0.0.1:7780) gives him the same overview, per fort, written by a
+Keep (http://127.0.0.1:7780) gives the Overseer the same overview, per fort, written by a
 local model, at zero frontier tokens.
 
 It is a convenience and is labelled as one. The Overseer's trust plan: for the
@@ -116,7 +116,7 @@ its text (a string, or its `text` blocks); an image block becomes the literal
 
 Why: the first comparison against the Mayor's own overview (2026-10-29,
 recorded on `fortkit-t7vz`) found the summary presenting four of the
-Overseer's decisions as still open. His answers were user records, which the
+Overseer's decisions as still open. The Overseer's answers were user records, which the
 Mayor-only extraction dropped; the Mayor's acknowledgement ("I've recorded
 your four answers") did not restate them.
 
@@ -174,7 +174,7 @@ A committed file, `civ/keep/prompts/mayor-summary.md`, versioned in git; its
 sha256 goes in every run record. Its instructions, in substance:
 
 - Summarise for the Overseer returning after time away from this fort.
-- Lead with what needs him (the waiting-on-the-Overseer facts first).
+- Lead with what needs the Overseer (the waiting-on-the-Overseer facts first).
 - Name beads by id AND title, using the supplied facts only.
 - Every number comes from the supplied facts. Never invent a bead, a status, a
   count or a cause. Say "unclear" rather than guess. No speculation about
@@ -188,7 +188,7 @@ sha256 goes in every run record. Its instructions, in substance:
   Mayor's work, written for the Overseer. A step the Mayor says it will take is
   reported as the Mayor's ("the Mayor will rerun verify"), never turned into an
   instruction to the Overseer. Only something the supplied facts or the
-  Mayor's messages say awaits the Overseer is addressed to him.
+  Mayor's messages say awaits the Overseer is addressed to the Overseer.
 
 Why (first live runs, 2026-10-28, recorded on `fortkit-t7vz`): asked to
 restate facts, the 7B model invented a count (54 against a supplied 78),
@@ -310,7 +310,7 @@ split at a **recent boundary**:
   in time order. The instruction: describe the state at the END of the window;
   a later message supersedes an earlier one; a question the Overseer answered
   is resolved, and is reported as decided (with the Overseer's answer if it is in the
-  messages), never as waiting on him.
+  messages), never as waiting on the Overseer.
 - Every message carries its timestamp and speaker in the data, so order is
   explicit, not inferred from position.
 
