@@ -1027,6 +1027,26 @@ describe("Mayor summary local model", () => {
     expect(record.recentBoundary).toBe("2026-10-27T10:01:00Z");
   });
 
+  test("keeps the live Ollama request byte-for-byte unchanged", async () => {
+    let requestBody = "";
+    await summariseMayor(input(), {
+      persist: false,
+      now: () => Date.parse("2026-10-27T11:00:00Z"),
+      fetch: async (_url: string, init: RequestInit) => {
+        requestBody = String(init.body);
+        return new Response(
+          JSON.stringify({
+            prompt_eval_count: 10,
+            message: { content: "final" },
+          }),
+        );
+      },
+    });
+    expect(createHash("sha256").update(requestBody).digest("hex")).toBe(
+      "ad8bb7849e7f1dda2307f0fe6d10ae222e9022061d22a82b2567d605a8028d0f",
+    );
+  });
+
   test("summarises earlier messages then sends only notes plus recent messages to the final pass", async () => {
     const calls: { messages: { content: string }[] }[] = [];
     const twelveHours = {
@@ -1259,6 +1279,136 @@ describe("Mayor summary local model", () => {
       speaker: "Overseer",
       text: "Approved halls-x1",
     });
+  });
+
+  test("replay applies and records every experiment override", async () => {
+    const root = mkdtempSync(join(tmpdir(), "mayor-summary-overrides-"));
+    const home = join(root, "home");
+    const repo = join(root, "fort");
+    const out = join(root, "replay.json");
+    const prompt = join(root, "prompt.md");
+    const instructions = join(root, "passes.json");
+    const transcriptDirectory = join(
+      home,
+      ".claude/projects",
+      repo.replace(/[^A-Za-z0-9]/g, "-"),
+    );
+    mkdirSync(join(repo, ".beads"), { recursive: true });
+    mkdirSync(transcriptDirectory, { recursive: true });
+    writeFileSync(join(repo, ".beads/issues.jsonl"), "");
+    writeFileSync(
+      join(transcriptDirectory, "past-session.jsonl"),
+      `${JSON.stringify({
+        type: "user",
+        timestamp: "2026-10-27T10:30:00Z",
+        origin: { kind: "human" },
+        promptSource: "typed",
+        message: { content: [{ type: "text", text: "A fixed message" }] },
+      })}\n`,
+    );
+    writeFileSync(prompt, "EXPERIMENT SYSTEM PROMPT\n");
+    writeFileSync(
+      instructions,
+      JSON.stringify({ final: "EXPERIMENT FINAL INSTRUCTION" }),
+    );
+    let body: Record<string, unknown> = {};
+    const record = await replaySummary(
+      [
+        "--fort",
+        "halls",
+        "--session",
+        "past-session",
+        "--start",
+        "2026-10-27T10:00:00Z",
+        "--end",
+        "2026-10-27T11:00:00Z",
+        "--out",
+        out,
+        "--model",
+        "experiment-model",
+        "--temperature",
+        "0.375",
+        "--prompt",
+        prompt,
+        "--pass-instructions",
+        instructions,
+      ],
+      {
+        env: { HOME: home },
+        loadForts: () => [
+          {
+            key: "halls",
+            name: "Halls",
+            project: "halls",
+            civilization: "Justin",
+            registryPath: join(home, ".claude/civilization.json"),
+            repo,
+            waitingLabels: ["gate-1"],
+            whoseMove: null,
+            mode: "plain",
+            fleetState: null,
+          },
+        ],
+        fetch: async (_url: string, init: RequestInit) => {
+          body = JSON.parse(String(init.body));
+          return new Response(
+            JSON.stringify({
+              prompt_eval_count: 10,
+              message: { content: "Experimental result" },
+            }),
+          );
+        },
+      },
+    );
+    expect(body).toMatchObject({
+      model: "experiment-model",
+      options: { temperature: 0.375 },
+      messages: [
+        { role: "system", content: "EXPERIMENT SYSTEM PROMPT\n" },
+        {
+          role: "user",
+          content: expect.stringContaining("EXPERIMENT FINAL INSTRUCTION"),
+        },
+      ],
+    });
+    expect(record).toMatchObject({
+      model: "experiment-model",
+      temperature: 0.375,
+      promptText: "EXPERIMENT SYSTEM PROMPT\n",
+      promptSha256: createHash("sha256")
+        .update("EXPERIMENT SYSTEM PROMPT\n")
+        .digest("hex"),
+      passInstructions: {
+        background:
+          "Write compact background notes for a later final pass. These messages are EARLIER state that later messages may have changed.",
+        combine:
+          "Combine these background notes into fewer compact notes for a later final pass. They describe EARLIER state that later messages may have changed.",
+        final: "EXPERIMENT FINAL INSTRUCTION",
+      },
+    });
+    expect(JSON.parse(readFileSync(out, "utf8"))).toEqual(record);
+  });
+
+  test("replay rejects unknown pass-instruction keys", async () => {
+    const root = mkdtempSync(join(tmpdir(), "mayor-summary-bad-passes-"));
+    const instructions = join(root, "passes.json");
+    writeFileSync(instructions, JSON.stringify({ typo: "not a pass" }));
+    await expect(
+      replaySummary([
+        "--fort",
+        "halls",
+        "--session",
+        "past-session",
+        "--start",
+        "2026-10-27T10:00:00Z",
+        "--end",
+        "2026-10-27T11:00:00Z",
+        "--out",
+        join(root, "out.json"),
+        "--pass-instructions",
+        instructions,
+      ]),
+    ).rejects.toThrow("unknown pass-instructions key: typo");
   });
 
   test("accounts for JSON escaping while chunking realistic Mayor text", async () => {
