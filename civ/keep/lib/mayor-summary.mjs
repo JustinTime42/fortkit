@@ -1,4 +1,4 @@
-// Local-model Mayor-summary generation and private run-record storage.
+// Mayor-summary generation and private run-record storage.
 
 import { spawn as nodeSpawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -7,6 +7,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const MAYOR_SUMMARY_MODEL = "greenlab-qwen2.5:7b-instruct-32k";
+export const LIVE_SUMMARY_PROVIDER = "claude";
+export const LIVE_SUMMARY_MODEL = "sonnet";
 export const MAYOR_SUMMARY_CONTEXT = 32768;
 export const MAYOR_SUMMARY_RESERVE = 2048;
 export const CLAUDE_SUMMARY_CONTEXT = 150000;
@@ -17,6 +19,8 @@ export const MAYOR_SUMMARY_PASS_INSTRUCTIONS = Object.freeze({
     "Combine these background notes into fewer compact notes for a later final pass. They describe EARLIER state that later messages may have changed.",
   final:
     "Write the final summary. Describe the state at the END of the window. A later message supersedes an earlier one. A proposal, recommendation, or question is NOT done or decided unless a later message says it was done or answered. A question the Overseer answered is resolved and must be reported as decided, with his actual answer when supplied, never as waiting on him. Attribute each statement to its actual speaker (Mayor, Overseer, Warden, or Forge) as the messages name them.",
+  incremental:
+    "Update the previous summary to describe the state at the END of the whole window. Keep what is still true, remove what the new messages resolve, add what is new, and apply every summary rule to the complete result. Return the complete updated summary, not a patch.",
 });
 const BACKGROUND_NOTES_RESERVE_CHARS = MAYOR_SUMMARY_RESERVE * 3;
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -188,6 +192,18 @@ function finalRequest(input, backgroundNotes, recentMessages, instructions) {
 }
 function singlePassRequest(input, messages, instructions) {
   return `${factsBlock(input)}\n\n${instructions.final}\n${jsonData("WHOLE CONVERSATION (FULL, IN TIME ORDER)", messages)}`;
+}
+function incrementalRequest(input, previousSummary, messages, instructions) {
+  return `${factsBlock(input)}\n\n${instructions.final}\n${instructions.incremental}\n${jsonData("PREVIOUS SUCCESSFUL SUMMARY", previousSummary)}\n\n${jsonData("NEW CONVERSATION SINCE THE PREVIOUS SUMMARY", messages)}`;
+}
+function incrementalFinalRequest(
+  input,
+  previousSummary,
+  backgroundNotes,
+  recentMessages,
+  instructions,
+) {
+  return `${factsBlock(input)}\n\n${instructions.final}\n${instructions.incremental}\n${jsonData("PREVIOUS SUCCESSFUL SUMMARY", previousSummary)}\n\n${jsonData("BACKGROUND NOTES FROM NEW MESSAGES", backgroundNotes)}\n\n${jsonData("NEW CONVERSATION SINCE THE PREVIOUS SUMMARY", recentMessages)}`;
 }
 function chunksFor(messages, input, prompt, instructions, context) {
   if (!fitsRequest(prompt, backgroundRequest(input, [], instructions), context))
@@ -476,6 +492,37 @@ export function unverifiedNumbers(summary, facts) {
   }
   return unverified;
 }
+export function summaryMode(previous, current, force = false) {
+  const full = (fullReasons) => ({
+    mode: "full",
+    baseRun: null,
+    incrementalCount: 0,
+    fullReason: fullReasons[0],
+    fullReasons,
+  });
+  const fullReasons = [];
+  if (previous && previous.readMarkId !== current.readMarkId)
+    fullReasons.push("read mark changed");
+  if (current.fullReason) fullReasons.push(current.fullReason);
+  if (previous && previous.provider !== current.provider)
+    fullReasons.push("provider changed");
+  if (previous && previous.model !== current.model)
+    fullReasons.push("model changed");
+  if (previous && previous.promptSha256 !== current.promptSha256)
+    fullReasons.push("prompt changed");
+  if (previous && Number(previous.incrementalCount ?? 0) >= 5)
+    fullReasons.push("sixth incremental");
+  if (force) fullReasons.push("regenerate");
+  if (!previous) fullReasons.push("no previous summary");
+  if (fullReasons.length) return full(fullReasons);
+  return {
+    mode: "incremental",
+    baseRun: previous.generatedAt,
+    incrementalCount: Number(previous.incrementalCount ?? 0) + 1,
+    fullReason: null,
+    fullReasons: [],
+  };
+}
 function addClaudeTotals(record) {
   const totals = {
     input_tokens: 0,
@@ -501,6 +548,7 @@ export async function summariseMayor(input, options = {}) {
   const now = options.now ?? (() => Date.now());
   const started = now();
   const at = iso(started);
+  const provider = options.provider ?? "ollama";
   const experiment = {
     model: options.model ?? MAYOR_SUMMARY_MODEL,
     temperature: options.temperature,
@@ -508,8 +556,8 @@ export async function summariseMayor(input, options = {}) {
       ...MAYOR_SUMMARY_PASS_INSTRUCTIONS,
       ...options.passInstructions,
     },
-    provider: options.provider ?? "ollama",
-    requestedPasses: options.passes ?? 2,
+    provider,
+    requestedPasses: provider === "ollama" ? 2 : (options.passes ?? 2),
     spawn: options.spawn ?? nodeSpawn,
   };
   experiment.context =
@@ -551,6 +599,12 @@ export async function summariseMayor(input, options = {}) {
     malformedLines: input.malformedLines ?? 0,
     keepRefreshedAt: input.keepRefreshedAt ?? null,
     beadExport: input.beadExport ?? null,
+    mode: "full",
+    baseRun: null,
+    incrementalCount: 0,
+    fullReason: null,
+    fullReasons: [],
+    readMarkId: input.readMarkId ?? "none",
   };
   try {
     if (options.persist !== false)
@@ -559,6 +613,39 @@ export async function summariseMayor(input, options = {}) {
     prompt = promptAndDigest.prompt;
     record.promptSha256 = promptAndDigest.sha256;
     record.promptText = prompt;
+    const selectedMode =
+      experiment.provider === "ollama"
+        ? {
+            mode: "full",
+            baseRun: null,
+            incrementalCount: 0,
+            fullReason: "local provider",
+            fullReasons: ["local provider"],
+          }
+        : summaryMode(
+            options.previousSummary,
+            {
+              readMarkId: input.readMarkId ?? "none",
+              provider: experiment.provider,
+              model: experiment.model,
+              promptSha256: record.promptSha256,
+              fullReason: input.fullReason,
+            },
+            options.force,
+          );
+    Object.assign(record, selectedMode);
+    const generationInput =
+      selectedMode.mode === "incremental"
+        ? {
+            ...input,
+            highlights: input.highlights.filter(
+              (message) =>
+                Date.parse(message.timestamp) >
+                Date.parse(options.previousSummary.windowEnd),
+            ),
+          }
+        : input;
+    record.highlights = input.highlights;
     if (experiment.provider === "ollama" && typeof fetchImpl !== "function")
       throw new Error("fetch is required");
     if (
@@ -566,19 +653,33 @@ export async function summariseMayor(input, options = {}) {
       typeof experiment.spawn !== "function"
     )
       throw new Error("spawn is required");
+    if (
+      experiment.provider === "claude" &&
+      process.env.VITEST &&
+      options.spawn === undefined
+    )
+      throw new Error("Claude spawn stub is required under VITEST");
     if (experiment.requestedPasses === 1) {
-      const request = singlePassRequest(
-        input,
-        input.highlights,
-        experiment.passInstructions,
-      );
+      const request =
+        selectedMode.mode === "incremental"
+          ? incrementalRequest(
+              generationInput,
+              options.previousSummary.summary,
+              generationInput.highlights,
+              experiment.passInstructions,
+            )
+          : singlePassRequest(
+              generationInput,
+              generationInput.highlights,
+              experiment.passInstructions,
+            );
       const context =
         experiment.provider === "claude"
           ? CLAUDE_SUMMARY_CONTEXT
           : MAYOR_SUMMARY_CONTEXT;
       if (estimate(prompt + request) + MAYOR_SUMMARY_RESERVE <= context) {
         record.backgroundMessages = [];
-        record.recentMessages = input.highlights;
+        record.recentMessages = generationInput.highlights;
         record.backgroundNotes = [];
         const final = await askProvider(fetchImpl, prompt, request, experiment);
         record.chunks.push({ ...final, phase: "final", attempt: 1 });
@@ -586,7 +687,8 @@ export async function summariseMayor(input, options = {}) {
         record.unverifiedNumbers = unverifiedNumbers(final.notes, {
           beadFacts: input.beadFacts,
           factsBlock: input.factsBlock,
-          highlights: input.highlights,
+          highlights: generationInput.highlights,
+          previousSummary: options.previousSummary?.summary,
         });
         record.durationMs = now() - started;
         if (experiment.provider === "claude") addClaudeTotals(record);
@@ -609,24 +711,33 @@ export async function summariseMayor(input, options = {}) {
       record.passes = 2;
       record.passFallback = "single-pass input exceeded context budget";
     }
-    const twoHoursAgo = Date.parse(input.windowEnd) - 2 * 60 * 60 * 1000;
-    let split = input.highlights.findIndex(
+    const twoHoursAgo =
+      Date.parse(generationInput.windowEnd) - 2 * 60 * 60 * 1000;
+    let split = generationInput.highlights.findIndex(
       (message) => Date.parse(message.timestamp) >= twoHoursAgo,
     );
-    if (split < 0) split = input.highlights.length;
-    let backgroundMessages = input.highlights.slice(0, split);
-    let recentMessages = input.highlights.slice(split);
+    if (split < 0) split = generationInput.highlights.length;
+    let backgroundMessages = generationInput.highlights.slice(0, split);
+    let recentMessages = generationInput.highlights.slice(split);
     const reservedNotes = ["x".repeat(BACKGROUND_NOTES_RESERVE_CHARS)];
     while (
       recentMessages.length &&
       !fitsRequest(
         prompt,
-        finalRequest(
-          input,
-          reservedNotes,
-          recentMessages,
-          experiment.passInstructions,
-        ),
+        selectedMode.mode === "incremental"
+          ? incrementalFinalRequest(
+              generationInput,
+              options.previousSummary.summary,
+              reservedNotes,
+              recentMessages,
+              experiment.passInstructions,
+            )
+          : finalRequest(
+              generationInput,
+              reservedNotes,
+              recentMessages,
+              experiment.passInstructions,
+            ),
         experiment.context,
       )
     ) {
@@ -636,7 +747,7 @@ export async function summariseMayor(input, options = {}) {
     let attempt = 1;
     let backgroundNotes = await summariseBackground(
       backgroundMessages,
-      input,
+      generationInput,
       prompt,
       fetchImpl,
       record,
@@ -647,12 +758,20 @@ export async function summariseMayor(input, options = {}) {
       recentMessages.length &&
       !fitsRequest(
         prompt,
-        finalRequest(
-          input,
-          backgroundNotes,
-          recentMessages,
-          experiment.passInstructions,
-        ),
+        selectedMode.mode === "incremental"
+          ? incrementalFinalRequest(
+              generationInput,
+              options.previousSummary.summary,
+              backgroundNotes,
+              recentMessages,
+              experiment.passInstructions,
+            )
+          : finalRequest(
+              generationInput,
+              backgroundNotes,
+              recentMessages,
+              experiment.passInstructions,
+            ),
         experiment.context,
       )
     ) {
@@ -662,12 +781,20 @@ export async function summariseMayor(input, options = {}) {
         move < recentMessages.length &&
         !fitsRequest(
           prompt,
-          finalRequest(
-            input,
-            backgroundNotes,
-            recentMessages.slice(move),
-            experiment.passInstructions,
-          ),
+          selectedMode.mode === "incremental"
+            ? incrementalFinalRequest(
+                generationInput,
+                options.previousSummary.summary,
+                backgroundNotes,
+                recentMessages.slice(move),
+                experiment.passInstructions,
+              )
+            : finalRequest(
+                generationInput,
+                backgroundNotes,
+                recentMessages.slice(move),
+                experiment.passInstructions,
+              ),
           experiment.context,
         )
       )
@@ -682,7 +809,7 @@ export async function summariseMayor(input, options = {}) {
       attempt += 1;
       backgroundNotes = await summariseBackground(
         backgroundMessages,
-        input,
+        generationInput,
         prompt,
         fetchImpl,
         record,
@@ -692,18 +819,28 @@ export async function summariseMayor(input, options = {}) {
       if (record.chunks.length === firstChunk)
         throw new Error("background retry produced no run-record chunks");
     }
-    const request = finalRequest(
-      input,
-      backgroundNotes,
-      recentMessages,
-      experiment.passInstructions,
-    );
+    const request =
+      selectedMode.mode === "incremental"
+        ? incrementalFinalRequest(
+            generationInput,
+            options.previousSummary.summary,
+            backgroundNotes,
+            recentMessages,
+            experiment.passInstructions,
+          )
+        : finalRequest(
+            generationInput,
+            backgroundNotes,
+            recentMessages,
+            experiment.passInstructions,
+          );
     if (!fitsRequest(prompt, request, experiment.context))
       throw new Error("facts and background notes exceed model context");
     record.backgroundMessages = backgroundMessages;
     record.recentMessages = recentMessages;
     record.backgroundNotes = backgroundNotes;
-    record.recentBoundary = recentMessages[0]?.timestamp ?? input.windowEnd;
+    record.recentBoundary =
+      recentMessages[0]?.timestamp ?? generationInput.windowEnd;
     const final = await askProvider(fetchImpl, prompt, request, experiment);
     record.chunks.push({ ...final, phase: "final", attempt });
     const summary = final.notes;
@@ -711,7 +848,8 @@ export async function summariseMayor(input, options = {}) {
     record.unverifiedNumbers = unverifiedNumbers(summary, {
       beadFacts: input.beadFacts,
       factsBlock: input.factsBlock,
-      highlights: input.highlights,
+      highlights: generationInput.highlights,
+      previousSummary: options.previousSummary?.summary,
     });
     record.durationMs = now() - started;
     if (experiment.provider === "claude") addClaudeTotals(record);
@@ -733,6 +871,7 @@ export async function summariseMayor(input, options = {}) {
   } catch (error) {
     record.reason = String(error?.message ?? error);
     record.durationMs = now() - started;
+    if (experiment.provider === "claude") addClaudeTotals(record);
     if (directory && options.persist !== false) {
       try {
         writePrivate(

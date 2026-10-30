@@ -38,6 +38,8 @@ import {
 } from "./lib/graph.mjs";
 import {
   hasSuccessfulSummaryWindowEnd,
+  LIVE_SUMMARY_MODEL,
+  LIVE_SUMMARY_PROVIDER,
   readLastFailure,
   readLatestSummary,
   readSummaryReadMark,
@@ -133,6 +135,11 @@ export function createCivKeep(options = {}) {
   const exit = options.exit ?? process.exit;
   const log = options.log ?? console.error;
   const fetchImpl = options.fetch ?? globalThis.fetch;
+  const summarySpawn = options.summarySpawn;
+  const summaryProvider = options.summaryProvider ?? LIVE_SUMMARY_PROVIDER;
+  const summaryModel =
+    options.summaryModel ??
+    (summaryProvider === "claude" ? LIVE_SUMMARY_MODEL : undefined);
   const sessionsDirectory =
     options.sessionsDirectory ?? path.join(env.HOME ?? "", ".claude/sessions");
   const procRoot = options.procRoot ?? "/proc";
@@ -492,13 +499,40 @@ export function createCivKeep(options = {}) {
     const latest = readLatestSummary(stateHome, fort.key, { fileSystem });
     const readMark = readSummaryReadMark(stateHome, fort.key, { fileSystem });
     const maximumWindowMs = 48 * 60 * 60 * 1000;
+    const readMarkId = readMark?.upTo ?? "none";
     let windowReason;
     let windowStart;
+    let fullReason = null;
     if (!readMark) {
-      windowStart = new Date(now() - 12 * 60 * 60 * 1000).toISOString();
-      windowReason = "no read mark: last 12 hours";
+      const priorAnchor =
+        latest?.readMarkId === "none" ? Date.parse(latest.windowStart) : NaN;
+      if (
+        Number.isFinite(priorAnchor) &&
+        now() - priorAnchor < maximumWindowMs
+      ) {
+        windowStart = latest.windowStart;
+      } else if (Number.isFinite(priorAnchor)) {
+        windowStart = new Date(now() - maximumWindowMs).toISOString();
+        fullReason = "48-hour cap";
+      } else {
+        windowStart = new Date(now() - 12 * 60 * 60 * 1000).toISOString();
+      }
+      windowReason = "no read mark";
     } else if (now() - Date.parse(readMark.upTo) > maximumWindowMs) {
-      windowStart = new Date(now() - maximumWindowMs).toISOString();
+      const priorAnchor =
+        latest?.readMarkId === readMarkId &&
+        latest?.windowReason === "read mark capped: last 48 hours"
+          ? Date.parse(latest.windowStart)
+          : NaN;
+      if (
+        Number.isFinite(priorAnchor) &&
+        now() - priorAnchor < 2 * maximumWindowMs
+      ) {
+        windowStart = latest.windowStart;
+      } else {
+        windowStart = new Date(now() - maximumWindowMs).toISOString();
+        fullReason = "48-hour cap";
+      }
       windowReason = "read mark capped: last 48 hours";
     } else {
       windowStart = readMark.upTo;
@@ -553,6 +587,8 @@ export function createCivKeep(options = {}) {
         windowEnd: end,
         firstRun,
         windowReason,
+        readMarkId,
+        fullReason,
         fingerprint,
         highlights: extracted.highlights,
         beadFacts: resolveBeadFacts(
@@ -565,14 +601,27 @@ export function createCivKeep(options = {}) {
         malformedLines: extracted.malformedLines,
         keepRefreshedAt: entry.refreshedAt ?? null,
       },
-      { fileSystem, fetch: fetchImpl, now, stateHome, log },
+      {
+        fileSystem,
+        fetch: fetchImpl,
+        now,
+        stateHome,
+        log,
+        provider: summaryProvider,
+        model: summaryModel,
+        passes: summaryProvider === "claude" ? 1 : 2,
+        spawn: summarySpawn,
+        previousSummary: latest,
+        force: flight.force,
+      },
     );
   }
 
   function queueSummary(fort, options = {}) {
     const current = summaryFlights.get(fort.key);
     if (current) {
-      if (options.force) current.force = true;
+      if (options.force && !current.force)
+        return current.promise.then(() => queueSummary(fort, { force: true }));
       return current.promise;
     }
     const flight = { force: Boolean(options.force), promise: null };

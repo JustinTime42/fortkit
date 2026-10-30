@@ -210,10 +210,36 @@ describe("Mayor summary overlay renderers", () => {
     expect(capped).toContain("running");
     expect(capped).toContain("No live Mayor session for Halls.");
     const noMark = renderSummaryOverlay(
-      { latest: { ...latest, windowReason: "no read mark: last 12 hours" } },
+      { latest: { ...latest, windowReason: "no read mark" } },
       { fortName: "Halls" },
     );
-    expect(noMark).toContain("no read mark: last 12 hours");
+    expect(noMark).toContain("no read mark: since");
+    const claude = renderSummaryOverlay({
+      latest: {
+        ...latest,
+        provider: "claude<script>",
+        model: "sonnet<img>",
+        models: ["claude-sonnet-5-5<script>"],
+        mode: "incremental<b>",
+        usage: { input_tokens: 123, output_tokens: 45 },
+      },
+    });
+    expect(claude).toContain(
+      "Local-model summary, claude-sonnet-5-5&lt;script&gt;",
+    );
+    expect(claude).toContain("incremental&lt;b&gt;, 123 in / 45 out");
+    expect(claude).not.toContain("<img>");
+    expect(
+      renderSummaryOverlay({
+        latest: {
+          ...latest,
+          provider: "claude",
+          model: "sonnet",
+          models: ["claude-sonnet-5-5"],
+          mode: "full",
+        },
+      }),
+    ).toContain("Claude summary, claude-sonnet-5-5");
     const empty = renderSummaryOverlay(
       { latest: null, liveMayor: null },
       { fortName: "Halls" },
