@@ -967,7 +967,7 @@ describe("Mayor summary local model", () => {
     ]);
   });
   test("chunks and combines oversized messages, using only the injected Ollama", async () => {
-    const calls: unknown[] = [];
+    const calls: { messages: { content: string }[] }[] = [];
     const fetch = async (_url: string, init: RequestInit) => {
       calls.push(JSON.parse(String(init.body)));
       return new Response(
@@ -985,6 +985,14 @@ describe("Mayor summary local model", () => {
     expect(record.status).toBe("success");
     expect(record.chunks.length).toBeGreaterThan(2);
     expect(calls.length).toBe(record.chunks.length);
+    expect(
+      new Set(record.chunks.map((chunk: { phase: string }) => chunk.phase)),
+    ).toEqual(new Set(["background", "background-combine", "final"]));
+    for (const call of calls) {
+      expect(call.messages[1]?.content).toContain(
+        "Use no gendered pronouns for any person",
+      );
+    }
     expect(calls[0]).toMatchObject({
       model: "greenlab-qwen2.5:7b-instruct-32k",
       stream: false,
@@ -1055,7 +1063,7 @@ describe("Mayor summary local model", () => {
       },
     });
     expect(createHash("sha256").update(requestBody).digest("hex")).toBe(
-      "defd50a71c3db24ea32887162c9ecfef036eea5d784a41be5ee34f6045928b78",
+      "cf50e617093a269ad29620efcffe1fb9868bb442ccf1a054e5ec28bcdec11626",
     );
   });
 
@@ -1393,9 +1401,9 @@ describe("Mayor summary local model", () => {
         .digest("hex"),
       passInstructions: {
         background:
-          "Write compact background notes for a later final pass. These messages are EARLIER state that later messages may have changed.",
+          "Write compact background notes for a later final pass. These messages are EARLIER state that later messages may have changed. Use no gendered pronouns for any person. Name each person by role or use they/them.",
         combine:
-          "Combine these background notes into fewer compact notes for a later final pass. They describe EARLIER state that later messages may have changed.",
+          "Combine these background notes into fewer compact notes for a later final pass. They describe EARLIER state that later messages may have changed. Use no gendered pronouns for any person. Name each person by role or use they/them.",
         final: "EXPERIMENT FINAL INSTRUCTION",
       },
     });
@@ -1546,7 +1554,12 @@ describe("Mayor summary local model", () => {
     const systemPromptIndex = invocation.args?.indexOf("--system-prompt") ?? -1;
     const systemPrompt = invocation.args?.[systemPromptIndex + 1] ?? "";
     expect(systemPrompt).toContain("Use no gendered pronouns for any person");
-    expect(systemPrompt).not.toMatch(/\b(?:he|his|him|she|her)\b/i);
+    const bannedPronouns = /\b(?:he|his|him|himself|she|her|hers|herself)\b/i;
+    expect(systemPrompt).not.toMatch(bannedPronouns);
+    for (const instruction of Object.values(record.passInstructions)) {
+      expect(instruction).toContain("Use no gendered pronouns for any person");
+      expect(instruction).not.toMatch(bannedPronouns);
+    }
     expect(invocation.args?.join(" ")).not.toContain("FIRST WHOLE MESSAGE");
     expect(invocation.args?.join(" ")).not.toContain("SECOND WHOLE MESSAGE");
     expect(invocation.stdin).toContain("FIRST WHOLE MESSAGE");
@@ -2910,12 +2923,25 @@ describe("Mayor summary local model", () => {
       ["timeout", 120_000],
       ["interval", 3_600_000],
     ]);
+    const queued = keep.queueSummary(fort);
+    const promoted = keep.regenerateSummary(fort);
+    expect(promoted).toBe(queued);
+    await Promise.all([queued, promoted]);
+    expect(calls).toHaveLength(1);
+    const promotedLatest = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/latest.json"),
+        "utf8",
+      ),
+    );
+    expect(promotedLatest.fullReasons).toContain("regenerate");
+
     const first = keep.regenerateSummary(fort);
     const joined = keep.regenerateSummary(fort);
     expect(joined).toBe(first);
     await Promise.all([first, joined]);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toMatchObject({
       file: "claude",
       args: [
         "-p",
@@ -2933,11 +2959,13 @@ describe("Mayor summary local model", () => {
         "json",
       ],
     });
-    const systemPromptIndex = calls[0]?.args.indexOf("--system-prompt") ?? -1;
-    const systemPrompt = calls[0]?.args[systemPromptIndex + 1] ?? "";
+    const systemPromptIndex = calls[1]?.args.indexOf("--system-prompt") ?? -1;
+    const systemPrompt = calls[1]?.args[systemPromptIndex + 1] ?? "";
     expect(systemPrompt).toContain("Use no gendered pronouns for any person");
-    expect(systemPrompt).not.toMatch(/\b(?:he|his|him|she|her)\b/i);
-    expect(calls[0]?.stdin).toContain('"text":"Mayor update"');
+    expect(systemPrompt).not.toMatch(
+      /\b(?:he|his|him|himself|she|her|hers|herself)\b/i,
+    );
+    expect(calls[1]?.stdin).toContain('"text":"Mayor update"');
     let latest = JSON.parse(
       readFileSync(
         join(stateHome, "civ-keep/summaries/halls/latest.json"),
@@ -3004,7 +3032,7 @@ describe("Mayor summary local model", () => {
       fullReason: "regenerate",
       fullReasons: ["regenerate"],
     });
-    expect(calls).toHaveLength(4);
+    expect(calls).toHaveLength(5);
     const marked = await fetch(
       `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
       {
@@ -3033,7 +3061,7 @@ describe("Mayor summary local model", () => {
       fullReason: "read mark changed",
       fullReasons: ["read mark changed"],
     });
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(6);
     clock += 60_000;
     await keep.regenerateSummary(fort);
     latest = JSON.parse(
@@ -3085,14 +3113,14 @@ describe("Mayor summary local model", () => {
     expect(latest.windowReason).toBe("read mark capped: 48-hour maximum");
     clock += 60_000;
     await keep.runSummaryPass();
-    expect(calls).toHaveLength(7);
+    expect(calls).toHaveLength(8);
     expect(logs).toContain(
       "summary halls: skipped, unchanged since 2026-10-30T12:04:00.000Z",
     );
     appendFileSync(transcript, " ");
     clock += 60_000;
     await keep.runSummaryPass();
-    expect(calls).toHaveLength(8);
+    expect(calls).toHaveLength(9);
     nodeFs.rmSync(join(sessions, "41.json"));
     await keep.runSummaryPass();
     expect(logs).toContain("summary halls: skipped, no live Mayor");

@@ -560,10 +560,6 @@ export function createCivKeep(options = {}) {
       latest?.fingerprint &&
       JSON.stringify(latest.fingerprint) === JSON.stringify(fingerprint)
     ) {
-      // A forced request can join while this flight is running. Yield once
-      // before deciding to skip, then honour the flight's live force flag.
-      await Promise.resolve();
-      if (flight.force) return generateSummary(fort, { force: true });
       log(
         `summary ${fort.key}: skipped, unchanged since ${latest.generatedAt}`,
       );
@@ -1319,6 +1315,7 @@ export function createCivKeep(options = {}) {
     states,
     refresh,
     runSummaryPass,
+    queueSummary,
     regenerateSummary(fort) {
       return queueSummary(fort, { force: true });
     },
