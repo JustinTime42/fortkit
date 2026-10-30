@@ -2786,7 +2786,7 @@ describe("Mayor summary local model", () => {
     clock += 60_000;
     holdNext = true;
     const scheduled = keep.runSummaryPass();
-    await new Promise((resolve) => setImmediate(resolve));
+    await vi.waitFor(() => expect(releaseNext).toBeTypeOf("function"));
     const forced = keep.regenerateSummary(fort);
     releaseNext?.();
     await Promise.all([scheduled, forced]);
