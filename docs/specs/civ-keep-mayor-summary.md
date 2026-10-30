@@ -12,7 +12,7 @@ Keep (http://127.0.0.1:7780) gives him the same overview, per fort, written by a
 local model, at zero frontier tokens.
 
 It is a convenience and is labelled as one. The Overseer's trust plan: for the
-first while he reads the summary, then asks that fort's Mayor for its own, and
+first while the Overseer reads the summary, then asks that fort's Mayor for its own, and
 compares. Every run therefore keeps its inputs and its output on disk, so a bad
 summary can be diagnosed rather than argued about.
 
@@ -99,7 +99,7 @@ Each highlight is `{ timestamp, speaker, text }`, in transcript order, where
 ### 4.1a The Overseer's own messages (Overseer decision, 2026-10-29)
 
 The Overseer's replies are part of the conversation, interleaved with the
-Mayor's by timestamp, so the summariser can see which questions he answered
+Mayor's by timestamp, so the summariser can see which questions the Overseer answered
 and when. A record is an Overseer message only if ALL hold, measured on the
 Proofdelve transcript 2026-10-29 (11 such records in a 12-hour window):
 
@@ -309,7 +309,7 @@ split at a **recent boundary**:
   (labelled earlier and possibly superseded), and the recent messages in full,
   in time order. The instruction: describe the state at the END of the window;
   a later message supersedes an earlier one; a question the Overseer answered
-  is resolved, and is reported as decided (with his answer if it is in the
+  is resolved, and is reported as decided (with the Overseer's answer if it is in the
   messages), never as waiting on him.
 - Every message carries its timestamp and speaker in the data, so order is
   explicit, not inferred from position.
@@ -617,3 +617,8 @@ Under the Keep's state home, beside the signature audit:
   at 48 hours before that run" in 5.2a and "starts 48 hours before now" in 6,
   which together forced either a full rebuild every hour or a window that
   outgrew its label.
+- 2026-10-30, after the first live Sonnet summary called Marrek (they/them)
+  'he' (bead `.23` item 6): summaries use NO gendered pronoun for anyone,
+  the Overseer included; people are named by role or referred to as they.
+  Standing order 10: pronouns come from the roster, never inferred. The
+  prompt-instruction text in this spec is reworded to match.
