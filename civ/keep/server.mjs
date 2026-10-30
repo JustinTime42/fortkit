@@ -499,6 +499,7 @@ export function createCivKeep(options = {}) {
     const latest = readLatestSummary(stateHome, fort.key, { fileSystem });
     const readMark = readSummaryReadMark(stateHome, fort.key, { fileSystem });
     const maximumWindowMs = 48 * 60 * 60 * 1000;
+    const reanchoredWindowMs = 36 * 60 * 60 * 1000;
     const readMarkId = readMark?.upTo ?? "none";
     let windowReason;
     let windowStart;
@@ -508,11 +509,11 @@ export function createCivKeep(options = {}) {
         latest?.readMarkId === "none" ? Date.parse(latest.windowStart) : NaN;
       if (
         Number.isFinite(priorAnchor) &&
-        now() - priorAnchor < maximumWindowMs
+        now() - priorAnchor <= maximumWindowMs
       ) {
         windowStart = latest.windowStart;
       } else if (Number.isFinite(priorAnchor)) {
-        windowStart = new Date(now() - maximumWindowMs).toISOString();
+        windowStart = new Date(now() - reanchoredWindowMs).toISOString();
         fullReason = "48-hour cap";
       } else {
         windowStart = new Date(now() - 12 * 60 * 60 * 1000).toISOString();
@@ -520,20 +521,19 @@ export function createCivKeep(options = {}) {
       windowReason = "no read mark";
     } else if (now() - Date.parse(readMark.upTo) > maximumWindowMs) {
       const priorAnchor =
-        latest?.readMarkId === readMarkId &&
-        latest?.windowReason === "read mark capped: last 48 hours"
+        latest?.readMarkId === readMarkId
           ? Date.parse(latest.windowStart)
           : NaN;
       if (
         Number.isFinite(priorAnchor) &&
-        now() - priorAnchor < 2 * maximumWindowMs
+        now() - priorAnchor <= maximumWindowMs
       ) {
         windowStart = latest.windowStart;
       } else {
-        windowStart = new Date(now() - maximumWindowMs).toISOString();
+        windowStart = new Date(now() - reanchoredWindowMs).toISOString();
         fullReason = "48-hour cap";
       }
-      windowReason = "read mark capped: last 48 hours";
+      windowReason = "read mark capped: 48-hour maximum";
     } else {
       windowStart = readMark.upTo;
       windowReason = "read mark";
@@ -620,12 +620,25 @@ export function createCivKeep(options = {}) {
   function queueSummary(fort, options = {}) {
     const current = summaryFlights.get(fort.key);
     if (current) {
-      if (options.force && !current.force)
-        return current.promise.then(() => queueSummary(fort, { force: true }));
+      if (options.force && !current.force) {
+        if (!current.started) {
+          current.force = true;
+          return current.promise;
+        }
+        const retryForced = () => queueSummary(fort, { force: true });
+        return current.promise.then(retryForced, retryForced);
+      }
       return current.promise;
     }
-    const flight = { force: Boolean(options.force), promise: null };
-    const task = summaryQueue.then(() => generateSummary(fort, flight));
+    const flight = {
+      force: Boolean(options.force),
+      started: false,
+      promise: null,
+    };
+    const task = summaryQueue.then(() => {
+      flight.started = true;
+      return generateSummary(fort, flight);
+    });
     summaryQueue = task.catch(() => {});
     const shared = task.finally(() => summaryFlights.delete(fort.key));
     flight.promise = shared;

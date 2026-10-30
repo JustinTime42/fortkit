@@ -18,9 +18,9 @@ export const MAYOR_SUMMARY_PASS_INSTRUCTIONS = Object.freeze({
   combine:
     "Combine these background notes into fewer compact notes for a later final pass. They describe EARLIER state that later messages may have changed.",
   final:
-    "Write the final summary. Describe the state at the END of the window. A later message supersedes an earlier one. A proposal, recommendation, or question is NOT done or decided unless a later message says it was done or answered. A question the Overseer answered is resolved and must be reported as decided, with his actual answer when supplied, never as waiting on him. Attribute each statement to its actual speaker (Mayor, Overseer, Warden, or Forge) as the messages name them.",
+    "Write the final summary. Describe the state at the END of the window. A later message supersedes an earlier one. A proposal, recommendation, or question is NOT done or decided unless a later message says it was done or answered. A question the Overseer answered is resolved and must be reported as decided, with the Overseer's actual answer when supplied, never as waiting on the Overseer. Attribute each statement to its actual speaker (Mayor, Overseer, Warden, or Forge) as the messages name them. Use no gendered pronouns for any person. Name each person by role or use they/them.",
   incremental:
-    "Update the previous summary to describe the state at the END of the whole window. Keep what is still true, remove what the new messages resolve, add what is new, and apply every summary rule to the complete result. Return the complete updated summary, not a patch.",
+    "Update the previous summary to describe the state at the END of the whole window. Keep what is still true, remove what the new messages resolve, add what is new, and apply every summary rule to the complete result. Use no gendered pronouns for any person. Name each person by role or use they/them. Return the complete updated summary, not a patch.",
 });
 const BACKGROUND_NOTES_RESERVE_CHARS = MAYOR_SUMMARY_RESERVE * 3;
 const here = path.dirname(fileURLToPath(import.meta.url));
