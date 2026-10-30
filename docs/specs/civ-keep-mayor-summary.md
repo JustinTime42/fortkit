@@ -199,6 +199,61 @@ supplied ESCALATE verdicts.
 
 ### 5.2 Runtime
 
+**Live provider: Claude Sonnet 5.5** (Overseer decision, 2026-10-29), replacing
+the local model as the live default. Why: on two scored 12-hour windows the
+local 7B model made 3 or more material errors in every one of 8 runs, under
+6 prompt variants, and identical inputs gave different errors even at
+temperature 0; Claude Haiku 5.5 and Sonnet 5.5 made none in 6 runs, and Sonnet
+was the more complete on the Overseer's decisions (scores and rubrics on
+`fortkit-t7vz`, 2026-10-29). This moves the summary off this host: the
+original premise of zero frontier tokens is retired knowingly.
+
+- **The call**, exactly, measured working 2026-10-29 (Claude Code 2.1.314):
+  `claude -p --model sonnet --tools "" --no-session-persistence
+  --strict-mcp-config --setting-sources "" --system-prompt <prompt>
+  --output-format json`, the request on STDIN, never on argv. No other flags,
+  never `--dangerously-skip-permissions`. The model runs with NO tools, no MCP
+  servers and no settings sources, so text in a transcript that tries to
+  instruct it can change only the summary's words, which the overlay escapes
+  (section 9).
+- **Data boundary:** the transcripts go only to Anthropic, which already
+  processed every word of them in the Mayor's own session. They never go to
+  another vendor.
+- **One request** carries the whole window (context budget 150,000 estimated
+  tokens). Over budget, the two-pass path of 5.3 runs instead, recorded.
+- **Timeout** 5 minutes per call. A non-zero exit, `is_error: true`, or an
+  unparseable result fails the run loudly.
+- **No silent fallback to the local model.** A failed Claude run is recorded
+  as failed and the previous summary stays displayed with the failure shown.
+  The local Ollama path remains in the code and is selected only by changing
+  the provider constant, and the run record and overlay label then name it.
+- **Usage is recorded** per call and per run (input, output, cache-write and
+  cache-read tokens, `total_cost_usd`, the model actually used) and shown in
+  the overlay's provenance label.
+
+### 5.2a Incremental updates (Overseer decision, 2026-10-29)
+
+Each hourly run that finds a fort moved sends the PREVIOUS successful summary,
+the messages since that summary's `windowEnd`, and a fresh facts block, and
+asks for the updated summary of the whole window. A full rebuild (every message
+in the window) runs instead when any of these hold:
+- there is no previous successful summary;
+- the read mark changed since it (the window start moved);
+- the provider, model or prompt sha256 differs from it;
+- it is the 6th incremental run since the last full rebuild;
+- the Overseer pressed Regenerate (always a full rebuild).
+The incremental instruction says: keep what is still true, remove what the new
+messages resolve, add what is new, and apply every rule of 5.1 and 5.3 to the
+result. The run record stores `mode: "full" | "incremental"`, `baseRun` (the
+previous run's `generatedAt`) and `incrementalCount`. The previous summary's
+text counts as supplied for the number check.
+
+Why: a full 12-hour window is about 35,000-40,000 input tokens; an hourly
+incremental update is a fraction of that, and the window grows until the
+Overseer marks it read.
+
+### 5.2b The local provider (fallback, not live)
+
 - Ollama native `POST http://127.0.0.1:11434/api/chat`, `stream: false`.
 - Model: one constant, `greenlab-qwen2.5:7b-instruct-32k` (Overseer decision;
   no non-Greenlab 32k variant exists on this host, measured 2026-10-27).
@@ -399,9 +454,12 @@ Under the Keep's state home, beside the signature audit:
 - **Overlay:** centred, modal, styled like the bead drawer (`keep.css` tokens),
   closed by Escape and by its close button, focus trapped while open and
   returned to the button on close.
-- **Header label:** "Local-model summary, <model>, <generated time>, window
-  <start> to <end>", plus "first summary: last 12 hours" when it applies, and
-  "running" while a run is in progress.
+- **Header label:** "<Provider> summary, <model actually used>, <generated
+  time>, window <start> to <end>, <full | incremental>, <input tokens> in /
+  <output tokens> out", where Provider is "Claude" or "Local-model" from the
+  run record; plus the window reason ("no read mark: last 12 hours", "window
+  capped at 48 hours") when it applies, and "running" while a run is in
+  progress.
 - **Facts block** above the summary, from `latest.factsBlock`: "Waiting on
   you" (id and title, linked), "Escalated" (same), and the counts. This block,
   not the model's text, is what the Overseer reads first.
@@ -513,3 +571,8 @@ Under the Keep's state home, beside the signature audit:
   in full and earlier ones as background notes, with later messages
   superseding earlier ones (5.3); the number check also reads the messages;
   a replay tool reruns a fixed past window for comparison (5.5).
+- 2026-10-29, Overseer decision after the Claude replay results (bead `.22`):
+  the live provider is Claude Sonnet 5.5 through a tool-less headless call
+  (5.2), with incremental hourly updates and full rebuilds on Regenerate, a
+  changed read mark, model or prompt, or every 6th run (5.2a); no silent
+  fallback; the local Ollama path is kept as a selectable fallback (5.2b).
