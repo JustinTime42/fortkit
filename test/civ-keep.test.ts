@@ -1581,16 +1581,16 @@ describe("Mayor summary local model", () => {
   });
 
   test.each([
-    ["no previous", null, {}, false],
-    ["read mark changed", { windowStart: "old" }, {}, false],
-    ["provider changed", { provider: "ollama" }, {}, false],
-    ["model changed", { model: "old" }, {}, false],
-    ["prompt changed", { promptSha256: "old" }, {}, false],
-    ["sixth incremental", { incrementalCount: 5 }, {}, false],
-    ["Regenerate", {}, {}, true],
-  ])("selects a full rebuild when %s", (_name, override, _unused, force) => {
+    ["no previous", null, false, "no previous summary"],
+    ["read mark changed", { readMarkId: "old" }, false, "read mark changed"],
+    ["provider changed", { provider: "ollama" }, false, "provider changed"],
+    ["model changed", { model: "old" }, false, "model changed"],
+    ["prompt changed", { promptSha256: "old" }, false, "prompt changed"],
+    ["sixth incremental", { incrementalCount: 5 }, false, "sixth incremental"],
+    ["Regenerate", {}, true, "regenerate"],
+  ])("selects a full rebuild when %s", (_name, override, force, fullReason) => {
     const current = {
-      windowStart: "start",
+      readMarkId: "mark",
       provider: "claude",
       model: "sonnet",
       promptSha256: "prompt",
@@ -1608,6 +1608,7 @@ describe("Mayor summary local model", () => {
       mode: "full",
       baseRun: null,
       incrementalCount: 0,
+      fullReason,
     });
   });
 
@@ -1679,8 +1680,119 @@ describe("Mayor summary local model", () => {
       usage: { input_tokens: 7, output_tokens: 3 },
     });
     expect(stdin).toContain("PREVIOUS 42");
-    expect(stdin).toContain("NEW");
+    expect(stdin).toContain('"text":"NEW"');
     expect(stdin).not.toContain('"text":"OLD"');
+    expect(record.highlights).toEqual(current.highlights);
+  });
+
+  test("incremental two-pass retry keeps the previous summary in the final request", async () => {
+    const requests: string[] = [];
+    const spawn = (_file: string, _args: string[]) => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdin: Writable;
+        stdout: PassThrough;
+        stderr: PassThrough;
+        kill: () => boolean;
+      };
+      child.stdout = new PassThrough();
+      child.stderr = new PassThrough();
+      child.kill = () => true;
+      let request = "";
+      child.stdin = new Writable({
+        write(chunk, _encoding, callback) {
+          request += String(chunk);
+          callback();
+        },
+        final(callback) {
+          requests.push(request);
+          child.stdout.end(
+            JSON.stringify({
+              result: "compact",
+              usage: {},
+              modelUsage: { "claude-sonnet-5-5": {} },
+            }),
+          );
+          queueMicrotask(() => child.emit("close", 0));
+          callback();
+        },
+      });
+      return child;
+    };
+    const record = await summariseMayor(
+      {
+        ...input(),
+        readMarkId: "none",
+        windowStart: "2026-10-27T00:00:00Z",
+        windowEnd: "2026-10-27T12:00:00Z",
+        highlights: [
+          {
+            timestamp: "2026-10-27T11:30:00Z",
+            speaker: "Mayor",
+            text: "x".repeat(450_000),
+          },
+        ],
+      },
+      {
+        persist: false,
+        provider: "claude",
+        model: "sonnet",
+        passes: 1,
+        spawn,
+        previousSummary: {
+          ...input(),
+          status: "success",
+          provider: "claude",
+          model: "sonnet",
+          promptSha256: createHash("sha256")
+            .update(readFileSync("civ/keep/prompts/mayor-summary.md"))
+            .digest("hex"),
+          readMarkId: "none",
+          summary: "PREVIOUS SUMMARY SURVIVES",
+          windowEnd: "2026-10-27T11:00:00Z",
+          generatedAt: "base-run",
+          incrementalCount: 0,
+        },
+      },
+    );
+    expect(record.passes).toBe(2);
+    expect(requests.length).toBeGreaterThan(1);
+    expect(requests.at(-1)).toContain("PREVIOUS SUMMARY SURVIVES");
+    expect(requests.at(-1)).toContain("PREVIOUS SUCCESSFUL SUMMARY");
+    expect(requests.at(-1)).toContain("Update the previous summary");
+  });
+
+  test("Ollama always uses a full two-pass run", async () => {
+    let calls = 0;
+    const record = await summariseMayor(
+      { ...input(), windowEnd: "2026-10-27T14:00:00Z" },
+      {
+        persist: false,
+        provider: "ollama",
+        passes: 1,
+        previousSummary: {
+          ...input(),
+          summary: "previous",
+          generatedAt: "base",
+          provider: "ollama",
+          model: "greenlab-qwen2.5:7b-instruct-32k",
+        },
+        fetch: async () => {
+          calls += 1;
+          return new Response(
+            JSON.stringify({
+              prompt_eval_count: 10,
+              message: { content: "summary" },
+            }),
+          );
+        },
+      },
+    );
+    expect(calls).toBeGreaterThan(1);
+    expect(record).toMatchObject({
+      mode: "full",
+      passes: 2,
+      fullReason: "local provider",
+    });
   });
 
   test.each([
@@ -1821,6 +1933,17 @@ describe("Mayor summary local model", () => {
     expect(
       JSON.parse(readFileSync(join(directory, "runs", run ?? ""), "utf8")),
     ).toMatchObject({ status: "failed", provider: "claude" });
+  });
+
+  test("Claude generation under Vitest refuses the default process spawn", async () => {
+    await expect(
+      summariseMayor(input(), {
+        persist: false,
+        provider: "claude",
+        model: "sonnet",
+        passes: 1,
+      }),
+    ).rejects.toThrow("Claude spawn stub is required under VITEST");
   });
 
   test("Claude calls kill the child at the five-minute timeout", async () => {
@@ -2500,7 +2623,46 @@ describe("Mayor summary local model", () => {
     );
     let clock = Date.parse("2026-10-27T12:00:00Z");
     const logs: string[] = [];
-    let calls = 0;
+    const calls: { file: string; args: string[]; stdin: string }[] = [];
+    let holdNext = false;
+    let releaseNext: (() => void) | undefined;
+    const summarySpawn = (file: string, args: string[]) => {
+      const invocation = { file, args, stdin: "" };
+      calls.push(invocation);
+      const child = new EventEmitter() as EventEmitter & {
+        stdin: Writable;
+        stdout: PassThrough;
+        stderr: PassThrough;
+        kill: () => boolean;
+      };
+      child.stdout = new PassThrough();
+      child.stderr = new PassThrough();
+      child.kill = () => true;
+      child.stdin = new Writable({
+        write(chunk, _encoding, callback) {
+          invocation.stdin += String(chunk);
+          callback();
+        },
+        final(callback) {
+          const finish = () => {
+            child.stdout.end(
+              JSON.stringify({
+                result: "summary",
+                usage: { input_tokens: 10, output_tokens: 2 },
+                modelUsage: { "claude-sonnet-5-5": {} },
+              }),
+            );
+            queueMicrotask(() => child.emit("close", 0));
+            callback();
+          };
+          if (holdNext) {
+            holdNext = false;
+            releaseNext = finish;
+          } else finish();
+        },
+      });
+      return child;
+    };
     const timers: {
       fn: () => void;
       delay: number;
@@ -2508,8 +2670,26 @@ describe("Mayor summary local model", () => {
       handle: object;
     }[] = [];
     const clears: object[] = [];
+    const unsafeKeep = createCivKeep({
+      summaryProvider: "claude",
+      env: { HOME: home, XDG_STATE_HOME: join(home, "unsafe-state") },
+      sessionsDirectory: sessions,
+      procRoot: proc,
+      now: () => clock,
+      loadForts: () => [fort],
+      run: async () => "",
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      log: () => {},
+    });
+    await unsafeKeep.refresh();
+    await expect(unsafeKeep.regenerateSummary(fort)).rejects.toThrow(
+      "Claude spawn stub is required under VITEST",
+    );
+    unsafeKeep.close();
     keep = createCivKeep({
-      summaryProvider: "ollama",
+      summaryProvider: "claude",
+      summaryModel: "sonnet",
+      summarySpawn,
       env: { HOME: home, XDG_STATE_HOME: stateHome },
       sessionsDirectory: sessions,
       procRoot: proc,
@@ -2518,15 +2698,6 @@ describe("Mayor summary local model", () => {
       run: async () =>
         `${JSON.stringify({ id: "halls-x1", title: "t", status: "open", labels: [] })}\n`,
       eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
-      fetch: async () => {
-        calls += 1;
-        return new Response(
-          JSON.stringify({
-            prompt_eval_count: 10,
-            message: { content: "summary" },
-          }),
-        );
-      },
       log: (message: string) => logs.push(message),
       setTimeout: (fn: () => void, delay: number) => {
         const handle = { unref() {} };
@@ -2550,7 +2721,26 @@ describe("Mayor summary local model", () => {
     const joined = keep.regenerateSummary(fort);
     expect(joined).toBe(first);
     await Promise.all([first, joined]);
-    expect(calls).toBe(1);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      file: "claude",
+      args: [
+        "-p",
+        "--model",
+        "sonnet",
+        "--tools",
+        "",
+        "--no-session-persistence",
+        "--strict-mcp-config",
+        "--setting-sources",
+        "",
+        "--system-prompt",
+        expect.any(String),
+        "--output-format",
+        "json",
+      ],
+    });
+    expect(calls[0]?.stdin).toContain('"text":"Mayor update"');
     let latest = JSON.parse(
       readFileSync(
         join(stateHome, "civ-keep/summaries/halls/latest.json"),
@@ -2558,21 +2748,56 @@ describe("Mayor summary local model", () => {
       ),
     );
     expect(latest.windowStart).toBe("2026-10-27T00:00:00.000Z");
-    expect(latest.windowReason).toBe("no read mark: last 12 hours");
+    expect(latest.windowReason).toBe("no read mark");
     await new Promise<void>((resolve) =>
       keep?.server.listen(0, "127.0.0.1", resolve),
     );
     const port = (keep.server.address() as AddressInfo).port;
     const firstEnd = latest.windowEnd;
+    appendFileSync(
+      transcript,
+      `${JSON.stringify({ type: "assistant", timestamp: "2026-10-27T12:00:30Z", message: { content: [{ type: "text", text: "Incremental update" }] } })}\n`,
+    );
     clock += 60_000;
-    await keep.regenerateSummary(fort);
+    await keep.runSummaryPass();
     latest = JSON.parse(
       readFileSync(
         join(stateHome, "civ-keep/summaries/halls/latest.json"),
         "utf8",
       ),
     );
-    expect(latest.windowStart).toBe("2026-10-27T00:01:00.000Z");
+    expect(latest.windowStart).toBe("2026-10-27T00:00:00.000Z");
+    expect(latest).toMatchObject({
+      mode: "incremental",
+      fullReason: null,
+      baseRun: "2026-10-27T12:00:00.000Z",
+      incrementalCount: 1,
+    });
+    expect(
+      latest.highlights.map((message: { text: string }) => message.text),
+    ).toEqual(["Mayor update", "Incremental update"]);
+    expect(calls.at(-1)?.stdin).toContain("PREVIOUS SUCCESSFUL SUMMARY");
+    expect(calls.at(-1)?.stdin).toContain('"text":"Incremental update"');
+    expect(calls.at(-1)?.stdin).not.toContain('"text":"Mayor update"');
+    appendFileSync(
+      transcript,
+      `${JSON.stringify({ type: "assistant", timestamp: "2026-10-27T12:01:30Z", message: { content: [{ type: "text", text: "Late force update" }] } })}\n`,
+    );
+    clock += 60_000;
+    holdNext = true;
+    const scheduled = keep.runSummaryPass();
+    await new Promise((resolve) => setImmediate(resolve));
+    const forced = keep.regenerateSummary(fort);
+    releaseNext?.();
+    await Promise.all([scheduled, forced]);
+    latest = JSON.parse(
+      readFileSync(
+        join(stateHome, "civ-keep/summaries/halls/latest.json"),
+        "utf8",
+      ),
+    );
+    expect(latest).toMatchObject({ mode: "full", fullReason: "regenerate" });
+    expect(calls).toHaveLength(4);
     const marked = await fetch(
       `http://127.0.0.1:${port}/api/summary/mark-read?fort=halls`,
       {
@@ -2596,7 +2821,7 @@ describe("Mayor summary local model", () => {
     );
     expect(latest.windowStart).toBe(firstEnd);
     expect(latest.windowReason).toBe("read mark");
-    expect(calls).toBe(3);
+    expect(calls).toHaveLength(5);
     clock += 60_000;
     await keep.regenerateSummary(fort);
     latest = JSON.parse(
@@ -2642,18 +2867,19 @@ describe("Mayor summary local model", () => {
         "utf8",
       ),
     );
-    expect(latest.windowStart).toBe("2026-10-28T12:03:00.000Z");
+    expect(latest.windowStart).toBe("2026-10-28T12:04:00.000Z");
+    expect(latest.fullReason).toBe("48-hour cap");
     expect(latest.windowReason).toBe("read mark capped: last 48 hours");
     clock += 60_000;
     await keep.runSummaryPass();
-    expect(calls).toBe(5);
+    expect(calls).toHaveLength(7);
     expect(logs).toContain(
-      "summary halls: skipped, unchanged since 2026-10-30T12:03:00.000Z",
+      "summary halls: skipped, unchanged since 2026-10-30T12:04:00.000Z",
     );
     appendFileSync(transcript, " ");
     clock += 60_000;
     await keep.runSummaryPass();
-    expect(calls).toBe(6);
+    expect(calls).toHaveLength(8);
     nodeFs.rmSync(join(sessions, "41.json"));
     await keep.runSummaryPass();
     expect(logs).toContain("summary halls: skipped, no live Mayor");

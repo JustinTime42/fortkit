@@ -196,6 +196,15 @@ function singlePassRequest(input, messages, instructions) {
 function incrementalRequest(input, previousSummary, messages, instructions) {
   return `${factsBlock(input)}\n\n${instructions.final}\n${instructions.incremental}\n${jsonData("PREVIOUS SUCCESSFUL SUMMARY", previousSummary)}\n\n${jsonData("NEW CONVERSATION SINCE THE PREVIOUS SUMMARY", messages)}`;
 }
+function incrementalFinalRequest(
+  input,
+  previousSummary,
+  backgroundNotes,
+  recentMessages,
+  instructions,
+) {
+  return `${factsBlock(input)}\n\n${instructions.final}\n${instructions.incremental}\n${jsonData("PREVIOUS SUCCESSFUL SUMMARY", previousSummary)}\n\n${jsonData("BACKGROUND NOTES FROM NEW MESSAGES", backgroundNotes)}\n\n${jsonData("NEW CONVERSATION SINCE THE PREVIOUS SUMMARY", recentMessages)}`;
+}
 function chunksFor(messages, input, prompt, instructions, context) {
   if (!fitsRequest(prompt, backgroundRequest(input, [], instructions), context))
     throw new Error("facts exceed model context");
@@ -484,20 +493,28 @@ export function unverifiedNumbers(summary, facts) {
   return unverified;
 }
 export function summaryMode(previous, current, force = false) {
-  if (force || !previous)
-    return { mode: "full", baseRun: null, incrementalCount: 0 };
-  if (
-    previous.windowStart !== current.windowStart ||
-    previous.provider !== current.provider ||
-    previous.model !== current.model ||
-    previous.promptSha256 !== current.promptSha256 ||
-    Number(previous.incrementalCount ?? 0) >= 5
-  )
-    return { mode: "full", baseRun: null, incrementalCount: 0 };
+  const full = (fullReason) => ({
+    mode: "full",
+    baseRun: null,
+    incrementalCount: 0,
+    fullReason,
+  });
+  if (force) return full("regenerate");
+  if (!previous) return full("no previous summary");
+  if (current.fullReason) return full(current.fullReason);
+  if (previous.readMarkId !== current.readMarkId)
+    return full("read mark changed");
+  if (previous.provider !== current.provider) return full("provider changed");
+  if (previous.model !== current.model) return full("model changed");
+  if (previous.promptSha256 !== current.promptSha256)
+    return full("prompt changed");
+  if (Number(previous.incrementalCount ?? 0) >= 5)
+    return full("sixth incremental");
   return {
     mode: "incremental",
     baseRun: previous.generatedAt,
     incrementalCount: Number(previous.incrementalCount ?? 0) + 1,
+    fullReason: null,
   };
 }
 function addClaudeTotals(record) {
@@ -525,6 +542,7 @@ export async function summariseMayor(input, options = {}) {
   const now = options.now ?? (() => Date.now());
   const started = now();
   const at = iso(started);
+  const provider = options.provider ?? "ollama";
   const experiment = {
     model: options.model ?? MAYOR_SUMMARY_MODEL,
     temperature: options.temperature,
@@ -532,8 +550,8 @@ export async function summariseMayor(input, options = {}) {
       ...MAYOR_SUMMARY_PASS_INSTRUCTIONS,
       ...options.passInstructions,
     },
-    provider: options.provider ?? "ollama",
-    requestedPasses: options.passes ?? 2,
+    provider,
+    requestedPasses: provider === "ollama" ? 2 : (options.passes ?? 2),
     spawn: options.spawn ?? nodeSpawn,
   };
   experiment.context =
@@ -578,6 +596,8 @@ export async function summariseMayor(input, options = {}) {
     mode: "full",
     baseRun: null,
     incrementalCount: 0,
+    fullReason: null,
+    readMarkId: input.readMarkId ?? "none",
   };
   try {
     if (options.persist !== false)
@@ -586,16 +606,25 @@ export async function summariseMayor(input, options = {}) {
     prompt = promptAndDigest.prompt;
     record.promptSha256 = promptAndDigest.sha256;
     record.promptText = prompt;
-    const selectedMode = summaryMode(
-      options.previousSummary,
-      {
-        windowStart: input.windowStart,
-        provider: experiment.provider,
-        model: experiment.model,
-        promptSha256: record.promptSha256,
-      },
-      options.force,
-    );
+    const selectedMode =
+      experiment.provider === "ollama"
+        ? {
+            mode: "full",
+            baseRun: null,
+            incrementalCount: 0,
+            fullReason: "local provider",
+          }
+        : summaryMode(
+            options.previousSummary,
+            {
+              readMarkId: input.readMarkId ?? "none",
+              provider: experiment.provider,
+              model: experiment.model,
+              promptSha256: record.promptSha256,
+              fullReason: input.fullReason,
+            },
+            options.force,
+          );
     Object.assign(record, selectedMode);
     const generationInput =
       selectedMode.mode === "incremental"
@@ -608,7 +637,7 @@ export async function summariseMayor(input, options = {}) {
             ),
           }
         : input;
-    record.highlights = generationInput.highlights;
+    record.highlights = input.highlights;
     if (experiment.provider === "ollama" && typeof fetchImpl !== "function")
       throw new Error("fetch is required");
     if (
@@ -616,6 +645,12 @@ export async function summariseMayor(input, options = {}) {
       typeof experiment.spawn !== "function"
     )
       throw new Error("spawn is required");
+    if (
+      experiment.provider === "claude" &&
+      process.env.VITEST &&
+      options.spawn === undefined
+    )
+      throw new Error("Claude spawn stub is required under VITEST");
     if (experiment.requestedPasses === 1) {
       const request =
         selectedMode.mode === "incremental"
@@ -681,12 +716,20 @@ export async function summariseMayor(input, options = {}) {
       recentMessages.length &&
       !fitsRequest(
         prompt,
-        finalRequest(
-          generationInput,
-          reservedNotes,
-          recentMessages,
-          experiment.passInstructions,
-        ),
+        selectedMode.mode === "incremental"
+          ? incrementalFinalRequest(
+              generationInput,
+              options.previousSummary.summary,
+              reservedNotes,
+              recentMessages,
+              experiment.passInstructions,
+            )
+          : finalRequest(
+              generationInput,
+              reservedNotes,
+              recentMessages,
+              experiment.passInstructions,
+            ),
         experiment.context,
       )
     ) {
@@ -703,18 +746,24 @@ export async function summariseMayor(input, options = {}) {
       attempt,
       experiment,
     );
-    if (selectedMode.mode === "incremental")
-      backgroundNotes = [options.previousSummary.summary, ...backgroundNotes];
     while (
       recentMessages.length &&
       !fitsRequest(
         prompt,
-        finalRequest(
-          generationInput,
-          backgroundNotes,
-          recentMessages,
-          experiment.passInstructions,
-        ),
+        selectedMode.mode === "incremental"
+          ? incrementalFinalRequest(
+              generationInput,
+              options.previousSummary.summary,
+              backgroundNotes,
+              recentMessages,
+              experiment.passInstructions,
+            )
+          : finalRequest(
+              generationInput,
+              backgroundNotes,
+              recentMessages,
+              experiment.passInstructions,
+            ),
         experiment.context,
       )
     ) {
@@ -724,12 +773,20 @@ export async function summariseMayor(input, options = {}) {
         move < recentMessages.length &&
         !fitsRequest(
           prompt,
-          finalRequest(
-            generationInput,
-            backgroundNotes,
-            recentMessages.slice(move),
-            experiment.passInstructions,
-          ),
+          selectedMode.mode === "incremental"
+            ? incrementalFinalRequest(
+                generationInput,
+                options.previousSummary.summary,
+                backgroundNotes,
+                recentMessages.slice(move),
+                experiment.passInstructions,
+              )
+            : finalRequest(
+                generationInput,
+                backgroundNotes,
+                recentMessages.slice(move),
+                experiment.passInstructions,
+              ),
           experiment.context,
         )
       )
@@ -754,12 +811,21 @@ export async function summariseMayor(input, options = {}) {
       if (record.chunks.length === firstChunk)
         throw new Error("background retry produced no run-record chunks");
     }
-    const request = finalRequest(
-      generationInput,
-      backgroundNotes,
-      recentMessages,
-      experiment.passInstructions,
-    );
+    const request =
+      selectedMode.mode === "incremental"
+        ? incrementalFinalRequest(
+            generationInput,
+            options.previousSummary.summary,
+            backgroundNotes,
+            recentMessages,
+            experiment.passInstructions,
+          )
+        : finalRequest(
+            generationInput,
+            backgroundNotes,
+            recentMessages,
+            experiment.passInstructions,
+          );
     if (!fitsRequest(prompt, request, experiment.context))
       throw new Error("facts and background notes exceed model context");
     record.backgroundMessages = backgroundMessages;
