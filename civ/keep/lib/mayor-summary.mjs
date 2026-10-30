@@ -1,4 +1,6 @@
 // Local-model Mayor-summary generation and private run-record storage.
+
+import { spawn as nodeSpawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -7,6 +9,7 @@ import { fileURLToPath } from "node:url";
 export const MAYOR_SUMMARY_MODEL = "greenlab-qwen2.5:7b-instruct-32k";
 export const MAYOR_SUMMARY_CONTEXT = 32768;
 export const MAYOR_SUMMARY_RESERVE = 2048;
+export const CLAUDE_SUMMARY_CONTEXT = 150000;
 export const MAYOR_SUMMARY_PASS_INSTRUCTIONS = Object.freeze({
   background:
     "Write compact background notes for a later final pass. These messages are EARLIER state that later messages may have changed.",
@@ -171,10 +174,8 @@ export function splitText(text, fits) {
   }
   return pieces;
 }
-function fitsRequest(prompt, message) {
-  return (
-    estimate(prompt + message) + MAYOR_SUMMARY_RESERVE <= MAYOR_SUMMARY_CONTEXT
-  );
+function fitsRequest(prompt, message, context = MAYOR_SUMMARY_CONTEXT) {
+  return estimate(prompt + message) + MAYOR_SUMMARY_RESERVE <= context;
 }
 function backgroundRequest(input, chunk, instructions) {
   return `${factsBlock(input)}\n\n${instructions.background}\n${jsonData("EARLIER CONVERSATION", chunk)}`;
@@ -185,8 +186,11 @@ function notesRequest(input, group, instructions) {
 function finalRequest(input, backgroundNotes, recentMessages, instructions) {
   return `${factsBlock(input)}\n\n${instructions.final}\n${jsonData("BACKGROUND NOTES (EARLIER AND POSSIBLY SUPERSEDED)", backgroundNotes)}\n\n${jsonData("RECENT CONVERSATION (FULL, IN TIME ORDER)", recentMessages)}`;
 }
-function chunksFor(messages, input, prompt, instructions) {
-  if (!fitsRequest(prompt, backgroundRequest(input, [], instructions)))
+function singlePassRequest(input, messages, instructions) {
+  return `${factsBlock(input)}\n\n${instructions.final}\n${jsonData("WHOLE CONVERSATION (FULL, IN TIME ORDER)", messages)}`;
+}
+function chunksFor(messages, input, prompt, instructions, context) {
+  if (!fitsRequest(prompt, backgroundRequest(input, [], instructions), context))
     throw new Error("facts exceed model context");
   const splitMarker = "\n[message split]";
   const pieces = messages.flatMap((item) => {
@@ -195,6 +199,7 @@ function chunksFor(messages, input, prompt, instructions) {
       fitsRequest(
         prompt,
         backgroundRequest(input, `${part}${splitMarker}`, instructions),
+        context,
       ),
     );
   });
@@ -205,7 +210,11 @@ function chunksFor(messages, input, prompt, instructions) {
     const candidate = `${current ? `${current}\n\n` : ""}${itemText}`;
     if (
       current &&
-      !fitsRequest(prompt, backgroundRequest(input, candidate, instructions))
+      !fitsRequest(
+        prompt,
+        backgroundRequest(input, candidate, instructions),
+        context,
+      )
     ) {
       chunks.push(current);
       current = "";
@@ -220,12 +229,13 @@ export function packNotes(
   input,
   prompt,
   instructions = MAYOR_SUMMARY_PASS_INSTRUCTIONS,
+  context = MAYOR_SUMMARY_CONTEXT,
 ) {
-  if (!fitsRequest(prompt, notesRequest(input, "", instructions)))
+  if (!fitsRequest(prompt, notesRequest(input, "", instructions), context))
     throw new Error("facts exceed model context");
   const pieces = notes.flatMap((note, index) =>
     splitText(JSON.stringify({ chunk: index + 1, notes: note }), (part) =>
-      fitsRequest(prompt, notesRequest(input, part, instructions)),
+      fitsRequest(prompt, notesRequest(input, part, instructions), context),
     ),
   );
   const groups = [];
@@ -234,7 +244,11 @@ export function packNotes(
     const candidate = `${current ? `${current}\n\n` : ""}${piece.text}`;
     if (
       current &&
-      !fitsRequest(prompt, notesRequest(input, candidate, instructions))
+      !fitsRequest(
+        prompt,
+        notesRequest(input, candidate, instructions),
+        context,
+      )
     ) {
       groups.push(current);
       current = "";
@@ -286,6 +300,99 @@ export async function ask(fetchImpl, prompt, messages, experiment = {}) {
     notes: text,
   };
 }
+function claudeUsage(value) {
+  const usage = value?.usage ?? {};
+  return {
+    input_tokens: Number(usage.input_tokens ?? 0),
+    output_tokens: Number(usage.output_tokens ?? 0),
+    cache_creation_input_tokens: Number(usage.cache_creation_input_tokens ?? 0),
+    cache_read_input_tokens: Number(usage.cache_read_input_tokens ?? 0),
+  };
+}
+export async function askClaude(spawnImpl, prompt, messages, experiment = {}) {
+  const chars = prompt.length + messages.length;
+  const estTokens = estimate(prompt + messages);
+  if (estTokens + MAYOR_SUMMARY_RESERVE > CLAUDE_SUMMARY_CONTEXT)
+    throw new Error(
+      `request exceeds Claude context (${estTokens} estimated tokens)`,
+    );
+  const args = [
+    "-p",
+    "--model",
+    experiment.model,
+    "--tools",
+    "",
+    "--no-session-persistence",
+    "--strict-mcp-config",
+    "--setting-sources",
+    "",
+    "--system-prompt",
+    prompt,
+    "--output-format",
+    "json",
+  ];
+  const started = Date.now();
+  const result = await new Promise((resolve, reject) => {
+    const child = spawnImpl("claude", args, {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, 300000);
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.on("close", (code) => {
+      clearTimeout(timeout);
+      if (timedOut)
+        return reject(new Error("Claude call timed out after 300000ms"));
+      if (code !== 0)
+        return reject(
+          new Error(
+            `Claude exited ${code}${stderr.trim() ? `: ${stderr.trim()}` : ""}`,
+          ),
+        );
+      try {
+        resolve(JSON.parse(stdout));
+      } catch {
+        reject(new Error("Claude returned invalid JSON"));
+      }
+    });
+    child.stdin.end(messages);
+  });
+  if (result?.is_error === true)
+    throw new Error("Claude returned is_error true");
+  const text = result?.result;
+  if (typeof text !== "string" || !text.trim())
+    throw new Error("Claude returned no summary text");
+  return {
+    chars,
+    estTokens,
+    notes: text,
+    durationMs: Date.now() - started,
+    models: Object.keys(result?.modelUsage ?? {}),
+    usage: claudeUsage(result),
+    total_cost_usd: Number(result?.total_cost_usd ?? 0),
+  };
+}
+async function askProvider(fetchImpl, prompt, messages, experiment) {
+  if (experiment.provider === "claude")
+    return askClaude(experiment.spawn, prompt, messages, experiment);
+  return ask(fetchImpl, prompt, messages, experiment);
+}
 async function summariseBackground(
   messages,
   input,
@@ -301,10 +408,11 @@ async function summariseBackground(
     input,
     prompt,
     experiment.passInstructions,
+    experiment.context,
   );
   const notes = [];
   for (const chunk of chunks) {
-    const response = await ask(
+    const response = await askProvider(
       fetchImpl,
       prompt,
       backgroundRequest(input, chunk, experiment.passInstructions),
@@ -320,12 +428,13 @@ async function summariseBackground(
       input,
       prompt,
       experiment.passInstructions,
+      experiment.context,
     );
     if (groups.length >= current.length)
       throw new Error("combine round did not reduce note count");
     const next = [];
     for (const group of groups) {
-      const response = await ask(
+      const response = await askProvider(
         fetchImpl,
         prompt,
         notesRequest(input, group, experiment.passInstructions),
@@ -367,6 +476,25 @@ export function unverifiedNumbers(summary, facts) {
   }
   return unverified;
 }
+function addClaudeTotals(record) {
+  const totals = {
+    input_tokens: 0,
+    output_tokens: 0,
+    cache_creation_input_tokens: 0,
+    cache_read_input_tokens: 0,
+  };
+  const models = new Set();
+  let totalCostUsd = 0;
+  for (const chunk of record.chunks) {
+    for (const model of chunk.models ?? []) models.add(model);
+    for (const key of Object.keys(totals))
+      totals[key] += Number(chunk.usage?.[key] ?? 0);
+    totalCostUsd += Number(chunk.total_cost_usd ?? 0);
+  }
+  record.models = [...models];
+  record.usage = totals;
+  record.total_cost_usd = totalCostUsd;
+}
 export async function summariseMayor(input, options = {}) {
   const fileSystem = options.fileSystem ?? fs;
   const fetchImpl = options.fetch ?? globalThis.fetch;
@@ -380,7 +508,14 @@ export async function summariseMayor(input, options = {}) {
       ...MAYOR_SUMMARY_PASS_INSTRUCTIONS,
       ...options.passInstructions,
     },
+    provider: options.provider ?? "ollama",
+    requestedPasses: options.passes ?? 2,
+    spawn: options.spawn ?? nodeSpawn,
   };
+  experiment.context =
+    experiment.provider === "claude"
+      ? CLAUDE_SUMMARY_CONTEXT
+      : MAYOR_SUMMARY_CONTEXT;
   let prompt;
   let directory;
   const record = {
@@ -408,6 +543,11 @@ export async function summariseMayor(input, options = {}) {
     backgroundMessages: [],
     backgroundNotes: [],
     chunks: [],
+    provider: experiment.provider,
+    requestedPasses: experiment.requestedPasses,
+    passes: experiment.requestedPasses,
+    passFallback: null,
+    usage: null,
     malformedLines: input.malformedLines ?? 0,
     keepRefreshedAt: input.keepRefreshedAt ?? null,
     beadExport: input.beadExport ?? null,
@@ -419,7 +559,56 @@ export async function summariseMayor(input, options = {}) {
     prompt = promptAndDigest.prompt;
     record.promptSha256 = promptAndDigest.sha256;
     record.promptText = prompt;
-    if (typeof fetchImpl !== "function") throw new Error("fetch is required");
+    if (experiment.provider === "ollama" && typeof fetchImpl !== "function")
+      throw new Error("fetch is required");
+    if (
+      experiment.provider === "claude" &&
+      typeof experiment.spawn !== "function"
+    )
+      throw new Error("spawn is required");
+    if (experiment.requestedPasses === 1) {
+      const request = singlePassRequest(
+        input,
+        input.highlights,
+        experiment.passInstructions,
+      );
+      const context =
+        experiment.provider === "claude"
+          ? CLAUDE_SUMMARY_CONTEXT
+          : MAYOR_SUMMARY_CONTEXT;
+      if (estimate(prompt + request) + MAYOR_SUMMARY_RESERVE <= context) {
+        record.backgroundMessages = [];
+        record.recentMessages = input.highlights;
+        record.backgroundNotes = [];
+        const final = await askProvider(fetchImpl, prompt, request, experiment);
+        record.chunks.push({ ...final, phase: "final", attempt: 1 });
+        record.summary = final.notes;
+        record.unverifiedNumbers = unverifiedNumbers(final.notes, {
+          beadFacts: input.beadFacts,
+          factsBlock: input.factsBlock,
+          highlights: input.highlights,
+        });
+        record.durationMs = now() - started;
+        if (experiment.provider === "claude") addClaudeTotals(record);
+        const successRecord = { ...record, status: "success" };
+        if (options.persist !== false) {
+          writePrivate(
+            fileSystem,
+            path.join(directory, "latest.json"),
+            successRecord,
+          );
+          writePrivate(
+            fileSystem,
+            path.join(directory, "runs", `${at}.json`),
+            successRecord,
+          );
+        }
+        record.status = "success";
+        return record;
+      }
+      record.passes = 2;
+      record.passFallback = "single-pass input exceeded context budget";
+    }
     const twoHoursAgo = Date.parse(input.windowEnd) - 2 * 60 * 60 * 1000;
     let split = input.highlights.findIndex(
       (message) => Date.parse(message.timestamp) >= twoHoursAgo,
@@ -438,6 +627,7 @@ export async function summariseMayor(input, options = {}) {
           recentMessages,
           experiment.passInstructions,
         ),
+        experiment.context,
       )
     ) {
       backgroundMessages.push(recentMessages[0]);
@@ -463,6 +653,7 @@ export async function summariseMayor(input, options = {}) {
           recentMessages,
           experiment.passInstructions,
         ),
+        experiment.context,
       )
     ) {
       const firstChunk = record.chunks.length;
@@ -477,6 +668,7 @@ export async function summariseMayor(input, options = {}) {
             recentMessages.slice(move),
             experiment.passInstructions,
           ),
+          experiment.context,
         )
       )
         move += 1;
@@ -506,13 +698,13 @@ export async function summariseMayor(input, options = {}) {
       recentMessages,
       experiment.passInstructions,
     );
-    if (!fitsRequest(prompt, request))
+    if (!fitsRequest(prompt, request, experiment.context))
       throw new Error("facts and background notes exceed model context");
     record.backgroundMessages = backgroundMessages;
     record.recentMessages = recentMessages;
     record.backgroundNotes = backgroundNotes;
     record.recentBoundary = recentMessages[0]?.timestamp ?? input.windowEnd;
-    const final = await ask(fetchImpl, prompt, request, experiment);
+    const final = await askProvider(fetchImpl, prompt, request, experiment);
     record.chunks.push({ ...final, phase: "final", attempt });
     const summary = final.notes;
     record.summary = summary;
@@ -522,6 +714,7 @@ export async function summariseMayor(input, options = {}) {
       highlights: input.highlights,
     });
     record.durationMs = now() - started;
+    if (experiment.provider === "claude") addClaudeTotals(record);
     const successRecord = { ...record, status: "success" };
     if (options.persist !== false) {
       writePrivate(

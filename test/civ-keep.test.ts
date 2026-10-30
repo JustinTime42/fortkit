@@ -3,6 +3,7 @@
 // per-fort allowlist (civ/keep/lib/readers.mjs signCommand); only the final
 // execFile is stubbed, so a write the allowlist would reject fails these tests.
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
 import nodeFs, {
   appendFileSync,
   mkdirSync,
@@ -16,7 +17,8 @@ import { request as httpRequest } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, test } from "vitest";
+import { PassThrough, Writable } from "node:stream";
+import { afterEach, describe, expect, test, vi } from "vitest";
 // @ts-expect-error JavaScript library module.
 import * as fortsModel from "../civ/keep/lib/forts.mjs";
 // @ts-expect-error JavaScript library module.
@@ -43,6 +45,7 @@ const {
   MAYOR_SUMMARY_CONTEXT,
   MAYOR_SUMMARY_RESERVE,
   ask,
+  askClaude,
   packNotes,
   readLastFailure,
   splitText,
@@ -1409,6 +1412,349 @@ describe("Mayor summary local model", () => {
         instructions,
       ]),
     ).rejects.toThrow("unknown pass-instructions key: typo");
+  });
+
+  test("Claude replay uses exact tool-less argv, stdin, one pass, and records usage", async () => {
+    const root = mkdtempSync(join(tmpdir(), "mayor-summary-claude-"));
+    const home = join(root, "home");
+    const repo = join(root, "fort");
+    const out = join(root, "replay.json");
+    const transcriptDirectory = join(
+      home,
+      ".claude/projects",
+      repo.replace(/[^A-Za-z0-9]/g, "-"),
+    );
+    mkdirSync(join(repo, ".beads"), { recursive: true });
+    mkdirSync(transcriptDirectory, { recursive: true });
+    writeFileSync(join(repo, ".beads/issues.jsonl"), "");
+    writeFileSync(
+      join(transcriptDirectory, "past-session.jsonl"),
+      `${["FIRST WHOLE MESSAGE", "SECOND WHOLE MESSAGE"]
+        .map((text, index) =>
+          JSON.stringify({
+            type: "user",
+            timestamp: `2026-10-27T10:0${index}:30Z`,
+            origin: { kind: "human" },
+            promptSource: "typed",
+            message: { content: [{ type: "text", text }] },
+          }),
+        )
+        .join("\n")}\n`,
+    );
+    let invocation: { file?: string; args?: string[]; stdin?: string } = {};
+    const spawn = (file: string, args: string[]) => {
+      invocation = { file, args, stdin: "" };
+      const child = new EventEmitter() as EventEmitter & {
+        stdin: Writable;
+        stdout: PassThrough;
+        stderr: PassThrough;
+        kill: (signal: string) => boolean;
+      };
+      child.stdout = new PassThrough();
+      child.stderr = new PassThrough();
+      child.kill = () => true;
+      child.stdin = new Writable({
+        write(chunk, _encoding, callback) {
+          invocation.stdin += String(chunk);
+          callback();
+        },
+        final(callback) {
+          child.stdout.end(
+            JSON.stringify({
+              result: "Claude final 2",
+              is_error: false,
+              usage: {
+                input_tokens: 101,
+                output_tokens: 17,
+                cache_creation_input_tokens: 13,
+                cache_read_input_tokens: 19,
+              },
+              total_cost_usd: 0.0123,
+              modelUsage: { "claude-test-actual": {} },
+            }),
+          );
+          queueMicrotask(() => child.emit("close", 0));
+          callback();
+        },
+      });
+      return child;
+    };
+    const record = await replaySummary(
+      [
+        "--fort",
+        "halls",
+        "--session",
+        "past-session",
+        "--start",
+        "2026-10-27T10:00:00Z",
+        "--end",
+        "2026-10-27T11:00:00Z",
+        "--out",
+        out,
+        "--provider",
+        "claude",
+        "--passes",
+        "1",
+        "--model",
+        "claude-test-requested",
+      ],
+      {
+        env: { HOME: home },
+        loadForts: () => [
+          {
+            key: "halls",
+            name: "Halls",
+            project: "halls",
+            civilization: "Justin",
+            registryPath: join(home, ".claude/civilization.json"),
+            repo,
+            waitingLabels: ["gate-1"],
+            whoseMove: null,
+            mode: "plain",
+            fleetState: null,
+          },
+        ],
+        spawn,
+      },
+    );
+    expect(invocation.file).toBe("claude");
+    expect(invocation.args).toEqual([
+      "-p",
+      "--model",
+      "claude-test-requested",
+      "--tools",
+      "",
+      "--no-session-persistence",
+      "--strict-mcp-config",
+      "--setting-sources",
+      "",
+      "--system-prompt",
+      expect.any(String),
+      "--output-format",
+      "json",
+    ]);
+    expect(invocation.args?.join(" ")).not.toContain("FIRST WHOLE MESSAGE");
+    expect(invocation.args?.join(" ")).not.toContain("SECOND WHOLE MESSAGE");
+    expect(invocation.stdin).toContain("FIRST WHOLE MESSAGE");
+    expect(invocation.stdin).toContain("SECOND WHOLE MESSAGE");
+    expect(invocation.stdin).toContain("WHOLE CONVERSATION");
+    expect(invocation.stdin).not.toContain("BACKGROUND NOTES");
+    expect(record).toMatchObject({
+      provider: "claude",
+      requestedPasses: 1,
+      passes: 1,
+      passFallback: null,
+      backgroundMessages: [],
+      backgroundNotes: [],
+      models: ["claude-test-actual"],
+      usage: {
+        input_tokens: 101,
+        output_tokens: 17,
+        cache_creation_input_tokens: 13,
+        cache_read_input_tokens: 19,
+      },
+      total_cost_usd: 0.0123,
+      chunks: [
+        {
+          phase: "final",
+          models: ["claude-test-actual"],
+          usage: {
+            input_tokens: 101,
+            output_tokens: 17,
+            cache_creation_input_tokens: 13,
+            cache_read_input_tokens: 19,
+          },
+          total_cost_usd: 0.0123,
+          durationMs: expect.any(Number),
+        },
+      ],
+    });
+  });
+
+  test.each([
+    { code: 7, isError: false, message: "Claude exited 7" },
+    { code: 0, isError: true, message: "Claude returned is_error true" },
+  ])(
+    "Claude replay fails loudly for $message",
+    async ({ code, isError, message }) => {
+      const spawn = () => {
+        const child = new EventEmitter() as EventEmitter & {
+          stdin: Writable;
+          stdout: PassThrough;
+          stderr: PassThrough;
+          kill: () => boolean;
+        };
+        child.stdout = new PassThrough();
+        child.stderr = new PassThrough();
+        child.kill = () => true;
+        child.stdin = new Writable({
+          write(_chunk, _encoding, callback) {
+            callback();
+          },
+          final(callback) {
+            child.stdout.end(
+              JSON.stringify({
+                result: "bad",
+                is_error: isError,
+                modelUsage: {},
+              }),
+            );
+            queueMicrotask(() => child.emit("close", code));
+            callback();
+          },
+        });
+        return child;
+      };
+      const replayRoot = mkdtempSync(
+        join(tmpdir(), "mayor-summary-claude-error-"),
+      );
+      const replayHome = join(replayRoot, "home");
+      const replayRepo = join(replayRoot, "fort");
+      const transcriptDirectory = join(
+        replayHome,
+        ".claude/projects",
+        replayRepo.replace(/[^A-Za-z0-9]/g, "-"),
+      );
+      mkdirSync(join(replayRepo, ".beads"), { recursive: true });
+      mkdirSync(transcriptDirectory, { recursive: true });
+      writeFileSync(join(replayRepo, ".beads/issues.jsonl"), "");
+      writeFileSync(
+        join(transcriptDirectory, "past-session.jsonl"),
+        `${JSON.stringify({
+          type: "user",
+          timestamp: "2026-10-27T10:30:00Z",
+          origin: { kind: "human" },
+          promptSource: "typed",
+          message: { content: [{ type: "text", text: "message" }] },
+        })}\n`,
+      );
+      await expect(
+        replaySummary(
+          [
+            "--fort",
+            "halls",
+            "--session",
+            "past-session",
+            "--start",
+            "2026-10-27T10:00:00Z",
+            "--end",
+            "2026-10-27T11:00:00Z",
+            "--out",
+            join(replayRoot, "out.json"),
+            "--provider",
+            "claude",
+            "--model",
+            "claude-test",
+          ],
+          {
+            env: { HOME: replayHome },
+            loadForts: () => [
+              {
+                key: "halls",
+                repo: replayRepo,
+                waitingLabels: ["gate-1"],
+                whoseMove: null,
+                mode: "plain",
+                fleetState: null,
+              },
+            ],
+            spawn,
+          },
+        ),
+      ).rejects.toThrow(message);
+    },
+  );
+
+  test("Claude calls kill the child at the five-minute timeout", async () => {
+    vi.useFakeTimers();
+    let killedWith = "";
+    const spawn = () => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdin: Writable;
+        stdout: PassThrough;
+        stderr: PassThrough;
+        kill: (signal: string) => boolean;
+      };
+      child.stdout = new PassThrough();
+      child.stderr = new PassThrough();
+      child.stdin = new PassThrough();
+      child.kill = (signal) => {
+        killedWith = signal;
+        queueMicrotask(() => child.emit("close", null));
+        return true;
+      };
+      return child;
+    };
+    const pending = askClaude(spawn, "prompt", "request", {
+      model: "claude-test",
+    });
+    const failure = expect(pending).rejects.toThrow("timed out after 300000ms");
+    await vi.advanceTimersByTimeAsync(300000);
+    await failure;
+    expect(killedWith).toBe("SIGKILL");
+    vi.useRealTimers();
+  });
+
+  test("over-budget Claude single-pass input falls back to two passes", async () => {
+    let calls = 0;
+    const spawn = () => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdin: Writable;
+        stdout: PassThrough;
+        stderr: PassThrough;
+        kill: () => boolean;
+      };
+      child.stdout = new PassThrough();
+      child.stderr = new PassThrough();
+      child.kill = () => true;
+      child.stdin = new Writable({
+        write(_chunk, _encoding, callback) {
+          callback();
+        },
+        final(callback) {
+          calls += 1;
+          child.stdout.end(
+            JSON.stringify({
+              result: "compact",
+              is_error: false,
+              usage: {},
+              total_cost_usd: 0,
+              modelUsage: { "claude-test": {} },
+            }),
+          );
+          queueMicrotask(() => child.emit("close", 0));
+          callback();
+        },
+      });
+      return child;
+    };
+    const record = await summariseMayor(
+      {
+        ...input(),
+        windowStart: "2026-10-27T00:00:00Z",
+        windowEnd: "2026-10-27T12:00:00Z",
+        highlights: [
+          {
+            timestamp: "2026-10-27T01:00:00Z",
+            speaker: "Mayor",
+            text: "x".repeat(450_000),
+          },
+        ],
+      },
+      {
+        persist: false,
+        provider: "claude",
+        passes: 1,
+        model: "claude-test",
+        spawn,
+      },
+    );
+    expect(calls).toBeGreaterThan(1);
+    expect(record).toMatchObject({
+      requestedPasses: 1,
+      passes: 2,
+      passFallback: "single-pass input exceeded context budget",
+    });
   });
 
   test("accounts for JSON escaping while chunking realistic Mayor text", async () => {
