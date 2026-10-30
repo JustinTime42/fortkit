@@ -38,6 +38,8 @@ import {
 } from "./lib/graph.mjs";
 import {
   hasSuccessfulSummaryWindowEnd,
+  LIVE_SUMMARY_MODEL,
+  LIVE_SUMMARY_PROVIDER,
   readLastFailure,
   readLatestSummary,
   readSummaryReadMark,
@@ -133,6 +135,11 @@ export function createCivKeep(options = {}) {
   const exit = options.exit ?? process.exit;
   const log = options.log ?? console.error;
   const fetchImpl = options.fetch ?? globalThis.fetch;
+  const summarySpawn = options.summarySpawn;
+  const summaryProvider = options.summaryProvider ?? LIVE_SUMMARY_PROVIDER;
+  const summaryModel =
+    options.summaryModel ??
+    (summaryProvider === "claude" ? LIVE_SUMMARY_MODEL : undefined);
   const sessionsDirectory =
     options.sessionsDirectory ?? path.join(env.HOME ?? "", ".claude/sessions");
   const procRoot = options.procRoot ?? "/proc";
@@ -565,7 +572,19 @@ export function createCivKeep(options = {}) {
         malformedLines: extracted.malformedLines,
         keepRefreshedAt: entry.refreshedAt ?? null,
       },
-      { fileSystem, fetch: fetchImpl, now, stateHome, log },
+      {
+        fileSystem,
+        fetch: fetchImpl,
+        now,
+        stateHome,
+        log,
+        provider: summaryProvider,
+        model: summaryModel,
+        passes: 1,
+        spawn: summarySpawn,
+        previousSummary: latest,
+        force: flight.force,
+      },
     );
   }
 

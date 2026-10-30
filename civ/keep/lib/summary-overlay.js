@@ -104,8 +104,10 @@ export function renderSummaryOverlay(data, { fortName, knownIds = [] } = {}) {
   const latest = data.latest;
   const labels = [];
   if (latest) {
+    const provider = latest.provider === "claude" ? "Claude" : "Local-model";
+    const usage = latest.usage ?? {};
     labels.push(
-      `Local-model summary, ${escapeHtml(latest.model ?? "unknown model")}, ${escapeHtml(date(latest.generatedAt))}, window ${escapeHtml(date(latest.windowStart))} to ${escapeHtml(date(latest.windowEnd))}`,
+      `${escapeHtml(provider)} summary, ${escapeHtml(latest.model ?? "unknown model")}, ${escapeHtml(date(latest.generatedAt))}, window ${escapeHtml(date(latest.windowStart))} to ${escapeHtml(date(latest.windowEnd))}, ${escapeHtml(latest.mode ?? "full")}, ${escapeHtml(String(usage.input_tokens ?? 0))} in / ${escapeHtml(String(usage.output_tokens ?? 0))} out`,
     );
     if (latest.windowReason === "no read mark: last 12 hours")
       labels.push("no read mark: last 12 hours");

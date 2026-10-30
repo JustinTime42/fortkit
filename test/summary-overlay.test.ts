@@ -214,6 +214,28 @@ describe("Mayor summary overlay renderers", () => {
       { fortName: "Halls" },
     );
     expect(noMark).toContain("no read mark: last 12 hours");
+    const claude = renderSummaryOverlay({
+      latest: {
+        ...latest,
+        provider: "claude<script>",
+        model: "sonnet<img>",
+        mode: "incremental<b>",
+        usage: { input_tokens: 123, output_tokens: 45 },
+      },
+    });
+    expect(claude).toContain("Local-model summary, sonnet&lt;img&gt;");
+    expect(claude).toContain("incremental&lt;b&gt;, 123 in / 45 out");
+    expect(claude).not.toContain("<img>");
+    expect(
+      renderSummaryOverlay({
+        latest: {
+          ...latest,
+          provider: "claude",
+          model: "sonnet",
+          mode: "full",
+        },
+      }),
+    ).toContain("Claude summary, sonnet");
     const empty = renderSummaryOverlay(
       { latest: null, liveMayor: null },
       { fortName: "Halls" },

@@ -48,6 +48,7 @@ const {
   askClaude,
   packNotes,
   readLastFailure,
+  summaryMode,
   splitText,
   summariseMayor,
   unverifiedNumbers,
@@ -222,12 +223,20 @@ async function start() {
     return "";
   };
   keep = createCivKeep({
+    summaryProvider: "ollama",
     env: { HOME: scratch },
     run,
     tokenPath,
     auditPath,
     loadForts: () => forts,
     eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+    fetch: async () =>
+      new Response(
+        JSON.stringify({
+          prompt_eval_count: 10,
+          message: { content: "summary" },
+        }),
+      ),
     exit: () => {},
     log: () => {},
   });
@@ -1572,6 +1581,109 @@ describe("Mayor summary local model", () => {
   });
 
   test.each([
+    ["no previous", null, {}, false],
+    ["read mark changed", { windowStart: "old" }, {}, false],
+    ["provider changed", { provider: "ollama" }, {}, false],
+    ["model changed", { model: "old" }, {}, false],
+    ["prompt changed", { promptSha256: "old" }, {}, false],
+    ["sixth incremental", { incrementalCount: 5 }, {}, false],
+    ["Regenerate", {}, {}, true],
+  ])("selects a full rebuild when %s", (_name, override, _unused, force) => {
+    const current = {
+      windowStart: "start",
+      provider: "claude",
+      model: "sonnet",
+      promptSha256: "prompt",
+    };
+    const previous =
+      override === null
+        ? null
+        : {
+            ...current,
+            generatedAt: "base",
+            incrementalCount: 0,
+            ...override,
+          };
+    expect(summaryMode(previous, current, force)).toEqual({
+      mode: "full",
+      baseRun: null,
+      incrementalCount: 0,
+    });
+  });
+
+  test("ordinary Claude update is incremental and sends only new messages plus the previous summary", async () => {
+    let stdin = "";
+    const spawn = (_file: string, _args: string[]) => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdin: Writable;
+        stdout: PassThrough;
+        stderr: PassThrough;
+        kill: () => boolean;
+      };
+      child.stdout = new PassThrough();
+      child.stderr = new PassThrough();
+      child.kill = () => true;
+      child.stdin = new Writable({
+        write(chunk, _encoding, callback) {
+          stdin += String(chunk);
+          callback();
+        },
+        final(callback) {
+          child.stdout.end(
+            JSON.stringify({
+              result: "updated summary",
+              usage: { input_tokens: 7, output_tokens: 3 },
+              modelUsage: { sonnet: {} },
+            }),
+          );
+          queueMicrotask(() => child.emit("close", 0));
+          callback();
+        },
+      });
+      return child;
+    };
+    const current = {
+      ...input(),
+      windowStart: "2026-10-27T00:00:00Z",
+      windowEnd: "2026-10-27T12:00:00Z",
+      highlights: [
+        { timestamp: "2026-10-27T10:00:00Z", speaker: "Mayor", text: "OLD" },
+        { timestamp: "2026-10-27T11:30:00Z", speaker: "Mayor", text: "NEW" },
+      ],
+    };
+    const probe = await summariseMayor(current, {
+      persist: false,
+      provider: "claude",
+      model: "sonnet",
+      passes: 1,
+      spawn,
+    });
+    stdin = "";
+    const record = await summariseMayor(current, {
+      persist: false,
+      provider: "claude",
+      model: "sonnet",
+      passes: 1,
+      spawn,
+      previousSummary: {
+        ...probe,
+        summary: "PREVIOUS 42",
+        windowEnd: "2026-10-27T11:00:00Z",
+        generatedAt: "base-run",
+      },
+    });
+    expect(record).toMatchObject({
+      mode: "incremental",
+      baseRun: "base-run",
+      incrementalCount: 1,
+      usage: { input_tokens: 7, output_tokens: 3 },
+    });
+    expect(stdin).toContain("PREVIOUS 42");
+    expect(stdin).toContain("NEW");
+    expect(stdin).not.toContain('"text":"OLD"');
+  });
+
+  test.each([
     { code: 7, isError: false, message: "Claude exited 7" },
     { code: 0, isError: true, message: "Claude returned is_error true" },
   ])(
@@ -1664,6 +1776,52 @@ describe("Mayor summary local model", () => {
       ).rejects.toThrow(message);
     },
   );
+
+  test("failed Claude call records failure without Ollama fallback or latest replacement", async () => {
+    let ollamaCalls = 0;
+    const spawn = () => {
+      const child = new EventEmitter() as EventEmitter & {
+        stdin: Writable;
+        stdout: PassThrough;
+        stderr: PassThrough;
+        kill: () => boolean;
+      };
+      child.stdout = new PassThrough();
+      child.stderr = new PassThrough();
+      child.kill = () => true;
+      child.stdin = new Writable({
+        write(_chunk, _encoding, callback) {
+          callback();
+        },
+        final(callback) {
+          queueMicrotask(() => child.emit("close", 7));
+          callback();
+        },
+      });
+      return child;
+    };
+    const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-no-fallback-"));
+    await expect(
+      summariseMayor(input(), {
+        stateHome,
+        provider: "claude",
+        model: "sonnet",
+        passes: 1,
+        spawn,
+        fetch: async () => {
+          ollamaCalls += 1;
+          throw new Error("Ollama must not be called");
+        },
+      }),
+    ).rejects.toThrow("Claude exited 7");
+    expect(ollamaCalls).toBe(0);
+    const directory = join(stateHome, "civ-keep/summaries/halls");
+    expect(nodeFs.existsSync(join(directory, "latest.json"))).toBe(false);
+    const [run] = readdirSync(join(directory, "runs"));
+    expect(
+      JSON.parse(readFileSync(join(directory, "runs", run ?? ""), "utf8")),
+    ).toMatchObject({ status: "failed", provider: "claude" });
+  });
 
   test("Claude calls kill the child at the five-minute timeout", async () => {
     vi.useFakeTimers();
@@ -2114,6 +2272,7 @@ describe("Mayor summary local model", () => {
   test("summary endpoints refuse unknown and Greenlab forts", async () => {
     const stateHome = mkdtempSync(join(tmpdir(), "mayor-summary-api-"));
     keep = createCivKeep({
+      summaryProvider: "ollama",
       env: { HOME: scratch, XDG_STATE_HOME: stateHome },
       run: async () => "",
       tokenPath,
@@ -2261,6 +2420,7 @@ describe("Mayor summary local model", () => {
       release = resolve;
     });
     keep = createCivKeep({
+      summaryProvider: "ollama",
       env: { HOME: home, XDG_STATE_HOME: join(home, "state") },
       sessionsDirectory: sessions,
       procRoot: proc,
@@ -2349,6 +2509,7 @@ describe("Mayor summary local model", () => {
     }[] = [];
     const clears: object[] = [];
     keep = createCivKeep({
+      summaryProvider: "ollama",
       env: { HOME: home, XDG_STATE_HOME: stateHome },
       sessionsDirectory: sessions,
       procRoot: proc,
