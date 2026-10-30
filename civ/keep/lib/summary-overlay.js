@@ -116,7 +116,7 @@ export function renderSummaryOverlay(data, { fortName, knownIds = [] } = {}) {
       labels.push(
         `no read mark: since ${escapeHtml(date(latest.windowStart))}`,
       );
-    if (latest.windowReason === "read mark capped: last 48 hours")
+    if (latest.windowReason === "read mark capped: 48-hour maximum")
       labels.push("window capped at 48 hours");
   }
   if (data.running) labels.push("running");

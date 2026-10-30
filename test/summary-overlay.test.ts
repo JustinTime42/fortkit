@@ -199,7 +199,7 @@ describe("Mayor summary overlay renderers", () => {
       {
         latest: {
           ...latest,
-          windowReason: "read mark capped: last 48 hours",
+          windowReason: "read mark capped: 48-hour maximum",
         },
         running: true,
         liveMayor: null,
