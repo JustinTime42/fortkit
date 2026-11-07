@@ -235,7 +235,7 @@ export function createCivKeep(options = {}) {
     try {
       const text = await run("bd", ["export"], {
         cwd: fort.repo,
-        maxBuffer: 64 * 1024 * 1024,
+        maxBuffer: 256 * 1024 * 1024,
       });
       const parsed = parseExport(String(text));
       entry.exportDigest = createHash("sha256")
