@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import nodeFs, {
   appendFileSync,
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -21,12 +22,14 @@ import { PassThrough, Writable } from "node:stream";
 import { afterEach, describe, expect, test, vi } from "vitest";
 // @ts-expect-error JavaScript library module.
 import * as fortsModel from "../civ/keep/lib/forts.mjs";
+// @ts-expect-error JavaScript graph module.
+import { dependencyGroups, graph } from "../civ/keep/lib/graph.mjs";
 // @ts-expect-error JavaScript library module.
 import * as mayorSummaryModel from "../civ/keep/lib/mayor-summary.mjs";
 // @ts-expect-error JavaScript library module.
 import * as mayorSummary from "../civ/keep/lib/mayor-summary-extract.mjs";
 // @ts-expect-error JavaScript library module.
-import { signCommand } from "../civ/keep/lib/readers.mjs";
+import * as readers from "../civ/keep/lib/readers.mjs";
 // @ts-expect-error JavaScript replay module exercised through its injectable seam.
 import { replaySummary } from "../civ/keep/scripts/replay-summary.mjs";
 // @ts-expect-error JavaScript server module exercised through its HTTP seam.
@@ -40,6 +43,7 @@ const {
   summaryFactsBlock,
   windowCounts,
 } = mayorSummary;
+const { parseExport, readExport, signCommand } = readers;
 const { loadForts, prefixOf, productionRegistryPath } = fortsModel;
 const {
   MAYOR_SUMMARY_CONTEXT,
@@ -269,6 +273,164 @@ async function start() {
       );
   return { port, sign, calls, writes, auditPath };
 }
+
+describe("Civ Keep streamed export reader", () => {
+  function fakeBd(body: string) {
+    const directory = mkdtempSync(join(tmpdir(), "civ-keep-bd-"));
+    const executable = join(directory, "bd");
+    writeFileSync(executable, `#!/bin/sh\n${body}\n`);
+    chmodSync(executable, 0o755);
+    return {
+      fort: { repo: directory },
+      env: { ...process.env, PATH: `${directory}:${process.env.PATH}` },
+    };
+  }
+
+  test("streams records, keeps the bounded view, and hashes raw output", async () => {
+    const old = {
+      id: "old",
+      status: "closed",
+      closed_at: "2020-01-01T00:00:00.000Z",
+      title: "old child",
+      issue_type: "task",
+      dependencies: [],
+      description: "discard me",
+      comments: [{ text: "discard me" }],
+    };
+    const fresh = {
+      id: "fresh",
+      status: "closed",
+      closed_at: "2026-11-01T00:00:00.000Z",
+      title: "fresh child",
+      comments: [{ text: "keep me" }],
+    };
+    const output = `${JSON.stringify(old)}\n${JSON.stringify(fresh)}\n`;
+    const fixture = fakeBd(`printf '%s' '${output.replaceAll("'", "'\\''")}'`);
+    const result = await readExport(fixture.fort, {
+      env: fixture.env,
+      now: Date.parse("2026-11-07T00:00:00.000Z"),
+    });
+    expect(result.digest).toBe(
+      createHash("sha256").update(output).digest("hex"),
+    );
+    expect(result.byId.get("old")).toMatchObject({ trimmed: true });
+    expect(result.byId.get("old")).not.toHaveProperty("description");
+    expect(result.byId.get("old")).not.toHaveProperty("comments");
+    expect(result.byId.get("fresh")).toMatchObject({
+      comments: fresh.comments,
+    });
+    expect(
+      parseExport(output, {
+        now: Date.parse("2026-11-07T00:00:00.000Z"),
+      }).byId.get("old"),
+    ).toMatchObject({ trimmed: true });
+  });
+
+  test("reports child-process failures without waiting on stderr", async () => {
+    const failed = fakeBd("yes x | head -c 70000 >&2\nexit 7");
+    await expect(readExport(failed.fort, { env: failed.env })).rejects.toThrow(
+      "bd export exited with code 7",
+    );
+    await expect(
+      readExport(
+        { repo: scratch },
+        { env: { PATH: mkdtempSync(join(tmpdir(), "no-bd-")) } },
+      ),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    const slow = fakeBd("sleep 10");
+    await expect(
+      readExport(slow.fort, { env: slow.env, timeout: 10 }),
+    ).rejects.toThrow("bd export timed out after 0.01 s");
+    const signalled = fakeBd("kill -TERM $$");
+    await expect(
+      readExport(signalled.fort, { env: signalled.env }),
+    ).rejects.toThrow("bd export exited with signal SIGTERM");
+  });
+
+  test("streams an export larger than the former 64 MiB limit", async () => {
+    const count = 300_000;
+    const fixture = fakeBd(`awk 'BEGIN {
+      padding = sprintf("%180s", "");
+      gsub(/ /, "x", padding);
+      for (i = 0; i < ${count}; i++)
+        printf "{\\"id\\":\\"large-%d\\",\\"status\\":\\"closed\\",\\"closed_at\\":\\"2020-01-01T00:00:00.000Z\\",\\"title\\":\\"old\\",\\"description\\":\\"%s\\"}\\n", i, padding;
+    }'`);
+    const result = await readExport(fixture.fort, { env: fixture.env });
+    expect(result.skipped).toBe(0);
+    expect(result.byId).toHaveLength(count);
+    expect(result.byId.get("large-0")).toMatchObject({ trimmed: true });
+  });
+
+  test("old closed stubs preserve graph blocking and epic children", () => {
+    const oldClosed = {
+      id: "old-closed",
+      status: "closed",
+      closed_at: "2020-01-01T00:00:00.000Z",
+      title: "old closed child",
+      issue_type: "task",
+      dependencies: [{ type: "parent-child", depends_on_id: "epic" }],
+      description: "large historical record",
+    };
+    const dependent = {
+      id: "dependent",
+      status: "open",
+      title: "unblocked by the old close",
+      labels: ["fleet-safe"],
+      dependencies: [{ type: "blocks", depends_on_id: "old-closed" }],
+    };
+    const epic = {
+      id: "epic",
+      status: "open",
+      title: "epic",
+      labels: [],
+      dependencies: [],
+    };
+    const now = Date.parse("2026-11-07T00:00:00.000Z");
+    const full = [oldClosed, dependent, epic];
+    const bounded = [
+      ...parseExport(full.map((bead) => JSON.stringify(bead)).join("\n"), {
+        now,
+      }).byId.values(),
+    ];
+
+    const fullNode = graph(full, [], [], now, "open").nodes.find(
+      (node: { id: string }) => node.id === dependent.id,
+    );
+    const boundedNode = graph(bounded, [], [], now, "open").nodes.find(
+      (node: { id: string }) => node.id === dependent.id,
+    );
+    expect(fullNode?.stage).toBe("ready");
+    expect(boundedNode).toMatchObject({
+      stage: fullNode?.stage,
+      needsYou: fullNode?.needsYou,
+    });
+    expect(
+      dependencyGroups(
+        bounded.find((bead) => bead.id === epic.id),
+        new Map(bounded.map((bead) => [bead.id, bead])),
+      ).children,
+    ).toEqual([oldClosed.id]);
+  });
+
+  test("passes the Keep's injected clock to the streaming reader", async () => {
+    const clock = Date.parse("2026-11-07T00:00:00.000Z");
+    let receivedNow: number | undefined;
+    const clockKeep = createCivKeep({
+      now: () => clock,
+      readExport: async (_fort: unknown, options: { now: number }) => {
+        receivedNow = options.now;
+        return { byId: new Map(), skipped: 0, digest: "digest" };
+      },
+      loadForts: () => [forts[0]],
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+    });
+    await clockKeep.refresh();
+    clockKeep.close();
+    expect(receivedNow).toBe(clock);
+  });
+});
 
 describe("civ keep signing desk", () => {
   test("refuses foreign authorities before every route can read or write", async () => {

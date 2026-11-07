@@ -9,8 +9,10 @@
 // The writing half is the Proofdelve allowlist made per-fort: every argument is
 // checked against the fort the request names (its bead prefix, its emit.sh, its
 // waiting labels), so a signature for one fort can never be applied to another.
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import path from "node:path";
+import { createInterface } from "node:readline";
 import { validRequestId } from "./airlock.mjs";
 import { escapeRegExp, idPattern } from "./id-pattern.js";
 
@@ -30,20 +32,126 @@ export function command(file, args, options = {}) {
   });
 }
 
-export function parseExport(text) {
+export const KEEP_CLOSED_FULL_DAYS = 14;
+const STDERR_TAIL_BYTES = 4 * 1024;
+
+function boundedBead(bead, cutoff) {
+  const closedAt = Date.parse(bead.closed_at);
+  if (
+    bead.status !== "closed" ||
+    typeof bead.closed_at !== "string" ||
+    !Number.isFinite(closedAt) ||
+    closedAt >= cutoff
+  )
+    return bead;
+  return {
+    id: bead.id,
+    status: "closed",
+    closed_at: bead.closed_at,
+    title: bead.title,
+    issue_type: bead.issue_type,
+    dependencies: bead.dependencies,
+    trimmed: true,
+  };
+}
+
+function addExportLine(byId, line, cutoff) {
+  if (!line) return false;
+  try {
+    const bead = JSON.parse(line);
+    if (!bead.id) throw new Error("export record has no id");
+    byId.set(bead.id, boundedBead(bead, cutoff));
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+export function parseExport(text, { now = Date.now() } = {}) {
   const byId = new Map();
   let skipped = 0;
+  const cutoff = now - KEEP_CLOSED_FULL_DAYS * 24 * 60 * 60 * 1000;
   for (const line of text.split("\n")) {
-    if (!line) continue;
-    try {
-      const bead = JSON.parse(line);
-      if (!bead.id) throw new Error("export record has no id");
-      byId.set(bead.id, bead);
-    } catch {
-      skipped += 1;
-    }
+    if (addExportLine(byId, line, cutoff)) skipped += 1;
   }
   return { byId, skipped };
+}
+
+// Read the export without buffering its full history. The hash deliberately sees
+// raw chunks, rather than lines, so it remains identical to sha256(stdout).
+export function readExport(fort, options = {}) {
+  const spawnImpl = options.spawn ?? spawn;
+  const timeoutMs = options.timeout ?? 60_000;
+  const now = options.now ?? Date.now();
+  const cutoff = now - KEEP_CLOSED_FULL_DAYS * 24 * 60 * 60 * 1000;
+  return new Promise((resolve, reject) => {
+    let child;
+    try {
+      child = spawnImpl("bd", ["export"], {
+        cwd: fort.repo,
+        env: options.env,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    const byId = new Map();
+    let skipped = 0;
+    let stderr = Buffer.alloc(0);
+    const hash = createHash("sha256");
+    let settled = false;
+    let killTimer;
+    const settle = (error, result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (killTimer) clearTimeout(killTimer);
+      if (error) reject(error);
+      else resolve(result);
+    };
+    const stderrTail = () => stderr.toString("utf8").trim();
+    const reader = createInterface({
+      input: child.stdout,
+      crlfDelay: Infinity,
+    });
+    reader.on("line", (line) => {
+      if (addExportLine(byId, line, cutoff)) skipped += 1;
+    });
+    child.stdout.on("data", (chunk) => hash.update(chunk));
+    child.stderr.on("data", (chunk) => {
+      const data = Buffer.concat([stderr, Buffer.from(chunk)]);
+      stderr = data.subarray(Math.max(0, data.length - STDERR_TAIL_BYTES));
+    });
+    const fail = (error) => {
+      reader.close();
+      settle(error);
+    };
+    child.on("error", fail);
+    child.stdout.on("error", fail);
+    child.stderr.on("error", fail);
+    child.on("close", (code, signal) => {
+      if (code !== 0) {
+        const detail = stderrTail();
+        fail(
+          new Error(
+            signal
+              ? `bd export exited with signal ${signal}${detail ? `: ${detail}` : ""}`
+              : `bd export exited with code ${code}${detail ? `: ${detail}` : ""}`,
+          ),
+        );
+        return;
+      }
+      settle(null, { byId, skipped, digest: hash.digest("hex") });
+    });
+    const timeout = setTimeout(() => {
+      child.kill("SIGTERM");
+      fail(new Error(`bd export timed out after ${timeoutMs / 1000} s`));
+      killTimer = setTimeout(() => child.kill("SIGKILL"), 5_000);
+      killTimer.unref?.();
+    }, timeoutMs);
+    timeout.unref?.();
+  });
 }
 
 export const signEvents = Object.freeze({
