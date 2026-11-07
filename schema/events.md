@@ -32,6 +32,11 @@ Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `for
   the next default run reads its timestamp as the lower bound. **Listed
   BEFORE the first one is emitted**, which is the whole point of the
   paragraph below and the first time this fort has managed that order.
+- `keep.stale`, `keep.fresh` (fortkit-8bvu.3, civ stream, actor `keep`) — a
+  fort's Civ Keep data has been stale for more than 10 minutes, once per stale
+  episode; and the end of that episode. Target is the fort key; payload
+  `{ fort, staleSince, error }` and `{ fort }`. Listed before the first one is
+  emitted, at the Warden's prompting on `fortkit-8bvu.3`.
 
 **`digest.emitted` was listed before it was ever emitted (2026-08-31), and
 that is a deliberate contrast with the paragraph that follows.** The Warden
