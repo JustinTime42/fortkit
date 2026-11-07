@@ -432,6 +432,85 @@ describe("Civ Keep streamed export reader", () => {
   });
 });
 
+describe("Civ Keep stale episodes", () => {
+  test("records staleSince, announces one stale event, then announces recovery", async () => {
+    let clock = Date.parse("2026-11-07T00:00:00.000Z");
+    const emitted: {
+      category: string;
+      event: { target: string; payload: unknown };
+    }[] = [];
+    let healthy = false;
+    keep = createCivKeep({
+      now: () => clock,
+      readExport: async () => {
+        if (!healthy) throw new Error("export unavailable");
+        return { byId: new Map(), skipped: 0, digest: "digest" };
+      },
+      emitCiv: async (
+        category: string,
+        _detail: string,
+        event: { target: string; payload: unknown },
+      ) => {
+        emitted.push({ category, event });
+      },
+      loadForts: () => [forts[0]],
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+    });
+    await keep.refresh();
+    clock += 10 * 60 * 1000;
+    await keep.refresh();
+    await keep.refresh();
+    await new Promise<void>((resolve) =>
+      keep?.server.listen(0, "127.0.0.1", resolve),
+    );
+    const port = (keep.server.address() as AddressInfo).port;
+    const stale = (await (
+      await fetch(`http://127.0.0.1:${port}/api/graph`)
+    ).json()) as {
+      staleForts: {
+        name: string;
+        staleSince: string;
+        error: string;
+        refreshedAt: string | null;
+      }[];
+    };
+    expect(stale.staleForts).toEqual([
+      {
+        name: "Proof",
+        staleSince: "2026-11-07T00:00:00.000Z",
+        error: "export unavailable",
+        refreshedAt: null,
+      },
+    ]);
+    expect(emitted).toEqual([
+      {
+        category: "keep.stale",
+        event: {
+          target: "proof",
+          payload: {
+            fort: "proof",
+            staleSince: "2026-11-07T00:00:00.000Z",
+            error: "export unavailable",
+          },
+        },
+      },
+    ]);
+
+    healthy = true;
+    await keep.refresh();
+    expect(emitted.map((event) => event.category)).toEqual([
+      "keep.stale",
+      "keep.fresh",
+    ]);
+    const summary = (await (
+      await fetch(`http://127.0.0.1:${port}/api/forts`)
+    ).json()) as { stale: boolean; staleSince: string | null }[];
+    expect(summary).toMatchObject([{ stale: false, staleSince: null }]);
+  });
+});
+
 describe("civ keep signing desk", () => {
   test("refuses foreign authorities before every route can read or write", async () => {
     const { port, auditPath } = await start();
