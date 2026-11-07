@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import nodeFs, {
   appendFileSync,
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -26,7 +27,11 @@ import * as mayorSummaryModel from "../civ/keep/lib/mayor-summary.mjs";
 // @ts-expect-error JavaScript library module.
 import * as mayorSummary from "../civ/keep/lib/mayor-summary-extract.mjs";
 // @ts-expect-error JavaScript library module.
-import { signCommand } from "../civ/keep/lib/readers.mjs";
+import {
+  parseExport,
+  readExport,
+  signCommand,
+} from "../civ/keep/lib/readers.mjs";
 // @ts-expect-error JavaScript replay module exercised through its injectable seam.
 import { replaySummary } from "../civ/keep/scripts/replay-summary.mjs";
 // @ts-expect-error JavaScript server module exercised through its HTTP seam.
@@ -269,6 +274,77 @@ async function start() {
       );
   return { port, sign, calls, writes, auditPath };
 }
+
+describe("Civ Keep streamed export reader", () => {
+  function fakeBd(body: string) {
+    const directory = mkdtempSync(join(tmpdir(), "civ-keep-bd-"));
+    const executable = join(directory, "bd");
+    writeFileSync(executable, `#!/bin/sh\n${body}\n`);
+    chmodSync(executable, 0o755);
+    return {
+      fort: { repo: directory },
+      env: { ...process.env, PATH: `${directory}:${process.env.PATH}` },
+    };
+  }
+
+  test("streams records, keeps the bounded view, and hashes raw output", async () => {
+    const old = {
+      id: "old",
+      status: "closed",
+      closed_at: "2020-01-01T00:00:00.000Z",
+      title: "old child",
+      issue_type: "task",
+      dependencies: [],
+      description: "discard me",
+      comments: [{ text: "discard me" }],
+    };
+    const fresh = {
+      id: "fresh",
+      status: "closed",
+      closed_at: "2026-11-01T00:00:00.000Z",
+      title: "fresh child",
+      comments: [{ text: "keep me" }],
+    };
+    const output = `${JSON.stringify(old)}\n${JSON.stringify(fresh)}\n`;
+    const fixture = fakeBd(
+      `printf '%s' '${output.replaceAll("'", "'\\''")}'`,
+    );
+    const result = await readExport(fixture.fort, {
+      env: fixture.env,
+      now: Date.parse("2026-11-07T00:00:00.000Z"),
+    });
+    expect(result.digest).toBe(
+      createHash("sha256").update(output).digest("hex"),
+    );
+    expect(result.byId.get("old")).toMatchObject({ trimmed: true });
+    expect(result.byId.get("old")).not.toHaveProperty("description");
+    expect(result.byId.get("old")).not.toHaveProperty("comments");
+    expect(result.byId.get("fresh")).toMatchObject({
+      comments: fresh.comments,
+    });
+    expect(
+      parseExport(output, { now: Date.parse("2026-11-07T00:00:00.000Z") })
+        .byId.get("old"),
+    ).toMatchObject({ trimmed: true });
+  });
+
+  test("reports child-process failures without waiting on stderr", async () => {
+    const failed = fakeBd("yes x | head -c 70000 >&2\nexit 7");
+    await expect(readExport(failed.fort, { env: failed.env })).rejects.toThrow(
+      "bd export exited with code 7",
+    );
+    await expect(
+      readExport(
+        { repo: scratch },
+        { env: { PATH: mkdtempSync(join(tmpdir(), "no-bd-")) } },
+      ),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    const slow = fakeBd("sleep 10");
+    await expect(
+      readExport(slow.fort, { env: slow.env, timeout: 10 }),
+    ).rejects.toThrow("bd export timed out after 0.01 s");
+  });
+});
 
 describe("civ keep signing desk", () => {
   test("refuses foreign authorities before every route can read or write", async () => {

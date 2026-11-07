@@ -57,6 +57,7 @@ import {
 import {
   command,
   parseExport,
+  readExport as streamExport,
   signCommand,
   signEvents,
 } from "./lib/readers.mjs";
@@ -132,6 +133,9 @@ export function createCivKeep(options = {}) {
   const fileSystem = options.fileSystem ?? fs;
   const now = options.now ?? (() => Date.now());
   const run = options.run ?? command;
+  // Tests that already provide the old buffered runner retain that seam. Normal
+  // operation takes the streaming path; an explicit reader always wins.
+  const readExport = options.readExport ?? (options.run ? null : streamExport);
   const exit = options.exit ?? process.exit;
   const log = options.log ?? console.error;
   const fetchImpl = options.fetch ?? globalThis.fetch;
@@ -233,14 +237,17 @@ export function createCivKeep(options = {}) {
       }
     }
     try {
-      const text = await run("bd", ["export"], {
-        cwd: fort.repo,
-        maxBuffer: 256 * 1024 * 1024,
-      });
-      const parsed = parseExport(String(text));
-      entry.exportDigest = createHash("sha256")
-        .update(String(text))
-        .digest("hex");
+      let parsed;
+      if (readExport) {
+        parsed = await readExport(fort);
+      } else {
+        const text = String(await run("bd", ["export"], { cwd: fort.repo }));
+        parsed = {
+          ...parseExport(text),
+          digest: createHash("sha256").update(text).digest("hex"),
+        };
+      }
+      entry.exportDigest = parsed.digest;
       const prefix = prefixOf(parsed.byId.values());
       const clash = [...states.values()].find(
         (other) =>
