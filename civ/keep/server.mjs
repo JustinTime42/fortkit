@@ -57,9 +57,9 @@ import {
 import {
   command,
   parseExport,
-  readExport as streamExport,
   signCommand,
   signEvents,
+  readExport as streamExport,
 } from "./lib/readers.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -239,7 +239,7 @@ export function createCivKeep(options = {}) {
     try {
       let parsed;
       if (readExport) {
-        parsed = await readExport(fort);
+        parsed = await readExport(fort, { now: now() });
       } else {
         const text = String(await run("bd", ["export"], { cwd: fort.repo }));
         parsed = {

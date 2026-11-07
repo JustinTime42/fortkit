@@ -11,8 +11,8 @@
 // waiting labels), so a signature for one fort can never be applied to another.
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createInterface } from "node:readline";
 import path from "node:path";
+import { createInterface } from "node:readline";
 import { validRequestId } from "./airlock.mjs";
 import { escapeRegExp, idPattern } from "./id-pattern.js";
 
@@ -130,12 +130,14 @@ export function readExport(fort, options = {}) {
     child.on("error", fail);
     child.stdout.on("error", fail);
     child.stderr.on("error", fail);
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       if (code !== 0) {
         const detail = stderrTail();
         fail(
           new Error(
-            `bd export exited with code ${code}${detail ? `: ${detail}` : ""}`,
+            signal
+              ? `bd export exited with signal ${signal}${detail ? `: ${detail}` : ""}`
+              : `bd export exited with code ${code}${detail ? `: ${detail}` : ""}`,
           ),
         );
         return;
