@@ -6,6 +6,18 @@ import { escapeHtml } from "./graph.mjs";
 const storageKey = "civ-keep-fort";
 const el = (id) => document.getElementById(id);
 
+export function renderStaleBanner(staleForts) {
+  const forts = (staleForts ?? []).filter((fort) => fort.banner);
+  const banner = el("stale-banner");
+  banner.hidden = !forts.length;
+  banner.innerHTML = forts
+    .map(
+      (fort) =>
+        `<p>${escapeHtml(fort.name)} data is stale since ${escapeHtml(fort.refreshedAt ?? "never read")}: ${escapeHtml(fort.error ?? "")}</p>`,
+    )
+    .join("");
+}
+
 export async function fortControls(onChange) {
   const params = new URL(location.href).searchParams;
   let current = params.get("fort") || localStorage.getItem(storageKey) || "all";
@@ -33,7 +45,7 @@ export async function fortControls(onChange) {
         const needs = fort.needsYou
           ? `<b class="needs${fort.stale ? " stale-needs" : ""}"${fort.stale ? ' title="This needs-you count may be out of date"' : ""}>${fort.stale ? "⚠ " : ""}${fort.needsYou}</b>`
           : "";
-        return `<button class="fort-pill${fort.key === current ? " active" : ""}${fort.stale ? " stale" : ""}" data-fort="${escapeHtml(fort.key)}" title="${escapeHtml(title)}">${escapeHtml(fort.name)}${needs}${fort.halted ? ' <span class="halted">halt</span>' : ""}</button>`;
+        return `<button class="fort-pill${fort.key === current ? " active" : ""}${fort.stale ? " stale" : ""}" data-fort="${escapeHtml(fort.key)}" title="${escapeHtml(title)}">${escapeHtml(fort.name)}${needs ? ` ${needs}` : ""}${fort.halted ? ' <span class="halted">halt</span>' : ""}</button>`;
       })
       .join("");
     document.querySelectorAll(".fort-pill").forEach((pill) => {

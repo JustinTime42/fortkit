@@ -459,9 +459,6 @@ describe("Civ Keep stale episodes", () => {
       log: () => {},
     });
     await keep.refresh();
-    clock += 10 * 60 * 1000;
-    await keep.refresh();
-    await keep.refresh();
     await new Promise<void>((resolve) =>
       keep?.server.listen(0, "127.0.0.1", resolve),
     );
@@ -474,14 +471,23 @@ describe("Civ Keep stale episodes", () => {
         staleSince: string;
         error: string;
         refreshedAt: string | null;
+        banner: boolean;
       }[];
     };
-    expect(stale.staleForts).toEqual([
+    expect(stale.staleForts).toMatchObject([{ banner: false }]);
+    clock += 10 * 60 * 1000;
+    await keep.refresh();
+    await keep.refresh();
+    const stalePastThreshold = (await (
+      await fetch(`http://127.0.0.1:${port}/api/graph`)
+    ).json()) as typeof stale;
+    expect(stalePastThreshold.staleForts).toEqual([
       {
         name: "Proof",
         staleSince: "2026-11-07T00:00:00.000Z",
         error: "export unavailable",
         refreshedAt: null,
+        banner: true,
       },
     ]);
     expect(emitted).toEqual([

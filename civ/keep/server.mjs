@@ -136,7 +136,7 @@ export function createCivKeep(options = {}) {
   const run = options.run ?? command;
   const emitCiv =
     options.emitCiv ??
-    ((category, detail, event = {}) =>
+    ((category, detail, event) =>
       command(
         path.join(here, "..", "scripts", "emit.sh"),
         [
@@ -293,6 +293,7 @@ export function createCivKeep(options = {}) {
             payload: { fort: fort.key },
           });
         } catch (emitError) {
+          // Recovery has ended the episode. A failed fresh event is logged, not retried.
           log(`Civ Keep fresh event failed for ${fort.key}:`, emitError);
         }
     } catch (error) {
@@ -305,6 +306,9 @@ export function createCivKeep(options = {}) {
         Number.isFinite(staleSince) &&
         now() - staleSince >= STALE_BANNER_MS
       ) {
+        // Claim the episode before awaiting so overlapping manual and interval
+        // refreshes cannot both emit keep.stale.
+        entry.staleEventEmitted = true;
         try {
           await emitCiv(
             "keep.stale",
@@ -318,8 +322,8 @@ export function createCivKeep(options = {}) {
               },
             },
           );
-          entry.staleEventEmitted = true;
         } catch (emitError) {
+          entry.staleEventEmitted = false;
           log(`Civ Keep stale event failed for ${fort.key}:`, emitError);
         }
       }
@@ -456,6 +460,9 @@ export function createCivKeep(options = {}) {
           staleSince: entry.staleSince ?? null,
           error: entry.error,
           refreshedAt: entry.refreshedAt ?? null,
+          banner:
+            Boolean(entry.staleSince) &&
+            now() - Date.parse(entry.staleSince) >= STALE_BANNER_MS,
         });
       }
     }
