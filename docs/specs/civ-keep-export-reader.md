@@ -118,6 +118,21 @@ renders, in place of the description section, a notice: "Closed more than 14
 days ago; details are trimmed from the Keep's view. `bd show <id>` in the
 fort has the full record." Fetching the full bead on demand is out of scope.
 
+*Amended 2026-11-07 by the Mayor after the Warden's review of `.4`
+(APPROVE-WITH-FINDINGS, findings 1-3), within the Overseer's approval of this
+epic.* A trimmed drawer must not state anything the stub does not know:
+
+- **Header:** no created or updated times and no priority chip (the stub has
+  none; rendering them gave "NaNh ago" and "?"). Show "Closed {relative
+  closed_at}" instead. Any drawer, trimmed or not, skips a time it does not have
+  rather than printing NaN.
+- **Sections:** only the notice and Dependencies render. Acceptance criteria,
+  Notes, Comments (and its comment box) and Close reason are omitted, because
+  "None." under Comments is false for a bead whose comments were trimmed.
+- **The window:** the notice's "14" comes from the payload, not a second
+  constant: `/api/bead/:id` carries `trimmedAfterDays` (from
+  `KEEP_CLOSED_FULL_DAYS`) on a trimmed bead.
+
 ## 4. Tests (in `test/civ-keep.test.ts`, existing pattern)
 
 1. A fake `bd` writing more than 64 MiB of lines refreshes without error, and
