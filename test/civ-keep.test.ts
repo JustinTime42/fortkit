@@ -20,10 +20,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough, Writable } from "node:stream";
 import { afterEach, describe, expect, test, vi } from "vitest";
+// @ts-expect-error JavaScript browser module tested through its pure renderer.
+import * as drawerModel from "../civ/keep/lib/drawer.js";
 // @ts-expect-error JavaScript library module.
 import * as fortsModel from "../civ/keep/lib/forts.mjs";
 // @ts-expect-error JavaScript graph module.
-import { dependencyGroups, graph } from "../civ/keep/lib/graph.mjs";
+import * as graphModel from "../civ/keep/lib/graph.mjs";
 // @ts-expect-error JavaScript library module.
 import * as mayorSummaryModel from "../civ/keep/lib/mayor-summary.mjs";
 // @ts-expect-error JavaScript library module.
@@ -33,7 +35,7 @@ import * as readers from "../civ/keep/lib/readers.mjs";
 // @ts-expect-error JavaScript replay module exercised through its injectable seam.
 import { replaySummary } from "../civ/keep/scripts/replay-summary.mjs";
 // @ts-expect-error JavaScript server module exercised through its HTTP seam.
-import { createCivKeep, eventFileNamesForWindow } from "../civ/keep/server.mjs";
+import * as civKeep from "../civ/keep/server.mjs";
 
 const {
   extractHighlights,
@@ -43,7 +45,10 @@ const {
   summaryFactsBlock,
   windowCounts,
 } = mayorSummary;
+const { dependencyGroups, graph, graphContext } = graphModel;
+const { descriptionContent, drawerContent, drawerHeader } = drawerModel;
 const { parseExport, readExport, signCommand } = readers;
+const { apiBeadPayload, createCivKeep, eventFileNamesForWindow } = civKeep;
 const { loadForts, prefixOf, productionRegistryPath } = fortsModel;
 const {
   MAYOR_SUMMARY_CONTEXT,
@@ -64,6 +69,8 @@ type Bead = {
   title: string;
   status: string;
   labels: string[];
+  closed_at?: string;
+  issue_type?: string;
   description?: string;
   assignee?: string;
   comments?: { text: string }[];
@@ -324,6 +331,75 @@ describe("Civ Keep streamed export reader", () => {
         now: Date.parse("2026-11-07T00:00:00.000Z"),
       }).byId.get("old"),
     ).toMatchObject({ trimmed: true });
+  });
+
+  test("renders only the notice and dependencies for a trimmed closed bead", () => {
+    const trimmed = descriptionContent({
+      id: "proof-old",
+      trimmed: true,
+      trimmedAfterDays: 14,
+    });
+    expect(trimmed).toContain(
+      "Closed more than 14 days ago; details are trimmed from the Keep's view.",
+    );
+    expect(trimmed).toContain("bd show proof-old");
+    expect(trimmed).not.toContain("<summary>Description</summary>");
+    const storage = { getItem: () => null };
+    vi.stubGlobal("sessionStorage", storage);
+    const content = drawerContent({
+      id: "proof-old",
+      trimmed: true,
+      trimmedAfterDays: 14,
+      dependencyGroups: {},
+    });
+    expect(content).not.toContain("NaN");
+    expect(content).not.toContain("None.");
+    expect(content).not.toContain('id="comment-note"');
+    expect(content).not.toContain("Acceptance criteria");
+    expect(content).not.toContain("Close reason");
+    expect(content).toContain("Dependencies");
+    const header = drawerHeader({
+      id: "proof-old",
+      title: "old bead",
+      stage: "closed",
+      trimmed: true,
+      closed_at: "2026-10-01T00:00:00.000Z",
+    });
+    expect(header).toContain("Closed ");
+    expect(header).not.toContain("NaN");
+    expect(header).not.toContain("?");
+    expect(
+      drawerHeader({ id: "open", title: "open bead", stage: "open" }),
+    ).not.toContain("NaN");
+  });
+
+  test("returns a trimmed closed stub from the bead API", () => {
+    const stub: Bead = {
+      id: "proof-old",
+      title: "old closed bead",
+      status: "closed",
+      closed_at: "2020-01-01T00:00:00.000Z",
+      issue_type: "task",
+      labels: [],
+      description: "trim this detail",
+      comments: [{ text: "trim this comment" }],
+    };
+    const bounded = parseExport(`${JSON.stringify(stub)}\n`, {
+      now: Date.parse("2026-11-07T00:00:00.000Z"),
+    }).byId.get(stub.id);
+    if (!bounded) throw new Error("trimmed stub is missing");
+    const bead = apiBeadPayload(
+      { fort: forts[0] },
+      bounded,
+      graphContext([bounded], [], [], Date.now(), forts[0]?.waitingLabels),
+    );
+    expect(bead).toMatchObject({
+      id: stub.id,
+      trimmed: true,
+      trimmedAfterDays: 14,
+    });
+    expect(bead).not.toHaveProperty("description");
+    expect(bead).not.toHaveProperty("comments");
   });
 
   test("reports child-process failures without waiting on stderr", async () => {

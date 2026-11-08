@@ -19,9 +19,19 @@ const relative = (time) => {
       ? `${Math.floor(seconds / 60)}m ago`
       : `${Math.floor(seconds / 3600)}h ago`;
 };
+const hasTime = (time) =>
+  typeof time === "string" && Number.isFinite(Date.parse(time));
+const metaTime = (label, time) =>
+  hasTime(time)
+    ? `<time title="${escapeHtml(time)}">${label} ${relative(time)}</time>`
+    : "";
 const section = (name, content, open = false) =>
   `<details class="drawer-section" data-section="${name}" ${sessionStorage.getItem(`keep-section-${name}`) === "open" || (open && sessionStorage.getItem(`keep-section-${name}`) !== "closed") ? "open" : ""}><summary>${name}</summary>${content}</details>`;
-const dependencies = (bead) => {
+export const descriptionContent = (bead) =>
+  bead.trimmed
+    ? `<p class="notice">Closed more than ${escapeHtml(bead.trimmedAfterDays)} days ago; details are trimmed from the Keep's view. <code>bd show ${escapeHtml(bead.id)}</code> in the fort has the full record.</p>`
+    : section("Description", renderMarkdown(bead.description), true);
+const dependencies = (bead, empty = "<p>None.</p>") => {
   const labels = {
     blocks: "Blocks",
     blockedBy: "Blocked by",
@@ -38,7 +48,7 @@ const dependencies = (bead) => {
           ? `<p><b>${name}</b> <span class="dependency-chips">${ids.map((id) => `<button class="chip dependency" data-id="${escapeHtml(id)}">${escapeHtml(id)}</button>`).join("")}</span></p>`
           : "";
       })
-      .join("") || "<p>None.</p>"
+      .join("") || empty
   );
 };
 const optionsFrom = (bead) =>
@@ -67,6 +77,12 @@ const approveLabel = (bead, noted) =>
   bead.fortMode === "fleet" && !noted ? "Approve → Fleet" : "Approve → Mayor";
 const commentDesk = () =>
   `<div class="signing-desk"><label>Comment <textarea id="comment-note" rows="3"></textarea></label><p class="muted">Posted on the bead as an OVERSEER comment. No labels change and no event is emitted.</p>${localStorage.getItem(tokenKey) ? "" : '<label>Signing token <input id="comment-token" type="password" autocomplete="off"></label>'}<div class="sign-actions"><button id="comment-send">Post comment</button></div><output id="comment-result" aria-live="polite"></output></div>`;
+export const drawerContent = (bead, comments = "") =>
+  bead.trimmed
+    ? `${descriptionContent(bead)}${section("Dependencies", dependencies(bead, ""))}`
+    : `${bead.needsYou ? section("Needs you", signingDesk(bead), true) : ""}${descriptionContent(bead)}${section("Acceptance criteria", renderMarkdown(bead.acceptance_criteria))}${section("Notes", renderMarkdown(bead.notes))}${section("Comments", commentDesk() + comments, Boolean(bead.comments?.length))}${section("Close reason", renderMarkdown(bead.close_reason))}${section("Dependencies", dependencies(bead))}`;
+export const drawerHeader = (bead) =>
+  `<div class="drawer-header"><div><span class="chip fort-chip">${escapeHtml(bead.fortName ?? "")}${bead.civilization && bead.civilization !== "Justin" ? ` · ${escapeHtml(bead.civilization)}` : ""}</span> <code>${escapeHtml(bead.id)}</code><h2>${escapeHtml(bead.title)}</h2><div class="meta"><span class="stage-chip ${stageClass(bead.stage)}">${escapeHtml(bead.stage)}</span>${bead.trimmed ? metaTime("Closed", bead.closed_at) : `<span>${escapeHtml(priority(bead))} · ${glyph(bead.issue_type)}</span>`}${(bead.labels ?? []).map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join("")}<span>${escapeHtml(bead.assignee ?? "Unassigned")}</span>${bead.trimmed ? "" : `${metaTime("Created", bead.created_at)}${metaTime("Updated", bead.updated_at)}`}</div></div><button id="drawer-close">Back</button></div>`;
 async function post(body, token) {
   const response = await fetch("/api/sign", {
     method: "POST",
@@ -194,7 +210,7 @@ export async function openDrawer(
     if (!response.ok) return;
     bead = await response.json();
   }
-  const header = `<div class="drawer-header"><div><span class="chip fort-chip">${escapeHtml(bead.fortName ?? "")}${bead.civilization && bead.civilization !== "Justin" ? ` · ${escapeHtml(bead.civilization)}` : ""}</span> <code>${escapeHtml(bead.id)}</code><h2>${escapeHtml(bead.title)}</h2><div class="meta"><span class="stage-chip ${stageClass(bead.stage)}">${escapeHtml(bead.stage)}</span><span>${escapeHtml(priority(bead))} · ${glyph(bead.issue_type)}</span>${(bead.labels ?? []).map((label) => `<span class="chip">${escapeHtml(label)}</span>`).join("")}<span>${escapeHtml(bead.assignee ?? "Unassigned")}</span><time title="${escapeHtml(bead.created_at)}">Created ${relative(bead.created_at)}</time><time title="${escapeHtml(bead.updated_at)}">Updated ${relative(bead.updated_at)}</time></div></div><button id="drawer-close">Back</button></div>`;
+  const header = drawerHeader(bead);
   // Newest first, with the comment box above them (Overseer, 2026-10-27).
   const comments =
     [...(bead.comments ?? [])]
@@ -205,7 +221,7 @@ export async function openDrawer(
       )
       .join("") || "<p>None.</p>";
   el("drawer").innerHTML =
-    `${header}${notice ? `<p class="notice">${escapeHtml(notice)}</p>` : ""}${bead.needsYou ? section("Needs you", signingDesk(bead), true) : ""}${section("Description", renderMarkdown(bead.description), true)}${section("Acceptance criteria", renderMarkdown(bead.acceptance_criteria))}${section("Notes", renderMarkdown(bead.notes))}${section("Comments", commentDesk() + comments, Boolean(bead.comments?.length))}${section("Close reason", renderMarkdown(bead.close_reason))}${section("Dependencies", dependencies(bead))}`;
+    `${header}${notice ? `<p class="notice">${escapeHtml(notice)}</p>` : ""}${drawerContent(bead, comments)}`;
   el("drawer").hidden = false;
   if (updateHash) window.location.hash = encodeURIComponent(id);
   el("drawer-close").addEventListener("click", () => {
@@ -217,8 +233,8 @@ export async function openDrawer(
   });
   const reopen = (target) =>
     openDrawer(target, { onNavigate, onClose, updateHash });
-  if (bead.needsYou) bindSigningDesk(bead, reopen);
-  bindCommentDesk(bead, reopen);
+  if (bead.needsYou && !bead.trimmed) bindSigningDesk(bead, reopen);
+  if (!bead.trimmed) bindCommentDesk(bead, reopen);
   document.querySelectorAll(".drawer-section").forEach((item) =>
     item.addEventListener("toggle", () => {
       sessionStorage.setItem(

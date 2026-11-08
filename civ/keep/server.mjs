@@ -56,6 +56,7 @@ import {
 } from "./lib/mayor-summary-extract.mjs";
 import {
   command,
+  KEEP_CLOSED_FULL_DAYS,
   parseExport,
   signCommand,
   signEvents,
@@ -109,6 +110,20 @@ export function decisionOptions(bead) {
     id: match[1],
     text: match[2],
   }));
+}
+
+export function apiBeadPayload(entry, bead, context) {
+  return {
+    ...bead,
+    fort: entry.fort.key,
+    fortName: entry.fort.name,
+    civilization: entry.fort.civilization,
+    fortMode: entry.fort.mode,
+    stage: stage(bead, context),
+    needsYou: needsYou(bead, context),
+    dependencyGroups: dependencyGroups(bead, context.byId),
+    ...(bead.trimmed ? { trimmedAfterDays: KEEP_CLOSED_FULL_DAYS } : {}),
+  };
 }
 
 // Event filenames use the writer's local date. They are only a shard hint, so
@@ -785,16 +800,7 @@ export function createCivKeep(options = {}) {
     if (!entry) return json(response, { error: "Not found" }, 404);
     const bead = entry.byId.get(id);
     const context = contextFor(entry);
-    return json(response, {
-      ...bead,
-      fort: entry.fort.key,
-      fortName: entry.fort.name,
-      civilization: entry.fort.civilization,
-      fortMode: entry.fort.mode,
-      stage: stage(bead, context),
-      needsYou: needsYou(bead, context),
-      dependencyGroups: dependencyGroups(bead, context.byId),
-    });
+    return json(response, apiBeadPayload(entry, bead, context));
   }
 
   function readToken(response) {
