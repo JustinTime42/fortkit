@@ -56,6 +56,7 @@ import {
 } from "./lib/mayor-summary-extract.mjs";
 import {
   command,
+  KEEP_CLOSED_FULL_DAYS,
   parseExport,
   signCommand,
   signEvents,
@@ -121,6 +122,7 @@ export function apiBeadPayload(entry, bead, context) {
     stage: stage(bead, context),
     needsYou: needsYou(bead, context),
     dependencyGroups: dependencyGroups(bead, context.byId),
+    ...(bead.trimmed ? { trimmedAfterDays: KEEP_CLOSED_FULL_DAYS } : {}),
   };
 }
 
