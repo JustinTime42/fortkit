@@ -21,6 +21,10 @@ const relative = (time) => {
 };
 const section = (name, content, open = false) =>
   `<details class="drawer-section" data-section="${name}" ${sessionStorage.getItem(`keep-section-${name}`) === "open" || (open && sessionStorage.getItem(`keep-section-${name}`) !== "closed") ? "open" : ""}><summary>${name}</summary>${content}</details>`;
+export const descriptionContent = (bead) =>
+  bead.trimmed
+    ? `<p class="notice">Closed more than 14 days ago; details are trimmed from the Keep's view. <code>bd show ${escapeHtml(bead.id)}</code> in the fort has the full record.</p>`
+    : section("Description", renderMarkdown(bead.description), true);
 const dependencies = (bead) => {
   const labels = {
     blocks: "Blocks",
@@ -205,7 +209,7 @@ export async function openDrawer(
       )
       .join("") || "<p>None.</p>";
   el("drawer").innerHTML =
-    `${header}${notice ? `<p class="notice">${escapeHtml(notice)}</p>` : ""}${bead.needsYou ? section("Needs you", signingDesk(bead), true) : ""}${section("Description", renderMarkdown(bead.description), true)}${section("Acceptance criteria", renderMarkdown(bead.acceptance_criteria))}${section("Notes", renderMarkdown(bead.notes))}${section("Comments", commentDesk() + comments, Boolean(bead.comments?.length))}${section("Close reason", renderMarkdown(bead.close_reason))}${section("Dependencies", dependencies(bead))}`;
+    `${header}${notice ? `<p class="notice">${escapeHtml(notice)}</p>` : ""}${bead.needsYou ? section("Needs you", signingDesk(bead), true) : ""}${descriptionContent(bead)}${section("Acceptance criteria", renderMarkdown(bead.acceptance_criteria))}${section("Notes", renderMarkdown(bead.notes))}${section("Comments", commentDesk() + comments, Boolean(bead.comments?.length))}${section("Close reason", renderMarkdown(bead.close_reason))}${section("Dependencies", dependencies(bead))}`;
   el("drawer").hidden = false;
   if (updateHash) window.location.hash = encodeURIComponent(id);
   el("drawer-close").addEventListener("click", () => {

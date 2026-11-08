@@ -111,6 +111,19 @@ export function decisionOptions(bead) {
   }));
 }
 
+export function apiBeadPayload(entry, bead, context) {
+  return {
+    ...bead,
+    fort: entry.fort.key,
+    fortName: entry.fort.name,
+    civilization: entry.fort.civilization,
+    fortMode: entry.fort.mode,
+    stage: stage(bead, context),
+    needsYou: needsYou(bead, context),
+    dependencyGroups: dependencyGroups(bead, context.byId),
+  };
+}
+
 // Event filenames use the writer's local date. They are only a shard hint, so
 // a UTC summary window must include adjacent local-date shards.
 export function eventFileNamesForWindow(names, windowStart, windowEnd) {
@@ -785,16 +798,7 @@ export function createCivKeep(options = {}) {
     if (!entry) return json(response, { error: "Not found" }, 404);
     const bead = entry.byId.get(id);
     const context = contextFor(entry);
-    return json(response, {
-      ...bead,
-      fort: entry.fort.key,
-      fortName: entry.fort.name,
-      civilization: entry.fort.civilization,
-      fortMode: entry.fort.mode,
-      stage: stage(bead, context),
-      needsYou: needsYou(bead, context),
-      dependencyGroups: dependencyGroups(bead, context.byId),
-    });
+    return json(response, apiBeadPayload(entry, bead, context));
   }
 
   function readToken(response) {
