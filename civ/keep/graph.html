@@ -59,11 +59,11 @@
 </head>
 <body>
   <nav class="keep-nav" aria-label="Civ Keep"><strong class="brand">Civ Keep</strong><a href="/board">Board</a><a href="/graph" aria-current="page">Graph</a><a href="/airlock">Airlock</a><label class="fort-pick">Fort <select id="fort"><option value="all">All forts</option></select></label><span id="fort-strip" class="fort-strip"></span><span class="spacer"></span><span id="stale" class="badge" hidden>STALE</span><time id="tick">Loading</time></nav>
-  <header class="bar"><h1 id="graph-title">All forts</h1><button data-scope="frontier" aria-pressed="true">Frontier</button><button data-scope="open" aria-pressed="false">All open</button><select id="epic"><option value="">Epic: all</option></select><select id="closed"><option value="24h">24h</option><option value="7d">7d</option></select><label><input id="context" type="checkbox"> context edges</label><input id="search" placeholder="Search (/)"><button id="fit">Fit</button><button id="out" aria-label="Zoom out">−</button><button id="in" aria-label="Zoom in">+</button><span class="spacer"></span><span class="legend" aria-label="Stage legend"><span class="legend-chip stage-needs-you">needs you</span><span class="legend-chip stage-in-review">review</span><span class="legend-chip stage-building">building</span><span class="legend-chip stage-ready">ready</span><span class="legend-chip stage-blocked">blocked</span></span></header>
+  <section id="stale-banner" class="stale-banner" hidden aria-live="polite"></section><header class="bar"><h1 id="graph-title">All forts</h1><button data-scope="frontier" aria-pressed="true">Frontier</button><button data-scope="open" aria-pressed="false">All open</button><select id="epic"><option value="">Epic: all</option></select><select id="closed"><option value="24h">24h</option><option value="7d">7d</option></select><label><input id="context" type="checkbox"> context edges</label><input id="search" placeholder="Search (/)"><button id="fit">Fit</button><button id="out" aria-label="Zoom out">−</button><button id="in" aria-label="Zoom in">+</button><span class="spacer"></span><span class="legend" aria-label="Stage legend"><span class="legend-chip stage-needs-you">needs you</span><span class="legend-chip stage-in-review">review</span><span class="legend-chip stage-building">building</span><span class="legend-chip stage-ready">ready</span><span class="legend-chip stage-blocked">blocked</span></span></header>
   <main id="canvas"><div id="landed-strip"></div><svg aria-label="Bead dependency graph" role="img"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"/></marker><marker id="arrow-needs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--danger)"/></marker></defs><g id="scene"><g id="regions"></g><g id="edges"></g><g id="nodes"></g></g></svg></main><main id="phone-list"></main><aside id="drawer" hidden aria-label="Bead details"></aside>
   <script type="module">
     import { openDrawer } from '/static/drawer.js';
-    import { fortControls } from '/static/forts-ui.js';
+    import { fortControls, renderStaleBanner } from '/static/forts-ui.js';
     import { centerOn, compareNodes, contrastRatio, epicRegions, escapeHtml, fitTransform, glyph, graphOrder, layeredLayout, priority, relatedNodeIds, searchNodes, stageClass, titleLines, truncate, visibleEdges, zoomAt } from '/static/graph.mjs';
     import { subscribeRefresh } from '/static/live.mjs';
 
@@ -200,6 +200,7 @@
       if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
       state.data = await response.json();
       el('stale').hidden = !state.data.stale;
+      renderStaleBanner(state.data.staleForts);
       el('tick').textContent = `Last tick: ${new Date(state.data.generatedAt).toLocaleTimeString()}`;
       fill('epic', `<option value="">Epic: all</option>${state.data.epics.map((epic) => `<option value="${escapeHtml(epic.id)}">${escapeHtml(label(epic.id))}${forts.current() === 'all' ? ` (${escapeHtml(epic.fortName)})` : ''}</option>`).join('')}`);
       if (state.scope.startsWith('epic:')) el('epic').value = state.scope.slice(5);

@@ -63,6 +63,7 @@ import {
 } from "./lib/readers.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const STALE_BANNER_MS = 10 * 60 * 1000;
 
 function json(response, body, status = 200) {
   response.writeHead(status, {
@@ -133,6 +134,23 @@ export function createCivKeep(options = {}) {
   const fileSystem = options.fileSystem ?? fs;
   const now = options.now ?? (() => Date.now());
   const run = options.run ?? command;
+  const emitCiv =
+    options.emitCiv ??
+    ((category, detail, event) =>
+      command(
+        path.join(here, "..", "scripts", "emit.sh"),
+        [
+          category,
+          detail,
+          "-a",
+          "keep",
+          "-t",
+          event.target,
+          "-p",
+          JSON.stringify(event.payload),
+        ],
+        { cwd: path.join(here, "..") },
+      ));
   // Tests that already provide the old buffered runner retain that seam. Normal
   // operation takes the streaming path; an explicit reader always wins.
   const readExport = options.readExport ?? (options.run ? null : streamExport);
@@ -188,7 +206,7 @@ export function createCivKeep(options = {}) {
   // an ephemeral port; production binds KEEP_PORT (7780).
   let allowedHosts;
   let allowedOrigins;
-  // key -> { fort, byId, skipped, events, fleet, stale, error, refreshedAt }
+  // key -> { fort, byId, skipped, events, fleet, stale, staleSince, error, refreshedAt }
   const states = new Map();
   let bootModuleMtimes;
 
@@ -201,6 +219,8 @@ export function createCivKeep(options = {}) {
         skipped: 0,
         fleet: { workers: [], halted: false },
         stale: true,
+        staleSince: new Date(now()).toISOString(),
+        staleEventEmitted: false,
         error: "not yet read",
         events:
           options.eventTail?.(fort) ??
@@ -260,12 +280,53 @@ export function createCivKeep(options = {}) {
       entry.byId = parsed.byId;
       entry.skipped = parsed.skipped;
       entry.fort = { ...entry.fort, prefix };
+      const wasStaleEvent = entry.staleEventEmitted;
       entry.stale = false;
+      entry.staleSince = null;
+      entry.staleEventEmitted = false;
       entry.error = null;
       entry.refreshedAt = new Date(now()).toISOString();
+      if (wasStaleEvent)
+        try {
+          await emitCiv("keep.fresh", `${fort.name} data is fresh again`, {
+            target: fort.key,
+            payload: { fort: fort.key },
+          });
+        } catch (emitError) {
+          // Recovery has ended the episode. A failed fresh event is logged, not retried.
+          log(`Civ Keep fresh event failed for ${fort.key}:`, emitError);
+        }
     } catch (error) {
+      if (!entry.staleSince) entry.staleSince = new Date(now()).toISOString();
       entry.stale = true;
       entry.error = String(error.message ?? error).split("\n")[0];
+      const staleSince = Date.parse(entry.staleSince);
+      if (
+        !entry.staleEventEmitted &&
+        Number.isFinite(staleSince) &&
+        now() - staleSince >= STALE_BANNER_MS
+      ) {
+        // Claim the episode before awaiting so overlapping manual and interval
+        // refreshes cannot both emit keep.stale.
+        entry.staleEventEmitted = true;
+        try {
+          await emitCiv(
+            "keep.stale",
+            `${fort.name} data has been stale for over 10 minutes`,
+            {
+              target: fort.key,
+              payload: {
+                fort: fort.key,
+                staleSince: entry.staleSince,
+                error: entry.error,
+              },
+            },
+          );
+        } catch (emitError) {
+          entry.staleEventEmitted = false;
+          log(`Civ Keep stale event failed for ${fort.key}:`, emitError);
+        }
+      }
     }
   }
 
@@ -355,6 +416,7 @@ export function createCivKeep(options = {}) {
       halted: Boolean(entry.fleet?.halted),
       workers: (entry.fleet?.workers ?? []).length,
       stale: entry.stale,
+      staleSince: entry.staleSince ?? null,
       error: entry.error,
       refreshedAt: entry.refreshedAt ?? null,
     };
@@ -393,7 +455,15 @@ export function createCivKeep(options = {}) {
       result.skipped += entry.skipped;
       if (entry.stale) {
         result.stale = true;
-        result.staleForts.push(entry.fort.name);
+        result.staleForts.push({
+          name: entry.fort.name,
+          staleSince: entry.staleSince ?? null,
+          error: entry.error,
+          refreshedAt: entry.refreshedAt ?? null,
+          banner:
+            Boolean(entry.staleSince) &&
+            now() - Date.parse(entry.staleSince) >= STALE_BANNER_MS,
+        });
       }
     }
     return json(response, {
