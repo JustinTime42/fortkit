@@ -11,6 +11,7 @@ import nodeFs, {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -79,6 +80,13 @@ type Bead = {
 const scratch = mkdtempSync(join(tmpdir(), "civ-keep-test-"));
 const tokenPath = join(scratch, "token");
 writeFileSync(tokenPath, "secret-token\n");
+const temporaryDirectories = new Set<string>();
+
+function temporaryDirectory(prefix: string) {
+  const directory = mkdtempSync(join(tmpdir(), prefix));
+  temporaryDirectories.add(directory);
+  return directory;
+}
 
 const forts = [
   {
@@ -172,6 +180,9 @@ afterEach(() => {
   keep?.close();
   keep = null;
   vi.unstubAllGlobals();
+  for (const directory of temporaryDirectories)
+    rmSync(directory, { force: true, recursive: true });
+  temporaryDirectories.clear();
 });
 
 function requestWithHost(
@@ -284,7 +295,7 @@ async function start() {
 
 describe("Civ Keep streamed export reader", () => {
   function fakeBd(body: string) {
-    const directory = mkdtempSync(join(tmpdir(), "civ-keep-bd-"));
+    const directory = temporaryDirectory("civ-keep-bd-");
     const executable = join(directory, "bd");
     writeFileSync(executable, `#!/bin/sh\n${body}\n`);
     chmodSync(executable, 0o755);
@@ -436,21 +447,48 @@ describe("Civ Keep streamed export reader", () => {
 
   test("escalates to SIGKILL when a timed-out export ignores SIGTERM", async () => {
     const fixture = fakeBd(
-      "echo $$ > child.pid\ntrap '' TERM\nwhile :; do :; done",
+      "trap '' TERM\necho $$ > child.pid\nwhile :; do :; done",
     );
-    await expect(
-      readExport(fixture.fort, {
+    let pid: number | undefined;
+    try {
+      const exporting = readExport(fixture.fort, {
         env: fixture.env,
-        timeout: 20,
-        killGraceMs: 20,
-      }),
-    ).rejects.toThrow("bd export timed out after 0.02 s");
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const pid = readFileSync(
-      join(fixture.fort.repo, "child.pid"),
-      "utf8",
-    ).trim();
-    expect(() => process.kill(Number(pid), 0)).toThrow();
+        timeout: 300,
+        killGraceMs: 30,
+      });
+      await vi.waitFor(
+        () => {
+          pid = Number(
+            readFileSync(join(fixture.fort.repo, "child.pid"), "utf8").trim(),
+          );
+          expect(pid).toBeGreaterThan(0);
+        },
+        { interval: 5, timeout: 200 },
+      );
+      await expect(exporting).rejects.toThrow(
+        "bd export timed out after 0.3 s",
+      );
+      // The ready marker follows trap installation. The process surviving here
+      // proves SIGTERM was ignored before the grace-period SIGKILL lands.
+      const childPid = pid;
+      if (!childPid) throw new Error("fake bd did not report its pid");
+      expect(() => process.kill(childPid, 0)).not.toThrow();
+      await vi.waitFor(
+        () => expect(() => process.kill(childPid, 0)).toThrow(),
+        {
+          interval: 5,
+          timeout: 200,
+        },
+      );
+    } finally {
+      if (pid) {
+        try {
+          process.kill(pid, "SIGKILL");
+        } catch {
+          // Expected after the assertion above.
+        }
+      }
+    }
   });
 
   test("counts malformed and id-less streamed records, including a final unterminated line", async () => {
@@ -577,7 +615,7 @@ ${valid}'`);
   });
 
   test("uses the default civ emitter against its own script copy", async () => {
-    const civRoot = mkdtempSync(join(tmpdir(), "civ-keep-emit-"));
+    const civRoot = temporaryDirectory("civ-keep-emit-");
     mkdirSync(join(civRoot, "scripts"), { recursive: true });
     writeFileSync(
       join(civRoot, "scripts", "emit.sh"),
