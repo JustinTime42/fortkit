@@ -5770,3 +5770,63 @@ should name the seat if it matters who learned it.
   Regent sitting with the Overseer present**, reasoning that his half of the gate
   was the sitting itself; she cites ubgx, mskx, fhak, x7ojh, zw3q5 and 8sd4n as the
   practice. Expect that, and close on it.
+
+- 2026-11-09 (edict 79, Proofdelve docket: the Workbench seat ForgeOs-9srgz, and
+  ForgeOs-owhuw): **A PYTHON PATCHER IN A NON-RAW STRING WROTE A LITERAL NUL INTO
+  fleet.sh, AND bash -n, SHELLCHECK AND THE SESSION'S grep ALL STAYED SILENT.**
+  `tr '\0' ' '` inside a Python literal became a NUL byte; `bash -n` and
+  shellcheck passed the file, and the session's ugrep wrapper treated it as
+  binary and printed NOTHING for any pattern, which read as "the line is not
+  there". Found only because a grep that should have matched returned empty.
+  Every patcher now asserts `'\x00' not in t` before writing and runs under
+  `python3 -W error::SyntaxWarning`; use `command grep -a` on a file you just
+  generated. Same sitting, same family: `\\n` inside a heredoc-in-a-heredoc
+  became a real newline inside a printf format.
+
+- 2026-11-09: **SHELLCHECK SC2030/2031 IS NOT AN INFO TO SILENCE WHEN THE
+  VARIABLE IS A FAIL-CLOSED FLAG.** `{ cmd || ok=0; } | sort > f` sets ok in a
+  pipeline subshell, so the fail-closed branch below could never fire. Write the
+  group to a file, then sort the file. Caught before any run.
+
+- 2026-11-09: **A HARNESS THAT RESOLVES ITS ROOT FROM ITS OWN PATH FAILS IN THE
+  SCRATCHPAD FOR THE INSTRUMENT'S REASON.** Proofdelve's fleet-e2e resolves
+  `root` from `$(dirname $0)/..`; run from scratch, e2rbu 2 failed reading
+  `fort/seats/mayor.md`. Run a candidate harness with `ROOT=<fort>` from the
+  fort, or install and run in place, before reading a FAIL as the subject's.
+
+- 2026-11-09: **A RELATIVE PATH IN A Bash CALL IS RESOLVED AGAINST THE CAPITAL
+  BY THE TOOL-LAYER DENY EVEN AFTER `cd` INTO ANOTHER FORT** (second sighting of
+  the 2026-09-24 fact): `cp fort/scripts/workbench.sh ...` from inside ForgeOs
+  was refused as the capital's file. Absolute paths always.
+
+- 2026-11-09: **A STEP COPIED INTO ANOTHER FORT'S fort/scripts/ BY MISTAKE IS
+  UNTRACKED IN A HOST-EXECUTED DIRECTORY**, which that fort's `locked-dir-clean`
+  refuses. I `cp`'d a candidate there for one command and removed it at once
+  (`os.unlink`); git status clean after. Candidates live in the scratchpad, and
+  the install is the only write into fort/scripts.
+
+- 2026-11-09: **AN OVERSEER'S ANSWER CAN BE A MISCLICK, AND THE COST OF ONE IS
+  A FORWARD REPLACEMENT, NOT A REWRITE.** He chose "pause all dispatch" in a
+  multiple-choice question and corrected it to "keep running" after the pause
+  was built, harnessed and committed. Kept 4cc25d5a0, replaced it forward in
+  558606533, amended the charter sentence forward, appended the correction on
+  the bead in his words, and gave the Warden an addendum naming which commit to
+  judge. Lesson for question design: when an option REVERSES the docket's own
+  recommendation, say so in the option text, so a quick click on it is a
+  decision rather than a slip.
+
+- 2026-11-09: **PROOFDELVE HAS A FOURTH SEAT, THE WORKBENCH: Hollis Lathewarm
+  (he/him, actor hollis)**, declared read-only at a moot this Regent convened
+  and seated by the Overseer. `fort/scripts/workbench.sh` (Mayor's mask +
+  deploy script read-only + --rw-tree on the session worktree; marker
+  FORT_MASKED=workbench set in the launcher, not seat_identity, so the shared lib
+  is untouched); `fleet.sh --review-only <bead>` (one review, front of the reap
+  order, findings handed back to hollis); a live sitting's file set holds
+  overlapping fleet beads (`$FLEET_STATE/workbench.live`). The capital's lib
+  `seat_identity` knows nothing of the seat on purpose; a fifth case there would
+  be lib drift across four forts.
+
+- 2026-11-09: **THE WARDEN'S OWN LAUNCH IS THE CHEAPEST END-TO-END PROOF OF A
+  WARDEN-LAUNCHER FIX.** For ForgeOs-owhuw a read-only rig was planted in the
+  docket bead's scratch dir before the sitting's single review; the launch
+  cleared it and reached the mask, the exact point 0o16s died.
