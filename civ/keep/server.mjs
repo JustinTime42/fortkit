@@ -153,7 +153,11 @@ export function createCivKeep(options = {}) {
     options.emitCiv ??
     ((category, detail, event) =>
       command(
-        path.join(here, "..", "scripts", "emit.sh"),
+        path.join(
+          options.civRoot ?? path.join(here, ".."),
+          "scripts",
+          "emit.sh",
+        ),
         [
           category,
           detail,
@@ -164,7 +168,7 @@ export function createCivKeep(options = {}) {
           "-p",
           JSON.stringify(event.payload),
         ],
-        { cwd: path.join(here, "..") },
+        { cwd: options.civRoot ?? path.join(here, "..") },
       ));
   // Tests that already provide the old buffered runner retain that seam. Normal
   // operation takes the streaming path; an explicit reader always wins.
@@ -255,7 +259,7 @@ export function createCivKeep(options = {}) {
     return entry;
   }
 
-  async function refreshFort(entry) {
+  async function refreshFortNow(entry) {
     const { fort } = entry;
     try {
       entry.events.scan();
@@ -278,7 +282,7 @@ export function createCivKeep(options = {}) {
       } else {
         const text = String(await run("bd", ["export"], { cwd: fort.repo }));
         parsed = {
-          ...parseExport(text),
+          ...parseExport(text, { now: now() }),
           digest: createHash("sha256").update(text).digest("hex"),
         };
       }
@@ -343,6 +347,14 @@ export function createCivKeep(options = {}) {
         }
       }
     }
+  }
+
+  function refreshFort(entry) {
+    if (entry.refreshPromise) return entry.refreshPromise;
+    entry.refreshPromise = refreshFortNow(entry).finally(() => {
+      entry.refreshPromise = null;
+    });
+    return entry.refreshPromise;
   }
 
   async function refresh() {

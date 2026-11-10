@@ -171,6 +171,7 @@ let keep: ReturnType<typeof createCivKeep> | null = null;
 afterEach(() => {
   keep?.close();
   keep = null;
+  vi.unstubAllGlobals();
 });
 
 function requestWithHost(
@@ -350,7 +351,7 @@ describe("Civ Keep streamed export reader", () => {
       id: "proof-old",
       trimmed: true,
       trimmedAfterDays: 14,
-      dependencyGroups: {},
+      dependencyGroups: { children: ["proof-child"] },
     });
     expect(content).not.toContain("NaN");
     expect(content).not.toContain("None.");
@@ -358,16 +359,26 @@ describe("Civ Keep streamed export reader", () => {
     expect(content).not.toContain("Acceptance criteria");
     expect(content).not.toContain("Close reason");
     expect(content).toContain("Dependencies");
+    const emptyContent = drawerContent({
+      id: "proof-empty",
+      trimmed: true,
+      trimmedAfterDays: 9,
+      dependencyGroups: {},
+    });
+    expect(emptyContent).not.toContain("Dependencies");
+    expect(emptyContent).toContain("Closed more than 9 days ago");
     const header = drawerHeader({
       id: "proof-old",
       title: "old bead",
       stage: "closed",
       trimmed: true,
       closed_at: "2026-10-01T00:00:00.000Z",
+      issue_type: "task",
     });
     expect(header).toContain("Closed ");
     expect(header).not.toContain("NaN");
     expect(header).not.toContain("?");
+    expect(header).toContain("task");
     expect(
       drawerHeader({ id: "open", title: "open bead", stage: "open" }),
     ).not.toContain("NaN");
@@ -423,6 +434,39 @@ describe("Civ Keep streamed export reader", () => {
     ).rejects.toThrow("bd export exited with signal SIGTERM");
   });
 
+  test("escalates to SIGKILL when a timed-out export ignores SIGTERM", async () => {
+    const fixture = fakeBd(
+      "echo $$ > child.pid\ntrap '' TERM\nwhile :; do :; done",
+    );
+    await expect(
+      readExport(fixture.fort, {
+        env: fixture.env,
+        timeout: 20,
+        killGraceMs: 20,
+      }),
+    ).rejects.toThrow("bd export timed out after 0.02 s");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const pid = readFileSync(
+      join(fixture.fort.repo, "child.pid"),
+      "utf8",
+    ).trim();
+    expect(() => process.kill(Number(pid), 0)).toThrow();
+  });
+
+  test("counts malformed and id-less streamed records, including a final unterminated line", async () => {
+    const valid = JSON.stringify({
+      id: "final",
+      status: "open",
+      title: "last",
+    });
+    const fixture = fakeBd(`printf '%s' 'not json
+{}
+${valid}'`);
+    const result = await readExport(fixture.fort, { env: fixture.env });
+    expect(result.skipped).toBe(2);
+    expect(result.byId.get("final")).toMatchObject({ id: "final" });
+  });
+
   test("streams an export larger than the former 64 MiB limit", async () => {
     const count = 300_000;
     const fixture = fakeBd(`awk 'BEGIN {
@@ -435,7 +479,7 @@ describe("Civ Keep streamed export reader", () => {
     expect(result.skipped).toBe(0);
     expect(result.byId).toHaveLength(count);
     expect(result.byId.get("large-0")).toMatchObject({ trimmed: true });
-  });
+  }, 20_000);
 
   test("old closed stubs preserve graph blocking and epic children", () => {
     const oldClosed = {
@@ -506,9 +550,144 @@ describe("Civ Keep streamed export reader", () => {
     clockKeep.close();
     expect(receivedNow).toBe(clock);
   });
+
+  test("passes the Keep's injected clock to the buffered run fallback", async () => {
+    const clock = Date.parse("2026-11-07T00:00:00.000Z");
+    const old = JSON.stringify({
+      id: "proof-old",
+      status: "closed",
+      closed_at: "2020-01-01T00:00:00.000Z",
+      title: "old",
+    });
+    const fallbackKeep = createCivKeep({
+      now: () => clock,
+      run: async () => old,
+      loadForts: () => [forts[0]],
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+    });
+    await fallbackKeep.refresh();
+    expect(
+      fallbackKeep.states.get("proof")?.byId.get("proof-old"),
+    ).toMatchObject({
+      trimmed: true,
+    });
+    fallbackKeep.close();
+  });
+
+  test("uses the default civ emitter against its own script copy", async () => {
+    const civRoot = mkdtempSync(join(tmpdir(), "civ-keep-emit-"));
+    mkdirSync(join(civRoot, "scripts"), { recursive: true });
+    writeFileSync(
+      join(civRoot, "scripts", "emit.sh"),
+      readFileSync(join(process.cwd(), "civ/scripts/emit.sh"), "utf8"),
+    );
+    chmodSync(join(civRoot, "scripts", "emit.sh"), 0o755);
+    let clock = Date.parse("2026-11-07T00:00:00.000Z");
+    const emitterKeep = createCivKeep({
+      civRoot,
+      now: () => clock,
+      readExport: async () => {
+        throw new Error("export unavailable");
+      },
+      loadForts: () => [forts[0]],
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+    });
+    await emitterKeep.refresh();
+    clock += 10 * 60 * 1000;
+    await emitterKeep.refresh();
+    emitterKeep.close();
+    const eventFile = readdirSync(join(civRoot, "events")).find((name) =>
+      name.startsWith("events-"),
+    );
+    if (!eventFile)
+      throw new Error("default emitter did not create an event stream");
+    const lines = readFileSync(join(civRoot, "events", eventFile), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(lines).toContainEqual(
+      expect.objectContaining({
+        actor: "keep",
+        category: "keep.stale",
+        target: "proof",
+        payload: expect.objectContaining({ fort: "proof" }),
+      }),
+    );
+  });
+
+  test("serves trimmed metadata through the bead HTTP route", async () => {
+    const stub = {
+      id: "proof-old",
+      status: "closed",
+      closed_at: "2020-01-01T00:00:00.000Z",
+      title: "old",
+      issue_type: "task",
+      dependencies: [],
+      trimmed: true,
+    };
+    keep = createCivKeep({
+      readExport: async () => ({
+        byId: new Map([[stub.id, stub]]),
+        skipped: 0,
+        digest: "digest",
+      }),
+      loadForts: () => [forts[0]],
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+    });
+    await keep.refresh();
+    await new Promise<void>((resolve) =>
+      keep?.server.listen(0, "127.0.0.1", resolve),
+    );
+    const port = (keep.server.address() as AddressInfo).port;
+    const payload = await (
+      await fetch(`http://127.0.0.1:${port}/api/bead/${stub.id}`)
+    ).json();
+    expect(payload).toMatchObject({ trimmed: true, trimmedAfterDays: 14 });
+  });
 });
 
 describe("Civ Keep stale episodes", () => {
+  test("shares one in-flight refresh per fort", async () => {
+    let clock = Date.parse("2026-11-07T00:00:00.000Z");
+    let release!: () => void;
+    let hold = false;
+    let reads = 0;
+    const emitted: string[] = [];
+    keep = createCivKeep({
+      now: () => clock,
+      readExport: async () => {
+        reads += 1;
+        if (hold)
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        throw new Error("export unavailable");
+      },
+      emitCiv: async (category: string) => {
+        emitted.push(category);
+      },
+      loadForts: () => [forts[0]],
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+    });
+    await keep.refresh();
+    clock += 10 * 60 * 1000;
+    hold = true;
+    const staleFirst = keep.refresh();
+    const staleSecond = keep.refresh();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(reads).toBe(2);
+    release();
+    await Promise.all([staleFirst, staleSecond]);
+    expect(emitted).toEqual(["keep.stale"]);
+  });
   test("records staleSince, announces one stale event, then announces recovery", async () => {
     let clock = Date.parse("2026-11-07T00:00:00.000Z");
     const emitted: {

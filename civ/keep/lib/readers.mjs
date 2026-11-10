@@ -82,6 +82,7 @@ export function parseExport(text, { now = Date.now() } = {}) {
 export function readExport(fort, options = {}) {
   const spawnImpl = options.spawn ?? spawn;
   const timeoutMs = options.timeout ?? 60_000;
+  const killGraceMs = options.killGraceMs ?? 5_000;
   const now = options.now ?? Date.now();
   const cutoff = now - KEEP_CLOSED_FULL_DAYS * 24 * 60 * 60 * 1000;
   return new Promise((resolve, reject) => {
@@ -106,7 +107,6 @@ export function readExport(fort, options = {}) {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
-      if (killTimer) clearTimeout(killTimer);
       if (error) reject(error);
       else resolve(result);
     };
@@ -131,6 +131,7 @@ export function readExport(fort, options = {}) {
     child.stdout.on("error", fail);
     child.stderr.on("error", fail);
     child.on("close", (code, signal) => {
+      if (killTimer) clearTimeout(killTimer);
       if (code !== 0) {
         const detail = stderrTail();
         fail(
@@ -146,9 +147,9 @@ export function readExport(fort, options = {}) {
     });
     const timeout = setTimeout(() => {
       child.kill("SIGTERM");
-      fail(new Error(`bd export timed out after ${timeoutMs / 1000} s`));
-      killTimer = setTimeout(() => child.kill("SIGKILL"), 5_000);
+      killTimer = setTimeout(() => child.kill("SIGKILL"), killGraceMs);
       killTimer.unref?.();
+      fail(new Error(`bd export timed out after ${timeoutMs / 1000} s`));
     }, timeoutMs);
     timeout.unref?.();
   });
