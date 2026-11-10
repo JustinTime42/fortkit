@@ -653,7 +653,7 @@ ${valid}'`);
 });
 
 describe("Civ Keep stale episodes", () => {
-  test("shares one in-flight refresh per fort", async () => {
+  test("serializes overlapping refreshes and gives later callers a later read", async () => {
     let clock = Date.parse("2026-11-07T00:00:00.000Z");
     let release!: () => void;
     let hold = false;
@@ -682,11 +682,63 @@ describe("Civ Keep stale episodes", () => {
     hold = true;
     const staleFirst = keep.refresh();
     const staleSecond = keep.refresh();
+    const staleThird = keep.refresh();
     await new Promise((resolve) => setImmediate(resolve));
     expect(reads).toBe(2);
     release();
-    await Promise.all([staleFirst, staleSecond]);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(reads).toBe(3);
+    release();
+    await Promise.all([staleFirst, staleSecond, staleThird]);
+    expect(reads).toBe(3);
     expect(emitted).toEqual(["keep.stale"]);
+  });
+
+  test("queues one rerun for all callers that arrive during an active read", async () => {
+    const releases: (() => void)[] = [];
+    const started: number[] = [];
+    let laterRequested = false;
+    let secondStartedAfterLaterRequest = false;
+    let active = 0;
+    let maxActive = 0;
+    keep = createCivKeep({
+      readExport: async () => {
+        const read = started.length + 1;
+        started.push(read);
+        if (read === 2) secondStartedAfterLaterRequest = laterRequested;
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await new Promise<void>((resolve) => releases.push(resolve));
+        active -= 1;
+        return { byId: new Map(), skipped: 0, digest: `digest-${read}` };
+      },
+      loadForts: () => [forts[0]],
+      eventTail: () => ({ events: [], load() {}, scan() {}, close() {} }),
+      exit: () => {},
+      log: () => {},
+    });
+    const first = keep.refresh();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(started).toEqual([1]);
+
+    laterRequested = true;
+    const later = Promise.all([keep.refresh(), keep.refresh(), keep.refresh()]);
+    releases.shift()?.();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(started).toEqual([1, 2]);
+    expect(secondStartedAfterLaterRequest).toBe(true);
+    expect(maxActive).toBe(1);
+
+    let laterResolved = false;
+    void later.then(() => {
+      laterResolved = true;
+    });
+    await first;
+    expect(laterResolved).toBe(false);
+    releases.shift()?.();
+    await later;
+    expect(started).toEqual([1, 2]);
+    expect(maxActive).toBe(1);
   });
   test("records staleSince, announces one stale event, then announces recovery", async () => {
     let clock = Date.parse("2026-11-07T00:00:00.000Z");
