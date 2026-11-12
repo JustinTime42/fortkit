@@ -5830,3 +5830,23 @@ should name the seat if it matters who learned it.
   WARDEN-LAUNCHER FIX.** For ForgeOs-owhuw a read-only rig was planted in the
   docket bead's scratch dir before the sitting's single review; the launch
   cleared it and reached the mask, the exact point 0o16s died.
+
+- 2026-11-12 (edict 80, Proofdelve review throughput, ForgeOs-6niaz): **A
+  FIXTURE THAT WRITES THE STATE THE CODE MUST REACT TO, INSTEAD OF PRODUCING IT
+  THROUGH THE REAL ROUTE, TESTS A WORLD THAT DOES NOT OCCUR.** Belt 2's e2e
+  fixture hand-wrote a held sitting as workbench,sign-to-land,human; the
+  fleet's ESCALATE route adds `human` and never sign-to-land, so the belt was
+  blind to the ordinary held sitting and the case passed. The Warden found it
+  by reading the route. Build held/escalated/returned fixtures by running the
+  fleet's own route on them.
+- 2026-11-12: **`git merge-base` WITHOUT `--all` MISSES SHARED UNLANDED COMMITS
+  ONCE BOTH BRANCHES HAVE MERGED MAIN** (a criss-cross: the single base it
+  prints can be a main commit). Any "do these branches share unlanded work"
+  test asks every base.
+- 2026-11-12: **A STUB THAT IGNORES A FILTER THE CALLER PASSES MAKES THE RED ARM
+  FAIL FOR THE WRONG REASON**; make stubs honour the filters (--label) the
+  subject relies on, or the inversion cannot show the real miss.
+- 2026-11-12: **Proofdelve's Warden now writes FINDINGS: / END FINDINGS with
+  [record]/[polish]/[bead] tags, and FIX-FORWARD exists** (fleet.sh
+  fix_forward, state in $FLEET_STATE/fix-forward/<sfx>). Workbench session beads
+  land on review behind two fleet belts (gated_range_why, stacked_held_why).
