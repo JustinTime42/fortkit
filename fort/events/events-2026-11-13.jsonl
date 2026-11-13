@@ -4,3 +4,5 @@
 {"ts":"2026-11-13T09:34:05-09:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-11-13T09:32:42-09:00","payload":null}
 {"ts":"2026-11-13T09:34:35-09:00","actor":"emrith","seat":"mayor","category":"bead.closed","target":"fortkit-8bvu","detail":"Mayor closes fortkit-8bvu (Civ Keep bounded export reader) with .5 and .6 after live deploy","payload":null}
 {"ts":"2026-11-13T09:35:09-09:00","actor":"emrith","seat":"mayor","category":"handoff.written","target":null,"detail":"Mayor handoff 2026-11-13: fortkit-8bvu closed and live; follow-up fortkit-czxc","payload":null}
+{"ts":"2026-11-13T09:35:25-09:00","actor":"emrith","seat":"mayor","category":"push","target":"fortkit-8bvu","detail":"Mayor pushes main f61d609..7d4aa97 to origin (Overseer approved 2026-11-13): fortkit-8bvu and two Regent sittings","payload":null}
+{"ts":"2026-11-13T09:35:36-09:00","actor":"harness","seat":null,"category":"digest.emitted","target":"digest.sh","detail":"Digest emitted for event window since 2026-11-13T09:34:05-09:00","payload":null}
