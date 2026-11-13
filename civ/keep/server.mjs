@@ -153,7 +153,11 @@ export function createCivKeep(options = {}) {
     options.emitCiv ??
     ((category, detail, event) =>
       command(
-        path.join(here, "..", "scripts", "emit.sh"),
+        path.join(
+          options.civRoot ?? path.join(here, ".."),
+          "scripts",
+          "emit.sh",
+        ),
         [
           category,
           detail,
@@ -164,7 +168,7 @@ export function createCivKeep(options = {}) {
           "-p",
           JSON.stringify(event.payload),
         ],
-        { cwd: path.join(here, "..") },
+        { cwd: options.civRoot ?? path.join(here, "..") },
       ));
   // Tests that already provide the old buffered runner retain that seam. Normal
   // operation takes the streaming path; an explicit reader always wins.
@@ -255,7 +259,7 @@ export function createCivKeep(options = {}) {
     return entry;
   }
 
-  async function refreshFort(entry) {
+  async function refreshFortNow(entry) {
     const { fort } = entry;
     try {
       entry.events.scan();
@@ -278,7 +282,7 @@ export function createCivKeep(options = {}) {
       } else {
         const text = String(await run("bd", ["export"], { cwd: fort.repo }));
         parsed = {
-          ...parseExport(text),
+          ...parseExport(text, { now: now() }),
           digest: createHash("sha256").update(text).digest("hex"),
         };
       }
@@ -343,6 +347,44 @@ export function createCivKeep(options = {}) {
         }
       }
     }
+  }
+
+  function refreshFort(entry) {
+    if (entry.refreshPromise) {
+      // A caller that arrived after this read began needs a snapshot from a
+      // later read.  Coalescing it into the active promise can otherwise make
+      // the signing desk reopen a drawer with its pre-signature export.
+      entry.refreshPending = true;
+      if (!entry.queuedRefreshPromise) {
+        entry.queuedRefreshPromise = new Promise((resolve, reject) => {
+          entry.resolveQueuedRefresh = resolve;
+          entry.rejectQueuedRefresh = reject;
+        });
+      }
+      return entry.queuedRefreshPromise;
+    }
+
+    const refresh = refreshFortNow(entry);
+    entry.refreshPromise = refresh;
+    refresh.then(
+      () => settleRefresh(entry),
+      () => settleRefresh(entry),
+    );
+    return refresh;
+  }
+
+  function settleRefresh(entry) {
+    entry.refreshPromise = null;
+    if (!entry.refreshPending) return;
+    entry.refreshPending = false;
+    const resolve = entry.resolveQueuedRefresh;
+    const reject = entry.rejectQueuedRefresh;
+    entry.queuedRefreshPromise = null;
+    entry.resolveQueuedRefresh = null;
+    entry.rejectQueuedRefresh = null;
+    // Start the queued read synchronously before resolving callers, so another
+    // request cannot join the completed, pre-request snapshot.
+    refreshFort(entry).then(resolve, reject);
   }
 
   async function refresh() {
