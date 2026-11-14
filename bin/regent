@@ -30,6 +30,10 @@
 #   the Overseer. A future reader must not quietly default this downward: the
 #   Regent reviews and repairs the machinery every other seat depends on, and
 #   a cheaper model here is a cheaper civilization everywhere.
+#   AMENDED 2026-11-13 (the Overseer's choice at the Proofdelve sitting on
+#   docket 2026-11-13, item C(5)): the pinned default is Claude Fable 5.2
+#   (claude-fable-5-2) instead of opus (claude-opus-5-5). The model= line below
+#   is the one line to revert. --model still overrides it per launch.
 #
 # AND THE LAUNCHER STAMPS IT, because the session cannot be trusted to
 # (fortkit-vn8, ported from fort/scripts/forge.sh:104-127): "Model self-report
@@ -59,7 +63,7 @@ stamp="$(date +%Y-%m-%dT%H%M%S)"
 # Flags are parsed BEFORE the briefing is generated, so --brief-only still
 # short-circuits at the same point it always did.
 brief_only=0
-model="opus"          # frontier default; see the ladder note in the header
+model="fable"         # Claude Fable 5.2 (claude-fable-5-2), the Overseer's choice at the 2026-11-13 Proofdelve sitting, item C(5); TO REVERT: set this back to "opus" (it was opus, resolving to claude-opus-5-5). See the ladder note in the header.
 edict_target=""       # bead id, when the Overseer names it at wake
 instruction=""
 while [ "$#" -gt 0 ]; do
