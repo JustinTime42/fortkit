@@ -1,0 +1,157 @@
+REGENT DOCKET, Manyhalls (fortkit), DRAFT 2026-11-18: RE-FOUND MANYHALLS FROM A PROOFDELVE SNAPSHOT
+Prepared by the Mayor of Proofdelve (Marrek Splitstone) at the Overseer's request. DRAFT: nothing here is approved
+until the Overseer reads it and opens the sitting.
+
+WHY. Overseer, 2026-11-18: bring Manyhalls up to Proofdelve's level by replacement, not backport; Manyhalls's
+machinery is ~1,000 lines of fort scripts against Proofdelve's ~13,000, and little of it is worth merging.
+Caveats he set:
+  (1) the new Manyhalls is FORT-ARCHITECTURE focused, with less focus on civ-wide seats (no scholar, no researcher);
+  (2) the work happens on a transplanted COPY, and Proofdelve stays completely outside the blast radius: it is
+      doing real product work;
+  (3) Proofdelve is NOT made the upstream. Manyhalls becomes its own lineage from this snapshot; drift afterwards
+      is accepted, and later improvements move by ordinary backport.
+
+STANDING EXCEPTION FOR THIS SITTING ONLY. The fort-backport protections for the receiving fort (per-file
+merge, keep-local-edits) are set aside for Manyhalls's MACHINERY paths listed under REPLACED. They are NOT set
+aside for records or for the civ tooling. Git is the undo: the pre-sitting tag below.
+
+BLAST RADIUS RULES (Proofdelve). These hold for every step and are checked at the end.
+  B1. The source is a pinned snapshot, read once: `git -C /home/justin/dev/ForgeOs archive <SHA> <paths> | tar -x
+      -C <staging dir>`, with <SHA> a pushed, verified main (today's candidate e61bc6d49 or later). Nothing is
+      written under /home/justin/dev/ForgeOs or /home/justin/dev/ForgeOs-worktrees, no git command there takes
+      a lock or a ref, no Proofdelve seat, timer, fleet or Keep record is touched.
+  B2. Proofdelve is NOT halted for this sitting (nothing touches it). The Regent's own session.start / session.end
+      announcement in Proofdelve's event stream is the only write there, and it is append-only.
+  B3. Every runtime identifier is renamed before anything runs (see RENAMES), so a Manyhalls script can never
+      resolve a Proofdelve path even by mistake.
+  B4. A mechanical isolation gate (I1 below) goes red on any Proofdelve identifier in Manyhalls's machinery.
+  B5. No Manyhalls systemd unit, fleet run or loop is ENABLED in this sitting. Enabling is a separate Overseer
+      decision after the sitting, under the shared-host rules (S1-S3).
+  B6. All harnesses run with HOME and XDG_* pointed at a scratch directory, so a missed rename lands in scratch,
+      not in ~/.local/state/proofdelve-fleet or ~/.config/proofdelve.
+
+BEFORE THE FIRST EDIT
+  - Tag fortkit: pre-refound-2026-11-<dd>. Work on a fortkit branch `refound` in /home/justin/dev/fortkit-worktrees,
+    not on fortkit main; merge it only at the end, after the Warden's review.
+  - HALT Manyhalls (not Proofdelve); edict.begun in fortkit's stream; edict.ended at the end.
+  - Record <SHA> in the sitting's first commit message and in fort/annals.
+
+WHAT IS IN FORTKIT, AND WHAT HAPPENS TO EACH PART
+  REPLACED from the snapshot (mirror copy, files absent from the source are deleted):
+    fort/scripts/, fort/seats/, fort/profiles/, fort/checklists/, fort/systemd/, fort/charter.md,
+    fort/advisories.md, fort/remember.md (empty it), fort/events/README.md, fort/memory/*.mjs (linter and
+    consolidator; NOT facts/), the fort-side tools in scripts/ (list below), .claude/agents, .claude/commands.
+  KEPT as is (Manyhalls's own history; no conflict):
+    .beads/, fort/events/*.jsonl, fort/handoffs/, fort/memory/facts/, fort/annals/, fort/telemetry/, fort/laurels/.
+  NOT TOUCHED (civ tooling and the factory; out of scope for this sitting):
+    bin/regent, bin/civ-index, bin/fort-init, civ/ (ALL of it: civ/keep is Proofdelve's LIVE signing desk and
+    airlock UI at :7780, so a change there is inside Proofdelve's blast radius), schema/, skills/
+    (fort-backport), templates/ (refreshed from the new Manyhalls in a LATER sitting; recommended, Q2).
+  RETIRED from Manyhalls: fort/seats/researcher.md, fort/scripts/researcher.sh, probe-cycle7.sh, and any scholar
+    references (caveat 1). Their records stay in history.
+  RETIRED from fortkit, Bartizan (Overseer 2026-11-18: "No Bartizan"): the world and colony views only
+    (src/world*, src/colony*, their page types, readers used only by them, their tests, docs/specs/
+    fortress-visualizer.md moves to fort/annals as history). NOT the shared modules: the civ Herald runs
+    `node src/cli.ts digest` and `node src/cli.ts herald-lint` (civ/scripts/herald.sh, civ/profiles/
+    herald-settings.json), so src/cli.ts, digest, herald-lint and recall stay, and the Herald's boundary
+    self-test must still pass after the cut. The Regent greps every src/ import before deleting a file.
+
+SEAT ROSTER (Overseer 2026-11-18)
+  Mayor, Forge, Warden, Workbench, Regent. No scholar, no researcher.
+  - Regent: the civ Regent (bin/regent, unchanged) is named in Manyhalls's charter as the seat above its
+    constitution, the only seat that may land changes to Manyhalls's own machinery (gate 6), exactly as it is for
+    Proofdelve. A fort/seats/regent.md pointer only if the Regent wants one.
+  - Personas: flavor text kept to a minimum (a name and one line per seat). The Regent chooses the names.
+    Proofdelve's persona prose (Veyra, Tova, Marrek, Hollis: 341 mentions across 46 machinery files) is
+    stripped in the RENAMES pass, not carried over.
+
+THE KEEP (Overseer 2026-11-18: beads board, airlock request UI, Mayor summary)
+  Manyhalls uses the EXISTING Civ Keep (fortkit/civ/keep, http://127.0.0.1:7780). It already serves every fort in
+  ~/.claude/civilization.json, where fortkit is registered; it reads each fort's bd export, fort/events, airlock,
+  Mayor transcript (for the summary) and fleet state dir at ~/.local/state/<slug(fort name)>-fleet, which is
+  ~/.local/state/manyhalls-fleet, the same path the RENAMES give. So nothing is built or copied for the Keep and
+  civ/keep is not edited. Proofdelve's old tools/keep (:7777, being retired by ForgeOs-sy5p2) is NOT copied.
+  What the sitting checks instead (T8): the Keep's Manyhalls pill shows its board, its airlock page reads the new
+  (empty) operations.json, and Proofdelve's board, signing desk and airlock page are unchanged.
+
+SCRIPTS/ TOOLS: TAKE, ADAPT, DROP
+  TAKE (fort machinery, product-neutral or nearly): bead-export, bead-archive, bead-citation-check, branch-reaper,
+    digest*, flag-human, unflag-human, bd-say, file-budget-check, harness-source-pins, host-test, push-ready,
+    queue-lint, quiescent, skills-watch, stranded-sweep, unattended-fleet/, scripts/lib, and every *-harness.sh
+    that tests one of these or a fort/scripts file.
+  ADAPT: verify-impl.sh becomes Manyhalls's own product gate (fortkit is Node 24 + TypeScript: npm ci, tsc,
+    biome, vitest, plus the harness suite and I1). look-capture.mjs only if Bartizan gets LOOK checks.
+  DROP (ForgeOS product): deploy-azure-staging.sh, deploy-staging-runbook*, airlock-feedback-scan*,
+    backfill-staging-slack-feedback.sh, feedback-pull*/feedback-triage* (Freswick feedback channel),
+    contract-drift*, css-coverage*, mcp-inventory-recount*, nginx-template-check*, preview.sh/preview-sweep.sh/
+    preview-harness.sh (no ForgeOS app; re-add for Bartizan later if wanted), apply-eng3.5.sh, apply-u65j5.sh,
+    u65j-reproduce.sh. Airlock: keep the mechanism, ship an EMPTY fort/airlock/operations.json.
+
+RENAMES (B3). Counts are hits in Proofdelve's machinery at e61bc6d49.
+  proofdelve-fleet state dir (59 hits / 17 files)  -> ~/.local/state/manyhalls-fleet
+  ~/.config/proofdelve/ tokens (22 / 6)            -> ~/.config/manyhalls/ (the Overseer makes any token himself)
+  /home/justin/dev/ForgeOs-worktrees (14 / 11)     -> /home/justin/dev/fortkit-worktrees
+  Keep fort id "forgeos" (79 / 16)                 -> "fortkit" (Civ Keep rows must not mix)
+  proofdelve-*.service/.timer (59 / 15)            -> manyhalls-*.service/.timer; installed DISABLED (B5)
+  preview ports :5000/:5173 (29 / 9)               -> dropped with preview (above), or a new pair if Bartizan
+  dotnet / ForgeOS.sln / ForgeOS.Tests (199 / 32)  -> fortkit's commands, mostly inside forge.sh's prompt text
+  npm --prefix web / web/src (191 / 27)            -> fortkit's paths
+  deploy-azure / azure (71 / 23)                   -> removed from deny tables and prompts with the dropped scripts
+  Proofdelve / ForgeOS fort and product names      -> Manyhalls / fortkit in prose; bead-ID citations
+                                                      (ForgeOs-xxxx) left as provenance, prefixed "Proofdelve"
+
+ITEMS, IN ORDER
+  T1. Snapshot (B1) into a staging dir; list every file taken with its source sha.
+  T2. Mirror-copy REPLACED paths into the `refound` worktree; delete RETIRED files.
+  T3. RENAMES pass. Then I1: a verify step that fails on `proofdelve|ForgeOs-worktrees|\bforgeos\b|ForgeOS\.sln|
+      deploy-azure` anywhere in fort/scripts, fort/seats, fort/profiles, fort/systemd, fort/charter.md,
+      scripts/, .claude/, except lines that are bead-ID provenance ("Proofdelve ForgeOs-xxxx"). Paste it red on
+      the unrenamed copy, then green.
+  T4. Charter: Manyhalls's purpose (fort architecture: the machinery, its harnesses, the factory later), its
+      human gates (gate 6 covers this fort's own machinery, as in Proofdelve), its roster, Standing orders carried
+      over word for word except product-specific ones (staging, Azure, feedback channel) which are removed and listed.
+  T5. verify-impl for fortkit (ADAPT); every taken harness runs green under B6.
+  T6. Retire Bartizan (above); npm test, tsc, biome green; the Herald boundary self-test passes.
+  T7. Warden review of the whole transplant against this docket (one review, opus); findings fixed or beaded.
+  T8. The Keep check (THE KEEP, above), Proofdelve's side read-only.
+  T9. Templates, T10-T12 (section TEMPLATES below), then the Warden reviews that part too.
+  T13. Merge `refound` into fortkit main; edict.ended; lift Manyhalls's HALT. Do NOT enable timers or the fleet.
+
+SHARED HOST, BEFORE MANYHALLS'S FLEET IS EVER ENABLED (not in this sitting)
+  S1. Memory: each fleet's MEMGATE sees only its own workers; two fleets on this 31 GB machine would each count the
+      same free memory. Until a host-wide gate exists, Manyhalls's fleet runs only when Proofdelve's is idle
+      (no ~/.local/state/proofdelve-fleet/fleet.lock held), or with FLEET_FORGE_MAX=1.
+  S2. Model quota is shared (Codex and Claude): a Manyhalls burst can starve Proofdelve's Forges, which looks like
+      a run of fleet returns. Cap Manyhalls's hard stop low at first.
+  S3. Docker, the Civ Keep and the loop watchdog are shared services: check each is keyed by fort id.
+
+DECISIONS (Overseer, 2026-11-18)
+  Q1. Roster Mayor, Forge, Warden, Workbench, Regent; minimal persona flavor; the Regent sets the names.
+  Q3. No Bartizan (retired as above). The rest of the civ tooling stays in fortkit untouched.
+  Q4. Source: Proofdelve's main as it stands when the sitting opens (pushed and verified; the Regent records
+      the sha in T1).
+  The Keep: the existing Civ Keep (above).
+  Q2. templates/ ARE refreshed in this sitting (Overseer 2026-11-18: "let's update the templates as well"), as
+      items T10-T12 below, after the new Manyhalls is green. They supersede "templates/" in NOT TOUCHED above.
+
+TEMPLATES (the factory: bin/fort-init founds new forts from templates/)
+  Existing forts are not affected: fort-init reads templates only when founding. Proofdelve, Farlantern and
+  Kithmason do not change.
+  T10. Generate templates/ FROM THE NEW MANYHALLS (not from Proofdelve directly), with every fort-specific value
+       turned into a fort-init placeholder: fort name, project, repo path, state dir (~/.local/state/<slug>-fleet),
+       config dir, worktrees dir, systemd unit prefix, Keep fort id, persona names, and the product gate
+       (templates/scripts/verify-impl.sh becomes a stub that fails until the new fort wires its own build and
+       tests). Same roster: Mayor, Forge, Warden, Workbench, with the Regent named in the charter. scholar.md,
+       scholar.sh, scholar-settings.json and probe-scholar-boundaries.sh are retired from templates.
+  T11. bin/fort-init updated to match: its copy list, the seat-lint coupling it documents (fort-init and
+       templates/scripts/seat-lint.mjs are "one change", per its own comment), the profiles it installs, and the
+       new placeholders. fort-init lives in bin/, which NOT TOUCHED otherwise protects; this item is the one
+       exception.
+  T12. Proof: found a throwaway fort with the new fort-init in a scratch git repo under the B6 scratch HOME; its
+       verify runs (product-gate stub red, as designed, every machinery harness green); I1 run against it finds no
+       Manyhalls or Proofdelve identifier; delete the scratch fort and its registry line (it must not stay in
+       ~/.claude/civilization.json, which the Keep and Herald read).
+
+AFTER
+  Record on the run log; the Mayor of Proofdelve confirms Proofdelve's fleet, events and state dir show no
+  Manyhalls writes (find ~/.local/state/proofdelve-fleet -newer <sitting start>, git -C ForgeOs status unchanged).
