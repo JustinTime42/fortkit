@@ -590,8 +590,8 @@ depth_one='[{"id":"fortkit-one","status":"open","description":"Touches: scripts/
 # Proofdelve ForgeOs-sk3c.3 was fleet-safe but blocked by Proofdelve ForgeOs-aqc6.2.4 on 2026-09-21;
 # the fleet then idled for twenty hours. A label-only count would have claimed
 # depth 1, even though no fleet-safe bead was dispatchable.
-depth_sk3c3_blocked='[{"id":"Proofdelve ForgeOs-sk3c.3","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"Proofdelve ForgeOs-aqc6.2.4"}]}]'
-depth_sk3c3_blocked_open='[{"id":"Proofdelve ForgeOs-sk3c.3","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"Proofdelve ForgeOs-aqc6.2.4"}]},{"id":"Proofdelve ForgeOs-aqc6.2.4","status":"open","labels":[]}]'
+depth_sk3c3_blocked='[{"id":"fortkit-sk3c.3","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"fortkit-aqc6.2.4"}]}]'
+depth_sk3c3_blocked_open='[{"id":"fortkit-sk3c.3","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"fortkit-aqc6.2.4"}]},{"id":"fortkit-aqc6.2.4","status":"open","labels":[]}]'
 depth_unblocked_open='[{"id":"fortkit-blocked","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0}]'
 
 # Proofdelve ForgeOs-xnqio: DEPTH must fail closed exactly where fleet.sh dispatchable()
@@ -1303,9 +1303,9 @@ else printf '  FAIL  expired: an OPEN prose gate is NOT reported\n'; fail=$((fai
 
 # (b) the aqc6.2.4 case: the gate is named WITHOUT the fortkit- prefix. Bare
 #     resolution is what makes that visible at all.
-bare_hit='[{"id":"fortkit-a","status":"open","acceptance_criteria":"Deal variant once aqc6.2.3 lands."},{"id":"Proofdelve ForgeOs-aqc6.2.3","status":"closed"}]'
+bare_hit='[{"id":"fortkit-a","status":"open","acceptance_criteria":"Deal variant once aqc6.2.3 lands."},{"id":"fortkit-aqc6.2.3","status":"closed"}]'
 run_expired "$bare_hit" "$out"
-if has expired-bare 'deferral expired: Proofdelve ForgeOs-aqc6.2.3' "$out"; then
+if has expired-bare 'deferral expired: fortkit-aqc6.2.3' "$out"; then
   printf '  PASS  expired: a bare id resolving to a closed bead is reported\n'; pass=$((pass+1))
 else printf '  FAIL  expired: a bare id resolving to a closed bead is reported\n'; fail=$((fail+1)); fi
 

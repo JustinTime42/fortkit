@@ -63,16 +63,15 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 ```bash
 npm ci
 npm run typecheck
-npm run typecheck:browser
 npm run lint
 npm test
 fort/scripts/verify.sh
 ```
 
-`fort/scripts/verify.sh` is the authoritative fail-fast verifier. It runs
-the Node typecheck, the browser typecheck (page scripts against
-`tsconfig.browser.json`), lint, test, then ShellCheck over the shipped shell
-surface. Pass `--no-emit` (or set `CI`) to suppress event-stream writes.
+`fort/scripts/verify.sh` is the authoritative fail-fast verifier (a shim over
+`scripts/verify-impl.sh`). It runs the lints, the typecheck, biome, vitest,
+ShellCheck over the shipped shell surface, the isolation gate and the fort's
+harness suite. Pass `--no-emit` (or set `CI`) to suppress event-stream writes.
 
 ## Architecture Overview
 
@@ -80,9 +79,8 @@ _Add a brief overview of your project architecture_
 
 ## Conventions & Patterns
 
-- **Browser page scripts live in checked TypeScript modules** (e.g. `src/world-page.ts`), type-checked and linted like all other source, and composed into their HTML shell at server startup via `stripTypeScriptTypes` at an HTML comment marker. No bundler, no runtime dependencies. Decided on fortkit-b18 (Overseer, 2026-08-07); the colony renderer and any future page follow the same pattern. Hardening items for the pattern are tracked in fortkit-12z.
-- **The viewer product is named Bartizan** (Overseer decision, fortkit-zgp, 2026-08-07). CLI command names are unchanged.
-- **Gate labels are the single "waiting on the Overseer" signal** (Overseer adoption, 2026-08-08, from the fortkit-fci.1 proposal): any open bead waiting at a human gate carries the exact label `gate-1`, `gate-2`, or `gate-3`; the Mayor applies it at filing. A standing decision carried in a handoff becomes a bead with a gate label. `bd human` stays unused until its flags reach the export. The Keep renders these labels; its prose-cue heuristic is transitional and retires.
+- **The Bartizan viewer is retired** (Overseer, 2026-11-18, docket `fort/annals/regent-docket-2026-11-18-manyhalls-refound.txt`): the world and colony views, the `world` and `ambient` commands and the browser typecheck are gone; their specs are in `fort/annals/`. `src/cli.ts` keeps `status`, `digest`, `herald-lint` and `recall`.
+- **Gate labels are the single "waiting on the Overseer" signal** (Overseer adoption, 2026-08-08, from the fortkit-fci.1 proposal): any open bead waiting at a human gate carries the exact label `gate-1`, `gate-2`, or `gate-3`; the Mayor applies it at filing. A standing decision carried in a handoff becomes a bead with a gate label. `bd human` stays unused until its flags reach the export. The Keep renders these labels; its prose-cue heuristic is transitional and retires. **Amended 2026-11-18 at the re-founding:** the fleet machinery Manyhalls runs since then does not read these labels. Its hand-off to the Overseer is a bead assigned to `justin` with an `ASK:` comment line (`scripts/flag-human.sh`), which also carries the `human` label the Keep shows. Labels applied before that date use the gate numbers of the charter of the time (1 the constitution, 2 secrets, 3 public-facing); the charter's numbers changed and the old labels were not rewritten.
 
 ## Manyhalls — the fortkit Fort
 

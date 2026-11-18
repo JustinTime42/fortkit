@@ -46,10 +46,10 @@ while IFS=$'\t' read -r id js; do
   [ -n "$id" ] || continue
   printf '%s\n' "$js" > "$work/rec/$id.json"
 done <<'RECORDS'
-Proofdelve ForgeOs-b0vj.23	{"id":"Proofdelve ForgeOs-b0vj.23","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"Proofdelve ForgeOs-b0vj","status":"open","issue_type":"epic","dependency_type":"parent-child"}]}
-Proofdelve ForgeOs-s2lx	{"id":"Proofdelve ForgeOs-s2lx","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"Proofdelve ForgeOs-j3kp","status":"open","issue_type":"task","dependency_type":"discovered-from"}]}
-Proofdelve ForgeOs-5md6	{"id":"Proofdelve ForgeOs-5md6","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"Proofdelve ForgeOs-b0vj.4.2","status":"closed","issue_type":"task","dependency_type":"blocks"}]}
-Proofdelve ForgeOs-aqc6.2.3	{"id":"Proofdelve ForgeOs-aqc6.2.3","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":4,"dependencies":[{"id":"Proofdelve ForgeOs-91p2.18","status":"closed","issue_type":"bug","dependency_type":"blocks"},{"id":"Proofdelve ForgeOs-aqc6.2.1","status":"closed","issue_type":"task","dependency_type":"blocks"},{"id":"Proofdelve ForgeOs-aqc6.2","status":"open","issue_type":"feature","dependency_type":"parent-child"},{"id":"Proofdelve ForgeOs-aqc6.2.8","status":"open","issue_type":"feature","dependency_type":"blocks"}]}
+fortkit-b0vj.23	{"id":"fortkit-b0vj.23","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"fortkit-b0vj","status":"open","issue_type":"epic","dependency_type":"parent-child"}]}
+fortkit-s2lx	{"id":"fortkit-s2lx","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"fortkit-j3kp","status":"open","issue_type":"task","dependency_type":"discovered-from"}]}
+fortkit-5md6	{"id":"fortkit-5md6","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"fortkit-b0vj.4.2","status":"closed","issue_type":"task","dependency_type":"blocks"}]}
+fortkit-aqc6.2.3	{"id":"fortkit-aqc6.2.3","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":4,"dependencies":[{"id":"fortkit-91p2.18","status":"closed","issue_type":"bug","dependency_type":"blocks"},{"id":"fortkit-aqc6.2.1","status":"closed","issue_type":"task","dependency_type":"blocks"},{"id":"fortkit-aqc6.2","status":"open","issue_type":"feature","dependency_type":"parent-child"},{"id":"fortkit-aqc6.2.8","status":"open","issue_type":"feature","dependency_type":"blocks"}]}
 SYN-untyped	{"id":"SYN-untyped","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"SYN-parent","status":"open","issue_type":"task"}]}
 SYN-unknown	{"id":"SYN-unknown","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"SYN-parent","status":"open","issue_type":"task","dependency_type":"quantum-entangles"}]}
 SYN-empty	{"id":"SYN-empty","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"SYN-parent","status":"open","issue_type":"task","dependency_type":""}]}
@@ -94,14 +94,14 @@ run() { # $1 label, $2 bead, $3 expect yes|no, $4 substring the reason must cont
 echo "--- REAL records, captured from the live tracker ---"
 # Cases 1 and 2 are the DISPATCH side and are this file's vacuity controls: a
 # guard that refused everything would sweep all seven refusal cases below.
-run "1 parent-child edge to an OPEN bead DISPATCHES"        Proofdelve ForgeOs-b0vj.23  yes "-"
-run "2 discovered-from edge to an OPEN bead DISPATCHES"     Proofdelve ForgeOs-s2lx     yes "-"
-run "3 blocks edge to a CLOSED bead DISPATCHES"             Proofdelve ForgeOs-5md6     yes "-"
+run "1 parent-child edge to an OPEN bead DISPATCHES"        fortkit-b0vj.23  yes "-"
+run "2 discovered-from edge to an OPEN bead DISPATCHES"     fortkit-s2lx     yes "-"
+run "3 blocks edge to a CLOSED bead DISPATCHES"             fortkit-5md6     yes "-"
 # Case 4 carries FOUR edges -- two closed blocks, an OPEN parent-child, and an
 # OPEN blocks -- so it also proves the loop does not stop at the first open edge.
 # The pre-fix file refuses it naming Proofdelve ForgeOs-aqc6.2, the parent-child one.
 run "4 blocks edge to an OPEN bead REFUSES, past an open parent-child" \
-                                                            Proofdelve ForgeOs-aqc6.2.3 no  "aqc6.2.8"
+                                                            fortkit-aqc6.2.3 no  "aqc6.2.8"
 echo "--- synthetic: shapes bd has not produced in this tracker ---"
 run "5 an absent type REFUSES (bd dep add defaults to blocks)" SYN-untyped  no "records no type"
 run "6 an unrecognised type REFUSES"                          SYN-unknown  no "not a known non-blocking type"

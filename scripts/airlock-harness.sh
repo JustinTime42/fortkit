@@ -124,10 +124,9 @@ else no "5fyc: announce accepted what it should refuse" "rc1=$rc1 rc2=$rc2 recor
 
 # 6. the shipped table: deploy-staging declares deploy/staging, feedback-scan declares nothing
 ops_table="${AIRLOCK_OPS:-$here/fort/airlock/operations.json}"
-if [ "$(jq -r '.operations[] | select(.name=="deploy-staging") | .emits.category + "/" + .emits.target' "$ops_table" 2>/dev/null)" = "deploy/staging" ] \
-   && [ "$(jq -r '.operations[] | select(.name=="feedback-scan") | .emits // "none"' "$ops_table" 2>/dev/null)" = none ]; then
-  ok "operations.json: deploy-staging emits deploy/staging and feedback-scan emits nothing"
-else no "operations.json: the emits blocks are not as the sitting declared them" "$(jq -c '.operations[] | {name, emits}' "$ops_table" 2>&1)"; fi
+if [ "$(jq -r '.operations | length' "$ops_table" 2>/dev/null)" = 0 ]; then
+  ok "operations.json: Manyhalls ships the table with no operation (the mechanism is installed and nothing is permitted)"
+else no "operations.json: the shipped table is not empty" "$(jq -c '[.operations[].name]' "$ops_table" 2>&1)"; fi
 
 # --- Proofdelve ForgeOs-72ot.1: approval lives in the Overseer store, never in the request file ---
 # Each forgery case asserts the OPERATION DID NOT RUN (no result file, no
@@ -269,13 +268,11 @@ else no "mbv54 A: the runner ran under FORT_MASKED" "rc=$rc"; fi
 # Beside the launcher under test, not $here: verify-impl.sh copies this harness
 # out of the repo before running it, so $here is not the fort there.
 sysd="${AIRLOCK_SYSTEMD:-$(cd -- "$(dirname -- "$AIRLOCK_SH")/../systemd" 2>/dev/null && pwd -P)}"
-if grep -qx "PathModified=$HOME/.local/state/civ-keep/airlock-approvals.jsonl" "$sysd/manyhalls-airlock-runner.path" 2>/dev/null \
+if grep -qE '^PathModified=/.+/\.local/state/civ-keep/airlock-approvals\.jsonl$' "$sysd/manyhalls-airlock-runner.path" 2>/dev/null \
    && grep -qx 'Unit=manyhalls-airlock-runner.service' "$sysd/manyhalls-airlock-runner.path" \
    && grep -qx 'Unit=manyhalls-airlock-runner.service' "$sysd/manyhalls-airlock-runner.timer" \
-   && grep -q '^ExecStart=.*/fort/scripts/airlock-runner.sh$' "$sysd/manyhalls-airlock-runner.service" \
-   && [ "$(jq -r '.operations[] | select(.name=="deploy-staging") | .runs_from' "$ops_table")" = pinned-commit ] \
-   && [ "$(jq -r '.operations[] | select(.name=="feedback-scan") | .requires_approval' "$ops_table")" = false ]; then
-  ok "mbv54 A: the path unit watches the approvals store airlock.sh reads and fires the runner service; the timer fires the same service; deploy-staging runs from its pinned commit; feedback-scan still needs no approval and so is never auto-run"
+   && grep -q '^ExecStart=.*/fort/scripts/airlock-runner.sh$' "$sysd/manyhalls-airlock-runner.service"; then
+  ok "mbv54 A: the path unit watches the approvals store airlock.sh reads and fires the runner service; the timer fires the same service"
 else no "mbv54 A: the shipped units or table do not wire the runner as designed" "$(grep -h -E '^(PathModified|Unit|ExecStart)=' "$sysd"/manyhalls-airlock-runner.* 2>&1 | tr '\n' '|')"; fi
 
 # 18. Proofdelve ForgeOs-72ot.1.1 (2): the request-snapshot race. A jq shim swaps the
@@ -366,7 +363,7 @@ else no "emshb: request-time validation did not hold" "rc1=$rc1 rc2=$rc2 rc3=$rc
 # 23. runs_from bead-worktree: cwd is the named bead's worktree, the script is MAIN's copy, the run lock is closed for it
 r=$(mkfix e3) || exit 3
 mkdir -p "$r-wt/oye5y/.git" "$r-wt/oye5y/scripts"; printf '#!/bin/bash\necho WORKTREE-COPY\n' > "$r-wt/oye5y/scripts/op-args.sh"
-air "$r" request hostcheck --reason fixture --param target=Proofdelve ForgeOs-oye5y --param 'filter=A~1' >/dev/null; id=$(last_id "$r")
+air "$r" request hostcheck --reason fixture --param target=fortkit-oye5y --param 'filter=A~1' >/dev/null; id=$(last_id "$r")
 runner "$r" >/dev/null 2>&1; log="$r/fort/airlock/results/$id.log"
 if grep -qx "pwd=$r-wt/oye5y" "$log" 2>/dev/null && grep -qx "script=$r/scripts/op-args.sh" "$log" && ! grep -q WORKTREE-COPY "$log" && grep -qx 'fd8=closed' "$log"; then
   ok "emshb: a bead-worktree operation runs with cwd in \$root-worktrees/oye5y, executes main's script (never the worktree's seat-writable copy), and does not inherit the run lock (fd 8 closed)"
@@ -436,24 +433,12 @@ if ! ran "$r" "$id" && grep -q "skipping $id" <<<"$out" && [ "$(jq -r .operation
   ok "emshb: a request selected as auto_run and swapped to 'scan' before the snapshot is skipped (no result) and left for a person"
 else no "emshb: a swapped request ran unattended" "result=$(ran "$r" "$id" && echo RAN || echo no) op=$(jq -r .operation "$f") out=$(printf '%s' "$out" | tr '\n' '|' | cut -c1-200)"; fi
 
-# 28. the shipped table: auto_run only where approval is not required; every target pattern refuses injection/traversal/newline and admits real targets
-tp() { jq -r --arg n "$1" --arg k "$2" --arg v "$3" '.operations[] | select(.name==$n) | .params[$k] as $re | $v | test("\\A(?:" + $re + ")\\z")' "$ops_table"; }
-bad=""
-for o in host-test preview; do
-  for v in 'oye5y;id' '../x' $'main\n' 'oye5y id'; do [ "$(tp "$o" target "$v")" = false ] || bad="$bad $o:accepts[$v]"; done
-  for v in main oye5y Proofdelve ForgeOs-oye5y Proofdelve ForgeOs-2md9d.7.2; do [ "$(tp "$o" target "$v")" = true ] || bad="$bad $o:refuses[$v]"; done
-done
-[ "$(tp host-test filter 'x; rm -rf /')" = false ] || bad="$bad filter-injection"
-[ "$(tp host-test mutate '../x.patch')" = false ] || bad="$bad mutate-traversal"
-[ "$(tp host-test mutate 'fort/airlock/requests/arm.patch')" = true ] || bad="$bad mutate-real"
-if [ -z "$bad" ] \
-   && [ "$(jq -r '[.operations[] | select(.requires_approval == true and .auto_run == true)] | length' "$ops_table")" = 0 ] \
-   && [ "$(jq -r '.operations[] | select(.name=="deploy-staging") | [.requires_approval, (.auto_run // "absent"), .runs_from] | join(",")' "$ops_table")" = "true,absent,pinned-commit" ] \
-   && [ "$(jq -r '.operations[] | select(.name=="host-test") | [.requires_approval, .auto_run, .runs_from, .script] | join(",")' "$ops_table")" = "false,true,bead-worktree,scripts/host-test.sh" ] \
-   && [ "$(jq -r '.operations[] | select(.name=="preview") | [.requires_approval, (.auto_run // "absent"), (.result_url != null)] | join(",")' "$ops_table")" = "true,absent,true" ] \
-   && [ "$(jq -r '.operations[] | select(.name=="preview-stop") | [.requires_approval, .auto_run, (.args | join(" "))] | join(",")' "$ops_table")" = "false,true,stop" ]; then
-  ok "emshb: operations.json: deploy-staging needs approval and is not auto_run; host-test auto-runs from the bead worktree; preview needs approval and declares result_url; preview-stop auto-runs; no operation pairs auto_run with requires_approval true; every target pattern refuses 'oye5y;id', '../x', a trailing newline and a space, and admits main and bead ids"
-else no "emshb: the shipped table is not as the sitting declared it" "${bad:-flags} $(jq -c '.operations[] | {name, requires_approval, auto_run, runs_from}' "$ops_table" | tr '\n' ' ')"; fi
+# 28. the shipped table. The source fort asserted its own operations here; Manyhalls
+# ships none, so what is asserted is the one property that must hold of any table:
+# no operation pairs auto_run with requires_approval.
+if [ "$(jq -r '[.operations[] | select(.requires_approval == true and .auto_run == true)] | length' "$ops_table")" = 0 ]; then
+  ok "emshb: operations.json: no operation pairs auto_run with requires_approval"
+else no "emshb: an operation pairs auto_run with requires_approval" "$(jq -c '.operations[] | {name, requires_approval, auto_run}' "$ops_table" | tr '\n' ' ')"; fi
 
 # 29. the shipped units: the path unit also watches requests/ (an auto_run request needs no click to fire it) and the service lets a preview outlive the run
 unitroot="$(sed -n 's/^WorkingDirectory=//p' "$sysd/manyhalls-airlock-runner.service" 2>/dev/null)"

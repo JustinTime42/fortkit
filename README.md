@@ -3,18 +3,17 @@
 Civilization-level tooling for Justin's agent forts:
 - **bin/fort-init** — found a new fort in any git repo (templates extracted from Proofdelve + Farlantern)
 - **schema/events.md** — canonical event schema (forts vendor it; add-only)
-- **Bartizan** — DF-style visualizer: world view over all forts, embark into any colony. Spec: docs/specs/fortress-visualizer.md
+- **fort/** — Manyhalls, the fort that maintains fort architecture: the launchers, seat mask, fleet, verifier and airlock a settlement runs on, and their harnesses (`fort/charter.md`)
+- **civ/** — the civilization layer: covenant, seats, the Civ Keep, the Herald and Chronicler
 - Registry: ~/.claude/civilization.json
 - **skills/fort-backport** — the /fort-backport skill (canonical; deployed copy at ~/.claude/skills/)
 
-## World view
-
-Run the local, read-only embark map with Node 24:
+## Verify
 
 ```bash
-node src/cli.ts world
+npm ci
+fort/scripts/verify.sh
 ```
 
-It listens only on `127.0.0.1:4877`; use `--port <number>` to choose another
-local port. Open the printed URL. The page polls `/world` every five seconds
-and deliberately labels missing Beads exports and malformed source lines.
+The Bartizan viewer (world and colony views) was retired on 2026-11-18; its spec is
+kept at `fort/annals/fortress-visualizer-spec-retired-2026-11-18.md`.

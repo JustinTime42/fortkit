@@ -213,16 +213,13 @@ expect_tier() { # $1 expected, $2 case name, rest paths
 }
 expect_tier docs    docs-only        docs/specs/a.md fort/handoffs/forge-2026-10-19-x.md
 expect_tier docs    handoff-only     fort/handoffs/forge-2026-10-19-y.md
-expect_tier web     web-only         web/src/components/Grid.tsx fort/handoffs/forge-2026-10-19-z.md
-expect_tier server  server-only      src/Product.Api/Endpoints/Deals.cs tests/Product.Tests/DealsTests.cs
-expect_tier harness harness-only     scripts/digest-harness.sh tools/keep/lib/graph.mjs
-expect_tier full    web-and-server   web/src/a.tsx src/Product.Api/A.cs
-expect_tier full    migration        src/Product.Infrastructure/Migrations/20261019_X.cs
-expect_tier full    dbcontext        src/Product.Infrastructure/ProductDbContext.cs
-expect_tier full    auth-server      src/Product.Api/Auth/WorkOsAuthKit.cs
-expect_tier full    visibility       src/Product.Application/DealApplicationService.cs
-expect_tier full    spa-session-gate web/src/App.tsx
-expect_tier full    nginx            web/nginx.conf.template
+expect_tier server  server-only      src/digest.ts test/digest.test.ts
+expect_tier harness harness-only     scripts/digest-harness.sh scripts/digest.sh
+expect_tier full    server-and-harness src/a.ts scripts/a.sh
+expect_tier full    factory          bin/fort-init
+expect_tier full    civ-tooling      civ/scripts/herald.sh
+expect_tier full    templates        templates/fort/charter.md
+expect_tier full    schema           schema/events.md
 expect_tier full    verifier-itself  scripts/verify-impl.sh
 expect_tier full    constitution     fort/scripts/fleet.sh
 expect_tier full    fort-checklist   fort/checklists/unattended-fleet-run.md
@@ -237,13 +234,13 @@ check "tier: FLEET_VERIFY_TIERS=off turns a docs diff into full" "$got" "full"
 # s1reg-5: a file RENAMED OUT of a forced-full path, content unchanged (R100),
 # must still force full; with rename detection the diff names only docs/.
 git -C "$repo" checkout -q -B c-mvbase main
-mkdir -p "$repo/src/Product.Infrastructure/Migrations"
-printf 'migration body\nline two\nline three\n' > "$repo/src/Product.Infrastructure/Migrations/20260101_X.cs"
+mkdir -p "$repo/bin"
+printf 'tool body\nline two\nline three\n' > "$repo/bin/old-tool.sh"
 git -C "$repo" add -A; git -C "$repo" commit -qm mvbase; git -C "$repo" branch -f mvmain HEAD
 git -C "$repo" checkout -q -B c-mv mvmain; mkdir -p "$repo/docs"
-git -C "$repo" mv src/Product.Infrastructure/Migrations/20260101_X.cs docs/old-migration.cs; git -C "$repo" commit -qm mv
+git -C "$repo" mv bin/old-tool.sh docs/old-tool.sh; git -C "$repo" commit -qm mv
 got="$(bash -c "set -uo pipefail; main_branch=mvmain; $(cat "$work/f.sh"); verify_tier_of '$repo'" 2>&1)"
-check "tier: s1reg-5 a file renamed OUT of Migrations/ into docs/ forces full" "$got" "full"
+check "tier: s1reg-5 a file renamed OUT of bin/ into docs/ forces full" "$got" "full"
 sed 's/ diff --no-renames --name-only / diff --name-only /' "$work/f.sh" > "$work/f-renames.sh"
 if ! cmp -s "$work/f.sh" "$work/f-renames.sh"; then
   got="$(bash -c "set -uo pipefail; main_branch=mvmain; $(cat "$work/f-renames.sh"); verify_tier_of '$repo'" 2>&1)"
@@ -259,11 +256,10 @@ row() { # $1 tier, $2 step, $3 SKIP|RUN
   local got; got="$(skips "$1" "$2")"
   if [ "$got" = "$3" ]; then ok "verify-impl tier $1: $2 $3"; else no "verify-impl tier $1: $2" "expected $3, got '$got'"; fi
 }
-row full    dotnet-test  RUN;  row full    web-build   RUN
-row web     dotnet-test  SKIP; row web     web-test    RUN;  row web    docker-precheck SKIP
-row server  web-build    SKIP; row server  dotnet-test RUN;  row server nginx-template-check SKIP
-row docs    dotnet-build SKIP; row docs    web-deps    SKIP; row docs   shellcheck SKIP
-row harness dotnet-test  SKIP; row harness governor-harness RUN; row harness keep-test RUN
+row full    test         RUN;  row full    governor-harness RUN
+row server  test         RUN;  row server  governor-harness SKIP; row server shellcheck SKIP
+row docs    typecheck    SKIP; row docs    npm-deps    SKIP; row docs   shellcheck SKIP
+row harness test         SKIP; row harness governor-harness RUN; row harness typecheck SKIP
 # the fort's machinery checks skip on product tiers (test-depth-follows-risk, 2026-11-13)
 row web     governor-harness SKIP; row web    shellcheck SKIP; row web   harness-source-pins SKIP
 row server  queue-lint-harness SKIP; row server shellcheck SKIP
@@ -304,7 +300,7 @@ res full true "$vtree" true; got="$(reuse)"
 check "reuse: a host verify of a dirty tree is never reused" "$got" 'no*dirty*'
 res full true "$vtree" false true; got="$(reuse)"
 check "reuse: a host verify whose HEAD moved mid-run is never reused" "$got" 'no*HEAD moved*'
-res full true "$vtree" false false '["nginx-template-check"]'; got="$(reuse)"
+res full true "$vtree" false false '["test"]'; got="$(reuse)"
 check "reuse: a host verify that skipped a step is never reused" "$got" 'no*skipped*'
 res full true "$vtree"; got="$(reuse 'FLEET_VERIFY_REUSE=off;')"
 check "reuse: FLEET_VERIFY_REUSE=off runs the post-merge verify" "$got" 'no*FLEET_VERIFY_REUSE*'

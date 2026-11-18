@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# Docker-backed host tests. Usage: host-test.sh <main|fortkit-<bead>|bead> '<dotnet test filter>' [--mutate patch]
+# Host tests of main or of a bead's worktree. Usage: host-test.sh <main|fortkit-<bead>|bead> '<vitest file filter>' [--mutate patch]
+# The filter is handed to `npx vitest run` as file-name filters (space separated).
 # Overrides: HOST_TEST_MAIN_WORKTREE and HOST_TEST_WORKTREES_DIR.
 set -euo pipefail
 readonly EX_USAGE=64
 readonly max_filter_length=200
-readonly filter_pattern='^[A-Za-z0-9._~=!&|() ]+$'
+readonly filter_pattern='^[A-Za-z0-9._/ -]+$'
 root="$(cd -- "$(dirname -- "$0")/.." && pwd -P)"
-source "$root/scripts/lib/preview-common.sh"
-worktrees_dir="${HOST_TEST_WORKTREES_DIR:-$preview_worktrees_default}"
+worktrees_dir="${HOST_TEST_WORKTREES_DIR:-/home/justin/dev/fortkit-worktrees}"
+readonly bead_target_regex='^(fortkit-)?[a-z0-9]+(\.[0-9]+)*$'
+valid_target() {
+    [[ "$1" == main || "$1" =~ $bead_target_regex ]]
+}
 die() {
     printf 'host-test: %s\n' "$*" >&2
     exit "$EX_USAGE"
@@ -58,6 +62,8 @@ if [ -n "$mutate" ]; then
 fi
 (
     cd "$tree"
-    dotnet build Product.sln
-    dotnet test tests/Product.Tests/Product.Tests.csproj --filter "$filter"
+    [ -d node_modules ] || npm ci
+    npm run typecheck
+    read -r -a filter_words <<< "$filter"
+    npx vitest run "${filter_words[@]}"
 )

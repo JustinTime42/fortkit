@@ -2749,10 +2749,10 @@ $(cat "$db")"; fi
 wait_forge "$st" tsa
 
 # 42b DISJOINT: both go in one pass
-b9mj_fixture s42b 'E2E-tsc|open||fleet-safe||src/Product.Api/Program.cs\nE2E-tsd|open||fleet-safe||web/src/\n'
+b9mj_fixture s42b 'E2E-tsc|open||fleet-safe||src/digest.ts\nE2E-tsd|open||fleet-safe||test/\n'
 E2E_FORGE_SLEEP=3 run_pass "$work/s42b-fleet.sh" "$st" "$db" || true; out=$(cat "$st/out.txt")
 if [ "$(dispatched_count "$st")" -eq 2 ] && [ -s "$st/workers/tsc/touches" ] && [ -s "$st/workers/tsd/touches" ] \
-   && [ "$(cat "$st/workers/tsd/touches")" = "web/src/" ]; then
+   && [ "$(cat "$st/workers/tsd/touches")" = "test/" ]; then
   ok "b9mj: DISJOINT touch sets -> both dispatched in one pass, and each worker's set is cached in its directory as normalised prefixes"
 else no "b9mj: disjoint sets did not both dispatch" "dispatched=$(dispatched_count "$st") tsc=[$(cat "$st/workers/tsc/touches" 2>/dev/null)] tsd=[$(cat "$st/workers/tsd/touches" 2>/dev/null)]
 $(grep -E 'dispatched|skip|touch' "$st/out.txt")"; fi
@@ -2782,14 +2782,14 @@ wait_forge "$st" tsg
 
 # 42e THE WAIT ENDS: once the overlapping Forge is reaped the held bead dispatches
 # on the next pass, unblocked by nothing but time -- a refusal is not a block edge.
-b9mj_fixture s42e 'E2E-tsi|open||fleet-safe||src/Product.Infrastructure/Migrations/2026_a.cs\nE2E-tsj|open||fleet-safe||src/Product.Infrastructure/Migrations/2026_b.cs\n'
+b9mj_fixture s42e 'E2E-tsi|open||fleet-safe||src/shared/\nE2E-tsj|open||fleet-safe||src/shared/\n'
 E2E_FORGE_SLEEP=2 run_pass "$work/s42e-fleet.sh" "$st" "$db" || true; out1=$(cat "$st/out.txt")
 wait_forge "$st" tsi
 run_pass "$work/s42e-fleet.sh" "$st" "$db" || true; out2=$(cat "$st/out.txt")
-if grep -q 'skip E2E-tsj: its touch set overlaps worker E2E-tsi on src/Product.Infrastructure/Migrations/ ~ src/Product.Infrastructure/Migrations/' <<<"$out1" \
+if grep -q 'skip E2E-tsj: its touch set overlaps worker E2E-tsi on src/shared/ ~ src/shared/' <<<"$out1" \
    && grep -q 'dispatched E2E-tsj' <<<"$out2"; then
-  ok "b9mj: two MIGRATION beads declaring different files are widened to the whole Migrations/ directory (the model snapshot lives there) and serialise; the held one dispatches on the pass after the first Forge is reaped"
-else no "b9mj: migration widening or the release after reap" "pass1: $(grep -E 'dispatched|skip' <<< "$out1")
+  ok "b9mj: two beads declaring the same directory serialise; the held one dispatches on the pass after the first Forge is reaped (the source fort's migration-widening form of this case is not carried)"
+else no "b9mj: same-directory serialising or the release after reap" "pass1: $(grep -E 'dispatched|skip' <<< "$out1")
 pass2: $(grep -E 'dispatched|skip' <<< "$out2")"; fi
 wait_forge "$st" tsj
 
@@ -5160,11 +5160,11 @@ $(grep -E 'ffb|FIX' "$st/all.txt" | tail -8)"; fi
 # BELT 1 (the Overseer's ruling on the Warden's finding 2): a Workbench range that
 # touches a gated path waits for his signature even on an APPROVE.
 IFS='|' read -r r st db <<< "$(wb_fixture s6ng wg1 "$launcher" workbench,lands-on-review)"
-mkdir -p "$r-worktrees/wg1/src/Product.Api"; printf 'auth change\n' > "$r-worktrees/wg1/src/Product.Api/Program.cs"
+mkdir -p "$r-worktrees/wg1/bin"; printf 'factory change\n' > "$r-worktrees/wg1/bin/tool.sh"
 git -C "$r-worktrees/wg1" add -A >/dev/null; git -C "$r-worktrees/wg1" commit -qm "E2E-wg1: a gate-1 file"
 enqueue "$work/s6ng-fleet.sh" "$st" "$db" E2E-wg1 >/dev/null
 E2E_BD_CLASSIFY=off E2E_WARDEN_TOKEN=APPROVE run_pass "$work/s6ng-fleet.sh" "$st" "$db" || true
-if ! merged_in "$r" wg1 && grep -q '^E2E-wg1|open|justin|.*sign-to-land' "$db" && grep -q 'touches a gated path (src/Product.Api/Program.cs is gate-1 surface)' "$st/out.txt"; then
+if ! merged_in "$r" wg1 && grep -q '^E2E-wg1|open|justin|.*sign-to-land' "$db" && grep -q 'touches a gated path (bin/tool.sh is gate-1 surface' "$st/out.txt"; then
   ok "6niaz belt 1: a Workbench range touching a gate-1 file is HELD for the Overseer on an APPROVE (not merged, sign-to-land added, assigned justin)"
 else no "6niaz belt 1" "merged=$(merged_in "$r" wg1 && echo yes || echo no) rec=$(grep '^E2E-wg1|' "$db") $(grep -E 'wg1' "$st/out.txt" | tail -4 | tr '\n' '|')"; fi
 # and its vacuity control: the same fixture without the gated file lands.

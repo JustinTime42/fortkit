@@ -402,8 +402,8 @@ echo "F. THE WORKBENCH BELTS (fleet.sh; the Overseer's ruling on the Warden's fi
 extract "$fleet" sign_label gated_range_why stacked_held_why > "$work/belts.sh"
 # F1: the gate-1 alternation is the same in both launchers, so the fleet's belt
 # and the Warden's diff class cannot drift apart.
-g1f="$(grep -m1 'src/Product.Api/Program.cs|' "$work/belts.sh" | sed 's/^ *//')"
-g1w="$(grep -m1 'src/Product.Api/Program.cs|' "$warden" | sed 's/^ *//')"
+g1f="$(grep -m1 'bin/\*|civ/\*|templates/\*|schema/\*|skills/\*)' "$work/belts.sh" | sed 's/^ *//')"
+g1w="$(grep -m1 'bin/\*|civ/\*|templates/\*|schema/\*|skills/\*)' "$warden" | sed 's/^ *//')"
 if [ -n "$g1f" ] && [ "$g1f" = "$g1w" ]; then
   ok "F1: fleet.sh's gate-1 path list is byte-identical to warden.sh's diff-class list"
 else no "F1: gate-1 parity" "fleet='${g1f:0:80}' warden='${g1w:0:80}'"; fi
@@ -414,19 +414,17 @@ mkb() { # $1 branch, $2 base, $3 path, $4 content
   git -C "$gr" checkout -q -b "$1" "$2"; mkdir -p "$gr/$(dirname "$3")"; printf '%s\n' "$4" >> "$gr/$3"
   git -C "$gr" add -A; git -C "$gr" commit -qm "$1"; git -C "$gr" checkout -q main
 }
-mkb bead/g1 main src/Product.Api/Program.cs 'auth change'
+mkb bead/g1 main bin/fort-init 'factory change'
 mkb bead/g2 main fort/seats/x.md 'seat text'
 mkb bead/g3 main web/src/b.ts 'export const ok = 1;'
-mkb bead/g4 main web/src/c.ts 'await refreshSession();'
-mkb bead/g5 main src/Product.Infrastructure/Migrations/M1.cs 'migration'
 mkb bead/g6 main fort/systemd/manyhalls-airlock-runner.service 'unit'
 mkb bead/g7 main scripts/verify-impl.sh 'verifier'
 grw() { bash -c 'root="$1"; main_branch=main; source "$2"; gated_range_why "$3"' _ "$gr" "$work/belts.sh" "$1" 2>/dev/null; }
-if grw g1 | grep -q 'gate-1 surface' && grw g2 | grep -q 'gate 6' && grw g4 | grep -q 'SPA auth surface (refreshSession)' \
-   && grw g5 | grep -q 'gate 2' && grw g6 | grep -q 'gate 6' && grw g7 | grep -q 'gate 6' \
+if grw g1 | grep -q 'gate-1 surface' && grw g2 | grep -q 'gate 6' \
+   && grw g6 | grep -q 'gate 6' && grw g7 | grep -q 'gate 6' \
    && [ -z "$(grw g3)" ] && grep -q '^gated_range_why()' "$work/belts.sh"; then
-  ok "F2: belt 1 names auth (path and SPA symbol), migration and constitution ranges (fort/systemd and the verifier included) as gated, and an ordinary web/src change as not"
-else no "F2: gated_range_why" "g1='$(grw g1)' g2='$(grw g2)' g3='$(grw g3)' g4='$(grw g4)' g5='$(grw g5)' g6='$(grw g6)' g7='$(grw g7)'"; fi
+  ok "F2: belt 1 names the factory (gate 1) and constitution ranges (fort/systemd and the verifier included) as gated, and an ordinary source change as not"
+else no "F2: gated_range_why" "g1='$(grw g1)' g2='$(grw g2)' g3='$(grw g3)' g6='$(grw g6)' g7='$(grw g7)'"; fi
 # Belt 2. bead/h1 held by the ESCALATE route (human, never sign-to-land) and
 # bead/s1 cut from it; bead/s2 from main; bead/n1 an unheld sitting and bead/s4
 # cut from it; bead/h2 held and bead/s3 cut from it, then main moves and BOTH

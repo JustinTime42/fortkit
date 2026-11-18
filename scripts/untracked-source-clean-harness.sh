@@ -53,7 +53,7 @@ check() {  # $1 name, $2 expected exit, $3 dir, $4 expected stderr substring (""
 }
 
 fixture() {  # $1 dir -> a git repo with one committed source file and an ignore rule
-  mkdir -p "$1/src/App" "$1/tests" "$1/web/src" "$1/docs"
+  mkdir -p "$1/src/App" "$1/test" "$1/docs"
   git -C "$1" init -q
   git -C "$1" config user.email h@example.invalid; git -C "$1" config user.name harness
   printf 'bin/\nobj/\n' > "$1/.gitignore"
@@ -69,12 +69,8 @@ printf 'class Missing {}\n' > "$f2/src/App/Missing.cs"
 check "2 committed reference to an untracked src file refuses and names it" 1 "$f2" "src/App/Missing.cs"
 
 f3="$work/tests-untracked"; fixture "$f3"
-printf 'x\n' > "$f3/tests/NewTests.cs"
-check "3 untracked tests file refuses" 1 "$f3" "tests/NewTests.cs"
-
-f4="$work/web-untracked"; fixture "$f4"
-printf 'x\n' > "$f4/web/src/New.tsx"
-check "4 untracked web/src file refuses" 1 "$f4" "web/src/New.tsx"
+printf 'x\n' > "$f3/test/new.test.ts"
+check "3 untracked test file refuses" 1 "$f3" "test/new.test.ts"
 
 f5="$work/ignored"; fixture "$f5"
 mkdir -p "$f5/src/App/bin"; printf 'x\n' > "$f5/src/App/bin/out.dll"
@@ -82,7 +78,7 @@ check "5 an ignored build output under src passes" 0 "$f5" ""
 
 f6="$work/outside"; fixture "$f6"
 printf 'x\n' > "$f6/docs/notes.md"; printf 'x\n' > "$f6/scratch.txt"
-check "6 untracked files outside src, tests and web/src pass" 0 "$f6" ""
+check "6 untracked files outside src and test pass" 0 "$f6" ""
 
 f7="$work/not-git"; mkdir -p "$f7/src"; printf 'x\n' > "$f7/src/a.cs"
 check "7 outside a git tree says NOT CHECKED and does not claim green silently" 0 "$f7" "NOT CHECKED"

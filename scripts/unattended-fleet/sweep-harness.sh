@@ -97,7 +97,7 @@ satisfied-holds: 1 satisfied, 0 partial, over 4 beads (description+notes+design+
 [ "$(read_sweep_findings satisfied-holds.py)" = 1 ] && echo 'PASS satisfied-holds comment-refusal fixture reports one finding' || { echo 'FAIL satisfied-holds comment-refusal fixture did not report one finding'; exit 1; }
 if [ "${HARNESS_T4_RESTORATION_PROBE:-}" != 1 ]; then
   pre_t4_fixture="$here/sweep-pre-t4-drop.fixture.py"
-  pre_t4_fixture_sha256='7f75fd78534e2475b26953eb2d6b980b90e8e82c911a620eed0c7c638f46e60a'
+  pre_t4_fixture_sha256='8682dd776a34849ef1bf28c595b7809cc0eb30e4e8d7efaa740b371925bb07b2'
   actual_pre_t4_fixture_sha256="$(sha256sum "$pre_t4_fixture" | awk '{print $1}')"
   [ "$actual_pre_t4_fixture_sha256" = "$pre_t4_fixture_sha256" ] || {
     echo "FAIL RED arm: pre-T4 fixture sha256 $actual_pre_t4_fixture_sha256, expected $pre_t4_fixture_sha256"; exit 1

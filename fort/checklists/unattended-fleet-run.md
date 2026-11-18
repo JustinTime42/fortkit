@@ -5,6 +5,12 @@ description: Run the Manyhalls fleet unattended as the Mayor. Use when the Overs
 
 # Unattended fleet management
 
+> **Carried from Proofdelve at Manyhalls's re-founding, 2026-11-18 (`fortkit-ttpk`).**
+> The procedure is the machinery's and holds here. The incidents, bead ids, paths and
+> numbers in the examples are that fort's: read them as the reasons for each rule, and
+> re-measure anything you would rely on (`fort/scripts/fleet.conf` ships conservative
+> values and `FLEET_ENABLED=0`; no Manyhalls timer is installed).
+
 Written by the Mayor after the first run, 2026-09-15 14:24 to 23:20.
 Everything here was measured, not imagined. Where a rule exists because of a
 specific failure, the failure is named, because a rule without its incident

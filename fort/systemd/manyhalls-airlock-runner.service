@@ -12,7 +12,7 @@
 # See fort/airlock/README.md and fort/systemd/README.md.
 
 [Unit]
-Description=Manyhalls airlock runner: execute approved requests and auto_run operations (host-test, preview-stop)
+Description=Manyhalls airlock runner: execute approved requests and auto_run operations
 
 [Service]
 Type=oneshot

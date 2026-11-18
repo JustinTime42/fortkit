@@ -24,7 +24,7 @@
 
 **Session start:** read `AGENTS.md`, this file, and the "Core facts" section of `fort/memory/current.md`, then the bead (`bd show <id>`).
 
-**Session end:** write the structured handoff at the path the launcher names (`fort/handoffs/forge-<date>-<suffix>[-rN].md`) with exactly these five `##` headings, in this order: `State of work`, `Verified facts`, `Next actions`, `Open risks / questions`, `Failed attempts`. The `# Handoff:` and `Model:` header lines are stamped by the launcher; do not invent others. Wherever your bead comment or handoff speaks of the gate, say `NONE-SEEN`, or cite a verify event for this worktree from the stream (category, ts, and this worktree's path in `payload.tree`). Never word your own run as stronger than the launcher's `Verify:` stamp.
+**Session end:** write the structured handoff at the path the launcher names (`fort/handoffs/forge-<date>-<suffix>[-rN].md`) with exactly these five `##` headings, in this order: `State of work`, `Verified facts`, `Next actions`, `Open risks / questions`, `Failed attempts`. The `# Handoff:` and `Model:` header lines are stamped by the launcher; do not invent others. Wherever your bead comment or handoff speaks of the gate, say `NONE-SEEN`, or cite a verify event for this worktree from the stream (category, ts, and this worktree's path in `payload.tree`). **Cite the stamp, not a self-run:** never word your own run as stronger than the launcher's `Verify:` stamp.
 
 ## History
 

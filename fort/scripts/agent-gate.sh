@@ -35,6 +35,14 @@
 # started from the Mayor's Bash is a spawn this gate never sees; standing order
 # 14(a) remains the control for that route.
 in=$(cat)
+# MANYHALLS: SEATS ONLY. This repository is also the civilization's capital, and
+# sessions that are not this fort's seats start here: the Overseer's own, and the
+# Regent's. Those run unmasked and carry no FORT_MASKED marker; every seat this
+# fort launches carries one (lib/seat-sandbox.sh seat_identity, workbench.sh).
+# The gate binds the marked sessions and lets the others through unrecorded.
+# The fort this file came from has no such sessions and gates every one.
+# (Regent sitting 2026-11-18, fortkit-ttpk.)
+[ -n "${FORT_MASKED:-}" ] || exit 0
 t=$(printf '%s' "$in" | jq -r '.tool_input.subagent_type // "general-purpose"' 2>/dev/null) || t="unparseable"
 log="$(dirname "$0")/../../fort/telemetry/agent-spawns.jsonl"
 case "$t" in

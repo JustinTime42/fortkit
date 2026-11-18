@@ -237,55 +237,9 @@ else
   verdict T1 "forge-mask-suite" FAIL "see $runs/masks.log"
 fi
 
-# Build a mask for a given absolute path, failing CLOSED if it is absent.
-# `[ -e ] && mask+=...` was the original bug: a renamed target silently dropped
-# the mask, bash returned 127, and the probe called that a pass.
-exec_probe() { # <label> <abs-path-to-script>
-  local label="$1" path="$2"
-  if [ ! -e "$path" ]; then
-    verdict T1 "$label" FAIL "target absent: $path (probe cannot run)"
-    return
-  fi
-  if ! command -v bwrap >/dev/null 2>&1; then
-    verdict T1 "$label" FAIL "bwrap unavailable (probe cannot run)"
-    return
-  fi
-  local rc
-  rc=$(bwrap --bind / / --dev /dev --die-with-parent --ro-bind /dev/null "$path" \
-       -- bash -c "'$path' --help >/dev/null 2>&1; echo \$?" 2>/dev/null)
-  case "$rc" in
-    # 126 = found but not executable/permitted: the mask binds /dev/null over
-    # the path, so the file exists but exec is refused. That is the ONLY
-    # passing shape. 127 (not found) cannot legitimately occur — existence is
-    # a checked precondition above and the bind guarantees the path resolves —
-    # so 127 means the probe environment is broken, and accepting it was a
-    # residual fail-open (Warden finding 4, 21f.4 re-review).
-    126) verdict T1 "$label" PASS "exit=126 (exec denied, not merely read-denied)" ;;
-    127) verdict T1 "$label" FAIL "exit=127 (not found) despite verified existence — probe environment broken" ;;
-    "")  verdict T1 "$label" FAIL "empty result — bwrap did not run the probe" ;;
-    0)   verdict T1 "$label" FAIL "exit=0 — masked script EXECUTED" ;;
-    *)   verdict T1 "$label" FAIL "unexpected exit=$rc; probe inconclusive, treated as failure" ;;
-  esac
-}
 # (No exec_probe call: the source fort probed its masked deploy script here;
 # Manyhalls has no product script the host executes outside fort/scripts.)
 
-# Zero reachable bytes, so copy-then-run has nothing to copy. Existence is a
-# precondition here too, not a branch that silently passes.
-copy_probe() { # <label> <abs-path>
-  local label="$1" path="$2" bytes
-  if [ ! -e "$path" ]; then
-    verdict T1 "$label" FAIL "target absent: $path (probe cannot run)"
-    return
-  fi
-  bytes=$(bwrap --bind / / --dev /dev --die-with-parent --ro-bind /dev/null "$path" \
-          -- bash -c "wc -c < '$path' 2>/dev/null || echo unreadable" 2>/dev/null)
-  case "$bytes" in
-    0|unreadable) verdict T1 "$label" PASS "$bytes" ;;
-    "")           verdict T1 "$label" FAIL "empty result — probe did not run" ;;
-    *)            verdict T1 "$label" FAIL "$bytes bytes reachable" ;;
-  esac
-}
 # (No copy_probe call, for the same reason.)
 
 # core.hooksPath repoint: the documented bypass for the .beads hooks fix.
@@ -1174,13 +1128,12 @@ done
 # the argv (the secret to /dev/null through the lib's sweep; the deploy script
 # as a read-only bind of its own content since Proofdelve ForgeOs-96bg), so they get
 # their own anchored check against $root/<path> at the start of an entry.
-for m in ".env.staging.local"; do
-  if printf '%s\n' "$kernel_arrays" | grep -qxF "$root/$m"; then
-    verdict T2 "mask-array:$m" PASS "present in the forge posture's argv as $root/$m"
-  else
-    verdict T2 "mask-array:$m" FAIL "absent from the forge posture's argv (expected an entry $root/$m)"
-  fi
-done
+m=".env.staging.local"
+if printf '%s\n' "$kernel_arrays" | grep -qxF "$root/$m"; then
+  verdict T2 "mask-array:$m" PASS "present in the forge posture's argv as $root/$m"
+else
+  verdict T2 "mask-array:$m" FAIL "absent from the forge posture's argv (expected an entry $root/$m)"
+fi
 
 # Warden seat profile: the bead names "each seat context", and this seat is
 # write-safe today only because warden.sh restricts the toolset. Under

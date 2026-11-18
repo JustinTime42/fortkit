@@ -522,14 +522,14 @@ else
     # Proofdelve ForgeOs-51x1: the mutation grant is rendered with the EXACT scratch path, exactly once, and the static
     # profile carries no Edit deny that would beat it; the npm twins name the scratch path beside the relative forms
     render_case scratch-edit-grant "$profile_fixture" "/home/x/cand-worktrees/abc" 0 \
-      '([.permissions.allow[] | select(. == "Edit(//home/x/scratch/abc/**)")] | length) == 1 and ([.permissions.allow[] | select(startswith("Edit("))] | length) == 1 and ([.permissions.deny[] | select(startswith("Edit("))] | length) == 0 and (.permissions.allow | index("Bash(npm --prefix /home/x/scratch/abc/web ci*)") != null) and (.permissions.allow | index("Bash(npm --prefix web ci*)") != null)'
+      '([.permissions.allow[] | select(. == "Edit(//home/x/scratch/abc/**)")] | length) == 1 and ([.permissions.allow[] | select(startswith("Edit("))] | length) == 1 and ([.permissions.deny[] | select(startswith("Edit("))] | length) == 0'
     # Proofdelve ForgeOs-mskx + Proofdelve ForgeOs-rydv: the execution grants. The static file carries node, python3, sed and the relative
     # tools/keep spelling; the render adds the tools/keep twin at the exact scratch path and, for every
     # scripts/*-harness.sh in the CANDIDATE tree, two rules naming that one script by its exact scratch path -- and
     # nothing for a scripts/ file that is not a harness (the ADV-0002 control: no glob over scripts/).
     mkdir -p "$work/render-src-h/scripts"; : > "$work/render-src-h/scripts/a-harness.sh"; : > "$work/render-src-h/scripts/b-harness.sh"; : > "$work/render-src-h/scripts/other.sh"
     render_case execution-grants "$profile_fixture" "$work/render-src-h" 0 \
-      '(.permissions.allow | index("Bash(node *)") != null) and (.permissions.allow | index("Bash(python3 *)") != null) and (.permissions.allow | index("Bash(sed *)") != null) and (.permissions.allow | index("Bash(npm --prefix tools/keep test*)") != null) and (.permissions.allow | index("Bash(npm --prefix /home/x/scratch/abc/tools/keep test*)") != null) and ([.permissions.allow[] | select(. == "Bash(bash /home/x/scratch/abc/scripts/a-harness.sh*)" or . == "Bash(/home/x/scratch/abc/scripts/a-harness.sh*)" or . == "Bash(bash /home/x/scratch/abc/scripts/b-harness.sh*)" or . == "Bash(/home/x/scratch/abc/scripts/b-harness.sh*)")] | length) == 4 and ([.permissions.allow[] | select(test("^Bash\\((bash )?/home/x/scratch/abc/scripts/"))] | length) == 4 and ([.permissions.allow[] | select(test("other[.]sh"))] | length) == 0'
+      '(.permissions.allow | index("Bash(node *)") != null) and (.permissions.allow | index("Bash(python3 *)") != null) and (.permissions.allow | index("Bash(sed *)") != null) and ([.permissions.allow[] | select(. == "Bash(bash /home/x/scratch/abc/scripts/a-harness.sh*)" or . == "Bash(/home/x/scratch/abc/scripts/a-harness.sh*)" or . == "Bash(bash /home/x/scratch/abc/scripts/b-harness.sh*)" or . == "Bash(/home/x/scratch/abc/scripts/b-harness.sh*)")] | length) == 4 and ([.permissions.allow[] | select(test("^Bash\\((bash )?/home/x/scratch/abc/scripts/"))] | length) == 4 and ([.permissions.allow[] | select(test("other[.]sh"))] | length) == 0'
     # Proofdelve ForgeOs-ir0zn: a harness one directory down (scripts/unattended-fleet/) gets its own exact-path pair; a non-harness
     # beside it (grants.py) and a harness two directories down get nothing
     mkdir -p "$work/render-src-u/scripts/unattended-fleet/deeper"; : > "$work/render-src-u/scripts/a-harness.sh"; : > "$work/render-src-u/scripts/unattended-fleet/grants-harness.sh"; : > "$work/render-src-u/scripts/unattended-fleet/grants.py"; : > "$work/render-src-u/scripts/unattended-fleet/deeper/x-harness.sh"
@@ -606,10 +606,9 @@ else
   # fixture repository: one base commit with every kind of path, then one branch per class
   br="$work/brief-repo"; bg() { git -C "$br" -c user.email=h@h -c user.name=h "$@"; }
   git init -q -b main "$br"
-  mkdir -p "$br/web/src" "$br/tests" "$br/docs" "$br/src/Product.Api" "$br/src/Product.Infrastructure/Migrations" "$br/fort/handoffs" "$br/scripts"
-  printf 'export const a = 1;\n' > "$br/web/src/a.ts"; printf 'base\n' > "$br/tests/T.cs"; printf 'base\n' > "$br/docs/d.md"
-  printf 'class CurrentUser {}\n' > "$br/src/Product.Api/CurrentUser.cs"; printf 'keep\n' > "$br/src/Product.Infrastructure/Migrations/.keep"
-  printf 'const x = 1;\nfunction CookieSessionGate() { return hasCookieSession(); }\nconst y = 2;\n' > "$br/web/src/App.tsx"
+  mkdir -p "$br/src" "$br/test" "$br/docs" "$br/bin" "$br/fort/handoffs" "$br/scripts"
+  printf 'export const a = 1;\n' > "$br/src/a.ts"; printf 'base\n' > "$br/test/T.ts"; printf 'base\n' > "$br/docs/d.md"
+  printf 'echo\n' > "$br/bin/tool.sh"
   printf 'echo\n' > "$br/scripts/x.sh"; printf 'base\n' > "$br/fort/handoffs/old.md"
   bg add -A; bg commit -qm base
   mkbrief() { # $1 branch, then pairs of path=content (content 'RM' deletes)
@@ -619,18 +618,11 @@ else
     done
     bg commit -qm "$b"; bg checkout -q main
   }
-  mkbrief bead/small web/src/a.ts=changed docs/d.md=changed fort/handoffs/forge-small.md=handoff
-  mkbrief bead/auth src/Product.Api/CurrentUser.cs=changed
-  mkbrief bead/mig src/Product.Infrastructure/Migrations/20260914_x.cs=migration web/src/a.ts=changed
-  mkbrief bead/gate "web/src/App.tsx=const x = 1;
-function CookieSessionGate() { return hasCookieSession() && true; }
-const y = 2;"
-  mkbrief bead/webapp "web/src/App.tsx=const x = 3;
-function CookieSessionGate() { return hasCookieSession(); }
-const y = 2;"
+  mkbrief bead/small src/a.ts=changed docs/d.md=changed fort/handoffs/forge-small.md=handoff
+  mkbrief bead/auth bin/tool.sh=changed
   mkbrief bead/only fort/handoffs/forge-only.md=handoff
   mkbrief bead/scripts scripts/x.sh=changed
-  mkbrief bead/tests tests/T.cs=changed
+  mkbrief bead/tests test/T.ts=changed
   bg checkout -q -b bead/empty main; bg commit -q --allow-empty -m empty; bg checkout -q main
   brief_run() { # $1 function and args -> stdout
     bash -c "set -uo pipefail; $(cat "$brief_src"); $1" 2>"$work/brief.err"
@@ -641,48 +633,21 @@ const y = 2;"
       echo "  PASS  brief: $1"; pass=$((pass+1))
     else echo "  FAIL  brief: $1 -- got: $(printf '%s' "$out" | cut -c1-300) $(head -c 120 "$work/brief.err")"; fail=$((fail+1)); fi
   }
-  brief_case "web/src + docs + a handoff is SMALL, both product paths listed, the handoff not" \
-    "warden_diff_class '$br' 'main...bead/small'" '^DIFF CLASS: SMALL \(paths: docs/d.md web/src/a.ts\)' 'paths:.*forge-small.md'
-  brief_case "tests/ alone is SMALL" "warden_diff_class '$br' 'main...bead/tests'" '^DIFF CLASS: SMALL \(paths: tests/T.cs\)' -
-  brief_case "CurrentUser.cs is FULL naming the path as gate-1 surface" \
-    "warden_diff_class '$br' 'main...bead/auth'" '^DIFF CLASS: FULL \(reason: src/Product.Api/CurrentUser.cs is gate-1 surface\)' -
-  brief_case "a migration is FULL naming the migration, even beside a web/src change" \
-    "warden_diff_class '$br' 'main...bead/mig'" '^DIFF CLASS: FULL \(reason: src/Product.Infrastructure/Migrations/20260914_x.cs is a migration\)' -
-  brief_case "a web/src/App.tsx hunk touching CookieSessionGate is FULL (the symbol belt: the SPA session gate lives inside the SMALL set)" \
-    "warden_diff_class '$br' 'main...bead/gate'" '^DIFF CLASS: FULL \(reason: a web/src/ hunk touches the SPA auth surface \(CookieSessionGate\)' -
-  brief_case "CONTROL: a web/src/App.tsx hunk NOT touching the gate is SMALL (the belt does not fire on every App.tsx change)" \
-    "warden_diff_class '$br' 'main...bead/webapp'" '^DIFF CLASS: SMALL \(paths: web/src/App.tsx\)' -
+  brief_case "src + docs + a handoff is SMALL, both product paths listed, the handoff not" \
+    "warden_diff_class '$br' 'main...bead/small'" '^DIFF CLASS: SMALL \(paths: docs/d.md src/a.ts\)' 'paths:.*forge-small.md'
+  brief_case "test/ alone is SMALL" "warden_diff_class '$br' 'main...bead/tests'" '^DIFF CLASS: SMALL \(paths: test/T.ts\)' -
+  brief_case "a bin/ change is FULL naming the path as gate-1 surface" \
+    "warden_diff_class '$br' 'main...bead/auth'" '^DIFF CLASS: FULL \(reason: bin/tool.sh is gate-1 surface' -
   brief_case "a handoff-only diff is FULL, saying it carries no product path" \
     "warden_diff_class '$br' 'main...bead/only'" '^DIFF CLASS: FULL \(reason: the diff carries no product path' -
   brief_case "an empty diff is FULL, not SMALL (the safe default when there is nothing to classify)" \
     "warden_diff_class '$br' 'main...bead/empty'" '^DIFF CLASS: FULL \(reason: the diff carries no product path' -
   brief_case "scripts/ is FULL naming the path as outside the set" \
-    "warden_diff_class '$br' 'main...bead/scripts'" '^DIFF CLASS: FULL \(reason: scripts/x.sh is outside web/src/, tests/, docs/\)' -
+    "warden_diff_class '$br' 'main...bead/scripts'" '^DIFF CLASS: FULL \(reason: scripts/x.sh is outside src/, test/, docs/\)' -
   brief_case "an unresolvable range is FULL, never SMALL" \
     "warden_diff_class '$br' 'main...bead/nonesuch'" '^DIFF CLASS: FULL \(reason: git diff --name-only main...bead/nonesuch failed' -
-  # THE BELT'S SYMBOL SET (the Warden, finding 1.1 on the 2026-09-14c sitting): one
-  # case per symbol, each a hunk in web/src/api.ts naming it, plus the control
-  # that an api.ts hunk adding an ordinary endpoint function is still SMALL.
-  printf 'export async function getDeals() { return fetch("/api/deals"); }\n' > "$br/web/src/api.ts"; bg add web/src/api.ts; bg commit -qm "api base"
-  # name:expected-match -- the [Aa]uthenticationRequired token (round two) matches
-  # the error, the handler and the callback by their shared stem, so the reason
-  # names the stem; the header's VALUE names (currentUserId/setCurrentUser) are
-  # in the set too.
-  for pair in CookieSessionGate:CookieSessionGate hasCookieSession:hasCookieSession isSignedOutPath:isSignedOutPath \
-              AuthenticationRequiredError:AuthenticationRequired onAuthenticationRequired:AuthenticationRequired authenticationRequiredHandler:authenticationRequired \
-              useDevelopmentAuth:useDevelopmentAuth X-Product-UserId:X-Product-UserId currentUserId:currentUserId setCurrentUser:setCurrentUser \
-              refreshSession:refreshSession /auth/:/auth/; do
-    sym="${pair%%:*}"; want="${pair#*:}"
-    safe="$(printf '%s' "$sym" | tr -c 'A-Za-z0-9' '_')"
-    mkbrief "bead/sym-$safe" "web/src/api.ts=export async function getDeals() { return fetch(\"/api/deals\"); }
-// touches $sym here"
-    brief_case "belt: a web/src/api.ts hunk naming $sym is FULL, naming $want" \
-      "warden_diff_class '$br' 'main...bead/sym-$safe'" "^DIFF CLASS: FULL \\(reason: a web/src/ hunk touches the SPA auth surface \\($want\\)" -
-  done
-  mkbrief bead/api-ctl "web/src/api.ts=export async function getDeals() { return fetch(\"/api/deals\"); }
-export async function getParcels() { return fetch(\"/api/parcels\"); }"
-  brief_case "belt CONTROL: an api.ts hunk adding an ordinary endpoint function is still SMALL" \
-    "warden_diff_class '$br' 'main...bead/api-ctl'" '^DIFF CLASS: SMALL \(paths: web/src/api.ts\)' -
+  # (The source fort's symbol-belt cases are not carried: Manyhalls's gate 1 is whole
+  # directories and warden_diff_class has no symbol set.)
   # HOST VERIFY: fixture event files keyed on tree + commit; the tip's commit
   # date is today, so a file dated before it must be ignored.
   ev="$work/brief-events"; mkdir -p "$ev"; today="$(date +%F)"
@@ -761,7 +726,7 @@ elif [ ! -d "$work/brief-repo" ]; then
   echo "  FAIL  wip: the brief fixture repo was not built, so the WIP cases cannot run"; fail=$((fail+1))
 else
   wb="$work/brief-repo"; wg() { git -C "$wb" -c user.email=h@h -c user.name=h "$@"; }
-  wg checkout -q -b bead/wip main; printf 'half\n' > "$wb/web/src/a.ts"; wg add -A; wg commit -qm "fortkit-x: WIP RESCUED BY forge.sh, not the Forge's finished work (test)"; wg checkout -q main
+  wg checkout -q -b bead/wip main; printf 'half\n' > "$wb/src/a.ts"; wg add -A; wg commit -qm "fortkit-x: WIP RESCUED BY forge.sh, not the Forge's finished work (test)"; wg checkout -q main
   wip_run() { bash -c "set -uo pipefail; $(cat "$work/wip.sh"); $1" 2>&1; }
   out="$(wip_run "warden_wip_line '$wb' 'main...bead/wip'")"
   if grep -qE '^WIP RESCUE: 1 commit\(s\) in this range were made by forge.sh' <<<"$out" && grep -q 'UNFINISHED' <<<"$out"; then

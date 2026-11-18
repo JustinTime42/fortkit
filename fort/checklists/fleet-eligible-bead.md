@@ -1,5 +1,11 @@
 # Checklist: writing a bead the fleet may run unattended
 
+> **Carried from Proofdelve at Manyhalls's re-founding, 2026-11-18 (`fortkit-ttpk`).**
+> The procedure is the machinery's and holds here. The incidents, bead ids, paths and
+> numbers in the examples are that fort's: read them as the reasons for each rule, and
+> re-measure anything you would rely on (`fort/scripts/fleet.conf` ships conservative
+> values and `FLEET_ENABLED=0`; no Manyhalls timer is installed).
+
 Maintained by the Mayor. `Proofdelve ForgeOs-dx34.6`, from `docs/specs/continuous-fleet.md`
 §9 and `Proofdelve ForgeOs-8zb7`. Read before labelling anything `fleet-safe`.
 

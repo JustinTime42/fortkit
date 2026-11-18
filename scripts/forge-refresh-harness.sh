@@ -662,24 +662,24 @@ if [ -n "$hi_line" ]; then
   else no "gfuc1 A1: the generated instruction still tells the seat to run verify.sh" "$(grep -oF 'VERIFY_QUIET=1 bash fort/scripts/verify.sh' <<<"$hi" | head -1)"; fi
   if grep -qF 'NEVER background it' <<<"$hi"; then ok "9x3vj: the seat is told never to background its targeted run (a detached child is killed when its command returns, measured)"
   else no "9x3vj: backgrounding is not forbidden" "a detach-and-poll seat reads nothing in this sandbox"; fi
-  if grep -qF "dotnet test tests/Product.Tests/Product.Tests.csproj --filter 'FullyQualifiedName~" <<<"$hi" && grep -qF 'npx --prefix web vitest run' <<<"$hi" && grep -qF 'never the unfiltered suite' <<<"$hi"; then ok "gfuc1 A1: the seat is told to run the TARGETED tests: a dotnet --filter on the touched classes, vitest on the touched files, never the unfiltered suite"
+  if grep -qF 'npx vitest run <the test files you added or changed' <<<"$hi" && grep -qF 'npm run typecheck' <<<"$hi" && grep -qF 'never the unfiltered suite' <<<"$hi"; then ok "gfuc1 A1: the seat is told to run the TARGETED checks: typecheck, and vitest on the touched test files, never the unfiltered suite"
   else no "gfuc1 A1: no targeted-test instruction" "missing in the generated text"; fi
-  if grep -qF 'fort/memory/facts/test-depth-follows-risk.md' <<<"$hi"; then ok "gfuc1 A1: the seat is pointed at test-depth-follows-risk for how much testing the bead carries"
-  else no "gfuc1 A1: no pointer to test-depth-follows-risk" "missing in the generated text"; fi
+  if grep -qF 'HOW MUCH TESTING THE BEAD CARRIES FOLLOWS ITS RISK' <<<"$hi"; then ok "gfuc1 A1: the seat is told how much testing the bead carries follows its risk"
+  else no "gfuc1 A1: no test-depth rule" "missing in the generated text"; fi
   if grep -qF "'Seat-observed: NONE-SEEN <output of date -Is>'" <<<"$hi" && grep -qF "'Targeted: PASS <commands>" <<<"$hi" && grep -qF 'never the gate' <<<"$hi"; then ok "gfuc1 A1: the header carries Seat-observed: NONE-SEEN (the Verify: reconcile stays truthful) and a separate Targeted: line that is never the gate"
   else no "gfuc1 A1: header lines" "Seat-observed NONE-SEEN / Targeted: not both asked for"; fi
-  if grep -qF 'run npm --prefix web ci FIRST' <<<"$hi" && grep -qF 'Report the FINAL run of each command' <<<"$hi"; then ok "gfuc1 trial fold: a fresh worktree installs web deps first, and Targeted: reports the final run naming any earlier red"
+  if grep -qF 'run npm ci FIRST' <<<"$hi" && grep -qF 'Report the FINAL run of each command' <<<"$hi"; then ok "gfuc1 trial fold: a fresh worktree installs dependencies first, and Targeted: reports the final run naming any earlier red"
   else no "gfuc1 trial fold" "the npm ci / final-run instruction is missing"; fi
-  if grep -qF 'run node scripts/contract-drift.mjs and fix every FIELD-DRIFT and MISSING line' <<<"$hi"; then ok "gfuc1 trial fold: a DTO/endpoint/MCP change runs contract-drift before the session ends (the trial lost a lap to it)"
-  else no "gfuc1 trial fold: contract-drift" "the cross-layer check is not in the targeted set"; fi
+  if grep -qF 'run that harness too, and shellcheck -x every .sh you changed' <<<"$hi"; then ok "gfuc1 trial fold: a script change runs its harness and shellcheck before the session ends (the cheap host checks a targeted test run cannot see)"
+  else no "gfuc1 trial fold: harness" "the script-harness check is not in the targeted set"; fi
   if ! grep -qF '(~30 s)' <<<"$hi"; then ok "9x3vj: the unmeasured '~30 s window' claim is gone from what the seat reads"
   else no "9x3vj: the seat is still told its window is ~30 s" "measured false 2026-10-06 (200 s foreground returned)"; fi
   # The secrets-only posture rewrites one prompt sentence by exact match; if the
   # sentence and its pattern drift apart the rewrite silently does nothing.
-  pl="$(grep -m1 '^prompt="You are the Forge' "$launcher")"
+  pl="$(grep -m1 '^prompt="You are ' "$launcher")"
   # shellcheck disable=SC2016  # literal launcher text
-  pat="$(grep -m1 'prompt="${prompt//"The Docker socket is masked' "$launcher" | sed 's/^  prompt="\${prompt\/\/"//; s#"/".*##')"
-  if [ -n "$pat" ] && grep -qF -- "$pat" <<<"$pl"; then ok "gfuc1 A1: the secrets-only posture's Docker sentence still matches the prompt it rewrites"
+  pat="$(grep -m1 'prompt="${prompt//"Do not push (mechanically blocked)' "$launcher" | sed 's/^  prompt="\${prompt\/\/"//; s#"/".*##')"
+  if [ -n "$pat" ] && grep -qF -- "$pat" <<<"$pl"; then ok "gfuc1 A1: the secrets-only posture's push sentence still matches the prompt it rewrites"
   else no "gfuc1 A1: the posture rewrite no longer matches its sentence" "pattern=${pat:0:80}"; fi
 else no "mdwx.1" "no handoff_instruction line in $launcher"; fi
 

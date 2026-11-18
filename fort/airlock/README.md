@@ -1,5 +1,15 @@
 # The airlock
 
+> **Manyhalls, 2026-11-18 (Regent sitting `fortkit-ttpk`).** This fort has the airlock's
+> mechanism and **no operation**: `operations.json` ships with an empty table, so every
+> request is refused as an unknown operation until one is added under gate 6. The
+> operations described below (`host-test`, `preview`, `preview-stop`, `deploy-staging`,
+> `feedback-scan`) are the ones of the fort this README came from. They are kept as
+> worked examples of what an entry declares, and none of them exists here.
+> `scripts/host-test.sh` is present and adapted (it runs vitest), ready to be named by
+> an operation if the Overseer wants one. The runner's units in `fort/systemd/` are
+> not installed.
+
 Host-run operations a seat may REQUEST. The host runs one only on the
 Overseer's approval, or, for an operation the table declares `auto_run`
 (below), without one. The

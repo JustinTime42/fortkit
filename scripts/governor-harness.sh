@@ -1021,9 +1021,8 @@ if have touch_set_of; then
   if [ "$(tset 'no line here')" = "<everything>" ] && [ "$(tset 'Touches: *')" = "<everything>" ] && [ "$(tset 'Touches:   ')" = "<everything>" ]; then
     ok "b9mj: no Touches line, a bare '*', and an empty line each read as EVERYTHING (the conservative set)"
   else no "b9mj: the everything cases" "[$(tset 'no line here')] [$(tset 'Touches: *')] [$(tset 'Touches:   ')]"; fi
-  if [ "$(tset 'Touches: src/Product.Infrastructure/Migrations/2026_x.cs, src/Product.Infrastructure/Migrations/ProductDbContextModelSnapshot.cs' | sort -u | tr '\n' ' ')" = "src/Product.Infrastructure/Migrations/ " ]; then
-    ok "b9mj: any path under Migrations/ is widened to the whole directory (every migration rewrites the snapshot there)"
-  else no "b9mj: migration widening" "$(tset 'Touches: src/Product.Infrastructure/Migrations/2026_x.cs')"; fi
+  # (The source fort's migration-widening case is not carried: touches_migrations()
+  # names a prefix no path can have in Manyhalls.)
   # the intersection rule, on files
   printf 'web/src/App.tsx\ndocs/\n' > "$work/tA"; printf 'web/src/\n' > "$work/tB"; printf 'src/Product.Api/\ntests/\n' > "$work/tC"; printf '<everything>\n' > "$work/tE"; : > "$work/tEmpty"
   isect() { harness "touch_sets_intersect '$work/$1' '$work/$2' || echo NO"; }

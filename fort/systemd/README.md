@@ -1,8 +1,19 @@
 # Manyhalls fleet — systemd user units
 
+> **Manyhalls, 2026-11-18 (Regent sitting `fortkit-ttpk`).** NONE of these units is
+> installed or enabled. They were renamed from the fort this machinery came from and
+> are kept here as drafts. Enabling any of them is the Overseer's decision, and this
+> machine also runs Proofdelve's fleet, so three rules from the re-founding docket
+> come first: (S1) the two fleets' memory gates each see only their own workers, so
+> Manyhalls's fleet runs only while Proofdelve's is idle or with `FLEET_FORGE_MAX=1`;
+> (S2) the model quota is shared, so Manyhalls's hard stop starts low; (S3) Docker, the
+> Civ Keep and the loop watchdog are shared and keyed by fort. `fort/scripts/fleet.conf`
+> ships `FLEET_ENABLED=0`. The nightly verify here is drafted for 04:30, an hour after
+> Proofdelve's, and Manyhalls's verifier needs no Docker whatever the text below says.
+
 The **supervisor** pair (Proofdelve ForgeOs-dx34.4) starts fleet runs; the **scratch
 reaper** pair (Proofdelve ForgeOs-nv0j) cleans up after them; the **nightly verify** pair
-(Proofdelve ForgeOs-s1reg) runs one full, Docker-required verify of main at 03:30 and
+(Proofdelve ForgeOs-s1reg) runs one full, verify of main at 04:30 and
 writes the halt file on a red main -- the backstop for tiered host verifies and
 reused post-merge passes. (The airlock runner's three files are described in
 `fort/airlock/README.md`.) Both were
@@ -251,7 +262,7 @@ leaves the unit in `--failed`.
 Drafted and installed under the Regent edict of 2026-10-19 (docket
 Proofdelve ForgeOs-x7ojh), the Overseer's approval of the design recorded on
 Proofdelve ForgeOs-s1reg. `manyhalls-nightly-verify.timer` fires
-`manyhalls-nightly-verify.service` at 03:30; the service runs
+`manyhalls-nightly-verify.service` at 04:30; the service runs
 `fort/scripts/nightly-verify.sh` once, whose header is the design. GREEN removes
 its worktree; RED writes `~/.local/state/manyhalls-fleet/HALT`, keeps the
 worktree and emits an incident.
