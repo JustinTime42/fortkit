@@ -1,8 +1,8 @@
 #!/bin/bash
-# Manyhalls fort status — fast, read-only. Usage: fort/scripts/status.sh
-cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/fortkit)" || exit 1
+# ForgeOS city status — fast, read-only. Usage: fort/scripts/status.sh
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/ForgeOs)" || exit
 
-echo "══════════════════ MANYHALLS FORT STATUS (FORTKIT) ══════════════════"
+echo "══════════════════ PROOFDELVE FORT STATUS ══════════════════"
 echo
 echo "── Work in progress ──"
 bd list --status in_progress 2>/dev/null | grep -v '^─\|^Total\|^Status' | head -8
@@ -17,12 +17,10 @@ echo "── Worktrees (active Forge sessions) ──"
 git worktree list | tail -n +2
 echo
 echo "── Recent handoffs ──"
-found=0
-while IFS= read -r f; do
-  found=1
+find fort/handoffs -maxdepth 1 -type f -name '*.md' ! -name '.gitkeep' -printf '%T@ %p\n' \
+  | sort -rn | head -3 | while IFS=' ' read -r _ f; do
   echo "  $f  ($(date -r "$f" '+%b %d %H:%M'))"
-done < <(find fort/handoffs -maxdepth 1 -name '*.md' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -3 | cut -d' ' -f2-)
-[ "$found" -eq 1 ] || echo "  (none yet)"
+done || echo "  (none yet)"
 echo
 echo "── Git ──"
 # NOT "ahead of origin" (fortkit-rw86). origin/main is a LOCAL remote-tracking
@@ -58,6 +56,52 @@ else
   echo "  ⚠ SYNC STATE UNKNOWN — this is not 'level': run git ls-remote origin main"
 fi
 echo "  last: $(git log --oneline -1)"
+echo
+echo "── Fleet (ForgeOs-3q6g) ──"
+# THE THREE FACTS ARE SHOWN TOGETHER OR THE STREAK MISLEADS (Tova, dx34.4 round
+# one, finding 6). The supervisor exits on the halt file BEFORE it reads or
+# writes its streak record, so during a halt the record is FROZEN: count=N with
+# the lock free is not a wedge, it is the last live run's tail, and
+# last_refusal is the tell. Hence halt file, lock probe and streak, one block.
+FLEET_STATE_DIR="${FLEET_STATE:-$HOME/.local/state/proofdelve-fleet}"
+if [ -e "$FLEET_STATE_DIR/HALT" ]; then
+  # halt() writes a timestamp line then the reason; a person's file is usually one line. Show whatever is there, joined.
+  echo "  HALT: PRESENT since $(date -r "$FLEET_STATE_DIR/HALT" '+%b %d %H:%M') — $(tr '\n' ' ' < "$FLEET_STATE_DIR/HALT" | cut -c1-120)"
+  echo "        (the supervisor fires and exits on this file first; the streak below is FROZEN at the last live run)"
+else
+  echo "  HALT: absent"
+fi
+if [ -e "$FLEET_STATE_DIR/fleet.lock" ]; then
+  # READ-ONLY, SHARED, WITH A DISTINCT CONFLICT CODE (ForgeOs-ip9z finding 8;
+  # this is the line the bead QUOTES, and fleet-supervisor.sh carries the same
+  # probe silently). The old spelling was `flock -n 9 2>/dev/null 9>>...`, and
+  # `9>>` needs WRITE permission on the lock file: with a lock file or a state
+  # directory a reader cannot write -- which is every masked seat -- the
+  # redirection failed, the `if` was false, and this printed "HELD, a fleet run
+  # is live" about a fleet that was not running. A shared lock on a read-only
+  # descriptor still conflicts with fleet.sh's exclusive one and needs no write
+  # access (scripts/quiescent.sh's idiom), and `-E 75` gives contention a code
+  # of its own so a failed OPEN can no longer be read as a held lock.
+  lock_rc=0
+  ( flock -n -s -E 75 9 ) 9<"$FLEET_STATE_DIR/fleet.lock" 2>/dev/null || lock_rc=$?
+  case "$lock_rc" in
+    0)  echo "  lock: free (no fleet run is live)" ;;
+    75) echo "  lock: HELD — a fleet run is live" ;;
+    *)  echo "  lock: UNKNOWN — $FLEET_STATE_DIR/fleet.lock exists and could not be opened for reading (flock exited $lock_rc); this is NOT the same thing as a run being live" ;;
+  esac
+else
+  echo "  lock: no lock file yet (no run has ever started here)"
+fi
+if [ -f "$FLEET_STATE_DIR/supervisor.streak" ]; then
+  sv() { grep -m1 "^$1=" "$FLEET_STATE_DIR/supervisor.streak" 2>/dev/null | cut -d= -f2-; }
+  if [ "$(sv count)" != 0 ] && [ -n "$(sv count)" ]; then
+    echo "  supervisor streak: $(sv count) refusal(s) since $(sv first_refusal), last $(sv last_refusal)"
+  else
+    echo "  supervisor streak: 0 (reset $(sv reset_at); the cleared streak was $(sv previous_streak) refusal(s) from $(sv previous_first_refusal))"
+  fi
+else
+  echo "  supervisor streak: no record (never refused, or reset before the record existed)"
+fi
 echo
 echo "── Recent events ──"
 tail -5 fort/events/events-*.jsonl 2>/dev/null | grep '^{' | tail -5 | jq -r '"  \(.ts | split("T")[1] | split("-")[0]) [\(.actor)] \(.detail)"' 2>/dev/null || echo "  (no events yet)"

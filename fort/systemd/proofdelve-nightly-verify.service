@@ -1,0 +1,26 @@
+# Proofdelve nightly full verify (ForgeOs-s1reg item 2). Drafted under the Regent
+# edict of 2026-10-19 (docket ForgeOs-x7ojh), the Overseer's approval of the
+# design recorded on ForgeOs-s1reg before the edit; installed by hand into
+# ~/.config/systemd/user/ -- this file does nothing where it lives in the repo.
+#
+# Each firing runs fort/scripts/nightly-verify.sh once: main at its tip, every
+# step, Docker required, in a fresh worktree. Its header is the design. GREEN
+# removes the worktree; RED writes the fleet's halt file (the fleet stops, the
+# supervisor starts nothing) and keeps the worktree as evidence.
+#
+# Exit 1 is a red main and shows in --failed, which is the point. 75 (another
+# nightly holds the lock) is not a failure.
+
+[Unit]
+Description=Proofdelve nightly full verify of main (backstop for verify-once)
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/justin/dev/ForgeOs
+# The same PATH the supervisor hands a fleet run: the verifier needs dotnet,
+# node/npm (nvm), docker, shellcheck, jq, git.
+Environment=PATH=/home/justin/.local/bin:/home/justin/.nvm/versions/node/v24.14.0/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/justin/dev/ForgeOs/fort/scripts/nightly-verify.sh
+SuccessExitStatus=75
+# A full verify is ~10-15 min on this host; two hours is a hung build.
+TimeoutStartSec=2h

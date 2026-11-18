@@ -1,48 +1,19 @@
 #!/bin/bash
-# Manyhalls event emitter — append-only stream for the future fortress visualizer.
+# Proofdelve event emitter — append-only stream for the future fortress visualizer.
 # Usage: emit.sh <category> <detail> [-a actor] [-s seat] [-t target] [-p payload-json] [-T iso-timestamp]
 # Works from the main checkout AND from any worktree (all append to the main repo's stream).
 set -euo pipefail
-
-usage() {
-  echo "emit.sh: usage: emit.sh <category> <detail> [-a actor] [-s seat] [-t target] [-p payload-json] [-T iso-timestamp]" >&2
-}
-
-if [ "$#" -lt 2 ]; then
-  usage
-  exit 2
-fi
-
 category="$1"; detail="$2"; shift 2
-if [[ -z "$category" || "$category" == -* ]]; then
-  echo "emit.sh: category must not be empty or begin with '-'" >&2
-  usage
-  exit 2
-fi
-if [[ "$detail" == -* ]]; then
-  echo "emit.sh: detail must not begin with '-'" >&2
-  usage
-  exit 2
-fi
-
 actor="harness"; seat=""; target=""; payload="null"; ts="$(date -Is)"
-# Keep getopts' conventional `--` terminator: the residual-argument check below
-# still rejects anything after it, so it cannot bypass this positional contract.
 while getopts "a:s:t:p:T:" opt; do
-  case $opt in
+  case "$opt" in
     a) actor="$OPTARG";; s) seat="$OPTARG";; t) target="$OPTARG";;
     p) payload="$OPTARG";; T) ts="$OPTARG";;
-    *) echo "emit.sh: unknown flag" >&2; exit 2;;
+    *) exit 2 ;;
   esac
 done
-shift "$((OPTIND - 1))"
-if [ "$#" -ne 0 ]; then
-  echo "emit.sh: unexpected argument: $1" >&2
-  usage
-  exit 2
-fi
 # Resolve the MAIN repo root even when called from a linked worktree.
-gitcommon=$(git rev-parse --git-common-dir 2>/dev/null || echo "/home/justin/dev/fortkit/.git")
+gitcommon=$(git rev-parse --git-common-dir 2>/dev/null || echo "/home/justin/dev/ForgeOs/.git")
 case "$gitcommon" in /*) :;; *) gitcommon="$(pwd)/$gitcommon";; esac
 mainroot="$(cd "$(dirname "$gitcommon")" && pwd)"
 dir="$mainroot/fort/events"

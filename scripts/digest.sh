@@ -3,439 +3,364 @@
 # memory or infer outcomes from the event text.
 set -euo pipefail
 
-usage() { printf 'Usage: %s [--by-subject] [--since ISO-8601-timestamp]\n' "${0##*/}"; }
+usage() {
+  printf 'Usage: %s [--since ISO-8601-timestamp]\n' "${0##*/}"
+}
 
 since_override=""
-by_subject=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --by-subject) by_subject=1; shift ;;
-    --since) [ "$#" -ge 2 ] || { usage >&2; exit 2; }; since_override="$2"; shift 2 ;;
-    --help|-h) usage; exit 0 ;;
-    *) usage >&2; exit 2 ;;
+    --since)
+      [ "$#" -ge 2 ] || { usage >&2; exit 2; }
+      since_override="$2"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
   esac
 done
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 git_common="$(git -C "$repo_root" rev-parse --git-common-dir)"
-case "$git_common" in /*) ;; *) git_common="$repo_root/$git_common" ;; esac
+case "$git_common" in
+  /*) ;;
+  *) git_common="$repo_root/$git_common" ;;
+esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 events_dir="$main_root/fort/events"
 emitter="$main_root/fort/scripts/emit.sh"
-all_events="$(mktemp)"; timestamped_events="$(mktemp)"; window_events="$(mktemp)"; closed_beads="$(mktemp)"; timestamp_report="$(mktemp)"; audit_merges="$(mktemp)"; audit_coverage="$(mktemp)"; live_gate_beads="$(mktemp)"; all_beads="$(mktemp)"; gate_one="$(mktemp)"; gate_two="$(mktemp)"; gate_three="$(mktemp)"; action_render="$(mktemp)"; subject_render="$(mktemp)"
-trap 'rm -f "$all_events" "$timestamped_events" "$window_events" "$closed_beads" "$timestamp_report" "$audit_merges" "$audit_coverage" "$live_gate_beads" "$all_beads" "$gate_one" "$gate_two" "$gate_three" "$action_render" "$subject_render"' EXIT
-max_decisions_per_action=5
-boundary_tolerance_seconds=120
+window_file="$(mktemp)"
+events_file="$(mktemp)"
+human_file="$(mktemp)"
+beads_file="$(mktemp)"
+in_flight_file="$(mktemp)"
+landed_file="$(mktemp)"
+trap 'rm -f "$window_file" "$events_file" "$human_file" "$beads_file" "$in_flight_file" "$landed_file"' EXIT
 
-epoch() { [ -n "$1" ] && date -d "$1" +%s 2>/dev/null; }
+events_source() {
+  find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print 2>/dev/null | sort | xargs -r -n1 cat
+}
 
-stream_state="ok"; unreadable_shard=""; malformed=0; shard_count=0; valid_records=0; invalid_timestamps=0
-if [ ! -d "$events_dir" ]; then
-  stream_state="unavailable"
-elif [ ! -r "$events_dir" ] || [ ! -x "$events_dir" ]; then
-  stream_state="unreadable"
-else
-  while IFS= read -r -d '' event_file; do
-    shard_count=$((shard_count + 1))
-    # Process a shard at once. Per-record jq invocations make a complete
-    # historical stream needlessly slow, while raw-input parsing keeps one bad
-    # JSONL line from preventing the digest from reporting the rest.
-    if ! total_records="$(awk 'END { print NR }' "$event_file" 2>/dev/null)"; then
-      stream_state="unreadable"; unreadable_shard="$event_file"
-      break
-    fi
-    if ! shard_valid_records="$(jq -Rc 'fromjson? | select(type == "object")' "$event_file" 2>/dev/null | tee -a "$all_events" | awk 'END { print NR }')"; then
-      stream_state="unreadable"; unreadable_shard="$event_file"
-      break
-    fi
-    valid_records=$((valid_records + shard_valid_records))
-    malformed=$((malformed + total_records - shard_valid_records))
-  done < <(find "$events_dir" -maxdepth 1 -type f -name 'events-*.jsonl' -print0 2>/dev/null | sort -z)
-fi
+# Event timestamps are emitted by `date -Is` (offset form) as well as the Z
+# form used by older fixtures. Keep this conversion in jq so event scans do not
+# launch a `date` process for every row.
+# shellcheck disable=SC2016 # jq program intentionally contains literal $ names.
+jq_epoch='def epoch: try (capture("^(?<date>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2})(?:\\.[0-9]+)?(?<zone>Z|(?<sign>[+-])(?<hour>[0-9]{2}):(?<minute>[0-9]{2}))$") as $m | ($m.date + "Z" | fromdateiso8601) as $utc | if $m.zone == "Z" then $utc else (($m.hour | tonumber) * 3600 + ($m.minute | tonumber) * 60) as $offset | $utc - (if $m.sign == "+" then $offset else -$offset end) end) catch empty;'
 
-# The stream must be classified before deriving the window. A missing anchor is
-# ordinary at founding, while an absent, unreadable, or wholly malformed stream
-# is not evidence that there is simply nothing to report.
-if [ "$stream_state" = unavailable ]; then
-  printf 'EVENT STREAM\n  UNAVAILABLE (directory missing: %s)\n' "$events_dir" >&2
-  exit 1
-elif [ "$stream_state" = unreadable ]; then
-  if [ -n "$unreadable_shard" ]; then
-    printf 'EVENT STREAM\n  UNAVAILABLE (could not read event shard: %s)\n' "$unreadable_shard" >&2
-  else
-    printf 'EVENT STREAM\n  UNAVAILABLE (could not read directory: %s)\n' "$events_dir" >&2
-  fi
-  exit 1
-elif [ "$shard_count" -eq 0 ] && [ -z "$since_override" ]; then
-  printf 'EVENT STREAM\n  EMPTY WINDOW (0 event shards found in %s)\n' "$events_dir"
-  exit 0
-elif [ "$shard_count" -gt 0 ] && [ "$valid_records" -eq 0 ]; then
-  printf 'EVENT STREAM\n  UNAVAILABLE (no valid records in %s event shard(s))\n' "$shard_count" >&2
-  [ "$malformed" -eq 0 ] || printf '  WARNING: %s malformed stream record(s) were unreadable\n' "$malformed" >&2
-  exit 1
-fi
-
-# Parse timestamps once, after the JSONL stream has been validated. Date.parse
-# understands ISO-8601 offsets, so this keeps the schema's timestamp ordering
-# rule without treating event shard names as dates.
-if [ -s "$all_events" ]; then
-  node -e '
-    let invalid = 0;
-    let input = "";
-    process.stdin.setEncoding("utf8");
-    process.stdin.on("data", (chunk) => { input += chunk; });
-    process.stdin.on("end", () => {
-      for (const line of input.split("\n")) {
-        if (!line) continue;
-        const event = JSON.parse(line);
-        const instant = typeof event.ts === "string" ? Date.parse(event.ts) : NaN;
-        if (Number.isNaN(instant)) { invalid += 1; continue; }
-        process.stdout.write(JSON.stringify({ ...event, _epoch: Math.floor(instant / 1000) }) + "\n");
-      }
-      process.stderr.write(String(invalid));
-    });
-  ' <"$all_events" >"$timestamped_events" 2>"$timestamp_report"
-  invalid_timestamps="$(cat "$timestamp_report")"
-fi
+epoch() {
+  [ -n "$1" ] || return 1
+  date -d "$1" +%s 2>/dev/null
+}
 
 last_event_timestamp() {
-  jq -sr --arg wanted "$1" '[.[] | select(.category == $wanted)] | if length == 0 then "" else max_by(._epoch).ts end' "$timestamped_events"
+  local jq_filter="$1"
+  jq -r -s "$jq_epoch [.[] | select($jq_filter) | select(.ts | type == \"string\") | . + {event_epoch: (.ts | epoch)} | select(.event_epoch != null)] | if length == 0 then \"\" else max_by(.event_epoch).ts end" "$events_file"
 }
+
+declare -A last_verdict_details=()
+load_last_verdict_details() {
+  local target detail
+  while IFS= read -r -d '' target && IFS= read -r -d '' detail; do
+    last_verdict_details["$target"]="$detail"
+  done < <(jq -jr -s "$jq_epoch [.[] | select(.category == \"review.verdict\" and (.target | type == \"string\") and (.ts | type == \"string\")) | . + {event_epoch: (.ts | epoch)} | select(.event_epoch != null)] | sort_by(.target, .event_epoch) | group_by(.target) | .[] | last | .target, \"\\u0000\", (.detail // \"\"), \"\\u0000\"" "$events_file")
+}
+
+events_source >"$events_file"
 
 fallback_note=""
 if [ -n "$since_override" ]; then
   since="$since_override"
 else
-  since="$(last_event_timestamp digest.emitted)"
+  since="$(last_event_timestamp '.category == "digest.emitted"')"
   if [ -z "$since" ]; then
-    since="$(last_event_timestamp session.start)"
+    since="$(last_event_timestamp '.category == "session.start" and .seat == "mayor"')"
     if [ -z "$since" ]; then
-      printf 'EVENT STREAM\n  %s valid event(s) present; no session history exists yet\n' "$valid_records"
-      [ "$malformed" -eq 0 ] || printf '  WARNING: %s malformed stream record(s) were unreadable\n' "$malformed"
-      [ "$invalid_timestamps" -eq 0 ] || printf '  WARNING: %s valid stream record(s) had unreadable timestamps\n' "$invalid_timestamps"
-      exit 0
+      printf 'digest: no digest.emitted or mayor session.start event exists. Supply --since.\n' >&2
+      exit 1
     fi
-    fallback_note="first run; using last session.start"
+    fallback_note="first run; using last mayor session.start"
   fi
 fi
-since_epoch="$(epoch "$since")" || { printf 'digest: invalid --since timestamp: %s\n' "$since" >&2; exit 2; }
-now="$(date -Is)"; now_epoch="$(epoch "$now")"
-jq -c --argjson since "$since_epoch" --argjson now "$now_epoch" 'select(._epoch > $since and ._epoch <= $now)' "$timestamped_events" >"$window_events"
 
-event_count() { jq -s '[.[]] | length' "$window_events"; }
-print_window_events() {
-  jq -r "$1 | [.ts, .category, (.target // \"\"), (.detail // \"\")] | @tsv" "$window_events" |
-    while IFS=$'\t' read -r ts category target detail; do
-      if [ -n "$target" ]; then printf '  %s %s [%s] %s\n' "$ts" "$category" "$target" "$detail"
-      else printf '  %s %s %s\n' "$ts" "$category" "$detail"; fi
-    done
+since_epoch="$(epoch "$since")" || { printf 'digest: invalid --since timestamp: %s\n' "$since" >&2; exit 2; }
+now="$(date -Is)"
+now_epoch="$(epoch "$now")"
+
+jq -c --argjson since_epoch "$since_epoch" --argjson now_epoch "$now_epoch" "$jq_epoch select(.ts | type == \"string\") | . + {event_epoch: (.ts | epoch)} | select(.event_epoch != null and .event_epoch > \$since_epoch and .event_epoch <= \$now_epoch)" "$events_file" >"$window_file"
+
+# A human label has no timestamp in Beads. The flag wrapper records the missing
+# timestamp as decision.raised; creation date remains only for pre-wrapper
+# labels that have no raise event anywhere in the stream.
+human_status=0
+set +e
+bd -C "$main_root" human list --json >"$human_file"
+human_status=$?
+set -e
+human_beads=()
+closed_still_labelled=()
+if [ "$human_status" -eq 0 ]; then
+  # A closed bead keeps its labels, correctly: closing must not silently mutate
+  # metadata, and the label is the record that this bead once needed Justin. So
+  # `bd human list` answers "which beads carry the label", which is not the
+  # question this section asks. Filter here rather than upstream (ForgeOs-eng3.8,
+  # approved 2026-09-01). They are counted rather than dropped: a closed bead
+  # still carrying the label is a label nobody removed, and hiding it silently
+  # means nobody ever does.
+  mapfile -t human_beads < <(jq -c '.[] | select((.status // "open") != "closed")' "$human_file")
+  mapfile -t closed_still_labelled < <(jq -r '.[] | select((.status // "open") == "closed") | .id' "$human_file")
+fi
+
+# `bd human list --json` intentionally omits dependency information. Parent
+# edges therefore come from the complete list shape, where a parent-child edge
+# names its parent in `depends_on_id`.
+beads_status=0
+set +e
+bd -C "$main_root" list --status all --limit 0 --json >"$beads_file"
+beads_status=$?
+set -e
+
+event_lines() {
+  local filter="$1"
+  jq -r "$filter | .detail" "$window_file"
 }
 
-printf 'WINDOW\n  (%s, %s]\n' "$since" "$now"
-[ -z "$fallback_note" ] || printf '  %s\n' "$fallback_note"
-if [ "$shard_count" -eq 0 ]; then
-  printf 'EVENT STREAM\n  EMPTY WINDOW (0 event shards found in %s)\n' "$events_dir"
-elif [ "$(event_count)" -eq 0 ]; then
-  printf 'EVENT STREAM\n  EMPTY WINDOW (no valid events in the selected window)\n'
-else
-  printf 'EVENT STREAM\n  %s valid event(s) in the selected window\n' "$(event_count)"
+event_count() {
+  local filter="$1"
+  jq -s "[.[] | select($filter)] | length" "$window_file"
+}
+
+qualifying_count="$(event_count '.category != "digest.emitted"')"
+if [ -z "$since_override" ] && [ "$qualifying_count" -eq 0 ]; then
+  exit 0
 fi
-[ "$malformed" -eq 0 ] || printf '  WARNING: %s malformed stream record(s) were unreadable\n' "$malformed"
-[ "$invalid_timestamps" -eq 0 ] || printf '  WARNING: %s valid stream record(s) had unreadable timestamps\n' "$invalid_timestamps"
 
 printf 'DECISIONS WAITING\n'
-set +e
-bd -C "$main_root" list --status=open,in_progress --label=gate-1 --json >"$gate_one"; gate_one_status=$?
-bd -C "$main_root" list --status=open,in_progress --label=gate-2 --json >"$gate_two"; gate_two_status=$?
-bd -C "$main_root" list --status=open,in_progress --label=gate-3 --json >"$gate_three"; gate_three_status=$?
-set -e
-live_gate_status=$(( gate_one_status != 0 ? gate_one_status : gate_two_status != 0 ? gate_two_status : gate_three_status ))
-if [ "$live_gate_status" -eq 0 ]; then jq -s 'add | unique_by(.id)' "$gate_one" "$gate_two" "$gate_three" >"$live_gate_beads"; fi
-if [ "$live_gate_status" -ne 0 ]; then
-  printf '  ACTION GROUPS: UNAVAILABLE (bd exit %s)\n' "$live_gate_status"
-elif [ "$(jq -r 'type' "$live_gate_beads")" != "array" ]; then
-  printf '  ACTION GROUPS: UNAVAILABLE (bd returned invalid JSON)\n'
+if [ "$human_status" -ne 0 ]; then
+  printf '  UNAVAILABLE (bd exit %s)\n' "$human_status"
+elif [ "${#human_beads[@]}" -eq 0 ]; then
+  printf '%s\n' '  none'
 else
-  if node - "$live_gate_beads" "$max_decisions_per_action" >"$action_render" <<'NODE'
-const fs = require("node:fs");
-const [beadsPath, limitArg] = process.argv.slice(2);
-const beads = JSON.parse(fs.readFileSync(beadsPath, "utf8"));
-const limit = Number(limitArg);
-const groups = [
-  ["act-decide", "DECIDE"],
-  ["act-regent", "SUMMON REGENT"],
-  ["act-host", "ACT ON HOST"],
-  [null, "ACTION NOT YET CLASSIFIED"],
-];
-const actionOf = (bead) => groups.slice(0, 3).find(([label]) => bead.labels?.includes(label))?.[0] ?? null;
-const gateTag = (bead) => (bead.labels ?? []).filter((label) => /^gate-[123]$/.test(label)).sort().join(", ") || "gate unknown";
-for (const [action, heading] of groups) {
-  const members = beads.filter((bead) => actionOf(bead) === action)
-    .sort((left, right) => String(right.updated_at ?? right.created_at ?? "").localeCompare(String(left.updated_at ?? left.created_at ?? "")));
-  if (members.length === 0) {
-    console.log(`  ${heading}: no decisions waiting`);
-    continue;
-  }
-  const shown = members.slice(0, limit);
-  console.log(`  ${heading}: ${members.length} decision(s) waiting (showing ${shown.length} of ${members.length}, most recently updated)`);
-  for (const bead of shown) console.log(`    ${bead.title ?? "untitled"} [${bead.id ?? "UNKNOWN"}; ${bead.status ?? "open"}; ${gateTag(bead)}]`);
-  if (members.length > shown.length) console.log(`    ${members.length - shown.length} decision(s) elided; full count is ${members.length}.`);
-}
-NODE
-  then
-    cat "$action_render"
-  else
-    printf '  ACTION GROUPS: UNAVAILABLE (renderer failed)\n'
-  fi
-fi
+  declare -A last_raised_epoch=()
+  declare -A last_answered_epoch=()
+  while IFS=$'\t' read -r target category event_epoch; do
+    case "$category" in
+      decision.raised) last_raised_epoch["$target"]="$event_epoch" ;;
+      decision.answered) last_answered_epoch["$target"]="$event_epoch" ;;
+    esac
+  done < <(jq -r -s "$jq_epoch [.[] | select((.category == \"decision.raised\" or .category == \"decision.answered\") and (.target | type == \"string\") and (.ts | type == \"string\")) | . + {event_epoch: (.ts | epoch)} | select(.event_epoch != null)] | sort_by(.target, .category, .event_epoch) | group_by([.target, .category]) | .[] | last | [.target, .category, .event_epoch] | @tsv" "$events_file")
 
-if [ "$by_subject" -eq 1 ]; then
-  printf 'BY SUBJECT\n'
-  set +e
-  bd -C "$main_root" list --all --json >"$all_beads"
-  all_beads_status=$?
-  set -e
-  if [ "$all_beads_status" -ne 0 ]; then
-    printf '  SUBJECT VIEW: UNAVAILABLE (bd exit %s)\n' "$all_beads_status"
-  elif ! jq -e 'type == "array"' "$all_beads" >/dev/null 2>&1; then
-    printf '  SUBJECT VIEW: UNAVAILABLE (bd returned invalid JSON)\n'
-  elif [ "$live_gate_status" -ne 0 ]; then
-    printf '  SUBJECT VIEW: UNAVAILABLE (the live gate queue is unavailable)\n'
-  else
-    if node - "$live_gate_beads" "$all_beads" >"$subject_render" <<'NODE'
-const fs = require("node:fs");
-const [livePath, allPath] = process.argv.slice(2);
-const live = JSON.parse(fs.readFileSync(livePath, "utf8"));
-const all = JSON.parse(fs.readFileSync(allPath, "utf8"));
-const byId = new Map(all.map((bead) => [bead.id, bead]));
-const rootOf = (bead) => {
-  const seen = new Set(); let current = bead;
-  while (current?.parent && byId.has(current.parent) && !seen.has(current.parent)) { seen.add(current.parent); current = byId.get(current.parent); }
-  return current ?? bead;
-};
-const groups = new Map();
-for (const bead of live) {
-  const root = rootOf(bead);
-  if (!groups.has(root.id)) groups.set(root.id, { root, members: [] });
-  groups.get(root.id).members.push(bead);
-}
-const tagFor = (bead) => {
-  const labels = bead.labels ?? [];
-  const action = ["act-decide", "act-regent", "act-host"].find((label) => labels.includes(label)) ?? "action not yet classified";
-  const gate = labels.filter((label) => /^gate-[123]$/.test(label)).sort().join(", ") || "gate unknown";
-  return `${action}; ${gate}`;
-};
-for (const { root, members } of [...groups.values()].sort((left, right) => String(left.root.title ?? "").localeCompare(String(right.root.title ?? "")))) {
-  const descendants = all.filter((bead) => rootOf(bead).id === root.id && bead.id !== root.id);
-  const hasChildren = descendants.length > 0;
-  // The filtered gate query is intentionally lean. Dependencies must come from
-  // the all-status record, so blockers outside that query still render by title.
-  const resolvedMembers = members.map((member) => byId.get(member.id) ?? member);
-  const blockerIds = resolvedMembers.flatMap((member) => (member.dependencies ?? []).filter((dependency) => dependency.type === "blocks").map((dependency) => dependency.depends_on_id));
-  const blockers = blockerIds.map((id) => byId.get(id)).filter(Boolean);
-  const blockerDataUnavailable = blockerIds.some((id) => !byId.has(id));
-  const blockerText = blockerDataUnavailable ? "; blocker data unavailable" : blockers.length ? `; blocked by: ${[...new Set(blockers.map((blocker) => blocker.title ?? "untitled"))].join("; ")}` : "";
-  if (!hasChildren) {
-    for (const member of members.sort((left, right) => String(left.title ?? "").localeCompare(String(right.title ?? "")))) {
-      console.log(`  ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}; ${tagFor(member)}]${blockerText}`);
-    }
-    continue;
-  }
-  const closed = descendants.filter((bead) => bead.status === "closed").length;
-  console.log(`  ${root.title ?? "untitled"} [${root.id ?? "UNKNOWN"}] — ${closed}/${descendants.length} done${blockerText}`);
-  for (const member of members.sort((left, right) => String(left.title ?? "").localeCompare(String(right.title ?? "")))) {
-    if (member.id === root.id) continue;
-    console.log(`    ${member.title ?? "untitled"} [${member.id ?? "UNKNOWN"}; ${member.status ?? "open"}; ${tagFor(member)}]`);
-  }
-}
-if (groups.size === 0) console.log("  no decisions waiting");
-NODE
-    then
-      cat "$subject_render"
+  raised_beads=()
+  standing_beads=()
+  inherited_suspects=()
+  for bead in "${human_beads[@]}"; do
+    id="$(jq -r '.id' <<<"$bead")"
+    created_epoch="$(epoch "$(jq -r '.created_at // empty' <<<"$bead")")" || created_epoch=0
+    raised_epoch="${last_raised_epoch[$id]:-}"
+    answered_epoch="${last_answered_epoch[$id]:-}"
+    if [ -n "$raised_epoch" ] && [ "$raised_epoch" -gt "$since_epoch" ] && [ "$raised_epoch" -le "$now_epoch" ]; then
+      # A stale label must not make a decision outstanding after its answer.
+      if [ -z "$answered_epoch" ] || [ "$answered_epoch" -le "$raised_epoch" ]; then
+        raised_beads+=("$bead")
+      fi
+    elif [ -z "$raised_epoch" ]; then
+      if [ "$created_epoch" -gt "$since_epoch" ] && [ "$created_epoch" -le "$now_epoch" ]; then
+        raised_beads+=("$bead")
+      else
+        standing_beads+=("$bead")
+      fi
     else
-      printf '  SUBJECT VIEW: UNAVAILABLE (renderer failed)\n'
+      standing_beads+=("$bead")
     fi
+
+    parent=""
+    if [ "$beads_status" -eq 0 ]; then
+      parent="$(jq -r --arg child "$(jq -r '.id' <<<"$bead")" '[.[] | select(.id == $child) | .dependencies[]? | select(.type == "parent-child") | .depends_on_id] | first // empty' "$beads_file")"
+    fi
+    if [ -n "$parent" ] && bd -C "$main_root" show "$parent" --json | jq -e '(if type == "array" then .[0] else . end | .labels // []) | index("human") != null' >/dev/null; then
+      inherited_suspects+=("$(jq -r '.id' <<<"$bead")")
+    fi
+  done
+
+  if [ "${#raised_beads[@]}" -gt 0 ]; then
+    printf '%s\n' '  RAISED THIS RUN'
+    for bead in "${raised_beads[@]}"; do
+      id="$(jq -r '.id' <<<"$bead")"
+      title="$(jq -r '.title' <<<"$bead")"
+      status="$(jq -r '.status // "open"' <<<"$bead")"
+      if [ -z "${last_raised_epoch[$id]:-}" ]; then
+        printf '    %s [%s] %s (no raise event; by creation date)\n' "$id" "$status" "$title"
+      else
+        printf '    %s [%s] %s\n' "$id" "$status" "$title"
+      fi
+    done
+  fi
+
+  if [ "${#standing_beads[@]}" -gt 0 ]; then
+    # Timestamps with offsets must be compared as epochs. Missing or invalid
+    # timestamps sort last rather than falsely becoming the oldest standing row.
+    mapfile -t oldest_standing < <(
+      for bead in "${standing_beads[@]}"; do
+        created_epoch="$(epoch "$(jq -r '.created_at // empty' <<<"$bead")")" || created_epoch=9223372036854775807
+        printf '%s\t%s\n' "$created_epoch" "$(base64 -w 0 <<<"$bead")"
+      done | sort -s -n -k1,1 | head -n 3 | cut -f2-
+    )
+    oldest_summary=""
+    for encoded in "${oldest_standing[@]}"; do
+      bead="$(base64 --decode <<<"$encoded")"
+      id="$(jq -r '.id' <<<"$bead")"
+      created_epoch="$(epoch "$(jq -r '.created_at // empty' <<<"$bead")")" || created_epoch="$now_epoch"
+      age_days=$(( (now_epoch - created_epoch) / 86400 ))
+      if [ -n "$oldest_summary" ]; then
+        oldest_summary+=", "
+      fi
+      oldest_summary+="$id (${age_days}d)"
+    done
+    printf '  Also standing: %s blocked on you; oldest: %s.\n' "${#standing_beads[@]}" "$oldest_summary"
+  fi
+
+  if [ "${#inherited_suspects[@]}" -gt 0 ]; then
+    printf '  %s may be inherited labels: %s\n' "${#inherited_suspects[@]}" "$(printf '%s, ' "${inherited_suspects[@]}" | sed 's/, $//')"
   fi
 fi
 
-printf 'SHIPPED\n'
-if [ "$(jq -s '[.[] | select(.category == "merge" or .category == "bead.closed" or .category == "bead.filed")] | length' "$window_events")" -eq 0 ]; then
-  printf '  no merge/close/file events in the selected window\n'
-else
-  print_window_events 'select(.category == "merge" or .category == "bead.closed" or .category == "bead.filed")'
+if [ "${#closed_still_labelled[@]}" -gt 0 ]; then
+  printf '  Label hygiene: %s CLOSED bead(s) still carry the human label: %s\n' \
+    "${#closed_still_labelled[@]}" "$(printf '%s, ' "${closed_still_labelled[@]}" | sed 's/, $//')"
 fi
 
-# Audit coverage compares artifacts, including a small identity-matched margin
-# at each edge. Committer and event timestamps can differ by seconds; a matching
-# pair that straddles an edge is excluded from this window's count rather than
-# reported once as a missing event and again as an unmatched event.
-printf 'AUDIT COVERAGE\n'
-audit_ref='refs/heads/main'
-if ! git -C "$main_root" show-ref --verify --quiet "$audit_ref"; then audit_ref='HEAD'; fi
-audit_since="$(date -d "$since - $boundary_tolerance_seconds seconds" -Is)"
-audit_until="$(date -d "$now + $boundary_tolerance_seconds seconds" -Is)"
-if git -C "$main_root" rev-parse --verify --quiet "$audit_ref" >/dev/null; then
-  git -C "$main_root" log "$audit_ref" --merges --since="$audit_since" --until="$audit_until" --format='%H%x09%ct%x09%s' |
-    node -e '
-      let input = "";
-      process.stdin.setEncoding("utf8");
-      process.stdin.on("data", (chunk) => { input += chunk; });
-      process.stdin.on("end", () => {
-        for (const line of input.split("\n")) {
-          if (!line) continue;
-          const [commit, epoch, subject = ""] = line.split("\t", 3);
-          process.stdout.write(JSON.stringify({ commit, epoch: Number(epoch), subject }) + "\n");
-        }
-      });
-    ' >"$audit_merges"
-else
-  : >"$audit_merges"
+if [ -n "$fallback_note" ]; then
+  printf 'WINDOW\n  %s (%s)\n' "$since" "$fallback_note"
 fi
-closed_status=0
+
+if [ "$(event_count '.category == "merge" or .category == "deploy" or .category == "bead.closed"')" -gt 0 ]; then
+  printf 'SHIPPED\n'
+  event_lines 'select(.category == "merge" or .category == "deploy" or .category == "bead.closed")' | sed 's/^/  /'
+fi
+
+in_flight_status=0
 set +e
-bd -C "$main_root" list --status=closed --json >"$closed_beads"
-closed_status=$?
+bd -C "$main_root" list --status=in_progress --limit 0 --json >"$in_flight_file"
+in_flight_status=$?
 set -e
-if [ "$closed_status" -eq 0 ] && ! jq -e 'type == "array"' "$closed_beads" >/dev/null 2>&1; then closed_status=1; fi
-
-node - "$timestamped_events" "$audit_merges" "$closed_beads" "$since_epoch" "$now_epoch" "$boundary_tolerance_seconds" "$closed_status" <<'NODE' >"$audit_coverage"
-const [eventsPath, mergesPath, closedPath, since, now, tolerance, closedStatus] = process.argv.slice(2);
-const readJsonLines = (path) => require("node:fs").readFileSync(path, "utf8").split("\n").filter(Boolean).map(JSON.parse);
-const events = readJsonLines(eventsPath);
-const merges = readJsonLines(mergesPath);
-const lower = Number(since);
-const upper = Number(now);
-const margin = Number(tolerance);
-const inside = (epoch) => epoch > lower && epoch <= upper;
-const near = (epoch) => epoch > lower - margin && epoch <= upper + margin;
-const mergeTarget = (subject) => /^Merge (fortkit-[A-Za-z0-9.-]+):/.exec(subject)?.[1] ?? null;
-const eventMatchesMerge = (event, merge) =>
-  event.target === merge.commit || event.payload?.mergeCommit === merge.commit ||
-  (event.target === mergeTarget(merge.subject) && !event.payload?.mergeCommit);
-const crossBoundaryPairs = (subjects, records, matches) => {
-  const used = new Set();
-  let subjectInside = subjects.filter((subject) => inside(subject.epoch)).length;
-  let recordInside = records.filter((record) => inside(record._epoch)).length;
-  let pairs = 0;
-  for (const subject of subjects) {
-    for (let index = 0; index < records.length; index += 1) {
-      const record = records[index];
-      if (used.has(index) || !near(record._epoch) || inside(subject.epoch) === inside(record._epoch)) continue;
-      if (Math.abs(subject.epoch - record._epoch) > margin || !matches(record, subject)) continue;
-      used.add(index);
-      if (inside(record._epoch)) recordInside -= 1;
-      if (inside(subject.epoch)) subjectInside -= 1;
-      pairs += 1;
-      break;
-    }
-  }
-  return { subjects: subjectInside, records: recordInside, pairs };
-};
-const mergeCoverage = crossBoundaryPairs(
-  merges.filter((merge) => near(merge.epoch)),
-  events.filter((event) => event.category === "merge" && near(event._epoch)),
-  eventMatchesMerge,
-);
-let closedCoverage = null;
-if (Number(closedStatus) === 0) {
-  const closed = JSON.parse(require("node:fs").readFileSync(closedPath, "utf8"))
-    .map((bead) => ({ id: bead.id, epoch: Math.floor(Date.parse(bead.closed_at) / 1000) }))
-    .filter((bead) => bead.id && Number.isFinite(bead.epoch) && near(bead.epoch));
-  closedCoverage = crossBoundaryPairs(
-    closed,
-    events.filter((event) => event.category === "bead.closed" && near(event._epoch)),
-    (event, bead) => event.target === bead.id,
-  );
-}
-process.stdout.write(JSON.stringify({ mergeCoverage, closedCoverage }));
-NODE
-
-merge_commits="$(jq '.mergeCoverage.subjects' "$audit_coverage")"
-merge_events="$(jq '.mergeCoverage.records' "$audit_coverage")"
-merge_pairs="$(jq '.mergeCoverage.pairs' "$audit_coverage")"
-printf '  boundary tolerance: %ss; %s merge event%s matched by identity across a window edge\n' "$boundary_tolerance_seconds" "$merge_pairs" "$( [ "$merge_pairs" -eq 1 ] || printf s)"
-printf '  merge events: %s of %s commits\n' "$merge_events" "$merge_commits"
-if [ "$merge_events" -lt "$merge_commits" ]; then
-  printf '  WARNING: %s merge commits in window, %s merge events — the stream is missing %s.\n' "$merge_commits" "$merge_events" "$((merge_commits - merge_events))"
-elif [ "$merge_events" -gt "$merge_commits" ]; then
-  printf '  WARNING: %s merge events in window, %s merge commits — the stream has %s unmatched event(s).\n' "$merge_events" "$merge_commits" "$((merge_events - merge_commits))"
+in_flight=()
+in_flight_rows=()
+if [ "$in_flight_status" -eq 0 ]; then
+  mapfile -t in_flight < <(jq -c '.[]' "$in_flight_file")
+  mapfile -t in_flight_rows < <(jq -r '.[] | [.id, .title] | @tsv' "$in_flight_file")
+  load_last_verdict_details
+fi
+if [ "$in_flight_status" -ne 0 ]; then
+  printf 'IN FLIGHT: UNAVAILABLE (bd exit %s)\n' "$in_flight_status"
+elif [ "${#in_flight[@]}" -gt 0 ]; then
+  printf 'IN FLIGHT\n'
+  for row in "${in_flight_rows[@]}"; do
+    id="${row%%$'\t'*}"
+    title="${row#*$'\t'}"
+    verdict_detail="${last_verdict_details[$id]:-}"
+    if [ -n "$verdict_detail" ]; then
+      printf '  %s: %s\n    %s\n' "$id" "$title" "$verdict_detail"
+    else
+      printf '  %s: %s\n' "$id" "$title"
+    fi
+  done
 fi
 
-if [ "$closed_status" -eq 0 ]; then
-  closed_window="$(jq '.closedCoverage.subjects' "$audit_coverage")"
-  closed_events="$(jq '.closedCoverage.records' "$audit_coverage")"
-  closed_pairs="$(jq '.closedCoverage.pairs' "$audit_coverage")"
-  printf '  boundary tolerance: %ss; %s bead.closed event%s matched by identity across a window edge\n' "$boundary_tolerance_seconds" "$closed_pairs" "$( [ "$closed_pairs" -eq 1 ] || printf s)"
-  printf '  bead.closed events: %s of %s closed beads\n' "$closed_events" "$closed_window"
-  if [ "$closed_events" -lt "$closed_window" ]; then
-    printf '  WARNING: %s closed beads in window, %s bead.closed events — the stream is missing %s.\n' "$closed_window" "$closed_events" "$((closed_window - closed_events))"
-  elif [ "$closed_events" -gt "$closed_window" ]; then
-    printf '  WARNING: %s bead.closed events in window, %s closed beads — the stream has %s unmatched event(s).\n' "$closed_events" "$closed_window" "$((closed_events - closed_window))"
+# LANDED BUT OPEN (ForgeOs-eng3.8.1, approved by Justin 2026-09-01).
+#
+# The label-hygiene line above catches a CLOSED bead that kept its label. This
+# catches the larger and quieter case: a bead whose work is already merged and
+# which nobody closed. Three instances on 2026-09-01 alone -- ForgeOs-b0vj.5,
+# ForgeOs-sk3c.21 and (on 08-31) ForgeOs-eng3.4. sk3c.21 is why this exists:
+# merged 2026-08-28 with gate 1 signed, it sat in the decision queue for four
+# days as an outstanding gate-1 auth review that had already happened, and
+# JUSTIN caught it from memory when no queue could. A digest that reports
+# something the reader can disprove from his own experience costs the trust he
+# needs to act on the rest of it.
+#
+# REPORTS, NEVER CLOSES. A branch contained in main is strong evidence the work
+# landed and is NOT proof the bead is done: on the same evening, three readers
+# agreed ForgeOs-b0vj.10.1 was moot because the method it was filed against had
+# been deleted, and that bead's own text said one of its two findings was
+# regression cover for four other call sites. Surface candidates; let a person
+# close them with a reason.
+landed_open=()
+if git -C "$main_root" rev-parse --verify --quiet main >/dev/null; then
+  # One ref enumeration rather than a git call per bead: most open beads have no
+  # branch at all, and the intersection is what we are actually after.
+  declare -A bead_branch_exists=()
+  while IFS= read -r ref; do
+    [ -n "$ref" ] && bead_branch_exists["${ref#bead/}"]=1
+  done < <(git -C "$main_root" for-each-ref --format='%(refname:short)' 'refs/heads/bead/*' 2>/dev/null)
+
+  if [ "${#bead_branch_exists[@]}" -gt 0 ]; then
+    set +e
+    bd -C "$main_root" list --status=open --limit 0 --json >"$landed_file" 2>/dev/null
+    open_status=$?
+    set -e
+    candidates=()
+    if [ "$open_status" -eq 0 ]; then
+      mapfile -t candidates < <(jq -r '.[] | [.id, .title] | @tsv' "$landed_file" 2>/dev/null)
+    fi
+    # in_flight was already fetched above; reuse it rather than asking bd twice.
+    candidates+=("${in_flight_rows[@]:-}")
+
+    for row in "${candidates[@]:-}"; do
+      [ -n "$row" ] || continue
+      id="${row%%$'\t'*}"
+      title="${row#*$'\t'}"
+      suffix="${id##*-}"
+      [ -n "${bead_branch_exists[$suffix]:-}" ] || continue
+      # --is-ancestor exits 1 for "no", which set -e would treat as fatal.
+      if git -C "$main_root" merge-base --is-ancestor "bead/$suffix" main 2>/dev/null; then
+        landed_open+=("$id: $title")
+      fi
+    done
   fi
-else
-  printf '  bead.closed events: UNAVAILABLE (bd exit %s)\n' "$closed_status"
+fi
+if [ "${#landed_open[@]}" -gt 0 ]; then
+  printf 'LANDED BUT OPEN (%s) — branch already contained in main; verify and close with a reason\n' "${#landed_open[@]}"
+  printf '  %s\n' "${landed_open[@]}"
 fi
 
-printf 'VERIFIER\n'
-latest_verifier="$(jq -sr '[.[] | select(.category == "verify.pass" or .category == "verify.run" or .category == "verify.fail")] | if length == 0 then "" else max_by(._epoch) | [.ts, .category, (.target // ""), (.detail // "")] | @tsv end' "$window_events")"
-if [ -z "$latest_verifier" ]; then printf '  no verifier event in the selected window\n'
-else IFS=$'\t' read -r ts category target detail <<<"$latest_verifier"; printf '  %s %s%s %s\n' "$ts" "$category" "${target:+ [$target]}" "$detail"; fi
+if [ "$(event_count '.category == "review.verdict"')" -gt 0 ]; then
+  printf 'GATES\n'
+  event_lines 'select(.category == "review.verdict")' | sed 's/^/  /'
+fi
 
-printf 'IN FLIGHT\n'
-declare -A session_count session_detail session_timestamp
-unmatchable=0
-while IFS= read -r line; do
-  IFS=$'\t' read -r category seat target ts detail <<<"$line"
-  [ "$seat" = mayor ] && continue
-  if [ -z "$seat" ] || [ -z "$target" ]; then unmatchable=$((unmatchable + 1)); continue; fi
-  key="$seat|$target"
-  if [ "$category" = session.start ]; then
-    session_count["$key"]=$(( ${session_count[$key]:-0} + 1 )); session_detail["$key"]="$detail"; session_timestamp["$key"]="$ts"
-  elif [ "${session_count[$key]:-0}" -gt 0 ]; then session_count["$key"]=$(( ${session_count[$key]} - 1 )); fi
-done < <(jq -rs 'sort_by(._epoch)[] | select(.category == "session.start" or .category == "session.end") | [.category, (.seat // ""), (.target // ""), .ts, (.detail // "")] | @tsv' "$timestamped_events")
+if [ "$(event_count '.category == "incident" or .category == "incident.corrected" or .category == "verify.fail" or .category == "verify.blocked"')" -gt 0 ]; then
+  printf 'TROUBLE\n'
+  event_lines 'select(.category == "incident" or .category == "incident.corrected" or .category == "verify.fail" or .category == "verify.blocked")' | sed 's/^/  /'
+fi
 
-closed_status=0
-set +e
-bd -C "$main_root" list --status=closed --json >"$closed_beads"
-closed_status=$?
-set -e
-if [ "$closed_status" -eq 0 ] && ! jq -e 'type == "array"' "$closed_beads" >/dev/null 2>&1; then closed_status=1; fi
-active_sessions=0
-closed_sessions=0
-for key in "${!session_count[@]}"; do
-  count="${session_count[$key]}"; [ "$count" -gt 0 ] || continue
-  target="${key#*|}"
-  if [ "$closed_status" -eq 0 ] && jq -e --arg id "$target" 'any(.[]; .id == $id)' "$closed_beads" >/dev/null; then
-    closed_sessions=$((closed_sessions + count)); continue
+if git -C "$main_root" rev-parse --verify --quiet origin/main >/dev/null; then
+  mapfile -t unpushed < <(git -C "$main_root" log origin/main..main --oneline)
+  if [ "${#unpushed[@]}" -gt 0 ]; then
+    printf 'UNPUSHED (%s)\n' "${#unpushed[@]}"
+    printf '  %s\n' "${unpushed[@]}"
   fi
-  active_sessions=$((active_sessions + count)); printf '  SESSION %s (%s unmatched start%s, started %s): %s\n' "$key" "$count" "$( [ "$count" -eq 1 ] || printf s)" "${session_timestamp[$key]}" "${session_detail[$key]}"
-done
-[ "$active_sessions" -ne 0 ] || printf '  no non-Mayor sessions in flight\n'
-[ "$closed_sessions" -eq 0 ] || printf '  %s unmatched session start(s) omitted because the target bead is closed.\n' "$closed_sessions"
-[ "$closed_status" -eq 0 ] || printf '  UNDETERMINED: could not query closed beads (bd exit %s); unmatched sessions may target closed work.\n' "$closed_status"
-[ "$unmatchable" -eq 0 ] || printf '  UNDETERMINED: %s session event(s) lack seat or target\n' "$unmatchable"
+fi
 
-live_locks=0
-while IFS= read -r worktree; do
-  lock="$worktree/.forge.lock"; [ -e "$lock" ] || continue
-  # The Forge holds an exclusive lock. A non-blocking shared lock detects it
-  # without opening another worktree's lock file for write.
-  set +e
-  flock -E 75 -n -s "$lock" -c true 2>/dev/null
-  lock_status=$?
-  set -e
-  if [ "$lock_status" -eq 75 ]; then
-    live_locks=$((live_locks + 1)); holder="$(cat "$worktree/.forge.lock.info" 2>/dev/null || printf 'holder metadata unavailable')"
-    printf '  FORGE LOCK %s: %s\n' "$worktree" "$holder"
-  elif [ "$lock_status" -ne 0 ]; then
-    printf '  FORGE LOCK %s: UNDETERMINED (cannot inspect lock, flock exit %s)\n' "$worktree" "$lock_status"
+# PERMISSION PROMPTS (ForgeOs-758): the prompt-telemetry hook appends one row per
+# surviving permission prompt to fort/telemetry/prompts.jsonl. Reviewed once by
+# hand on 2026-09-17 (137 rows since 08-04, 21 since 09-01, no allowlist change
+# worth a gate-6 amendment: the survivors are compound shells and bd-comment
+# heredocs the classifier cannot read). This line keeps the count in front of a
+# reader every digest so a silent hook (zero rows while prompts are being
+# answered by hand) and a prompt storm are both visible. Rows in the window only.
+prompts_file="$main_root/fort/telemetry/prompts.jsonl"
+if [ -r "$prompts_file" ]; then
+  prompt_count="$(jq -c --argjson since_epoch "$since_epoch" --argjson now_epoch "$now_epoch" "$jq_epoch select(.ts | type == \"string\") | . + {event_epoch: (.ts | epoch)} | select(.event_epoch != null and .event_epoch > \$since_epoch and .event_epoch <= \$now_epoch)" "$prompts_file" 2>/dev/null | wc -l | tr -d ' ')"
+  if [ "${prompt_count:-0}" -gt 0 ]; then
+    printf 'PERMISSION PROMPTS (%s) — fort/telemetry/prompts.jsonl rows in this window; cluster them before proposing an allowlist change (gate 6)\n' "$prompt_count"
   fi
-done < <(git -C "$main_root" worktree list --porcelain | sed -n 's/^worktree //p')
-[ "$live_locks" -ne 0 ] || printf '  no live Forge locks\n'
+fi
 
 if [ -z "$since_override" ]; then
-  # This timestamp is the window boundary the anchor names, not a backfill of
-  # when emission happened. Anchoring at $now prevents an unreported gap while
-  # the digest itself is rendering.
-  "$emitter" digest.emitted "Digest emitted for event window since $since" -a harness -t digest.sh -T "$now"
+  "$emitter" digest.emitted "Digest emitted for event window since $since" -a harness -t digest.sh
 fi

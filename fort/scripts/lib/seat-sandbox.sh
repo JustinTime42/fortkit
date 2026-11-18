@@ -49,9 +49,34 @@
 # shellcheck disable=SC2034  # mask is consumed by the sourcing script
 build_mask() {
   local seat="$1" root="$2"; shift 2
+  # SANDBOX POSTURE (Overseer experiment, 2026-10-26, Regent docket
+  # fort/annals/regent-docket-2026-10-26-secrets-only.txt). One switch, read
+  # from fort/scripts/sandbox-posture (inside the kernel-read-only fort/scripts,
+  # so no seat can flip its own posture) and overridable by FORT_SANDBOX in the
+  # launching environment. Values:
+  #   full          today's mask, byte for byte (the default).
+  #   secrets-only  the seat gets the host: the Docker socket, a writable
+  #                 $HOME and checkouts, the shared /tmp,
+  #                 the network. STILL MASKED: the user manager's sockets
+  #                 (systemd --user is a host escape, unneeded), every secret spelling
+  #                 (SECRET_GLOBS), ~/.netrc ~/.npmrc ~/.git-credentials, the
+  #                 credential dirs (MASK_DIRS: ~/.ssh ~/.aws ~/.azure
+  #                 ~/.config/gh ~/.docker ~/.config/git), and every caller
+  #                 --mask-file (the Keep signing token, the deploy scripts).
+  # Anything else is refused loudly: an unknown posture must not launch.
+  local posture="${FORT_SANDBOX:-}"
+  if [ -z "$posture" ] && [ -r "$root/fort/scripts/sandbox-posture" ]; then
+    posture="$(head -1 "$root/fort/scripts/sandbox-posture" | tr -d '[:space:]')"
+  fi
+  posture="${posture:-full}"
+  case "$posture" in
+    full|secrets-only) ;;
+    *) echo "build_mask: unknown sandbox posture '$posture' (want full or secrets-only)" >&2; return 2 ;;
+  esac
+  echo "seat-sandbox: posture=$posture seat=$seat" >&2
   local CODEX_DIR_RW=0
   local mask_ssh_auth_sock=0
-  local extra_ro=() env_roots=("$root") rw_trees=("$root") mask_files_extra=()
+  local extra_ro=() env_roots=("$root") rw_trees=("$root") mask_files_extra=() rw_tmp=()
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --env-root)
@@ -74,6 +99,15 @@ build_mask() {
         mask_files_extra+=("$2")
         shift 2
         ;;
+      --rw-tmp)
+        # ForgeOs-u65j.5. A path under /tmp that must survive the per-seat
+        # tmpfs. /tmp is private per seat so build servers cannot be shared
+        # across mount namespaces; anything a LAUNCHER puts in /tmp and the
+        # SEAT must still see -- the Warden's scratch cwd -- is declared here.
+        [ "$#" -ge 2 ] || { echo "build_mask: --rw-tmp requires a path" >&2; return 2; }
+        rw_tmp+=("$2")
+        shift 2
+        ;;
       --mask-ssh-auth-sock)
         mask_ssh_auth_sock=1
         shift
@@ -90,24 +124,38 @@ build_mask() {
     "$HOME/.netrc" "$HOME/.npmrc" "$HOME/.git-credentials"
     /var/run/docker.sock /run/docker.sock "/run/user/$uid/docker.sock"
     "/run/user/$uid/podman/podman.sock"
-    # THE USER MANAGER'S THREE DOORS (fortkit-y7no; first applied in Proofdelve
-    # as ForgeOs-tq8s, fb273760, 2026-09-18). This lib binds `--bind / /` and
-    # inverts only $HOME, so /run/user/$uid was never masked and mask_env
-    # forwards XDG_RUNTIME_DIR: from inside every seat mask, `systemd-run
-    # --user` started an UNMASKED host process that saw the host's mount table,
-    # read the inode-masked secret at its full byte count and could write
-    # fort/scripts (measured 2026-09-10, both arms). Every kernel guarantee in
-    # this file is void for a seat that runs that one command. Three sockets,
-    # not one: with `bus` alone masked, systemd-run is refused but `systemctl
+    # THE USER MANAGER'S THREE DOORS (fortkit-y7no, ported here as
+    # ForgeOs-tq8s, 2026-09-18). The lib binds `--bind / /` and inverts only
+    # $HOME, so /run/user/$uid was never masked and mask_env forwards
+    # XDG_RUNTIME_DIR: from inside every seat mask, `systemd-run --user`
+    # started an UNMASKED host process that saw the host's mount table, read
+    # the inode-masked secret at its full byte count and could write
+    # fort/scripts (measured 2026-09-10, both arms). Every kernel guarantee
+    # below is void for a seat that runs that one command. Three sockets, not
+    # one: with `bus` alone masked, systemd-run is refused but `systemctl
     # --user` still reaches the manager through systemd/private (measured
-    # 2026-09-18), and io.systemd.Manager is the varlink door beside it. With
-    # all three masked, systemd-run, systemctl and busctl fail "Connection
-    # refused" by the kernel and both runtimes still launch.
-    # scripts/mask-harness.sh section E asserts it for every posture.
+    # 2026-09-18: "degraded" came back), and io.systemd.Manager is the varlink
+    # door beside it. All three masked: systemd-run, systemctl and busctl fail
+    # "Connection refused" by the kernel, and both runtimes still launch
+    # (claude -p and codex exec each answered a one-word prompt, rc 0). The
+    # tool-layer denies of ForgeOs-4778 (Bash(systemd-run*), the ~/.codex
+    # rules file) are now belt over this boundary; they bind the command word
+    # only, and /usr/bin/systemd-run or a compound shell line passed them.
     "/run/user/$uid/bus"
     "/run/user/$uid/systemd/private"
     "/run/user/$uid/systemd/io.systemd.Manager"
   )
+  if [ "$posture" = secrets-only ]; then
+    # The Docker sockets are granted on purpose (the experiment). The user
+    # manager's three doors STAY masked: no workflow needs systemd --user, and
+    # from inside a mask it starts an UNMASKED host process (measured
+    # 2026-09-10), which would void every secret mask below. Docker carries the
+    # same power (a bind mount reaches any path); that residual is accepted
+    # for the experiment and held by prose (the launchers' posture paragraph).
+    MASK_FILES=("$HOME/.netrc" "$HOME/.npmrc" "$HOME/.git-credentials"
+                "/run/user/$uid/bus" "/run/user/$uid/systemd/private"
+                "/run/user/$uid/systemd/io.systemd.Manager")
+  fi
   # Secret files, by the BOTH-LISTS rule: anything added to a policy deny list
   # belongs here too.
   #
@@ -136,11 +184,31 @@ build_mask() {
     '.*env*.sw?'   # vim swap for a dotfile: ..env.staging.local.swp, .envrc.swp
     '*env*~'       # editor backup copies
   )
-  local f x g
+  # DEPTH (ForgeOs-k47, 2026-09-18). This used to be two shell globs, "$x"/$g
+  # and "$x"/*/$g, so the guarantee was depth <= 2 from each root and a
+  # web/src/.env.local was readable in every seat (Warden finding 5 on 01l;
+  # probe-boundaries.sh's tier-3 decoys sit three deep for that reason). It is
+  # now a bounded find: every regular file (symlinks to one included, as -f
+  # followed them) at depth <= 4 below each of env_roots and extra_ro whose
+  # NAME matches one of the spellings above, pruning only .git and
+  # node_modules. Four from the fort root reaches src/<proj>/<dir>/.env* and
+  # web/src/<dir>/.env*; from a $root-worktrees root it reaches three deep
+  # inside each worktree. Measured cost on this host: 14 ms over the root plus
+  # seventeen worktrees. Anything deeper than four is the stated residual and
+  # is what fortkit-ks3t's gitignore control and "never open .env* in an editor
+  # inside a fort checkout" are for. DEDUPED across roots (Warden finding 7 on
+  # 01l): warden.sh passes $root as extra_ro as well as the env root, and the
+  # old loop bound every secret under it to /dev/null twice.
+  local f x g seen_key
+  local -A secret_seen=()
+  local -a name_args=()
+  for g in "${SECRET_GLOBS[@]}"; do
+    [ "${#name_args[@]}" -gt 0 ] && name_args+=(-o)
+    name_args+=(-name "$g")
+  done
   for x in "${env_roots[@]}" "${extra_ro[@]}"; do
-    for g in "${SECRET_GLOBS[@]}"; do
-      # shellcheck disable=SC2231  # $g MUST expand as a glob; that is the point
-      for f in "$x"/$g "$x"/*/$g; do
+    [ -d "$x" ] || continue
+    while IFS= read -r -d '' f; do
         # [ -f ], NOT [ -e ] (fortkit-faka finding 5, Warden Ilva Trueglass).
         # Two of the six spellings above — *env*~ and #*env*# — do NOT begin
         # with a dot, so they match ordinary names. A DIRECTORY called
@@ -157,14 +225,16 @@ build_mask() {
         # which is the right trade, because the abort took down every seat in
         # the civilization — but it is then simply UNMASKED, and no line of
         # output says so. A directory called `environments~` or `.env.d` holding
-        # secret files is therefore readable inside every mask. Not closed here:
-        # the honest fix is to descend into such a directory and sweep its files,
-        # which changes what a launch costs and belongs in its own sitting with
-        # its own measurement. Recorded so the next reader finds the limit stated
-        # rather than inferring the case was handled.
-        [ -f "$f" ] && MASK_FILES+=("$f")
-      done
-    done
+        # secret files was therefore readable inside every mask. CLOSED TO DEPTH
+        # FOUR by the find above (ForgeOs-k47): it descends into such a
+        # directory and sweeps the files whose own names match, at the launch
+        # cost measured there. A directory of secrets whose FILE names match no
+        # spelling (`.env.d/staging`) is still the residual, stated here.
+        [ -f "$f" ] || continue
+        seen_key="$f"; [ -n "${secret_seen[$seen_key]:-}" ] && continue
+        secret_seen[$seen_key]=1
+        MASK_FILES+=("$f")
+    done < <(find "$x" -maxdepth 4 \( -name .git -o -name node_modules \) -prune -o -xtype f \( "${name_args[@]}" \) -print0 2>/dev/null)
   done
   if [ "$mask_ssh_auth_sock" = "1" ]; then
     MASK_FILES+=("${SSH_AUTH_SOCK:-/nonexistent}")
@@ -175,21 +245,36 @@ build_mask() {
   # own --ro-bind after build_mask returns would get that ordering by luck.
   MASK_FILES+=("${mask_files_extra[@]}")
 
-  local MASK_DIRS=("$HOME/.ssh" "$HOME/.aws" "$HOME/.config/gh" "$HOME/.docker" "$HOME/.config/git")
-  # Cycle 7 (Overseer edict 2026-08-08, fortkit-i4y): charter and seat files
-  # moved OUT of the kernel mask to a prose gate — charter prose binds a
-  # session only through its own reading of it, and amendments now ride a bead
-  # with the Overseer's approval and a charter.amended event, with drift made
-  # visible by events-in-git and routine push. The ENFORCEMENT layer tightens
-  # instead: write access follows execution context. fort/scripts executes on
-  # the HOST (launchers, emit.sh in its launcher role, probes, cron watchers),
-  # so a seat that can edit it is editing code that runs unmasked at the next
-  # launch; verify.sh alone is re-granted writable below. .git/config and
-  # .git/hooks are host-executed the same way — hooks fire unmasked on the
-  # Overseer's next commit, and core.hooksPath repoints them (fortkit-cqc,
-  # same class as the .beads hooks below — the Forge is covered by Landlock
-  # keeping the main .git outside its writable scope; this lib had no guard
-  # at all until cycle 7).
+  local MASK_DIRS=("$HOME/.ssh" "$HOME/.aws" "$HOME/.azure" "$HOME/.config/gh" "$HOME/.docker" "$HOME/.config/git")
+  # ~/.azure joined this list under Regent edict 2026-10-15 (ForgeOs-mbv54 item
+  # C, closes ForgeOs-89uq): it holds msal_token_cache.json, the live access and
+  # refresh tokens for the subscription that owns staging, and was READABLE from
+  # the Mayor, Forge and Warden while ~/.aws beside it was masked (measured with
+  # test -r from all three postures that day). No seat needs it: a staging
+  # deploy runs on the host through the airlock, and deploy-azure-staging.sh
+  # refuses under FORT_MASKED anyway. Masked the way ~/.aws is, an empty tmpfs:
+  # the directory still resolves and nothing in it does.
+  # Cycle 7 (Overseer edict 2026-08-08, ForgeOs-8c9 / fortkit-i4y): charter and
+  # seat files moved OUT of the kernel mask to a prose gate — charter prose
+  # binds a session only through its own reading of it, and amendments now ride
+  # a bead with the Overseer's approval and a charter.amended event, with drift
+  # made visible by events-in-git and routine push. The ENFORCEMENT layer
+  # tightens instead: write access follows execution context. fort/scripts
+  # executes on the HOST (launchers, emit.sh in its launcher role, the probe
+  # suites, watch-push-drift.sh in cron), so a seat that can edit it is editing
+  # code that runs unmasked at the next launch. Since cycle 13 (fortkit-52vf.9,
+  # Shape B; the verify.sh re-grant this sentence once described was retired
+  # there, ForgeOs-zi46): fort/scripts is a WHOLE-DIRECTORY read-only bind with
+  # no exception, fort/scripts/verify.sh is a read-only shim, and the verifier
+  # this fort evolves is scripts/verify-impl.sh -- writable to the Mayor,
+  # read-only to the Forge by the codex carve-out below, read-only to the
+  # Warden because she binds her whole checkout. .git/config and .git/hooks
+  # are host-executed the same way —
+  # hooks fire unmasked on the Overseer's next commit, and core.hooksPath
+  # repoints them (fortkit-cqc, same class as the .beads hooks below). r2
+  # correction (Warden 8c9 finding 3): forge.sh does NOT carry these binds —
+  # its probe 20 passes because Landlock keeps the main .git outside the
+  # Forge's writable scope; this lib had no guard at all until cycle 7.
   #
   # fortkit-1q9: these are computed PER WRITABLE TREE, not once for $root.
   # RW_PATHS grants more than one checkout, and until this every cycle-7
@@ -200,9 +285,25 @@ build_mask() {
   # carved (same launch-time truth as the secret globs above), which is why the
   # answer is declared trees plus a narrowed $root-worktrees grant rather than
   # iterating whatever worktrees happen to exist.
-  local RO_PATHS=() t hostpath
+  local RO_PATHS=() RW_CARVE=() t hostpath
   for t in "${rw_trees[@]}"; do
     RO_PATHS+=("$t/.claude" "$t/fort/profiles" "$t/.git/config" "$t/.git/hooks")
+    # ForgeOs-72ot. The airlock operation TABLE, guarded on existence so a fort
+    # without an airlock is unaffected. It belongs with the files above and was
+    # measured WRITABLE from the Mayor mask on 2026-08-24, while its own header
+    # said "Adding an operation is a constitution-tier change (charter gate 6)".
+    # That claim was enforced by prose only, and the prose was load-bearing:
+    # airlock.sh reads BOTH the script path and requires_approval out of this
+    # file AT RUN TIME, then executes ( cd "$root" && bash "$root/$script" ) on
+    # the HOST, outside every sandbox, with credentials in scope. So the table
+    # deciding WHAT runs and WHETHER it needs the Overseer was writable by the
+    # seat that requests operations. Threat 1 as it stands: a seat that
+    # "helpfully" edits an operation changes what the host runs, silently.
+    # SCOPED DELIBERATELY TO THE TABLE. requests/ stays writable — a seat must
+    # be able to REQUEST — and that leaves the approval STATUS still seat-
+    # writable, which is the other half of 72ot and is filed separately. Do not
+    # read this line as closing 72ot whole; it closes the table, not the state.
+    [ -e "$t/fort/airlock/operations.json" ] && RO_PATHS+=("$t/fort/airlock/operations.json")
     # Host-executed civilization surface. Guarded on the covenant, not bare
     # existence (Warden suti finding 6): an ordinary fort growing a bin/ of its
     # own must not find it silently read-only — only the capital, which hosts
@@ -310,8 +411,21 @@ build_mask() {
       # not an instruction surface — Claude Code writes teams/session-<id>/
       # config.json at EVERY session start, so a read-only bind there would
       # break every masked launch. Do not "complete" this list with it.
-      RO_PATHS+=("$HOME/.claude/civilization.json" "$HOME/.claude/skills" \
-                 "$HOME/.claude/commands" "$HOME/.claude/plugins")
+      RO_PATHS+=("$HOME/.claude/civilization.json" "$HOME/.claude/plugins")
+      # SKILLS ARE WRITABLE (Overseer 2026-10-27, ForgeOs-yhn44): "Seats should be able
+      # to write user-level skills", with no carte blanche to .claude. ~/.claude/skills and
+      # ~/.claude/commands leave the read-only list; settings.json, settings.local.json,
+      # CLAUDE.md, helpers and plugins (which can carry hooks) stay read-only above.
+      # ACCEPTED RISK, stated so it is not rediscovered: a skill is standing instruction,
+      # and ~/.claude/skills is also read by the unmasked Regent at its next launch.
+      # The project .claude/skills and .claude/commands are carved writable per tree
+      # below, after the read-only pass, so the rest of the project .claude stays locked.
+      # A caller that must not write skills passes them as extra_ro, which binds after
+      # the carve: warden.sh does, for both the project and the user-level pair (the
+      # Overseer's choice at the 2026-10-27 sitting: the Warden stays read-only).
+      for t in "${rw_trees[@]}"; do
+        RW_CARVE+=("$t/.claude/skills" "$t/.claude/commands")
+      done
       # DISPATCH EXCEPTION, redesigned (longburn-1p9, measured 2026-08-05;
       # unified across the civilization 2026-08-13 by fortkit-52vf.10 with the
       # Overseer present): the Mayor launches the Forge, and a child codex
@@ -349,10 +463,15 @@ build_mask() {
       #     ANOTHER IS THE DRIFT CLASS THIS FILE EXISTS TO CLOSE, so what is
       #     named here is the mechanism that actually holds in ALL FOUR copies:
       #     every forge.sh runs `codex exec --sandbox workspace-write`, whose
-      #     writable roots are the explicit --add-dir grants, and ~/.codex is
-      #     not among them — so codex's own command executor refuses the
-      #     model's shell there ("rejected by the command executor", measured
-      #     in all three forts, 2026-08-13). Proofdelve's deny profile is an
+      #     writable roots are the workspace itself (the worktree that is cwd)
+      #     and the temp dir, PLUS the explicit --add-dir grants (ForgeOs-tfwm:
+      #     the grants are additions to that set, not the whole of it), and
+      #     ~/.codex is in none of them — so codex's own command executor
+      #     refuses the model's shell there ("rejected by the command
+      #     executor", MEASURED 2026-08-13 in the three forts that had a Forge
+      #     that day, Proofdelve, Farlantern and Manyhalls; the factory's copy
+      #     is the fourth and its mechanism is INFERRED from the identical
+      #     `codex exec` line, not measured). Proofdelve's deny profile is an
       #     ADDITIONAL layer in that one fort, not the load-bearing one; and
       #     Landlock DOES enforce write denials where a profile is in play
       #     (only read-deny is the upstream TODO, openai/codex#11316).
@@ -453,9 +572,16 @@ build_mask() {
   # the grants, never the prohibitions. Reads across $HOME stay open by decision
   # (Overseer, 2026-08-04): cross-fort reads are worth more than the
   # exfiltration-path reduction, since civ-digest and the Herald both need them.
-  local RW_PATHS=("${rw_trees[@]}" "$HOME/.claude" "${TMPDIR:-}" /tmp
+  local RW_PATHS=("${rw_trees[@]}" "$HOME/.claude"
                   "$HOME/.npm" "$HOME/.nuget" "$HOME/.cache" "$HOME/.bun"
-                  "$HOME/.local/share/pnpm" "$HOME/.local/state")
+                  "$HOME/.local/share/pnpm" "$HOME/.local/state"
+                  # XDG NuGet http-cache: forge.sh grants it to Codex (--add-dir),
+                  # and Codex's per-command bwrap mkdirs a .git marker under every
+                  # writable root — read-only here means Forge dispatched from a
+                  # masked Mayor session dies before its first command (ForgeOs bug
+                  # bead, measured 2026-08-04: even pwd failed). ~/.nuget was
+                  # already writable; this adds nothing new in kind.
+                  "$HOME/.local/share/NuGet")
   # fortkit-1q9. $root-worktrees is granted WHOLESALE only to a caller that
   # declared no tree of its own — the Mayor, who creates worktrees when she
   # dispatches the Forge from inside her own mask. A caller that names its
@@ -466,7 +592,19 @@ build_mask() {
   # close that. It closes when fortkit-52vf.6 (E5) makes forge.sh refuse to
   # launch in-mask, after which her grant can go too. Tracked on fortkit-1q9.
   [ "${#rw_trees[@]}" -eq 1 ] && RW_PATHS+=("$root-worktrees")
-  mask=(--bind / / --dev /dev --die-with-parent --ro-bind "$HOME" "$HOME")
+  if [ "$posture" = secrets-only ]; then
+    # Only the read-only $HOME goes. RO_PATHS and extra_ro STAY (Regent
+    # Calder's finding, ForgeOs-yhn44 sitting, 2026-10-26): they hold
+    # fort/scripts (incl. this posture switch), fort/airlock/operations.json,
+    # .git/config and .git/hooks, the Overseer's approval stores, the profiles
+    # and settings, and the host-executed scripts. Making them writable would
+    # let an ordinary file edit reach deploys and approvals, which the
+    # experiment never asked for. A first draft of this patch cleared both
+    # arrays; that was the Mayor's error, caught before it was applied.
+    mask=(--bind / / --dev /dev --die-with-parent)
+  else
+    mask=(--bind / / --dev /dev --die-with-parent --ro-bind "$HOME" "$HOME")
+  fi
   local w
   for w in "${RW_PATHS[@]}"; do [ -n "$w" ] && [ -e "$w" ] && mask+=(--bind "$w" "$w"); done
   # ~/.codex as a live rw DIRECTORY bind, for BOTH seat types (see the dispatch
@@ -481,10 +619,22 @@ build_mask() {
   # paths, extra_ro, hooks dirs — therefore go HERE, and the per-file dev-null
   # masks and per-dir tmpfs masks go LAST. One exception, surfacing a single
   # file back over a directory tmpfs and therefore placed after the masks: the
-  # ~/.ssh/known_hosts re-bind. (The ~/.codex/auth.json re-bind was the second
-  # until fortkit-52vf.10 retired it with the tmpfs it was compensating for.)
+  # ~/.ssh/known_hosts re-bind (ForgeOs-q6m). (The ~/.codex/auth.json re-bind
+  # was the second until fortkit-52vf.10 retired it with the tmpfs it was
+  # compensating for.)
   local p
   for p in "${RO_PATHS[@]}"; do [ -e "$p" ] && mask+=(--ro-bind "$p" "$p"); done
+  # RW_CARVE: writable subdirectories INSIDE a read-only path (the project
+  # .claude/skills and .claude/commands, ForgeOs-yhn44 2026-10-27). Bound after
+  # RO_PATHS so they win over the read-only project .claude, and bound only
+  # when the directory already exists, so a seat cannot create a new carve
+  # point. BOUND BEFORE extra_ro, DELIBERATELY (Regent sitting 2026-10-27, item
+  # D): the Warden passes her whole checkout as extra_ro, and a carve placed
+  # after that pass re-opened $root/.claude/skills and .claude/commands INSIDE
+  # her read-only tree (measured on a fixture with the drafted patch: WRITABLE
+  # for the Warden). A caller's own read-only binds must be able to re-mask a
+  # grant, the same rule the verify.sh re-grant learned in cycle 7.
+  for p in "${RW_CARVE[@]}"; do [ -d "$p" ] && [ ! -L "$p" ] && mask+=(--bind "$p" "$p"); done
   for p in "${extra_ro[@]}"; do [ -e "$p" ] && mask+=(--ro-bind "$p" "$p"); done
   # SSH inside a user namespace (cycle 6). bwrap's userns maps root-owned files
   # to 'nobody', and OpenSSH refuses any config owned by neither root nor the
@@ -539,17 +689,55 @@ build_mask() {
   local d
   for d in "${MASK_DIRS[@]}"; do [ -d "$d" ] && mask+=(--tmpfs "$d"); done
 
-  # SECOND EXCEPTION to the ordering invariant (ForgeOs-q6m, backported here
-  # 2026-08-12 by the E2 four-way diff — this copy had the bind but placed it
-  # BEFORE the MASK_DIRS loop, which buried it under the ~/.ssh tmpfs, so it had
-  # never had any effect): known_hosts is surfaced back over that tmpfs so
-  # host-key PINNING survives inside the mask — otherwise every launch does
-  # fresh TOFU against a known_hosts that dies with the tmpfs. Keys remain
-  # unreadable: only this one file is re-bound, read-only.
+  # THIRD EXCEPTION to the ordering invariant, the same shape as the
+  # known_hosts re-bind below. ForgeOs-u65j.5: /tmp is PRIVATE per seat.
+  # The Roslyn build server's socket is /tmp/<pipename>, the pipe name is keyed
+  # by user and toolset with no namespace component, and `--bind /tmp /tmp` made
+  # that one inode shared by every seat. Measured 2026-08-31: a compile in one
+  # namespace served by a server born in another produces CS2012 "Read-only file
+  # system" against a path the caller CAN write. A tmpfs makes the path resolve
+  # per seat, so cross-seat serving is impossible by construction rather than by
+  # every caller remembering a flag.
+  # PLACED HERE, WITH THE MASK PASS, per this file's ordering invariant: the
+  # tmpfs must precede the --rw-tmp re-binds below, and must not precede any
+  # bind whose DESTINATION is under /tmp (there are none today). It does NOT
+  # need to follow the fort_ssh bind: bwrap resolves --bind SOURCES in the
+  # ORIGINAL mount namespace, which is the same property the known_hosts
+  # re-bind below already relies on.
+  # AN EARLIER VERSION OF THIS COMMENT CLAIMED THE OPPOSITE — that a tmpfs
+  # ordered before the ssh bind "would shadow the source and break git fetch in
+  # every seat". That is false, and it is corrected here rather than deleted
+  # because a false rationale in the enforcement layer is what a future editor
+  # reorders on (ForgeOs-u65j.5.1, Warden finding 2; the same seat wrote the
+  # correct rule in ForgeOs-u65j.5's own description and the opposite of it in
+  # this code). The PLACEMENT was right the whole time; only the reason was not.
+  [ "$posture" = secrets-only ] || mask+=(--tmpfs /tmp)
+  local t
+  # ForgeOs-u65j.5.1, Warden finding 4: a path that does not exist yet produced
+  # no bind AND no message — the silent-gap class this file's own header
+  # discloses at length for --mask-file given a directory. Safe today because
+  # warden.sh rsyncs its scratch into place well before build_mask, but a future
+  # caller passing a not-yet-created path would get a failure surfacing later,
+  # somewhere else, as something else. It still does not abort: the caller may
+  # legitimately be probing. It just stops being invisible.
+  for t in "${rw_tmp[@]}"; do
+    if [ -n "$t" ] && [ -e "$t" ]; then
+      mask+=(--bind "$t" "$t")
+    elif [ -n "$t" ]; then
+      echo "seat-sandbox: --rw-tmp SKIPPED, path does not exist: $t" >&2
+      echo "              the seat will see the private tmpfs there, not your tree." >&2
+    fi
+  done
+
+
+  # SECOND EXCEPTION to the ordering invariant (ForgeOs-q6m): known_hosts is
+  # surfaced back over the ~/.ssh tmpfs so host-key PINNING survives inside the
+  # mask — otherwise every launch does fresh TOFU against a known_hosts that
+  # dies with the tmpfs. Placed before this line, the MASK_DIRS loop buried it
+  # (Warden finding 3 on the 01l review). Keys remain unreadable: only this one
+  # file is re-bound, read-only.
   [ -e "$HOME/.ssh/known_hosts" ] && mask+=(--ro-bind "$HOME/.ssh/known_hosts" "$HOME/.ssh/known_hosts")
-  # A false final test must not become build_mask's return value (ForgeOs-vzn
-  # class): under a `set -e` caller that aborts the launcher before the session
-  # starts. Backported here 2026-08-12 by the E2 four-way diff.
+  # A false final test must not become build_mask's return value (ForgeOs-vzn class).
   return 0
 }
 
@@ -571,12 +759,23 @@ build_mask() {
 mask_env() {
   local seat="$1" v
   local common=(HOME USER LOGNAME SHELL TERM COLORTERM TERM_PROGRAM LANG LC_ALL
-                PATH TMPDIR XDG_RUNTIME_DIR GIT_PAGER PAGER)
+                PATH XDG_RUNTIME_DIR GIT_PAGER PAGER)
   local codex_only=(CODEX_HOME OPENAI_API_KEY OPENAI_BASE_URL RUST_LOG NUGET_PACKAGES
                     DOTNET_CLI_TELEMETRY_OPTOUT DOTNET_NOLOGO npm_config_cache)
   local claude_only=(ANTHROPIC_API_KEY CLAUDE_CONFIG_DIR npm_config_cache SSH_AUTH_SOCK)
   mask+=(--clearenv)
   for v in "${common[@]}"; do [ -n "${!v:-}" ] && mask+=(--setenv "$v" "${!v}"); done
+  # TMPDIR IS SET, NOT FORWARDED (ForgeOs-u65j.5.1, Warden finding 3). It used to
+  # ride the common list, which was harmless only because TMPDIR is unset on this
+  # host. Forwarded, it breaks two ways under ForgeOs-u65j.5's private /tmp: a
+  # host TMPDIR under /tmp points the seat into an EMPTY tmpfs, and one under
+  # $HOME points it somewhere READ-ONLY, since $HOME is ro-bound and the rw
+  # re-grant is gone. Both are latent-until-someone-exports-TMPDIR. /tmp is the
+  # per-seat tmpfs build_mask installs, so it is writable, private, and the one
+  # answer that is correct whatever the host does.
+  # COUPLED TO build_mask: this is only true for a caller that ran it. Every
+  # launcher in this fort does, in the line above its mask_env call.
+  mask+=(--setenv TMPDIR /tmp)
   case "$seat" in
     codex)  for v in "${codex_only[@]}";  do [ -n "${!v:-}" ] && mask+=(--setenv "$v" "${!v}"); done ;;
     claude) for v in "${claude_only[@]}"; do [ -n "${!v:-}" ] && mask+=(--setenv "$v" "${!v}"); done ;;
@@ -591,4 +790,103 @@ require_bwrap() {
   echo "seat-sandbox: REFUSED — bwrap not found. The kernel mask layer is the boundary;" >&2
   echo "               permission rules alone bind spellings, not files (21f.8)." >&2
   return 78
+}
+
+# ---------------------------------------------------------------------------
+# THE ONE DEFINITION OF EACH SEAT'S ENVIRONMENT (ForgeOs-u65j.3.3).
+#
+# WHY THESE EXIST. Before this, every launcher wrote its own --setenv pairs and
+# probe-boundaries.sh RECONSTRUCTED them BY HAND to detect launcher drift. The
+# detector drifted: measured 2026-08-31 it set FORT_MASKED 1 where mayor.sh sets
+# `mayor` (stale since fortkit-wg8w.2 on 2026-08-17), omitted BEADS_ACTOR
+# entirely, and omitted both build-server settings added under ForgeOs-u65j.3.
+# Three pairs behind the thing it exists to police. Nothing FAILED, because its
+# assertions check that the mask builds and that $HOME/.codex is masked live,
+# never that the argv matches — so it did not lie, it merely stopped resembling
+# its subject, which is the ForgeOs-7gs / ADV-0005 shape.
+#
+# Updating the copy would have drifted again. One definition, several callers,
+# cannot.
+#
+# SCOPED, BECAUSE THAT SENTENCE READ WIDER THAN WHAT SHIPPED (Warden finding 1 on
+# ForgeOs-u65j.3.3). It is true of the seat's --setenv DELTAS, which is what these
+# functions own. It is NOT true of the build_mask INVOCATION, which
+# probe-boundaries.sh still reconstructs by hand and which is ALREADY one pair
+# behind: mayor.sh:80 passes scripts/airlock-feedback-scan.sh as an extra_ro
+# (ForgeOs-15k.2, 2026-08-24) and the probe never learned it, so the probe's mayor
+# mask is exactly three argv entries short of the live one — 162 against 165.
+# That is ForgeOs-u65j.3.3.1, and the fix is this same shape one level up.
+#
+# TWO FUNCTIONS, NOT ONE, AND THE SPLIT IS THE POINT (standing order 16).
+# Architecture ports between forts; identity never does. Expressing that boundary
+# as two function NAMES puts it where someone porting this file is looking,
+# instead of in a comment they are not reading. Alternative considered and not
+# taken: a separate lib/seat-identity.sh, so "never port this FILE" would replace
+# "never port this HUNK" — structurally safer, since standing order 16's own
+# worked example shows file-level convergence getting four of five hunks wrong.
+# Declined because it adds a gate-6 file for a hazard that is receding: Justin
+# decided 2026-08-31 that the civilization is moving from direct backporting to
+# advisories, which carry guidance rather than diffs. Recorded so the tradeoff is
+# visible if it ever bites.
+
+# seat_identity <seat> — appends THIS FORT'S identity for <seat> to mask[].
+#
+# ***** FORT-LOCAL. PROOFDELVE'S CITIZENS. NEVER PORT THIS FUNCTION. *****
+# Marrek Splitstone, Veyra Flintledger and Tova Marrowassay hold seats in THIS
+# settlement and no other. Standing order 16: a fort must never inherit another
+# settlement's citizen, and that rule applies at PORTING and not only at founding.
+# If you are converging this file against the factory template or another fort,
+# this hunk is the one to stop on. The factory's copy carries no identity at all
+# and that is correct for a file that renders for a fort which does not yet exist.
+seat_identity() {
+  case "$1" in
+    mayor)  mask+=(--setenv FORT_MASKED mayor  --setenv BEADS_ACTOR marrek) ;;
+    forge)  mask+=(--setenv FORT_MASKED forge  --setenv BEADS_ACTOR veyra)  ;;
+    warden) mask+=(--setenv FORT_MASKED warden --setenv BEADS_ACTOR tova)   ;;
+    *) echo "seat_identity: unknown seat '$1'" >&2; return 1 ;;
+  esac
+}
+
+# seat_build_env — fort-wide build settings, identical for every seat.
+#
+# ARCHITECTURE, not identity: safe to port, and worth porting to any fort whose
+# seats compile anything.
+#
+# THE FULL REASONING LIVES HERE, beside the definition, and the launchers point at
+# it (ForgeOs-u65j.3.3.4, Warden finding 5). It used to be the reverse: 23 identical
+# lines in each of the three launchers plus a condensed fourth copy here, four copies
+# of the rationale for one token, in a bead whose argument is that N copies drift.
+# They also dangled after the refactor, still saying "Two settings" and "THE SECOND
+# LINE" above a single function call.
+#
+# WHY BOTH, AND WHY THEY ARE DIFFERENT KINDS. MSBuild worker nodes and the Roslyn
+# shared compiler are separate processes with separate switches, and only the second
+# opens and writes the output DLL at MSBuild's default — the state being fixed; once
+# UseSharedCompilation is false the worker performs the write instead. Both are keyed
+# by USER AND TOOLSET with no namespace component, so a server left behind by one
+# seat is eligible to serve another seat's build and writes through the mount table
+# IT was born in, giving EROFS where that path is read-only there. Nine instances,
+# latest 2026-08-31. scripts/verify-impl.sh refuses both; these lines stop the SEATS
+# manufacturing them, which is the half that still bit.
+#
+# --setenv AND NOT export: mask_env appends --clearenv, so bwrap rebuilds the child
+# environment from --setenv alone and a host-side export reaches nothing
+# (fortkit-mm7m removed one that did exactly this).
+#
+# UseSharedCompilation IS NOT A DOCUMENTED ENVIRONMENT VARIABLE. It is an MSBuild
+# PROPERTY; it works because MSBuild surfaces environment variables as properties.
+# Confirmed live in-seat by the Warden, 2026-08-31: `dotnet build ...
+# -getProperty:UseSharedCompilation` returns "false" inside a masked session and
+# empty when unset. This is why no Directory.Build.props change was needed, which
+# would also have reached CI. Caveat: an explicit property in a .csproj BEATS an
+# environment variable and would silently disable this (ForgeOs-u65j.3.2).
+#
+# In one line: MSBuild worker nodes and the Roslyn
+# shared compiler outlive a build and are keyed by user and toolset with NO
+# namespace component, so a server left behind by one seat is eligible to serve
+# another seat's build and writes through the mount table IT was born in.
+# scripts/verify-impl.sh refuses both; these lines stop the seats manufacturing
+# them. Nine instances, latest 2026-08-31.
+seat_build_env() {
+  mask+=(--setenv MSBUILDDISABLENODEREUSE 1 --setenv UseSharedCompilation false)
 }

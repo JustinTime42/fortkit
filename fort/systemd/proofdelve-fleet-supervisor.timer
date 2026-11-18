@@ -1,0 +1,33 @@
+# Proofdelve fleet supervisor timer (ForgeOs-dx34.4). Installed by hand into
+# ~/.config/systemd/user/ under Regent edict 2026-09-10 with the Overseer's
+# gate-6 signature; enabling it is the act that makes runs begin without him.
+#
+# EVERY TWO MINUTES, ON THE WALL CLOCK. Short, because criterion 1 is that
+# work labelled fleet-safe at an arbitrary time is picked up without anyone
+# launching anything, and two minutes is the worst-case wait. Cheap, because a
+# firing during a live run is one flock probe and a write of a few bytes, and
+# a firing on an empty queue is one `bd ready` query. OnCalendar rather than
+# OnUnitActiveSec so the cadence does not depend on how long the last firing
+# took, and AccuracySec tightened from systemd's one-minute default, which
+# would otherwise smear a two-minute cadence into something between one and
+# three.
+#
+# NOT Persistent: a missed firing has nothing to catch up on — the next one
+# asks the same questions of the same state.
+#
+# TO STOP THE FLEET STARTING: `touch ~/.local/state/proofdelve-fleet/HALT`
+# (every firing is then a no-op) or `systemctl --user disable --now
+# proofdelve-fleet-supervisor.timer`. Both are reversible; neither touches a
+# run already live, which is stopped with `systemctl --user stop
+# proofdelve-fleet-run-<id>` (SIGTERM to fleet.sh alone: it drains and exits
+# 143) or the same halt file, which the run reads between passes.
+
+[Unit]
+Description=Proofdelve fleet supervisor — every two minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/2:00
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

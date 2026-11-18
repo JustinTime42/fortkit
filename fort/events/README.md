@@ -1,10 +1,8 @@
-# the civilization (canonical copy: fortkit/schema) event stream
+# Proofdelve event stream
 
 Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `fort/scripts/emit.sh`. This is the fort's replayable history: the data source for the future Dwarf-Fortress-style visualizer (bead ForgeOs-din) and for any digest/monitoring consumer. Daily files are **gitignored** (worktree-concurrent appends would make tracked files a merge hazard); this README and the schema are tracked.
 
 ## Schema
-
-**Time basis (decided 2026-08-04, fortkit-dpu):** `ts` carries an explicit offset and is an unambiguous instant; consumers group and order by **parsed UTC, never by filename**. The daily filename (`events-YYYY-MM-DD.jsonl`, writer-local date) is a **shard key, not a fact** — a file may contain instants from adjacent UTC days. Reader implementations must include the pinning test: an event stamped `23:24-08:00` belongs to the NEXT UTC day (`07:24Z`).
 
 ```json
 {"ts":"2026-08-03T17:30:00-08:00","actor":"veyra","seat":"forge","category":"bead.claimed","target":"ForgeOs-mij","detail":"Veyra claims the CI bead","payload":null}
@@ -18,7 +16,7 @@ Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `for
 - `seat.founded`, `seat.named`, `session.start`, `session.end`, `handoff.written`
 - `bead.filed`, `bead.claimed`, `bead.closed`, `bead.blocked`, `bead.unblocked`
 - `verify.run`, `verify.pass`, `verify.fail`, `review.verdict`, `merge`, `push`, `deploy`
-- `incident`, `incident.corrected`, `laurel`, `overseer.decision`, `watcher.alert`
+- `incident`, `incident.corrected`, `laurel`, `overseer.decision`, `watcher.alert`, `watcher.cleared` (the loop watchdog: an alerted condition no longer holds, `ForgeOs-dycc9`), `loop.heartbeat` (the Mayor, once per `/loop` iteration; what the loop watchdog reads as liveness)
 
 ## Emission points (who must emit, when)
 
