@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deterministic kernel-level verification of forge.sh's bwrap masks.
-# (ForgeOs-21f.3, Warden finding 3.) No model in the loop: a model asked to
+# (Proofdelve ForgeOs-21f.3, Warden finding 3.) No model in the loop: a model asked to
 # probe its own boundary may DECLINE on policy grounds and report "blocked",
 # which proves nothing — that happened on the 2026-08-04 08:38 smoke run for
 # probes 9, 10, and 14. This script runs the same mask array from a shell.
@@ -9,7 +9,7 @@
 # empty-and-successful, so 0 bytes = mask held, nonzero = mask FAILED.
 # Usage: fort/scripts/probe-forge-masks.sh [worktree-dir]
 set -uo pipefail
-root="/home/justin/dev/ForgeOs"
+root="/home/justin/dev/fortkit"
 # Default to the main checkout when no worktree is up (the original 21f.3
 # default was pruned 2026-08-04); pass the live worktree dir when one exists.
 wt="${1:-$root}"
@@ -17,8 +17,6 @@ fail=0
 
 REQUIRED_MASK_FILES=(
   "$root/.env.staging.local"
-  "$root/scripts/deploy-azure-staging.sh"
-  "$wt/scripts/deploy-azure-staging.sh"
 )
 OPTIONAL_MASK_FILES=(
   "$HOME/.netrc" "$HOME/.npmrc" "$HOME/.git-credentials"
@@ -28,7 +26,7 @@ OPTIONAL_MASK_FILES=(
 )
 REQUIRED_MASK_DIRS=("$HOME/.ssh")
 OPTIONAL_MASK_DIRS=("$HOME/.aws" "$HOME/.config/gh" "$HOME/.claude" "$HOME/.docker" "$HOME/.config/git")
-# Keep in lockstep with forge.sh (ForgeOs-21f.5): configs readable, unwritable.
+# Keep in lockstep with forge.sh (Proofdelve ForgeOs-21f.5): configs readable, unwritable.
 REQUIRED_RO_PATHS=("$HOME/.codex/config.toml" "$wt/.claude" "$root/.claude")
 
 missing_target() { # <kind> <path>
@@ -92,8 +90,6 @@ else
   echo "MODE: worktree $wt"
 fi
 check_unreadable "secrets-file"     "$(bwrap "${mask[@]}" -- bash -c "wc -c < '$root/.env.staging.local' 2>/dev/null || echo unreadable")"
-check_unreadable "deploy-main"      "$(bwrap "${mask[@]}" -- bash -c "wc -c < '$root/scripts/deploy-azure-staging.sh' 2>/dev/null || echo unreadable")"
-check_unreadable "deploy-worktree"  "$(bwrap "${mask[@]}" -- bash -c "wc -c < '$wt/scripts/deploy-azure-staging.sh' 2>/dev/null || echo unreadable")"
 check "ssh-dir-entries"         0 "$(bwrap "${mask[@]}" -- bash -c "ls '$HOME/.ssh' 2>/dev/null | wc -l")"
 # shellcheck disable=SC2016 # The inner shell intentionally expands these variables.
 check "ssh-agent-sock-unset"    unset "$(bwrap "${mask[@]}" -- bash -c 'echo ${SSH_AUTH_SOCK:-unset}')"
@@ -114,7 +110,7 @@ while IFS= read -r h; do
 done < <(find "$root/.beads" -type d -name hooks 2>/dev/null)
 echo "  ($n hooks directories checked)"
 
-echo "=== permission configs read-only (ForgeOs-21f.5) ==="
+echo "=== permission configs read-only (Proofdelve ForgeOs-21f.5) ==="
 # Opening the real masked path for append exercises its RO_PATHS bind, but does
 # not write a byte. The stat check is the safety net for that no-write contract.
 config_path="$HOME/.codex/config.toml"

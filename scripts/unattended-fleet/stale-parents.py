@@ -2,21 +2,21 @@
 """Which OPEN beads have had every one of their children closed?
 
 THE FAILURE, measured three times in this fort and twice in one week
-(ForgeOs-mfyq, 2026-09-21):
+(Proofdelve ForgeOs-mfyq, 2026-09-21):
 
-  ForgeOs-sk3c.8   held ForgeOs-sk3c.2.2, the fort's then-highest-priority bead,
+  Proofdelve ForgeOs-sk3c.8   held Proofdelve ForgeOs-sk3c.2.2, the fort's then-highest-priority bead,
                    shut. Its description named three missing things and all
                    three had landed under its own children. The Mayor read the
                    description rather than the routes and planned a dispatch on
                    it. This is the worked example behind capital advisory
                    ADV-0007.
-  ForgeOs-sk3c.13  closed 2026-09-19 as already-fixed, found only because its
+  Proofdelve ForgeOs-sk3c.13  closed 2026-09-19 as already-fixed, found only because its
                    cited lines pointed at unrelated code.
-  ForgeOs-sk3c.2   closed 2026-09-21. Both children closed 2026-08-31, every one
+  Proofdelve ForgeOs-sk3c.2   closed 2026-09-21. Both children closed 2026-08-31, every one
                    of its five PROVE items evidenced verbatim in the close
-                   reason of ForgeOs-sk3c.2.2 -- and because an open dependency
+                   reason of Proofdelve ForgeOs-sk3c.2.2 -- and because an open dependency
                    makes a bead invisible to `bd ready`, and the fleet dispatches
-                   from `bd ready`, it kept ForgeOs-sk3c.3 (P1, the signup UI)
+                   from `bd ready`, it kept Proofdelve ForgeOs-sk3c.3 (P1, the signup UI)
                    structurally undispatchable for three weeks. Nobody noticed,
                    because a bead that is merely INVISIBLE looks exactly like a
                    bead nobody has got to yet.
@@ -28,7 +28,7 @@ this report excludes those classes. An all-children-closed parent is otherwise a
 QUESTION for a person ("is anything of yours left?"), never a verdict.
 
 HIERARCHY IS READ FROM THE ID, not from bd edges, and that is deliberate. This
-fort's ids encode the tree (ForgeOs-aqc6.2.4.1 is a child of ForgeOs-aqc6.2.4),
+fort's ids encode the tree (Proofdelve ForgeOs-aqc6.2.4.1 is a child of Proofdelve ForgeOs-aqc6.2.4),
 the encoding is what `bd create --parent` produces, and reading it costs zero bd
 calls against a board of 1600. The check needs the WHOLE board rather than the
 open slice, because "every child closed" is unanswerable without the closed ones.

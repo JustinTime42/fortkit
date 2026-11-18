@@ -1,14 +1,14 @@
-# Proofdelve airlock runner safety net (ForgeOs-mbv54 item A). The path unit
+# Manyhalls airlock runner safety net (Proofdelve ForgeOs-mbv54 item A). The path unit
 # drops an approval appended while the runner is active (measured 2026-10-15);
 # this catches it within ten minutes. A firing with nothing approved prints one
 # line and exits 0.
 
 [Unit]
-Description=Proofdelve airlock runner safety net (every ten minutes)
+Description=Manyhalls airlock runner safety net (every ten minutes)
 
 [Timer]
 OnCalendar=*:0/10
-Unit=proofdelve-airlock-runner.service
+Unit=manyhalls-airlock-runner.service
 
 [Install]
 WantedBy=timers.target

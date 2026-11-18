@@ -1,8 +1,8 @@
 #!/bin/bash
-# ForgeOS city status — fast, read-only. Usage: fort/scripts/status.sh
-cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/ForgeOs)" || exit
+# Manyhalls fort status: fast, read-only. Usage: fort/scripts/status.sh
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/fortkit)" || exit
 
-echo "══════════════════ PROOFDELVE FORT STATUS ══════════════════"
+echo "══════════════════ MANYHALLS FORT STATUS ══════════════════"
 echo
 echo "── Work in progress ──"
 bd list --status in_progress 2>/dev/null | grep -v '^─\|^Total\|^Status' | head -8
@@ -57,13 +57,13 @@ else
 fi
 echo "  last: $(git log --oneline -1)"
 echo
-echo "── Fleet (ForgeOs-3q6g) ──"
-# THE THREE FACTS ARE SHOWN TOGETHER OR THE STREAK MISLEADS (Tova, dx34.4 round
+echo "── Fleet (Proofdelve ForgeOs-3q6g) ──"
+# THE THREE FACTS ARE SHOWN TOGETHER OR THE STREAK MISLEADS (the Warden, dx34.4 round
 # one, finding 6). The supervisor exits on the halt file BEFORE it reads or
 # writes its streak record, so during a halt the record is FROZEN: count=N with
 # the lock free is not a wedge, it is the last live run's tail, and
 # last_refusal is the tell. Hence halt file, lock probe and streak, one block.
-FLEET_STATE_DIR="${FLEET_STATE:-$HOME/.local/state/proofdelve-fleet}"
+FLEET_STATE_DIR="${FLEET_STATE:-$HOME/.local/state/manyhalls-fleet}"
 if [ -e "$FLEET_STATE_DIR/HALT" ]; then
   # halt() writes a timestamp line then the reason; a person's file is usually one line. Show whatever is there, joined.
   echo "  HALT: PRESENT since $(date -r "$FLEET_STATE_DIR/HALT" '+%b %d %H:%M') — $(tr '\n' ' ' < "$FLEET_STATE_DIR/HALT" | cut -c1-120)"
@@ -72,7 +72,7 @@ else
   echo "  HALT: absent"
 fi
 if [ -e "$FLEET_STATE_DIR/fleet.lock" ]; then
-  # READ-ONLY, SHARED, WITH A DISTINCT CONFLICT CODE (ForgeOs-ip9z finding 8;
+  # READ-ONLY, SHARED, WITH A DISTINCT CONFLICT CODE (Proofdelve ForgeOs-ip9z finding 8;
   # this is the line the bead QUOTES, and fleet-supervisor.sh carries the same
   # probe silently). The old spelling was `flock -n 9 2>/dev/null 9>>...`, and
   # `9>>` needs WRITE permission on the lock file: with a lock file or a state
@@ -105,9 +105,4 @@ fi
 echo
 echo "── Recent events ──"
 tail -5 fort/events/events-*.jsonl 2>/dev/null | grep '^{' | tail -5 | jq -r '"  \(.ts | split("T")[1] | split("-")[0]) [\(.actor)] \(.detail)"' 2>/dev/null || echo "  (no events yet)"
-echo
-echo "── Staging ──"
-timeout 5 curl -sf -o /dev/null -w "  /api/health: %{http_code} (%{time_total}s)\n" \
-  "$(grep -o 'https://[^"]*azurecontainerapps.io' docs/azure-staging-runbook.md 2>/dev/null | head -1)/api/health" 2>/dev/null \
-  || echo "  (health check skipped: no URL found or unreachable)"
 echo "═══════════════════════════════════════════════════════════"

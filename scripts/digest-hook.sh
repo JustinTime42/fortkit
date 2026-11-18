@@ -1,5 +1,5 @@
 #!/bin/bash
-# Stop-hook entry point for the run digest (ForgeOs-eng3.3).
+# Stop-hook entry point for the run digest (Proofdelve ForgeOs-eng3.3).
 # A hook must never prevent Codex from ending a turn.
 set -uo pipefail
 
@@ -16,7 +16,7 @@ fi
 # The hook payload arrives on stdin and carries transcript_path. Read it BEFORE
 # the digest runs, because the digest writes to stdout and stdin is consumed
 # once. Failure here must be silent: no transcript, no supplement, and the
-# deterministic half still runs (ForgeOs-eng3.11).
+# deterministic half still runs (Proofdelve ForgeOs-eng3.11).
 hook_input=""
 if [ ! -t 0 ]; then
   hook_input="$(timeout 2 cat 2>/dev/null || true)"

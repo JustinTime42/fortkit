@@ -1,5 +1,5 @@
 #!/bin/bash
-# verify-once-harness.sh -- ForgeOs-s1reg, criteria 1 (the decision half) and 4.
+# verify-once-harness.sh -- Proofdelve ForgeOs-s1reg, criteria 1 (the decision half) and 4.
 #
 # Proves, against the SHIPPED code extracted from fleet.sh and verify-impl.sh:
 #   * verify_tier_of() picks the tier from the bead's own diff, and every forced
@@ -62,7 +62,7 @@ nightly() { # $1 root, $2 hours ago or "", [$3 ran true|false]
 awk '/^verify_tier="\$\{VERIFY_TIER/{f=1} f{print} /^skipped_steps=\(\)/{exit}' "$vimpl" > "$work/t.sh"
 grep -q '^tier_skips()' "$work/t.sh" || { echo "HARNESS REFUSES: tier_skips() not extracted from $vimpl" >&2; exit 3; }
 
-# --- run_step(): a successful partial step is SKIP, never PASS (ForgeOs-gsams)
+# --- run_step(): a successful partial step is SKIP, never PASS (Proofdelve ForgeOs-gsams)
 #
 # Extract the shipped function, rather than carrying a convenient copy here: its
 # skip-file contract is meaningful precisely because the verifier's real runner
@@ -214,13 +214,13 @@ expect_tier() { # $1 expected, $2 case name, rest paths
 expect_tier docs    docs-only        docs/specs/a.md fort/handoffs/forge-2026-10-19-x.md
 expect_tier docs    handoff-only     fort/handoffs/forge-2026-10-19-y.md
 expect_tier web     web-only         web/src/components/Grid.tsx fort/handoffs/forge-2026-10-19-z.md
-expect_tier server  server-only      src/ForgeOS.Api/Endpoints/Deals.cs tests/ForgeOS.Tests/DealsTests.cs
+expect_tier server  server-only      src/Product.Api/Endpoints/Deals.cs tests/Product.Tests/DealsTests.cs
 expect_tier harness harness-only     scripts/digest-harness.sh tools/keep/lib/graph.mjs
-expect_tier full    web-and-server   web/src/a.tsx src/ForgeOS.Api/A.cs
-expect_tier full    migration        src/ForgeOS.Infrastructure/Migrations/20261019_X.cs
-expect_tier full    dbcontext        src/ForgeOS.Infrastructure/ForgeOsDbContext.cs
-expect_tier full    auth-server      src/ForgeOS.Api/Auth/WorkOsAuthKit.cs
-expect_tier full    visibility       src/ForgeOS.Application/DealApplicationService.cs
+expect_tier full    web-and-server   web/src/a.tsx src/Product.Api/A.cs
+expect_tier full    migration        src/Product.Infrastructure/Migrations/20261019_X.cs
+expect_tier full    dbcontext        src/Product.Infrastructure/ProductDbContext.cs
+expect_tier full    auth-server      src/Product.Api/Auth/WorkOsAuthKit.cs
+expect_tier full    visibility       src/Product.Application/DealApplicationService.cs
 expect_tier full    spa-session-gate web/src/App.tsx
 expect_tier full    nginx            web/nginx.conf.template
 expect_tier full    verifier-itself  scripts/verify-impl.sh
@@ -237,11 +237,11 @@ check "tier: FLEET_VERIFY_TIERS=off turns a docs diff into full" "$got" "full"
 # s1reg-5: a file RENAMED OUT of a forced-full path, content unchanged (R100),
 # must still force full; with rename detection the diff names only docs/.
 git -C "$repo" checkout -q -B c-mvbase main
-mkdir -p "$repo/src/ForgeOS.Infrastructure/Migrations"
-printf 'migration body\nline two\nline three\n' > "$repo/src/ForgeOS.Infrastructure/Migrations/20260101_X.cs"
+mkdir -p "$repo/src/Product.Infrastructure/Migrations"
+printf 'migration body\nline two\nline three\n' > "$repo/src/Product.Infrastructure/Migrations/20260101_X.cs"
 git -C "$repo" add -A; git -C "$repo" commit -qm mvbase; git -C "$repo" branch -f mvmain HEAD
 git -C "$repo" checkout -q -B c-mv mvmain; mkdir -p "$repo/docs"
-git -C "$repo" mv src/ForgeOS.Infrastructure/Migrations/20260101_X.cs docs/old-migration.cs; git -C "$repo" commit -qm mv
+git -C "$repo" mv src/Product.Infrastructure/Migrations/20260101_X.cs docs/old-migration.cs; git -C "$repo" commit -qm mv
 got="$(bash -c "set -uo pipefail; main_branch=mvmain; $(cat "$work/f.sh"); verify_tier_of '$repo'" 2>&1)"
 check "tier: s1reg-5 a file renamed OUT of Migrations/ into docs/ forces full" "$got" "full"
 sed 's/ diff --no-renames --name-only / diff --name-only /' "$work/f.sh" > "$work/f-renames.sh"
@@ -369,7 +369,7 @@ if ! cmp -s "$work/f.sh" "$work/f-notier.sh"; then
   nightly "$work/hv" ""; check "RED: without the backstop check the tier stays web with no nightly -- the case above discriminates" "$(hvtier "$work/f-notier.sh")" "web"
 else no "RED: no-backstop tier variant" "could not be generated (sed matched nothing)"; fi
 
-# --- ForgeOs-gfuc1 A2: after a refresh from main, a green host verify of the
+# --- Proofdelve ForgeOs-gfuc1 A2: after a refresh from main, a green host verify of the
 # SAME tier whose commit is an ancestor of HEAD is REUSED when everything between
 # the two commits is under docs/ or fort/handoffs/, and RE-RUN otherwise.
 # A real repo: bead/y verified green at web tier at commit C, then main merged in.
@@ -385,7 +385,7 @@ echo a > "$rr/web/a.ts"; echo d > "$rr/docs/x.md"; printf 'fort/events/\n' > "$r
 git -C "$rr" add -A; git -C "$rr" commit -qm base
 git -C "$rr" checkout -q -b bead/y; echo b > "$rr/web/a.ts"; git -C "$rr" commit -qam "bead work"
 rc_commit="$(git -C "$rr" rev-parse HEAD)"
-rwd="$work/rwd"; mkdir -p "$rwd"; echo ForgeOs-y > "$rwd/bead"
+rwd="$work/rwd"; mkdir -p "$rwd"; echo fortkit-y > "$rwd/bead"
 rrec() { # $1 tier, [$2 docker], [$3 commit]
   printf '{"result":"pass","tier":"%s","docker":%s,"commit":"%s","tree":"x","dirtyAtStart":false,"commitAtEnd":"x","dirtyAtEnd":false,"headMoved":false,"skippedSteps":[]}\n' \
     "$1" "${2:-true}" "${3:-$rc_commit}" > "$rwd/verified.json"

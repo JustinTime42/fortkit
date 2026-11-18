@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hermetic regression harness for ForgeOs-eng3.12 turn-taking checks.
+# Hermetic regression harness for Proofdelve ForgeOs-eng3.12 turn-taking checks.
 set -uo pipefail
 
 # The production default must not be inherited from a caller running this
@@ -15,7 +15,7 @@ citation_source="${citation_checker_source:-$(dirname "$lint_source")/bead-citat
 # Red-arm children re-run this harness with QUEUE_LINT_SRC pointing at a mutant
 # in a temp work dir, and verify-impl runs main's copy of this harness from a
 # temp dir too, so neither fallback above can find the checker there. Hand the
-# resolved path down instead (ForgeOs-e3kdp: main was red on exactly this).
+# resolved path down instead (Proofdelve ForgeOs-e3kdp: main was red on exactly this).
 export citation_checker_source="$citation_source"
 # Derived from the selected lint source because recursive red arms and the
 # verifier copy the pair into a temporary sibling directory; verify-impl has no
@@ -26,7 +26,7 @@ prose_source="${PROSE_BLOCKERS_SRC:-$here/unattended-fleet/prose-blockers.py}"
 # harness against sources named by env var and copied into a temp tree -- so a
 # source resolved from $here alone is ABSENT under the gate while being present
 # for anyone running the harness by hand. Measured 2026-09-21: 51/51 direct,
-# 46/51 under verify.sh, on the same commit (ForgeOs-mfyq).
+# 46/51 under verify.sh, on the same commit (Proofdelve ForgeOs-mfyq).
 parents_source="${STALE_PARENTS_SRC:-$here/unattended-fleet/stale-parents.py}"
 misrouted_source="${MISROUTED_SRC:-$here/unattended-fleet/misrouted.py}"
 # Derived from the selected lint source so verify-impl's extracted harness still
@@ -64,34 +64,34 @@ cp -f "$misrouted_source" "$repo/scripts/unattended-fleet/misrouted.py"
 cp -f "$unshaped_source" "$repo/scripts/unattended-fleet/unshaped.py"
 cp -f "$stale_criteria_source" "$repo/scripts/unattended-fleet/stale-criteria.py"
 chmod 755 "$repo/scripts/flag-human.sh" "$repo/scripts/queue-lint.sh" "$repo/scripts/bead-citation-check.sh" "$repo/scripts/unattended-fleet/prose-blockers.py" "$repo/scripts/unattended-fleet/misrouted.py" "$repo/scripts/unattended-fleet/unshaped.py" "$repo/scripts/unattended-fleet/stale-criteria.py"
-mkdir -p "$repo/src/ForgeOS.Api" "$repo/docs" "$repo/.claude" "$repo/web/src"
+mkdir -p "$repo/src/Product.Api" "$repo/docs" "$repo/.claude" "$repo/web/src"
 touch "$repo/fort/scripts/fleet.sh" "$repo/scripts/fleet-harness.sh" \
   "$repo/scripts/verify-impl.sh" \
   "$repo/docs/runbook.md" "$repo/fort/charter.md" "$repo/.claude/settings.json"
 touch "$repo/web/src/App.tsx"
-printf '%s\n' 'class KnownIdentifier {}' > "$repo/src/ForgeOS.Api/Program.cs"
+printf '%s\n' 'class KnownIdentifier {}' > "$repo/src/Product.Api/Program.cs"
 git -C "$repo" init -q -b main
 git -C "$repo" add scripts fort src docs .claude web
 git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit -q -m base
 stale_base="$(git -C "$repo" rev-parse HEAD)"
-printf '// touched declared file\n' >> "$repo/src/ForgeOS.Api/Program.cs"
-git -C "$repo" add src/ForgeOS.Api/Program.cs
+printf '// touched declared file\n' >> "$repo/src/Product.Api/Program.cs"
+git -C "$repo" add src/Product.Api/Program.cs
 git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit -q -m 'touch declared file'
 stale_file="$(git -C "$repo" rev-parse HEAD)"
-printf '// touched declared directory\n' > "$repo/src/ForgeOS.Api/WithinDirectory.cs"
-git -C "$repo" add src/ForgeOS.Api/WithinDirectory.cs
+printf '// touched declared directory\n' > "$repo/src/Product.Api/WithinDirectory.cs"
+git -C "$repo" add src/Product.Api/WithinDirectory.cs
 git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit -q -m 'touch declared directory'
 stale_directory="$(git -C "$repo" rev-parse HEAD)"
-git -C "$repo" checkout -q -b bead/ForgeOs-own "$stale_directory"
-printf '// touched by own bead merge\n' >> "$repo/src/ForgeOS.Api/Program.cs"
-git -C "$repo" add src/ForgeOS.Api/Program.cs
-git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit -q -m 'ForgeOs-own: work before landing'
+git -C "$repo" checkout -q -b bead/fortkit-own "$stale_directory"
+printf '// touched by own bead merge\n' >> "$repo/src/Product.Api/Program.cs"
+git -C "$repo" add src/Product.Api/Program.cs
+git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit -q -m 'fortkit-own: work before landing'
 git -C "$repo" checkout -q main
-git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid merge --no-ff -q bead/ForgeOs-own -m 'ForgeOs-own: merged by the fleet on MERGE-PARENT-OPEN'
+git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid merge --no-ff -q bead/fortkit-own -m 'fortkit-own: merged by the fleet on MERGE-PARENT-OPEN'
 own_merge="$(git -C "$repo" rev-parse HEAD)"
 git -C "$repo" checkout -q -b bead/off-main "$stale_directory"
-printf '// side branch only\n' > "$repo/src/ForgeOS.Api/SideBranch.cs"
-git -C "$repo" add src/ForgeOS.Api/SideBranch.cs
+printf '// side branch only\n' > "$repo/src/Product.Api/SideBranch.cs"
+git -C "$repo" add src/Product.Api/SideBranch.cs
 git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit -q -m 'off-main marker'
 off_main="$(git -C "$repo" rev-parse HEAD)"
 git -C "$repo" checkout -q main
@@ -107,26 +107,26 @@ chmod 755 "$repo/fort/scripts/emit.sh"
 cat > "$stub/bd" <<'EOF'
 #!/bin/bash
 args="$*"
-if [ "${HARNESS_BD_FAIL:-}" = show-gate ] && [[ "$args" == *"show ForgeOs-gate --json"* ]]; then
+if [ "${HARNESS_BD_FAIL:-}" = show-gate ] && [[ "$args" == *"show fortkit-gate --json"* ]]; then
   echo "cannot open database" >&2; exit 1
 fi
-if [ "${HARNESS_BD_FAIL:-}" = comments ] && [[ "$args" == *"comments ForgeOs-dialogue --json"* ]]; then
+if [ "${HARNESS_BD_FAIL:-}" = comments ] && [[ "$args" == *"comments fortkit-dialogue --json"* ]]; then
   echo "cannot open database" >&2; exit 1
 fi
-if [ "${HARNESS_BD_FAIL:-}" = comments-timeout ] && [[ "$args" == *"comments ForgeOs-dialogue --json"* ]]; then
+if [ "${HARNESS_BD_FAIL:-}" = comments-timeout ] && [[ "$args" == *"comments fortkit-dialogue --json"* ]]; then
   sleep 61
 fi
-if [ "${HARNESS_BD_FAIL:-}" = show-unknown ] && [[ "$args" == *"show ForgeOs-unknown --json"* ]]; then
-  echo 'Error fetching ForgeOs-unknown: no issue found matching "ForgeOs-unknown"' >&2
+if [ "${HARNESS_BD_FAIL:-}" = show-unknown ] && [[ "$args" == *"show fortkit-unknown --json"* ]]; then
+  echo 'Error fetching fortkit-unknown: no issue found matching "fortkit-unknown"' >&2
   printf '{"error":"no issues found matching the provided IDs","schema_version":1}\n'
   exit 1
 fi
-if [ "${HARNESS_BD_FAIL:-}" = show-unknown-plain ] && [[ "$args" == *"show ForgeOs-unknown --json"* ]]; then
-  echo 'Error fetching ForgeOs-unknown: no issue found matching "ForgeOs-unknown"' >&2
+if [ "${HARNESS_BD_FAIL:-}" = show-unknown-plain ] && [[ "$args" == *"show fortkit-unknown --json"* ]]; then
+  echo 'Error fetching fortkit-unknown: no issue found matching "fortkit-unknown"' >&2
   exit 1
 fi
-if [ "${HARNESS_BD_FAIL:-}" = show-near-miss ] && [[ "$args" == *"show ForgeOs-unknown --json"* ]]; then
-  echo 'Error fetching ForgeOs-other: no issue found matching "ForgeOs-other"' >&2
+if [ "${HARNESS_BD_FAIL:-}" = show-near-miss ] && [[ "$args" == *"show fortkit-unknown --json"* ]]; then
+  echo 'Error fetching fortkit-other: no issue found matching "fortkit-other"' >&2
   exit 1
 fi
 case "$args" in
@@ -141,7 +141,7 @@ if [ "${HARNESS_BD_FAIL:-}" = export ]; then
     printf '%s' "$HARNESS_EXPORT_JSON" > "${args##* -o }"
     ;;
   *" update "*) printf '%s\n' "$args" >> "$HARNESS_BD_LOG" ;;
-  # ForgeOs-29j3g: a comment's file content is kept beside the update log.
+  # Proofdelve ForgeOs-29j3g: a comment's file content is kept beside the update log.
   *" comment "*" --file "*) cat "${args##* --file }" >> "$HARNESS_BD_LOG.comments" ;;
   # Legacy fixtures predate the landing-class requirement. Classify their
   # fleet-safe rows by default so they continue exercising their own predicate;
@@ -155,10 +155,10 @@ if [ "${HARNESS_BD_FAIL:-}" = export ]; then
   *"list --status all --limit 0 --json"*)
     printf '%s\n' "$HARNESS_OPEN_JSON" | jq -c '[.[] | if env.HARNESS_RAW_LANDING_CLASSES == "1" or (((.labels // []) | index("fleet-safe")) | not) or ((.labels // []) | index("sign-to-land") or index("lands-on-review")) then . else .labels += ["lands-on-review"] end]'
     ;;
-  *"show ForgeOs-fleet --json"*) printf '%s\n' "$HARNESS_FLEET_SHOW" ;;
-  *"show ForgeOs-gate --json"*) printf '%s\n' "$HARNESS_GATE_SHOW" ;;
-  *"show ForgeOs-aa --json"*) printf '%s\n' "$HARNESS_A_SHOW" ;;
-  *"show ForgeOs-bb --json"*) printf '%s\n' "$HARNESS_B_SHOW" ;;
+  *"show fortkit-fleet --json"*) printf '%s\n' "$HARNESS_FLEET_SHOW" ;;
+  *"show fortkit-gate --json"*) printf '%s\n' "$HARNESS_GATE_SHOW" ;;
+  *"show fortkit-aa --json"*) printf '%s\n' "$HARNESS_A_SHOW" ;;
+  *"show fortkit-bb --json"*) printf '%s\n' "$HARNESS_B_SHOW" ;;
   *"comments "*" --json"*) printf '%s\n' "$HARNESS_COMMENTS_JSON" ;;
   *) echo "unexpected bd command: $args" >&2; exit 9 ;;
 esac
@@ -225,12 +225,12 @@ check_unshaped_cap() {  # $1 output file
   local output="$1" cap_fixture='[' cap_id n
   for n in $(seq 1 11); do
     cap_id="$(printf '%02d' "$n")"
-    cap_fixture+="{\"id\":\"ForgeOs-cap-$cap_id\",\"status\":\"open\",\"priority\":1,\"description\":\"Needs decomposition.\",\"labels\":[]},"
+    cap_fixture+="{\"id\":\"fortkit-cap-$cap_id\",\"status\":\"open\",\"priority\":1,\"description\":\"Needs decomposition.\",\"labels\":[]},"
   done
   cap_fixture="${cap_fixture%,}]"
   run_unshaped "$cap_fixture" "$output" \
     && has unshaped-cap-count '11 open unrouted bead(s) name no file; 1 suppressed by cap 10' "$output" \
-    && ! has unshaped-cap-eleven 'UNSHAPED ForgeOs-cap-11' "$output"
+    && ! has unshaped-cap-eleven 'UNSHAPED fortkit-cap-11' "$output"
 }
 
 # This source-array red arm has already bypassed source preflight. Its required
@@ -272,17 +272,17 @@ run_lint() {
   #   <token>    : bead + state "<token>|R0|fixture" (reap-pass shapes: in-hand, settled, ...)
   if [ -n "$worker_state" ]; then
     mkdir -p "$workers/dialogue"
-    printf 'ForgeOs-dialogue\n' > "$workers/dialogue/bead"
+    printf 'fortkit-dialogue\n' > "$workers/dialogue/bead"
     case "$worker_state" in
       in-flight) printf '2026-09-16T00:00:00-08:00\n' > "$workers/dialogue/started"; printf 'R0\n' > "$workers/dialogue/run"; printf '4242\n' > "$workers/dialogue/pid" ;;
       exited)    printf '2026-09-16T00:00:00-08:00\n' > "$workers/dialogue/started"; printf 'R0\n' > "$workers/dialogue/run"; printf '4242\n' > "$workers/dialogue/pid"; printf '0\n' > "$workers/dialogue/exit" ;;
       *)         printf '%s|R0|fixture\n' "$worker_state" > "$workers/dialogue/state" ;;
     esac
   fi
-  env -u QUEUE_LINT_BD_TIMEOUT "${timeout_env[@]}" HARNESS_BD_FAIL="$fail_mode" HARNESS_FLEET_JSON='[{"id":"ForgeOs-fleet","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]' \
-  HARNESS_FLEET_SHOW='{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' \
-  HARNESS_GATE_SHOW='{"id":"ForgeOs-gate","status":"open"}' \
-  HARNESS_OPEN_JSON="[{\"id\":\"ForgeOs-dialogue\",\"status\":\"open\",\"labels\":$labels}]" \
+  env -u QUEUE_LINT_BD_TIMEOUT "${timeout_env[@]}" HARNESS_BD_FAIL="$fail_mode" HARNESS_FLEET_JSON='[{"id":"fortkit-fleet","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]' \
+  HARNESS_FLEET_SHOW='{"id":"fortkit-fleet","status":"open","dependencies":[]}' \
+  HARNESS_GATE_SHOW='{"id":"fortkit-gate","status":"open"}' \
+  HARNESS_OPEN_JSON="[{\"id\":\"fortkit-dialogue\",\"status\":\"open\",\"labels\":$labels}]" \
   HARNESS_COMMENTS_JSON="[{\"author\":\"$author\"}]" HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" \
   QUEUE_LINT_SKIP_IDENTIFIER_SURFACE=1 FLEET_STATE="$work/fleet" HARNESS_REAL_PYTHON3="$real_python3" PATH="$stub:$PATH" "$repo/scripts/queue-lint.sh" >"$output" 2>&1
 }
@@ -305,42 +305,42 @@ run_stale_case() { # $1 fleet JSON, $2 comments JSON, $3 output, $4 bd failure m
     "$repo/scripts/queue-lint.sh" >"$3" 2>&1
 }
 
-# ForgeOs-481se.1: a stale criterion is a report, not a dispatch gate. The
+# Proofdelve ForgeOs-481se.1: a stale criterion is a report, not a dispatch gate. The
 # base anchor precedes one declared file commit, one directory child commit,
 # and one unrelated commit. A newer marker in a comment supersedes description;
 # updated_at is deliberately irrelevant after a label-only change.
 out="$work/stale-criteria.out"
-stale_file_board="[{\"id\":\"ForgeOs-stale-file\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"updated_at\":\"2099-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nTouches: src/ForgeOS.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
+stale_file_board="[{\"id\":\"fortkit-stale-file\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"updated_at\":\"2099-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nTouches: src/Product.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
 run_stale_case "$stale_file_board" '[]' "$out"; stale_file_rc=$?
 if [ "$stale_file_rc" -eq 0 ] && has stale-file-heading 'STALE CRITERIA' "$out" && has stale-file-sha "${stale_file:0:7} touch declared file" "$out" && ! has stale-file-unrelated 'touch undeclared path' "$out"; then
   printf '  PASS  stale criteria: declared file after anchor is reported, undeclared path is not\n'; pass=$((pass+1))
 else printf '  FAIL  stale criteria: declared file after anchor is reported, undeclared path is not\n'; fail=$((fail+1)); fi
-stale_dir_board="[{\"id\":\"ForgeOs-stale-directory\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_file\\nTouches: src/ForgeOS.Api/\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
+stale_dir_board="[{\"id\":\"fortkit-stale-directory\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_file\\nTouches: src/Product.Api/\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
 run_stale_case "$stale_dir_board" '[]' "$out"
 if has stale-dir-sha "${stale_directory:0:7} touch declared directory" "$out"; then
   printf '  PASS  stale criteria: directory Touches matches a child file\n'; pass=$((pass+1))
 else printf '  FAIL  stale criteria: directory Touches matches a child file\n'; fail=$((fail+1)); fi
-stale_comment_board="[{\"id\":\"ForgeOs-stale-comment\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nTouches: src/ForgeOS.Api/\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
+stale_comment_board="[{\"id\":\"fortkit-stale-comment\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nTouches: src/Product.Api/\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
 run_stale_case "$stale_comment_board" "[{\"text\":\"Checked against main $own_merge\"}]" "$out"
-if ! has stale-comment-clears 'ForgeOs-stale-comment --' "$out"; then
+if ! has stale-comment-clears 'fortkit-stale-comment --' "$out"; then
   printf '  PASS  stale criteria: newer comment marker clears earlier commits\n'; pass=$((pass+1))
 else printf '  FAIL  stale criteria: newer comment marker clears earlier commits\n'; fail=$((fail+1)); fi
-stale_label_board="[{\"id\":\"ForgeOs-stale-label\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"updated_at\":\"2099-01-01T00:00:00Z\",\"description\":\"Touches: src/ForgeOS.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\",\"label-only-update\"]}]"
+stale_label_board="[{\"id\":\"fortkit-stale-label\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"updated_at\":\"2099-01-01T00:00:00Z\",\"description\":\"Touches: src/Product.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\",\"label-only-update\"]}]"
 run_stale_case "$stale_label_board" '[]' "$out"; stale_label_rc=$?
 if [ "$stale_label_rc" -eq 0 ] && has stale-label-keeps "${stale_file:0:7} touch declared file" "$out"; then
   printf '  PASS  stale criteria: label-only updated_at does not clear commits and remains exit-zero\n'; pass=$((pass+1))
 else printf '  FAIL  stale criteria: label-only updated_at does not clear commits and remains exit-zero\n'; fail=$((fail+1)); fi
-stale_own_board="[{\"id\":\"ForgeOs-own\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_directory\\nTouches: src/ForgeOS.Api/\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
+stale_own_board="[{\"id\":\"fortkit-own\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_directory\\nTouches: src/Product.Api/\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
 run_stale_case "$stale_own_board" '[]' "$out"
-if ! has stale-own-merge 'ForgeOs-own --' "$out"; then
+if ! has stale-own-merge 'fortkit-own --' "$out"; then
   printf '  PASS  stale criteria: own bead merge is not reported\n'; pass=$((pass+1))
 else printf '  FAIL  stale criteria: own bead merge is not reported\n'; fail=$((fail+1)); fi
-stale_bad_board="[{\"id\":\"ForgeOs-typo\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nChecked against main deadbeef1\\nTouches: src/ForgeOS.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]},{\"id\":\"ForgeOs-ambiguous\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nChecked against main abcdef0\\nTouches: src/ForgeOS.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]},{\"id\":\"ForgeOs-foreign\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nChecked against main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\nTouches: src/ForgeOS.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]},{\"id\":\"ForgeOs-off-main\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nChecked against main $off_main\\nTouches: src/ForgeOS.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
+stale_bad_board="[{\"id\":\"fortkit-typo\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nChecked against main deadbeef1\\nTouches: src/Product.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]},{\"id\":\"fortkit-ambiguous\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nChecked against main abcdef0\\nTouches: src/Product.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]},{\"id\":\"fortkit-foreign\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nChecked against main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\nTouches: src/Product.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]},{\"id\":\"fortkit-off-main\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Checked against main $stale_base\\nChecked against main $off_main\\nTouches: src/Product.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
 run_stale_case "$stale_bad_board" '[]' "$out"; stale_bad_rc=$?
-if [ "$stale_bad_rc" -eq 0 ] && has stale-bad-typo 'ForgeOs-typo has invalid Checked against main deadbeef1' "$out" && has stale-bad-ambiguous 'ForgeOs-ambiguous has invalid Checked against main abcdef0' "$out" && has stale-bad-foreign 'ForgeOs-foreign has invalid Checked against main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' "$out" && has stale-bad-off-main "ForgeOs-off-main has invalid Checked against main $off_main" "$out"; then
+if [ "$stale_bad_rc" -eq 0 ] && has stale-bad-typo 'fortkit-typo has invalid Checked against main deadbeef1' "$out" && has stale-bad-ambiguous 'fortkit-ambiguous has invalid Checked against main abcdef0' "$out" && has stale-bad-foreign 'fortkit-foreign has invalid Checked against main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' "$out" && has stale-bad-off-main "fortkit-off-main has invalid Checked against main $off_main" "$out"; then
   printf '  PASS  stale criteria: invalid markers warn and remain exit-zero\n'; pass=$((pass+1))
 else printf '  FAIL  stale criteria: invalid markers warn and remain exit-zero\n'; fail=$((fail+1)); fi
-stale_export_board="[{\"id\":\"ForgeOs-stale-export\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Touches: src/ForgeOS.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
+stale_export_board="[{\"id\":\"fortkit-stale-export\",\"status\":\"open\",\"created_at\":\"2000-01-01T00:00:00Z\",\"description\":\"Touches: src/Product.Api/Program.cs\",\"labels\":[\"fleet-safe\",\"lands-on-review\"]}]"
 run_stale_case "$stale_export_board" '[]' "$out" export; stale_export_rc=$?
 if [ "$stale_export_rc" -eq 0 ] && has stale-export-warning 'STALE CRITERIA UNAVAILABLE -- cannot export comment anchors' "$out" && has stale-export-depth 'DEPTH --' "$out"; then
   printf '  PASS  stale criteria: export refusal warns and still reports DEPTH\n'; pass=$((pass+1))
@@ -376,8 +376,8 @@ run_prose_case() {
 
 run_lint_from_root() {
   local output="$1"
-  HARNESS_FLEET_JSON='[{"id":"ForgeOs-fleet","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]' \
-  HARNESS_FLEET_SHOW='{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' \
+  HARNESS_FLEET_JSON='[{"id":"fortkit-fleet","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]' \
+  HARNESS_FLEET_SHOW='{"id":"fortkit-fleet","status":"open","dependencies":[]}' \
   HARNESS_OPEN_JSON='[]' HARNESS_COMMENTS_JSON='[]' HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" \
   FLEET_STATE="$work/fleet" HARNESS_REAL_PYTHON3="$real_python3" PATH="$stub:$PATH" bash -c 'cd / && exec "$1"' _ "$repo/scripts/queue-lint.sh" >"$output" 2>&1
 }
@@ -448,29 +448,29 @@ else
 fi
 fi
 
-HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" PATH="$stub:$PATH" "$repo/scripts/flag-human.sh" ForgeOs-handback 'needs a ruling'
+HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" PATH="$stub:$PATH" "$repo/scripts/flag-human.sh" fortkit-handback 'needs a ruling'
 updates="$(wc -l < "$work/bd.log" | tr -d ' ')"
 if [ "$updates" = 1 ] && has handback-adds-human '--add-label human' "$work/bd.log" && has handback-removes-mayor-review '--remove-label mayor-review' "$work/bd.log" && has handback-emits-decision 'decision.raised needs a ruling' "$work/emits.log"; then printf '  PASS  hand-back flips both labels in one update and records decision\n'; pass=$((pass+1)); else printf '  FAIL  hand-back flips both labels in one update and records decision\n'; fail=$((fail+1)); fi
-# ForgeOs-29j3g: the same single update assigns him, and the ASK line is posted.
+# Proofdelve ForgeOs-29j3g: the same single update assigns him, and the ASK line is posted.
 if has handback-assigns '--assignee justin' "$work/bd.log" && has handback-ask 'ASK: decide -- needs a ruling' "$work/bd.log.comments"; then printf '  PASS  hand-back assigns the bead to justin in that update and posts its ASK line (29j3g)\n'; pass=$((pass+1)); else printf '  FAIL  hand-back assigns the bead to justin in that update and posts its ASK line (29j3g)\n'; fail=$((fail+1)); fi
 : > "$work/bd.log"; : > "$work/bd.log.comments"
-HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" PATH="$stub:$PATH" "$repo/scripts/flag-human.sh" ForgeOs-handback 'run the nginx -t on the host' 'run host test'
+HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" PATH="$stub:$PATH" "$repo/scripts/flag-human.sh" fortkit-handback 'run the nginx -t on the host' 'run host test'
 if has handback-verb 'ASK: run host test -- run the nginx -t on the host' "$work/bd.log.comments"; then printf '  PASS  hand-back carries the named ask verb (29j3g)\n'; pass=$((pass+1)); else printf '  FAIL  hand-back carries the named ask verb (29j3g)\n'; fail=$((fail+1)); fi
-if HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" PATH="$stub:$PATH" "$repo/scripts/flag-human.sh" ForgeOs-handback 'x' 'approve' 2>/dev/null; then printf '  FAIL  hand-back refuses an ask verb outside the five (29j3g)\n'; fail=$((fail+1)); else printf '  PASS  hand-back refuses an ask verb outside the five (29j3g)\n'; pass=$((pass+1)); fi
+if HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" PATH="$stub:$PATH" "$repo/scripts/flag-human.sh" fortkit-handback 'x' 'approve' 2>/dev/null; then printf '  FAIL  hand-back refuses an ask verb outside the five (29j3g)\n'; fail=$((fail+1)); else printf '  PASS  hand-back refuses an ask verb outside the five (29j3g)\n'; pass=$((pass+1)); fi
 
-# ForgeOs-29j3g item 8 and the board check.
+# Proofdelve ForgeOs-29j3g item 8 and the board check.
 out="$work/lint.out"
-multi_fleet='[{"id":"ForgeOs-multi","status":"open","description":"Touches: scripts/queue-lint.sh\nTouches: scripts/flag-human.sh","labels":["fleet-safe"]},{"id":"ForgeOs-mid","status":"open","description":"See Touches: scripts/queue-lint.sh for the file.","labels":["fleet-safe"]},{"id":"ForgeOs-one","status":"open","description":"Touches: scripts/queue-lint.sh, scripts/flag-human.sh","labels":["fleet-safe"]}]'
+multi_fleet='[{"id":"fortkit-multi","status":"open","description":"Touches: scripts/queue-lint.sh\nTouches: scripts/flag-human.sh","labels":["fleet-safe"]},{"id":"fortkit-mid","status":"open","description":"See Touches: scripts/queue-lint.sh for the file.","labels":["fleet-safe"]},{"id":"fortkit-one","status":"open","description":"Touches: scripts/queue-lint.sh, scripts/flag-human.sh","labels":["fleet-safe"]}]'
 run_queue_case "$multi_fleet" '[]' "$out" || true
-if has multi-heading 'TOUCHES ON MORE THAN ONE LINE' "$out" && has multi-bead '  ForgeOs-multi' "$out" && has mid-heading 'TOUCHES MID-LINE' "$out" && has mid-bead '  ForgeOs-mid' "$out" && ! has one-clean '  ForgeOs-one' "$out"; then printf '  PASS  two Touches: lines and a mid-line Touches: are flagged; one line naming two paths is not (29j3g item 8)\n'; pass=$((pass+1)); else printf '  FAIL  two Touches: lines and a mid-line Touches: are flagged; one line naming two paths is not (29j3g item 8)\n'; cat "$out"; fail=$((fail+1)); fi
-board_open='[{"id":"ForgeOs-yours","status":"open","assignee":"justin","labels":[]}]'
-# ForgeOs-1pcxp: an empty fleet-safe queue is exactly when the Overseer board
+if has multi-heading 'TOUCHES ON MORE THAN ONE LINE' "$out" && has multi-bead '  fortkit-multi' "$out" && has mid-heading 'TOUCHES MID-LINE' "$out" && has mid-bead '  fortkit-mid' "$out" && ! has one-clean '  fortkit-one' "$out"; then printf '  PASS  two Touches: lines and a mid-line Touches: are flagged; one line naming two paths is not (29j3g item 8)\n'; pass=$((pass+1)); else printf '  FAIL  two Touches: lines and a mid-line Touches: are flagged; one line naming two paths is not (29j3g item 8)\n'; cat "$out"; fail=$((fail+1)); fi
+board_open='[{"id":"fortkit-yours","status":"open","assignee":"justin","labels":[]}]'
+# Proofdelve ForgeOs-1pcxp: an empty fleet-safe queue is exactly when the Overseer board
 # must still be checked. Keep both red and clean empty-queue fixtures explicit.
 if HARNESS_FLEET_JSON='[]' HARNESS_OPEN_JSON="$board_open" HARNESS_COMMENTS_JSON='[{"author":"fleet","text":"no reason here"}]' HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" \
   QUEUE_LINT_SKIP_IDENTIFIER_SURFACE=1 FLEET_STATE="$work/fleet" HARNESS_REAL_PYTHON3="$real_python3" PATH="$stub:$PATH" "$repo/scripts/queue-lint.sh" >"$out" 2>&1; then
   printf '  FAIL  empty fleet-safe queue with a missing ASK is red\n'; fail=$((fail+1))
 elif has noask-empty-heading 'ON HIS BOARD WITH NO ASK LINE' "$out" \
-  && has noask-empty-bead '  ForgeOs-yours' "$out" \
+  && has noask-empty-bead '  fortkit-yours' "$out" \
   && has noask-empty-message 'queue-lint: no fleet-safe beads' "$out"; then
   printf '  PASS  empty fleet-safe queue still flags a justin bead with no ASK line\n'; pass=$((pass+1))
 else
@@ -488,13 +488,13 @@ fi
 # Closed is the only excluded status. Deferred work remains latent work and must
 # be audited alongside every other non-closed status.
 out="$work/lint.out"
-status_fleet='[{"id":"ForgeOs-open","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"ForgeOs-in-progress","status":"in_progress","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"ForgeOs-deferred","status":"deferred","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"ForgeOs-closed","status":"closed","description":"No touch set yet.","labels":["fleet-safe"]}]'
-if run_queue_case "$status_fleet" '[]' "$out" && has fleet-status-count '3 fleet-safe workload beads (everything except closed, standing, or record)' "$out" && ! has closed-undeclared 'ForgeOs-closed' "$out"; then
+status_fleet='[{"id":"fortkit-open","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"fortkit-in-progress","status":"in_progress","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"fortkit-deferred","status":"deferred","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"fortkit-closed","status":"closed","description":"No touch set yet.","labels":["fleet-safe"]}]'
+if run_queue_case "$status_fleet" '[]' "$out" && has fleet-status-count '3 fleet-safe workload beads (everything except closed, standing, or record)' "$out" && ! has closed-undeclared 'fortkit-closed' "$out"; then
   printf '  PASS  fleet-safe audit excludes only closed status\n'; pass=$((pass+1))
 else
   printf '  FAIL  fleet-safe audit excludes only closed status\n'; fail=$((fail+1))
 fi
-non_work_denominators='[{"id":"ForgeOs-work","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"],"dependency_count":0,"dependencies":[]},{"id":"ForgeOs-standing","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review","standing"],"dependency_count":0,"dependencies":[]},{"id":"ForgeOs-record","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review","record"],"dependency_count":0,"dependencies":[]}]'
+non_work_denominators='[{"id":"fortkit-work","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"],"dependency_count":0,"dependencies":[]},{"id":"fortkit-standing","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review","standing"],"dependency_count":0,"dependencies":[]},{"id":"fortkit-record","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review","record"],"dependency_count":0,"dependencies":[]}]'
 if run_queue_case "$non_work_denominators" "$non_work_denominators" "$out" raw \
   && has non-work-fleet-count '1 fleet-safe workload beads (everything except closed, standing, or record), 1 open workload beads' "$out" \
   && has non-work-depth 'DEPTH -- 1 fleet-safe, unblocked bead(s)' "$out"; then
@@ -502,10 +502,10 @@ if run_queue_case "$non_work_denominators" "$non_work_denominators" "$out" raw \
 else
   printf '  FAIL  standing and record are excluded from workload denominators\n'; fail=$((fail+1))
 fi
-deferred_fleet='[{"id":"ForgeOs-deferred","status":"deferred","description":"No touch set yet.","labels":["fleet-safe"]}]'
+deferred_fleet='[{"id":"fortkit-deferred","status":"deferred","description":"No touch set yet.","labels":["fleet-safe"]}]'
 if run_queue_case "$deferred_fleet" '[]' "$out"; then
   printf '  FAIL  deferred fleet-safe bead without Touches is UNDECLARED\n'; fail=$((fail+1))
-elif has deferred-undeclared 'ForgeOs-deferred' "$out"; then
+elif has deferred-undeclared 'fortkit-deferred' "$out"; then
   printf '  PASS  deferred fleet-safe bead without Touches is UNDECLARED\n'; pass=$((pass+1))
 else
   printf '  FAIL  deferred fleet-safe bead without Touches is UNDECLARED\n'; fail=$((fail+1))
@@ -513,29 +513,29 @@ fi
 
 # Globs reserve their fixed prefix. `scripts/*-harness.sh` therefore overlaps
 # the read-only verifier, and a bare `*` conservatively overlaps everything.
-glob_touches='[{"id":"ForgeOs-glob","status":"open","description":"Touches: scripts/*-harness.sh","labels":["fleet-safe"]}]'
-bare_touches='[{"id":"ForgeOs-bare","status":"open","description":"Touches: *","labels":["fleet-safe"]}]'
-dot_github='[{"id":"ForgeOs-dot-github","status":"open","description":"Touches: .github/x","labels":["fleet-safe"]}]'
-if ! run_queue_case "$glob_touches" "$glob_touches" "$out" && has glob-touches 'ForgeOs-glob declares scripts/ (read-only: scripts/verify-impl.sh)' "$out"; then
+glob_touches='[{"id":"fortkit-glob","status":"open","description":"Touches: scripts/*-harness.sh","labels":["fleet-safe"]}]'
+bare_touches='[{"id":"fortkit-bare","status":"open","description":"Touches: *","labels":["fleet-safe"]}]'
+dot_github='[{"id":"fortkit-dot-github","status":"open","description":"Touches: .github/x","labels":["fleet-safe"]}]'
+if ! run_queue_case "$glob_touches" "$glob_touches" "$out" && has glob-touches 'fortkit-glob declares scripts/ (read-only: scripts/verify-impl.sh)' "$out"; then
   printf '  PASS  Touches glob normalises to scripts/ and refuses the Forge\n'; pass=$((pass+1))
 else printf '  FAIL  Touches glob normalises to scripts/ and refuses the Forge\n'; fail=$((fail+1)); fi
-if ! run_queue_case "$bare_touches" "$bare_touches" "$out" && has bare-touches 'ForgeOs-bare declares  (read-only: scripts/verify-impl.sh)' "$out"; then
+if ! run_queue_case "$bare_touches" "$bare_touches" "$out" && has bare-touches 'fortkit-bare declares  (read-only: scripts/verify-impl.sh)' "$out"; then
   printf '  PASS  bare Touches glob conservatively refuses the Forge\n'; pass=$((pass+1))
 else printf '  FAIL  bare Touches glob conservatively refuses the Forge\n'; fail=$((fail+1)); fi
-if ! run_queue_case "$dot_github" "$dot_github" "$out" && has dot-github-leading-dot 'ForgeOs-dot-github declares .github/x' "$out" && ! has dot-github-stripped 'declares github/x' "$out"; then
+if ! run_queue_case "$dot_github" "$dot_github" "$out" && has dot-github-leading-dot 'fortkit-dot-github declares .github/x' "$out" && ! has dot-github-stripped 'declares github/x' "$out"; then
   printf '  PASS  .github Touches keeps its leading dot\n'; pass=$((pass+1))
 else printf '  FAIL  .github Touches keeps its leading dot\n'; fail=$((fail+1)); fi
 
-# ForgeOs-a51e8: queue-lint must surface the citation check's warn-only
+# Proofdelve ForgeOs-a51e8: queue-lint must surface the citation check's warn-only
 # identifier result on the Mayor's queue surface. The checker itself owns
 # token resolution; the fixtures only prove queue-lint wires and scopes it.
 # shellcheck disable=SC2016 # Backticks are literal bead fixture content.
-identifier_unresolved='[{"id":"ForgeOs-identifier","status":"open","description":"Touches: scripts/queue-lint.sh\nUse `InventedIdentifier`.","labels":["fleet-safe"]}]'
+identifier_unresolved='[{"id":"fortkit-identifier","status":"open","description":"Touches: scripts/queue-lint.sh\nUse `InventedIdentifier`.","labels":["fleet-safe"]}]'
 # shellcheck disable=SC2016 # Backticks are literal bead fixture content.
-identifier_resolved='[{"id":"ForgeOs-identifier","status":"open","description":"Touches: scripts/queue-lint.sh\nUse `KnownIdentifier`.","labels":["fleet-safe"]}]'
+identifier_resolved='[{"id":"fortkit-identifier","status":"open","description":"Touches: scripts/queue-lint.sh\nUse `KnownIdentifier`.","labels":["fleet-safe"]}]'
 if run_queue_case "$identifier_unresolved" "$identifier_unresolved" "$out" '' 0 \
   && has identifiers-heading 'UNRESOLVED IDENTIFIERS -- open fleet-safe or gate-ready beads name code identifiers that do not resolve:' "$out" \
-  && has identifiers-token 'ForgeOs-identifier  InventedIdentifier  -- grep it before writing it' "$out"; then
+  && has identifiers-token 'fortkit-identifier  InventedIdentifier  -- grep it before writing it' "$out"; then
   printf '  PASS  unresolved identifier warning names the fleet-safe bead and token\n'; pass=$((pass+1))
 else
   printf '  FAIL  unresolved identifier warning names the fleet-safe bead and token\n'; fail=$((fail+1))
@@ -557,24 +557,24 @@ fi
 
 # Children inherit labels at creation. A fleet-safe child with no Touches whose
 # parent is closed needs a different remedy from an ordinary undeclared bead.
-inherited_fleet='[{"id":"ForgeOs-closed-parent","status":"closed","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"ForgeOs-child","status":"open","description":"No touch set yet.","labels":["fleet-safe"],"dependencies":[{"type":"parent-child","depends_on_id":"ForgeOs-closed-parent"}]}]'
+inherited_fleet='[{"id":"fortkit-closed-parent","status":"closed","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"fortkit-child","status":"open","description":"No touch set yet.","labels":["fleet-safe"],"dependencies":[{"type":"parent-child","depends_on_id":"fortkit-closed-parent"}]}]'
 if run_queue_case "$inherited_fleet" '[]' "$out"; then
   printf '  FAIL  inherited fleet-safe child is red\n'; fail=$((fail+1))
-elif has inherited-output 'LIKELY INHERITED' "$out" && has inherited-parent 'ForgeOs-child <- ForgeOs-closed-parent' "$out"; then
+elif has inherited-output 'LIKELY INHERITED' "$out" && has inherited-parent 'fortkit-child <- fortkit-closed-parent' "$out"; then
   printf '  PASS  inherited fleet-safe child is red and names parent\n'; pass=$((pass+1))
 else
   printf '  FAIL  inherited fleet-safe child is red and names parent\n'; fail=$((fail+1))
 fi
-open_parent_fleet='[{"id":"ForgeOs-open-parent","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"ForgeOs-open-child","status":"open","description":"No touch set yet.","labels":["fleet-safe"],"dependencies":[{"type":"parent-child","depends_on_id":"ForgeOs-open-parent"}]}]'
+open_parent_fleet='[{"id":"fortkit-open-parent","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]},{"id":"fortkit-open-child","status":"open","description":"No touch set yet.","labels":["fleet-safe"],"dependencies":[{"type":"parent-child","depends_on_id":"fortkit-open-parent"}]}]'
 if run_queue_case "$open_parent_fleet" '[]' "$out"; then
   printf '  FAIL  open-parent fleet-safe child is UNDECLARED\n'; fail=$((fail+1))
-elif has open-parent-undeclared 'ForgeOs-open-child' "$out" && ! has open-parent-inherited 'ForgeOs-open-child <- ForgeOs-open-parent' "$out"; then
+elif has open-parent-undeclared 'fortkit-open-child' "$out" && ! has open-parent-inherited 'fortkit-open-child <- fortkit-open-parent' "$out"; then
   printf '  PASS  open-parent fleet-safe child is UNDECLARED\n'; pass=$((pass+1))
 else
   printf '  FAIL  open-parent fleet-safe child is UNDECLARED\n'; fail=$((fail+1))
 fi
 
-# ForgeOs-76uob.1: depth is supply, not another queue finding. These paired
+# Proofdelve ForgeOs-76uob.1: depth is supply, not another queue finding. These paired
 # fixtures prove the three materially different outcomes through the wired
 # script: a deep pool, no fleet-safe pool, and a fleet-safe pool held entirely
 # behind open blockers. The near case in each pair must print the opposite
@@ -583,33 +583,33 @@ fi
 depth_deep="["
 for n in $(seq 1 16); do
   [ "$n" -gt 1 ] && depth_deep+=","
-  depth_deep+="{\"id\":\"ForgeOs-deep-$n\",\"status\":\"open\",\"description\":\"Touches: scripts/queue-lint.sh\",\"labels\":[\"fleet-safe\"],\"dependency_count\":0}"
+  depth_deep+="{\"id\":\"fortkit-deep-$n\",\"status\":\"open\",\"description\":\"Touches: scripts/queue-lint.sh\",\"labels\":[\"fleet-safe\"],\"dependency_count\":0}"
 done
 depth_deep+="]"
-depth_one='[{"id":"ForgeOs-one","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0}]'
-# ForgeOs-sk3c.3 was fleet-safe but blocked by ForgeOs-aqc6.2.4 on 2026-09-21;
+depth_one='[{"id":"fortkit-one","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0}]'
+# Proofdelve ForgeOs-sk3c.3 was fleet-safe but blocked by Proofdelve ForgeOs-aqc6.2.4 on 2026-09-21;
 # the fleet then idled for twenty hours. A label-only count would have claimed
 # depth 1, even though no fleet-safe bead was dispatchable.
-depth_sk3c3_blocked='[{"id":"ForgeOs-sk3c.3","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"ForgeOs-aqc6.2.4"}]}]'
-depth_sk3c3_blocked_open='[{"id":"ForgeOs-sk3c.3","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"ForgeOs-aqc6.2.4"}]},{"id":"ForgeOs-aqc6.2.4","status":"open","labels":[]}]'
-depth_unblocked_open='[{"id":"ForgeOs-blocked","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0}]'
+depth_sk3c3_blocked='[{"id":"Proofdelve ForgeOs-sk3c.3","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"Proofdelve ForgeOs-aqc6.2.4"}]}]'
+depth_sk3c3_blocked_open='[{"id":"Proofdelve ForgeOs-sk3c.3","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"Proofdelve ForgeOs-aqc6.2.4"}]},{"id":"Proofdelve ForgeOs-aqc6.2.4","status":"open","labels":[]}]'
+depth_unblocked_open='[{"id":"fortkit-blocked","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0}]'
 
-# ForgeOs-xnqio: DEPTH must fail closed exactly where fleet.sh dispatchable()
+# Proofdelve ForgeOs-xnqio: DEPTH must fail closed exactly where fleet.sh dispatchable()
 # does. Each fixture was depth 1 under the former label/open-slice predicate.
-depth_deferred_blocker='[{"id":"ForgeOs-deferred-blocker","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"ForgeOs-deferred"}]}]'
-depth_deferred_board='[{"id":"ForgeOs-deferred-blocker","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"ForgeOs-deferred"}]},{"id":"ForgeOs-deferred","status":"deferred"}]'
+depth_deferred_blocker='[{"id":"fortkit-deferred-blocker","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"fortkit-deferred"}]}]'
+depth_deferred_board='[{"id":"fortkit-deferred-blocker","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"fortkit-deferred"}]},{"id":"fortkit-deferred","status":"deferred"}]'
 # bd list/export count only blocks edges. These lone non-blocks edges therefore
 # carry zero even though the edge array is present and must still be inspected.
-depth_unknown_edge='[{"id":"ForgeOs-unknown-edge","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0,"dependencies":[{"type":"future-edge","depends_on_id":"ForgeOs-open"}]}]'
-depth_unknown_board='[{"id":"ForgeOs-unknown-edge","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0,"dependencies":[{"type":"future-edge","depends_on_id":"ForgeOs-open"}]},{"id":"ForgeOs-open","status":"open"}]'
-depth_gate_dependency='[{"id":"ForgeOs-gated","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0,"dependencies":[{"type":"related","depends_on_id":"ForgeOs-gate"}]}]'
-depth_gate_board='[{"id":"ForgeOs-gated","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0,"dependencies":[{"type":"related","depends_on_id":"ForgeOs-gate"}]},{"id":"ForgeOs-gate","status":"open","issue_type":"gate"}]'
-depth_missing_count='[{"id":"ForgeOs-missing-count","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+depth_unknown_edge='[{"id":"fortkit-unknown-edge","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0,"dependencies":[{"type":"future-edge","depends_on_id":"fortkit-open"}]}]'
+depth_unknown_board='[{"id":"fortkit-unknown-edge","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0,"dependencies":[{"type":"future-edge","depends_on_id":"fortkit-open"}]},{"id":"fortkit-open","status":"open"}]'
+depth_gate_dependency='[{"id":"fortkit-gated","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0,"dependencies":[{"type":"related","depends_on_id":"fortkit-gate"}]}]'
+depth_gate_board='[{"id":"fortkit-gated","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":0,"dependencies":[{"type":"related","depends_on_id":"fortkit-gate"}]},{"id":"fortkit-gate","status":"open","issue_type":"gate"}]'
+depth_missing_count='[{"id":"fortkit-missing-count","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
 # An explicitly empty edge array is dispatchable even when its summary count is
 # stale. A missing array with that same nonzero count is incomplete data and
 # must instead fail closed through the production `dependencies is None` branch.
-depth_empty_dependencies='[{"id":"ForgeOs-empty-dependencies","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[]}]'
-depth_missing_dependencies='[{"id":"ForgeOs-missing-dependencies","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1}]'
+depth_empty_dependencies='[{"id":"fortkit-empty-dependencies","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[]}]'
+depth_missing_dependencies='[{"id":"fortkit-missing-dependencies","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1}]'
 
 if run_queue_case "$depth_deep" "$depth_deep" "$out" && has depth-deep 'DEPTH -- 16 fleet-safe, unblocked bead(s); 2.0 hours at ~8 beads/hour.' "$out"; then
   printf '  PASS  depth: deep pool reports 16 beads and 2.0 hours\n'; pass=$((pass+1))
@@ -640,8 +640,8 @@ for depth_case in "$depth_deferred_blocker" "$depth_unknown_edge" "$depth_gate_d
     printf '  FAIL  depth: absent dependency target reports zero\n'; fail=$((fail+1))
   fi
 done
-depth_closed_blocker='[{"id":"ForgeOs-closed-blocker","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"ForgeOs-closed"}]}]'
-depth_closed_board='[{"id":"ForgeOs-closed-blocker","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"ForgeOs-closed"}]},{"id":"ForgeOs-closed","status":"closed"}]'
+depth_closed_blocker='[{"id":"fortkit-closed-blocker","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"fortkit-closed"}]}]'
+depth_closed_board='[{"id":"fortkit-closed-blocker","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"],"dependency_count":1,"dependencies":[{"type":"blocks","depends_on_id":"fortkit-closed"}]},{"id":"fortkit-closed","status":"closed"}]'
 if run_queue_case "$depth_closed_blocker" "$depth_closed_board" "$out" && has depth-closed-blocker 'DEPTH -- 1 fleet-safe, unblocked bead(s)' "$out"; then
   printf '  PASS  depth: closed blocks target remains dispatchable\n'; pass=$((pass+1))
 else
@@ -839,7 +839,7 @@ if { [ "${QUEUE_LINT_RED_ARM_CHILD:-}" = 1 ] && [ -z "${QUEUE_LINT_HARNESS_SRC:-
   exit "$fail"
 fi
 
-# ForgeOs-2ll5.1: export freshness. Three outcomes: no export file -> clean with a
+# Proofdelve ForgeOs-2ll5.1: export freshness. Three outcomes: no export file -> clean with a
 # note; an export holding every open id -> clean, "export fresh"; an export missing
 # an open id -> EXPORT STALE finding naming it. The fixture repo has no .beads by
 # default, so every other case below runs in the first outcome.
@@ -850,16 +850,16 @@ else
   printf '  FAIL  no tracked export -> clean, says so\n'; fail=$((fail+1))
 fi
 mkdir -p "$repo/.beads"
-printf '{"id":"ForgeOs-dialogue"}\n' > "$repo/.beads/issues.jsonl"
+printf '{"id":"fortkit-dialogue"}\n' > "$repo/.beads/issues.jsonl"
 if run_lint '[]' harness "" "$out" && has export-fresh 'export fresh' "$out"; then
   printf '  PASS  export holds every open id -> clean, export fresh\n'; pass=$((pass+1))
 else
   printf '  FAIL  export holds every open id -> clean, export fresh\n'; fail=$((fail+1))
 fi
-printf '{"id":"ForgeOs-other"}\n{"torn\n' > "$repo/.beads/issues.jsonl"
+printf '{"id":"fortkit-other"}\n{"torn\n' > "$repo/.beads/issues.jsonl"
 if run_lint '[]' harness "" "$out"; then
   printf '  FAIL  export missing an open id -> EXPORT STALE\n'; fail=$((fail+1))
-elif has export-stale 'EXPORT STALE -- 1 open bead' "$out" && has export-stale-names '  ForgeOs-dialogue' "$out"; then
+elif has export-stale 'EXPORT STALE -- 1 open bead' "$out" && has export-stale-names '  fortkit-dialogue' "$out"; then
   printf '  PASS  export missing an open id -> EXPORT STALE, names it\n'; pass=$((pass+1))
 else
   printf '  FAIL  export missing an open id -> EXPORT STALE\n'; fail=$((fail+1))
@@ -868,49 +868,49 @@ rm -rf "$repo/.beads"
 
 # standing and record are workload exclusions, never a global mute. These
 # probes exercise checks owned by queue-lint itself, rather than misrouted.py.
-standing_undeclared='[{"id":"ForgeOs-standing-undeclared","status":"open","description":"No touch set yet.","labels":["fleet-safe","lands-on-review","standing"]}]'
+standing_undeclared='[{"id":"fortkit-standing-undeclared","status":"open","description":"No touch set yet.","labels":["fleet-safe","lands-on-review","standing"]}]'
 if ! run_queue_case "$standing_undeclared" "$standing_undeclared" "$out" raw \
   && has standing-undeclared 'UNDECLARED' "$out" \
-  && has standing-undeclared-id 'ForgeOs-standing-undeclared' "$out"; then
+  && has standing-undeclared-id 'fortkit-standing-undeclared' "$out"; then
   printf '  PASS  standing bead remains UNDECLARED when Touches is absent\n'; pass=$((pass+1))
 else
   printf '  FAIL  standing bead remains UNDECLARED when Touches is absent\n'; fail=$((fail+1))
 fi
 mkdir -p "$repo/.beads"
-printf '{"id":"ForgeOs-other"}\n' > "$repo/.beads/issues.jsonl"
-standing_export='[{"id":"ForgeOs-standing-export","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review","standing"]}]'
+printf '{"id":"fortkit-other"}\n' > "$repo/.beads/issues.jsonl"
+standing_export='[{"id":"fortkit-standing-export","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review","standing"]}]'
 if ! run_queue_case "$standing_export" "$standing_export" "$out" raw \
   && has standing-export 'EXPORT STALE -- 1 open bead' "$out" \
-  && has standing-export-id 'ForgeOs-standing-export' "$out"; then
+  && has standing-export-id 'fortkit-standing-export' "$out"; then
   printf '  PASS  standing bead remains EXPORT STALE when absent from export\n'; pass=$((pass+1))
 else
   printf '  FAIL  standing bead remains EXPORT STALE when absent from export\n'; fail=$((fail+1))
 fi
 rm -rf "$repo/.beads"
 
-if run_lint '["mayor-review"]' marrek settled "$out"; then
+if run_lint '["mayor-review"]' emrith settled "$out"; then
   printf '  FAIL  stalled dialogue is red\n'; fail=$((fail+1))
-elif has stalled-output 'ForgeOs-dialogue has mayor-review' "$out"; then
+elif has stalled-output 'fortkit-dialogue has mayor-review' "$out"; then
   printf '  PASS  stalled dialogue is red\n'; pass=$((pass+1))
 else
   printf '  FAIL  stalled dialogue names bead\n'; fail=$((fail+1))
 fi
-if run_lint '["mayor-review"]' marrek settled "$out" comments; then
+if run_lint '["mayor-review"]' emrith settled "$out" comments; then
   printf '  FAIL  comments bd outage refuses with exit 3\n'; fail=$((fail+1))
-elif [ "$?" -eq 3 ] && has comments-query-refusal 'comments query for ForgeOs-dialogue failed' "$out"; then
+elif [ "$?" -eq 3 ] && has comments-query-refusal 'comments query for fortkit-dialogue failed' "$out"; then
   printf '  PASS  comments bd outage refuses with exit 3\n'; pass=$((pass+1))
 else
   printf '  FAIL  comments bd outage refuses with exit 3\n'; fail=$((fail+1))
 fi
-if run_lint '["mayor-review"]' marrek settled "$out" comments-timeout 1; then
+if run_lint '["mayor-review"]' emrith settled "$out" comments-timeout 1; then
   printf '  FAIL  valid QUEUE_LINT_BD_TIMEOUT=1 preserves timeout refusal exit 3\n'; fail=$((fail+1))
-elif [ "$?" -eq 3 ] && has comments-timeout-refusal 'comments query for ForgeOs-dialogue failed' "$out"; then
+elif [ "$?" -eq 3 ] && has comments-timeout-refusal 'comments query for fortkit-dialogue failed' "$out"; then
   printf '  PASS  valid QUEUE_LINT_BD_TIMEOUT=1 preserves timeout refusal exit 3\n'; pass=$((pass+1))
 else
   printf '  FAIL  valid QUEUE_LINT_BD_TIMEOUT=1 preserves timeout refusal exit 3\n'; fail=$((fail+1))
 fi
 for timeout in abc '' 0 -1 inf nan 1e400; do
-  if run_lint '["mayor-review"]' marrek settled "$out" comments "$timeout"; then
+  if run_lint '["mayor-review"]' emrith settled "$out" comments "$timeout"; then
     printf '  FAIL  invalid QUEUE_LINT_BD_TIMEOUT=%q refuses with exit 3\n' "$timeout"; fail=$((fail+1))
   elif [ "$?" -eq 3 ] && has invalid-timeout "invalid QUEUE_LINT_BD_TIMEOUT value: $timeout" "$out"; then
     printf '  PASS  invalid QUEUE_LINT_BD_TIMEOUT=%q refuses with exit 3\n' "$timeout"; pass=$((pass+1))
@@ -921,36 +921,36 @@ done
 timeout_audit="$work/bd-timeouts.log"
 : > "$timeout_audit"
 if HARNESS_BD_TIMEOUT_AUDIT="$timeout_audit" PYTHONPATH="$timeout_observer${PYTHONPATH:+:$PYTHONPATH}" \
-  run_lint '["mayor-review"]' veyra '' "$out" \
+  run_lint '["mayor-review"]' kethra '' "$out" \
   && [ "$(sort -u "$timeout_audit")" = "60.0" ]; then
   printf '  PASS  unset QUEUE_LINT_BD_TIMEOUT keeps the 60-second default\n'; pass=$((pass+1))
 else
   printf '  FAIL  unset QUEUE_LINT_BD_TIMEOUT keeps the 60-second default\n'; fail=$((fail+1))
 fi
-if run_lint '["mayor-review","human"]' marrek '' "$out"; then
+if run_lint '["mayor-review","human"]' emrith '' "$out"; then
   printf '  FAIL  both labels is red\n'; fail=$((fail+1))
-elif has both-label-output 'ForgeOs-dialogue carries human and mayor-review' "$out"; then
+elif has both-label-output 'fortkit-dialogue carries human and mayor-review' "$out"; then
   printf '  PASS  both labels is red\n'; pass=$((pass+1))
 else
   printf '  FAIL  both labels names bead\n'; fail=$((fail+1))
 fi
-# ForgeOs-c1066 / ForgeOs-0q0i: fleet.sh:1264-1267 refuses fleet-safe beads
+# Proofdelve ForgeOs-c1066 / Proofdelve ForgeOs-0q0i: fleet.sh:1264-1267 refuses fleet-safe beads
 # carrying human or fleet-escalated. Keep this list beside the audit so a new
 # label-based refusal there gets reviewed here instead of quietly inflating depth.
-fleet_human='[{"id":"ForgeOs-contradiction","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","human"]}]'
-fleet_escalated='[{"id":"ForgeOs-escalated","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","fleet-escalated"]}]'
-fleet_only='[{"id":"ForgeOs-fleet-only","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-human_only='[{"id":"ForgeOs-human-only","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["human"]}]'
+fleet_human='[{"id":"fortkit-contradiction","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","human"]}]'
+fleet_escalated='[{"id":"fortkit-escalated","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","fleet-escalated"]}]'
+fleet_only='[{"id":"fortkit-fleet-only","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+human_only='[{"id":"fortkit-human-only","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["human"]}]'
 if run_queue_case "$fleet_human" "$fleet_human" "$out"; then
   printf '  FAIL  fleet-safe plus human is red\n'; fail=$((fail+1))
-elif has fleet-human-output 'ForgeOs-contradiction carries fleet-safe and human' "$out"; then
+elif has fleet-human-output 'fortkit-contradiction carries fleet-safe and human' "$out"; then
   printf '  PASS  fleet-safe plus human is red\n'; pass=$((pass+1))
 else
   printf '  FAIL  fleet-safe plus human names bead\n'; fail=$((fail+1))
 fi
 if run_queue_case "$fleet_escalated" "$fleet_escalated" "$out"; then
   printf '  FAIL  fleet-safe plus fleet-escalated is red\n'; fail=$((fail+1))
-elif has fleet-escalated-output 'ForgeOs-escalated carries fleet-safe and fleet-escalated' "$out"; then
+elif has fleet-escalated-output 'fortkit-escalated carries fleet-safe and fleet-escalated' "$out"; then
   printf '  PASS  fleet-safe plus fleet-escalated is red and names the label\n'; pass=$((pass+1))
 else
   printf '  FAIL  fleet-safe plus fleet-escalated names the label\n'; fail=$((fail+1))
@@ -967,34 +967,34 @@ for fixture in fleet_only human_only; do
   fi
 done
 
-# ForgeOs-qqjml: fleet.sh refuses fleet-safe work without an explicit landing
+# Proofdelve ForgeOs-qqjml: fleet.sh refuses fleet-safe work without an explicit landing
 # class, but a fleet skip is not a queue diagnosis. The complete board already
 # supplied to queue-lint also makes the pre-approval gate-ready shape visible.
-unclassified_fleet='[{"id":"ForgeOs-unclassified","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-unclassified_in_progress='[{"id":"ForgeOs-unclassified-in-progress","status":"in_progress","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-unclassified_closed='[{"id":"ForgeOs-unclassified-closed","status":"closed","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-review_classified='[{"id":"ForgeOs-unclassified","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"]}]'
-sign_classified='[{"id":"ForgeOs-unclassified","status":"in_progress","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","sign-to-land"]}]'
-unclassified_plain='[{"id":"ForgeOs-plain","status":"open","description":"Touches: scripts/queue-lint.sh","labels":[]}]'
-unclassified_gate_ready='[{"id":"ForgeOs-gate-ready","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["gate-ready"]}]'
-both_landing_classes='[{"id":"ForgeOs-both-classes","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","sign-to-land","lands-on-review"]}]'
-fleet_safe_gate_ready='[{"id":"ForgeOs-fleet-gate-ready","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","gate-ready"]}]'
+unclassified_fleet='[{"id":"fortkit-unclassified","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+unclassified_in_progress='[{"id":"fortkit-unclassified-in-progress","status":"in_progress","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+unclassified_closed='[{"id":"fortkit-unclassified-closed","status":"closed","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+review_classified='[{"id":"fortkit-unclassified","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"]}]'
+sign_classified='[{"id":"fortkit-unclassified","status":"in_progress","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","sign-to-land"]}]'
+unclassified_plain='[{"id":"fortkit-plain","status":"open","description":"Touches: scripts/queue-lint.sh","labels":[]}]'
+unclassified_gate_ready='[{"id":"fortkit-gate-ready","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["gate-ready"]}]'
+both_landing_classes='[{"id":"fortkit-both-classes","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","sign-to-land","lands-on-review"]}]'
+fleet_safe_gate_ready='[{"id":"fortkit-fleet-gate-ready","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","gate-ready"]}]'
 if run_queue_case "$unclassified_fleet" "$unclassified_fleet" "$out" 1; then
   printf '  FAIL  unclassified fleet-safe bead is red\n'; fail=$((fail+1))
-elif grep -Eq '^UNCLASSIFIED FLEET-SAFE -- .*neither sign-to-land nor lands-on-review' "$out" && has unclassified-fleet-name '  ForgeOs-unclassified' "$out"; then
+elif grep -Eq '^UNCLASSIFIED FLEET-SAFE -- .*neither sign-to-land nor lands-on-review' "$out" && has unclassified-fleet-name '  fortkit-unclassified' "$out"; then
   printf '  PASS  unclassified fleet-safe bead is red, named, and diagnosed\n'; pass=$((pass+1))
 else
   printf '  FAIL  unclassified fleet-safe bead is red, named, and diagnosed\n'; fail=$((fail+1))
 fi
 if run_queue_case "$unclassified_in_progress" "$unclassified_in_progress" "$out" 1; then
   printf '  FAIL  unclassified in_progress fleet-safe bead is red\n'; fail=$((fail+1))
-elif has unclassified-in-progress-heading 'UNCLASSIFIED FLEET-SAFE' "$out" && has unclassified-in-progress-name 'ForgeOs-unclassified-in-progress' "$out"; then
+elif has unclassified-in-progress-heading 'UNCLASSIFIED FLEET-SAFE' "$out" && has unclassified-in-progress-name 'fortkit-unclassified-in-progress' "$out"; then
   printf '  PASS  unclassified in_progress fleet-safe bead is red and named\n'; pass=$((pass+1))
 else
   printf '  FAIL  unclassified in_progress fleet-safe bead is red and named\n'; fail=$((fail+1))
 fi
 if run_queue_case "$unclassified_closed" "$unclassified_closed" "$out" 1 \
-  && ! has unclassified-closed 'ForgeOs-unclassified-closed' "$out"; then
+  && ! has unclassified-closed 'fortkit-unclassified-closed' "$out"; then
   printf '  PASS  unclassified closed fleet-safe bead is clean\n'; pass=$((pass+1))
 else
   printf '  FAIL  unclassified closed fleet-safe bead is clean\n'; fail=$((fail+1))
@@ -1010,21 +1010,21 @@ for fixture in review_classified sign_classified; do
     printf '  FAIL  %s fleet-safe bead is clean\n' "$fixture"; fail=$((fail+1))
   fi
 done
-if run_queue_case '[]' "$unclassified_plain" "$out" 1 && ! has unclassified-plain 'ForgeOs-plain' "$out"; then
+if run_queue_case '[]' "$unclassified_plain" "$out" 1 && ! has unclassified-plain 'fortkit-plain' "$out"; then
   printf '  PASS  unclassified bead without fleet-safe or gate-ready is not reported\n'; pass=$((pass+1))
 else
   printf '  FAIL  unclassified bead without fleet-safe or gate-ready is not reported\n'; fail=$((fail+1))
 fi
 if run_queue_case '[]' "$unclassified_gate_ready" "$out" 1; then
   printf '  FAIL  unclassified gate-ready bead is red\n'; fail=$((fail+1))
-elif has unclassified-gate-heading 'UNCLASSIFIED GATE-READY' "$out" && has unclassified-gate-name '  ForgeOs-gate-ready' "$out"; then
+elif has unclassified-gate-heading 'UNCLASSIFIED GATE-READY' "$out" && has unclassified-gate-name '  fortkit-gate-ready' "$out"; then
   printf '  PASS  unclassified gate-ready bead is red and named\n'; pass=$((pass+1))
 else
   printf '  FAIL  unclassified gate-ready bead is red and named\n'; fail=$((fail+1))
 fi
 if run_queue_case "$both_landing_classes" "$both_landing_classes" "$out" 1 \
   && has both-landing-heading 'LANDING CLASS WARNING' "$out" \
-  && has both-landing-name 'ForgeOs-both-classes carries sign-to-land and lands-on-review; fleet resolves it to sign-to-land' "$out"; then
+  && has both-landing-name 'fortkit-both-classes carries sign-to-land and lands-on-review; fleet resolves it to sign-to-land' "$out"; then
   printf '  PASS  both landing classes warns and exits clean\n'; pass=$((pass+1))
 else
   printf '  FAIL  both landing classes warns and exits clean\n'; fail=$((fail+1))
@@ -1072,13 +1072,13 @@ sed 's/{"open", "in_progress"}/{"open", "in_progress", "closed"}/' "$lint_source
 chmod 755 "$closed_included_landing_lint"
 if ! run_queue_source_case "$closed_included_landing_lint" "$unclassified_closed" "$unclassified_closed" "$out" 1 \
   && has closed-status-red-arm 'UNCLASSIFIED FLEET-SAFE' "$out" \
-  && has closed-status-red-arm-name 'ForgeOs-unclassified-closed' "$out"; then
+  && has closed-status-red-arm-name 'fortkit-unclassified-closed' "$out"; then
   printf '  PASS  landing-class red arm: including closed status reports closed fixture\n'; cat "$out"; pass=$((pass+1))
 else
   printf '  FAIL  landing-class red arm: including closed status did not report closed fixture\n'; cat "$out"; fail=$((fail+1))
 fi
 
-for fixture in 'human:["human"]:marrek:' 'in-flight-worker (no state file):["mayor-review"]:marrek:in-flight' 'in-hand-worker:["mayor-review"]:marrek:in-hand' 'other-author:["mayor-review"]:veyra:'; do
+for fixture in 'human:["human"]:emrith:' 'in-flight-worker (no state file):["mayor-review"]:emrith:in-flight' 'in-hand-worker:["mayor-review"]:emrith:in-hand' 'other-author:["mayor-review"]:kethra:'; do
   IFS=: read -r name labels author worker <<< "$fixture"
   if run_lint "$labels" "$author" "$worker" "$out"; then printf '  PASS  %s is clean\n' "$name"; pass=$((pass+1)); else printf '  FAIL  %s is clean\n' "$name"; fail=$((fail+1)); fi
 done
@@ -1086,112 +1086,112 @@ done
 # shape this lint was filed for) and exited-not-yet-reaped both report the stall.
 for fixture in 'settled-worker:settled' 'exited-worker (exit file, no state):exited'; do
   IFS=: read -r name worker <<< "$fixture"
-  if run_lint '["mayor-review"]' marrek "$worker" "$out"; then printf '  FAIL  %s still reports the stall\n' "$name"; fail=$((fail+1)); elif has x 'ForgeOs-dialogue has mayor-review' "$out"; then printf '  PASS  %s still reports the stall\n' "$name"; pass=$((pass+1)); else printf '  FAIL  %s names the bead\n' "$name"; fail=$((fail+1)); fi
+  if run_lint '["mayor-review"]' emrith "$worker" "$out"; then printf '  FAIL  %s still reports the stall\n' "$name"; fail=$((fail+1)); elif has x 'fortkit-dialogue has mayor-review' "$out"; then printf '  PASS  %s still reports the stall\n' "$name"; pass=$((pass+1)); else printf '  FAIL  %s names the bead\n' "$name"; fail=$((fail+1)); fi
 done
 
 # The prose blocker has required discriminators. They run through the
 # wired queue-lint script, with only bd stubbed, so this proves integration.
-prose_fleet='[{"id":"ForgeOs-fleet","status":"open","description":"Blocked on ForgeOs-gate.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-prose_plain='[{"id":"ForgeOs-fleet","status":"open","description":"Related to ForgeOs-gate.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-prose_before='[{"id":"ForgeOs-fleet","status":"open","description":"This bead must land before ForgeOs-gate.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-prose_mixed='[{"id":"ForgeOs-fleet","status":"open","description":"Blocked on ForgeOs-aa; must land before ForgeOs-bb.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-prose_subject_first='[{"id":"ForgeOs-fleet","status":"open","description":"ForgeOs-gate must land before this bead.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-prose_before_many='[{"id":"ForgeOs-fleet","status":"open","description":"This bead must land before ForgeOs-aa and ForgeOs-bb.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-if run_prose_case "$prose_fleet" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open"}' "$out"; then
+prose_fleet='[{"id":"fortkit-fleet","status":"open","description":"Blocked on fortkit-gate.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+prose_plain='[{"id":"fortkit-fleet","status":"open","description":"Related to fortkit-gate.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+prose_before='[{"id":"fortkit-fleet","status":"open","description":"This bead must land before fortkit-gate.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+prose_mixed='[{"id":"fortkit-fleet","status":"open","description":"Blocked on fortkit-aa; must land before fortkit-bb.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+prose_subject_first='[{"id":"fortkit-fleet","status":"open","description":"fortkit-gate must land before this bead.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+prose_before_many='[{"id":"fortkit-fleet","status":"open","description":"This bead must land before fortkit-aa and fortkit-bb.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+if run_prose_case "$prose_fleet" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open"}' "$out"; then
   printf '  FAIL  prose gate without bd edge is red\n'; fail=$((fail+1))
-elif has prose-gate-output '> Blocked on ForgeOs-gate.' "$out"; then
+elif has prose-gate-output '> Blocked on fortkit-gate.' "$out"; then
   printf '  PASS  prose gate without bd edge is red and quoted\n'; pass=$((pass+1))
 else
   printf '  FAIL  prose gate without bd edge quotes the sentence\n'; fail=$((fail+1))
 fi
-if run_prose_case "$prose_fleet" '{"id":"ForgeOs-fleet","status":"open","dependencies":[{"id":"ForgeOs-gate","dependency_type":"blocks","status":"open"}]}' '{"id":"ForgeOs-gate","status":"open"}' "$out"; then
+if run_prose_case "$prose_fleet" '{"id":"fortkit-fleet","status":"open","dependencies":[{"id":"fortkit-gate","dependency_type":"blocks","status":"open"}]}' '{"id":"fortkit-gate","status":"open"}' "$out"; then
   printf '  PASS  prose gate with bd edge is clean\n'; pass=$((pass+1))
 else
   printf '  FAIL  prose gate with bd edge is clean\n'; fail=$((fail+1))
 fi
-if run_prose_case "$prose_plain" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open"}' "$out"; then
+if run_prose_case "$prose_plain" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open"}' "$out"; then
   printf '  PASS  passing bead mention is clean\n'; pass=$((pass+1))
 else
   printf '  FAIL  passing bead mention is clean\n'; fail=$((fail+1))
 fi
-if run_prose_case "$prose_before" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open","dependencies":[{"id":"ForgeOs-fleet","dependency_type":"blocks","status":"open"}]}' "$out"; then
+if run_prose_case "$prose_before" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open","dependencies":[{"id":"fortkit-fleet","dependency_type":"blocks","status":"open"}]}' "$out"; then
   printf '  PASS  must land before with reverse bd edge is clean\n'; pass=$((pass+1))
 else
   printf '  FAIL  must land before with reverse bd edge is clean\n'; fail=$((fail+1))
 fi
-if run_prose_case "$prose_before" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open","dependencies":[]}' "$out"; then
+if run_prose_case "$prose_before" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open","dependencies":[]}' "$out"; then
   printf '  FAIL  must land before without reverse bd edge is red\n'; fail=$((fail+1))
-elif has prose-reverse-output 'MISSING REVERSE EDGE: ForgeOs-gate should depend on ForgeOs-fleet' "$out"; then
+elif has prose-reverse-output 'MISSING REVERSE EDGE: fortkit-gate should depend on fortkit-fleet' "$out"; then
   printf '  PASS  must land before without reverse bd edge names missing reverse edge\n'; pass=$((pass+1))
 else
   printf '  FAIL  must land before without reverse bd edge names missing reverse edge\n'; fail=$((fail+1))
 fi
-if run_prose_case "$prose_mixed" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open"}' "$out" '' '{"id":"ForgeOs-aa","status":"open"}' '{"id":"ForgeOs-bb","status":"open","dependencies":[{"id":"ForgeOs-fleet","dependency_type":"blocks","status":"open"}]}' ; then
+if run_prose_case "$prose_mixed" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open"}' "$out" '' '{"id":"fortkit-aa","status":"open"}' '{"id":"fortkit-bb","status":"open","dependencies":[{"id":"fortkit-fleet","dependency_type":"blocks","status":"open"}]}' ; then
   printf '  FAIL  mixed gate and reverse prose reports only the gate\n'; fail=$((fail+1))
-elif has prose-mixed-gate 'prose names as a gate: ForgeOs-aa' "$out" \
-  && ! has prose-mixed-not-both-gates 'prose names as a gate: ForgeOs-aa, ForgeOs-bb' "$out" \
-  && ! has prose-mixed-not-reverse 'MISSING REVERSE EDGE: ForgeOs-bb' "$out"; then
+elif has prose-mixed-gate 'prose names as a gate: fortkit-aa' "$out" \
+  && ! has prose-mixed-not-both-gates 'prose names as a gate: fortkit-aa, fortkit-bb' "$out" \
+  && ! has prose-mixed-not-reverse 'MISSING REVERSE EDGE: fortkit-bb' "$out"; then
   printf '  PASS  mixed gate and reverse prose reports only the gate\n'; pass=$((pass+1))
 else
   printf '  FAIL  mixed gate and reverse prose reports only the gate\n'; cat "$out"; fail=$((fail+1))
 fi
-if run_prose_case "$prose_subject_first" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open"}' "$out"; then
+if run_prose_case "$prose_subject_first" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open"}' "$out"; then
   printf '  FAIL  subject-first must-land-before is reported as a gate\n'; fail=$((fail+1))
-elif has prose-subject-first 'prose names as a gate: ForgeOs-gate' "$out"; then
+elif has prose-subject-first 'prose names as a gate: fortkit-gate' "$out"; then
   printf '  PASS  subject-first must-land-before is reported as a gate\n'; pass=$((pass+1))
 else
   printf '  FAIL  subject-first must-land-before is reported as a gate\n'; cat "$out"; fail=$((fail+1))
 fi
-if run_prose_case "$prose_before_many" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open"}' "$out" '' '{"id":"ForgeOs-aa","status":"open","dependencies":[{"id":"ForgeOs-fleet","dependency_type":"blocks","status":"open"}]}' '{"id":"ForgeOs-bb","status":"open","dependencies":[]}' ; then
+if run_prose_case "$prose_before_many" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open"}' "$out" '' '{"id":"fortkit-aa","status":"open","dependencies":[{"id":"fortkit-fleet","dependency_type":"blocks","status":"open"}]}' '{"id":"fortkit-bb","status":"open","dependencies":[]}' ; then
   printf '  FAIL  multi-id must-land-before reports every missing reverse edge\n'; fail=$((fail+1))
-elif has prose-before-many 'MISSING REVERSE EDGE: ForgeOs-bb should depend on ForgeOs-fleet' "$out"; then
+elif has prose-before-many 'MISSING REVERSE EDGE: fortkit-bb should depend on fortkit-fleet' "$out"; then
   printf '  PASS  multi-id must-land-before reports every missing reverse edge\n'; pass=$((pass+1))
 else
   printf '  FAIL  multi-id must-land-before reports every missing reverse edge\n'; cat "$out"; fail=$((fail+1))
 fi
-prose_first='[{"id":"ForgeOs-fleet","status":"open","description":"ForgeOs-gate must land first.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-if run_prose_case "$prose_first" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open"}' "$out"; then
+prose_first='[{"id":"fortkit-fleet","status":"open","description":"fortkit-gate must land first.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+if run_prose_case "$prose_first" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open"}' "$out"; then
   printf '  FAIL  must land first without bd edge is red\n'; fail=$((fail+1))
-elif has prose-first-output 'prose names as a gate: ForgeOs-gate' "$out"; then
+elif has prose-first-output 'prose names as a gate: fortkit-gate' "$out"; then
   printf '  PASS  must land first without bd edge remains a gate\n'; pass=$((pass+1))
 else
   printf '  FAIL  must land first without bd edge remains a gate\n'; fail=$((fail+1))
 fi
-if run_prose_case "$prose_fleet" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"closed"}' "$out"; then
+if run_prose_case "$prose_fleet" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"closed"}' "$out"; then
   printf '  PASS  prose gate with closed bead is clean\n'; pass=$((pass+1))
 else
   printf '  FAIL  prose gate with closed bead is clean\n'; fail=$((fail+1))
 fi
-if run_prose_case "$prose_fleet" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open"}' "$out" show-gate; then
+if run_prose_case "$prose_fleet" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open"}' "$out" show-gate; then
   printf '  FAIL  bd outage refuses\n'; fail=$((fail+1))
-elif [ "$?" -eq 3 ] && has prose-query-refusal 'prose-blockers: bd query failed for ForgeOs-gate' "$out"; then
+elif [ "$?" -eq 3 ] && has prose-query-refusal 'prose-blockers: bd query failed for fortkit-gate' "$out"; then
   printf '  PASS  bd outage refuses with exit 3\n'; pass=$((pass+1))
 else
   printf '  FAIL  bd outage refuses with exit 3\n'; fail=$((fail+1))
 fi
-unknown_fleet='[{"id":"ForgeOs-fleet","status":"open","description":"Blocked on ForgeOs-unknown.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
-if run_prose_case "$unknown_fleet" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{}' "$out" show-unknown; then
+unknown_fleet='[{"id":"fortkit-fleet","status":"open","description":"Blocked on fortkit-unknown.\nTouches: scripts/queue-lint.sh","labels":["fleet-safe"]}]'
+if run_prose_case "$unknown_fleet" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{}' "$out" show-unknown; then
   printf '  FAIL  unknown prose gate is red\n'; fail=$((fail+1))
-elif [ "$?" -eq 1 ] && has unknown-candidate 'UNKNOWN candidate named as a gate: ForgeOs-unknown' "$out"; then
+elif [ "$?" -eq 1 ] && has unknown-candidate 'UNKNOWN candidate named as a gate: fortkit-unknown' "$out"; then
   printf '  PASS  JSON unknown prose gate is an UNKNOWN candidate with exit 1\n'; pass=$((pass+1))
 else
   printf '  FAIL  JSON unknown prose gate reports an UNKNOWN candidate with exit 1\n'; fail=$((fail+1))
 fi
-if run_prose_case "$unknown_fleet" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{}' "$out" show-unknown-plain; then
+if run_prose_case "$unknown_fleet" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{}' "$out" show-unknown-plain; then
   printf '  FAIL  plain unknown prose gate is red\n'; fail=$((fail+1))
-elif [ "$?" -eq 1 ] && has unknown-candidate 'UNKNOWN candidate named as a gate: ForgeOs-unknown' "$out"; then
+elif [ "$?" -eq 1 ] && has unknown-candidate 'UNKNOWN candidate named as a gate: fortkit-unknown' "$out"; then
   printf '  PASS  plain unknown prose gate is an UNKNOWN candidate with exit 1\n'; pass=$((pass+1))
 else
   printf '  FAIL  plain unknown prose gate reports an UNKNOWN candidate with exit 1\n'; fail=$((fail+1))
 fi
-if run_prose_case "$unknown_fleet" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{}' "$out" show-near-miss; then
+if run_prose_case "$unknown_fleet" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{}' "$out" show-near-miss; then
   printf '  FAIL  near-miss unknown stderr refuses\n'; fail=$((fail+1))
-elif [ "$?" -eq 3 ] && has near-miss-refusal 'prose-blockers: bd query failed for ForgeOs-unknown' "$out"; then
+elif [ "$?" -eq 3 ] && has near-miss-refusal 'prose-blockers: bd query failed for fortkit-unknown' "$out"; then
   printf '  PASS  near-miss unknown stderr refuses with exit 3\n'; pass=$((pass+1))
 else
   printf '  FAIL  near-miss unknown stderr refuses with exit 3\n'; fail=$((fail+1))
 fi
-if HARNESS_PYTHON_FAIL=checker run_prose_case "$prose_plain" '{"id":"ForgeOs-fleet","status":"open","dependencies":[]}' '{"id":"ForgeOs-gate","status":"open"}' "$out"; then
+if HARNESS_PYTHON_FAIL=checker run_prose_case "$prose_plain" '{"id":"fortkit-fleet","status":"open","dependencies":[]}' '{"id":"fortkit-gate","status":"open"}' "$out"; then
   printf '  FAIL  prose checker exit 127 refuses\n'; fail=$((fail+1))
 elif [ "$?" -eq 3 ] && has prose-checker-127 'queue-lint: prose-blockers failed with exit 127' "$out"; then
   printf '  PASS  prose checker exit 127 refuses with exit 3\n'; pass=$((pass+1))
@@ -1211,17 +1211,17 @@ else
   printf '  FAIL  queue lint works outside the checkout\n'; fail=$((fail+1))
 fi
 chmod 644 "$repo/scripts/unattended-fleet/prose-blockers.py"
-if run_lint '[]' veyra '' "$out"; then
+if run_lint '[]' kethra '' "$out"; then
   printf '  PASS  prose checker does not require execute bit\n'; pass=$((pass+1))
 else
   printf '  FAIL  prose checker does not require execute bit\n'; fail=$((fail+1))
 fi
 # ---------------------------------------------------------------------------
-# THE BACKLOG SLICE (ForgeOs-mfyq). These two checks read a whole board on
+# THE BACKLOG SLICE (Proofdelve ForgeOs-mfyq). These two checks read a whole board on
 # stdin and make NO bd calls, so they need no stub: the board IS the input.
 # Every case below is a PAIR -- the shape that must be reported and the nearest
 # shape that must NOT be -- because a reporter that reports everything
-# establishes nothing (ForgeOs-8zb7).
+# establishes nothing (Proofdelve ForgeOs-8zb7).
 chmod 755 "$repo/scripts/unattended-fleet/prose-blockers.py"
 cp -f "$parents_source" "$repo/scripts/unattended-fleet/stale-parents.py"
 chmod 755 "$repo/scripts/unattended-fleet/stale-parents.py"
@@ -1290,10 +1290,10 @@ fi
 # (a) a gate that has CLOSED is the finding; the identical board with that gate
 #     still OPEN must stay silent. This is the exact branch the default mode
 #     skips, so the pair proves the two modes really are opposites.
-exp_closed='[{"id":"ForgeOs-a","status":"open","description":"Blocked on ForgeOs-gate."},{"id":"ForgeOs-gate","status":"closed"}]'
-exp_open='[{"id":"ForgeOs-a","status":"open","description":"Blocked on ForgeOs-gate."},{"id":"ForgeOs-gate","status":"open"}]'
+exp_closed='[{"id":"fortkit-a","status":"open","description":"Blocked on fortkit-gate."},{"id":"fortkit-gate","status":"closed"}]'
+exp_open='[{"id":"fortkit-a","status":"open","description":"Blocked on fortkit-gate."},{"id":"fortkit-gate","status":"open"}]'
 run_expired "$exp_closed" "$out"
-if has expired-closed-reported 'deferral expired: ForgeOs-gate' "$out"; then
+if has expired-closed-reported 'deferral expired: fortkit-gate' "$out"; then
   printf '  PASS  expired: a CLOSED prose gate is reported\n'; pass=$((pass+1))
 else printf '  FAIL  expired: a CLOSED prose gate is reported\n'; fail=$((fail+1)); fi
 run_expired "$exp_open" "$out"
@@ -1301,17 +1301,17 @@ if has expired-open-silent '0 open bead(s)' "$out"; then
   printf '  PASS  expired: an OPEN prose gate is NOT reported\n'; pass=$((pass+1))
 else printf '  FAIL  expired: an OPEN prose gate is NOT reported\n'; fail=$((fail+1)); fi
 
-# (b) the aqc6.2.4 case: the gate is named WITHOUT the ForgeOs- prefix. Bare
+# (b) the aqc6.2.4 case: the gate is named WITHOUT the fortkit- prefix. Bare
 #     resolution is what makes that visible at all.
-bare_hit='[{"id":"ForgeOs-a","status":"open","acceptance_criteria":"Deal variant once aqc6.2.3 lands."},{"id":"ForgeOs-aqc6.2.3","status":"closed"}]'
+bare_hit='[{"id":"fortkit-a","status":"open","acceptance_criteria":"Deal variant once aqc6.2.3 lands."},{"id":"Proofdelve ForgeOs-aqc6.2.3","status":"closed"}]'
 run_expired "$bare_hit" "$out"
-if has expired-bare 'deferral expired: ForgeOs-aqc6.2.3' "$out"; then
+if has expired-bare 'deferral expired: Proofdelve ForgeOs-aqc6.2.3' "$out"; then
   printf '  PASS  expired: a bare id resolving to a closed bead is reported\n'; pass=$((pass+1))
 else printf '  FAIL  expired: a bare id resolving to a closed bead is reported\n'; fail=$((fail+1)); fi
 
 # (c) THE SAFETY PROPERTY, and the reason bare matching is allowed at all: a
 #     dotted token that is NOT a real bead id must never be invented into one.
-bare_miss='[{"id":"ForgeOs-a","status":"open","acceptance_criteria":"Fixed once App.tsx.1355 lands."},{"id":"ForgeOs-other","status":"closed"}]'
+bare_miss='[{"id":"fortkit-a","status":"open","acceptance_criteria":"Fixed once App.tsx.1355 lands."},{"id":"fortkit-other","status":"closed"}]'
 run_expired "$bare_miss" "$out"
 if has expired-bare-safe '0 open bead(s)' "$out"; then
   printf '  PASS  expired: a bare token matching no bead is NOT invented\n'; pass=$((pass+1))
@@ -1319,10 +1319,10 @@ else printf '  FAIL  expired: a bare token matching no bead is NOT invented\n'; 
 
 # (d) a parent whose children are ALL closed is the finding; ONE open child
 #     must silence it.
-par_all='[{"id":"ForgeOs-p","status":"open","title":"parent"},{"id":"ForgeOs-p.1","status":"closed"},{"id":"ForgeOs-p.2","status":"closed"}]'
-par_one='[{"id":"ForgeOs-p","status":"open","title":"parent"},{"id":"ForgeOs-p.1","status":"closed"},{"id":"ForgeOs-p.2","status":"open"}]'
+par_all='[{"id":"fortkit-p","status":"open","title":"parent"},{"id":"fortkit-p.1","status":"closed"},{"id":"fortkit-p.2","status":"closed"}]'
+par_one='[{"id":"fortkit-p","status":"open","title":"parent"},{"id":"fortkit-p.1","status":"closed"},{"id":"fortkit-p.2","status":"open"}]'
 run_parents "$par_all" "$out"
-if has parents-all 'ForgeOs-p ' "$out"; then
+if has parents-all 'fortkit-p ' "$out"; then
   printf '  PASS  parents: all children closed is reported\n'; pass=$((pass+1))
 else printf '  FAIL  parents: all children closed is reported\n'; fail=$((fail+1)); fi
 run_parents "$par_one" "$out"
@@ -1332,7 +1332,7 @@ else printf '  FAIL  parents: one open child silences it\n'; fail=$((fail+1)); f
 
 # (e) DEFERRED IS NOT CLOSED. Deferred work is latent work, so a parent whose
 #     remaining child is merely deferred still has something outstanding.
-par_def='[{"id":"ForgeOs-p","status":"open","title":"parent"},{"id":"ForgeOs-p.1","status":"deferred"}]'
+par_def='[{"id":"fortkit-p","status":"open","title":"parent"},{"id":"fortkit-p.1","status":"deferred"}]'
 run_parents "$par_def" "$out"
 if has parents-deferred '0 open bead(s)' "$out"; then
   printf '  PASS  parents: a DEFERRED child is not treated as closed\n'; pass=$((pass+1))
@@ -1340,13 +1340,13 @@ else printf '  FAIL  parents: a DEFERRED child is not treated as closed\n'; fail
 
 # `standing` and `record` are classes of intentionally open, non-work beads.
 # The standing pair is the red arm: removing only its label changes the report.
-par_standing='[{"id":"ForgeOs-standing","status":"open","title":"standing parent","labels":["standing"]},{"id":"ForgeOs-standing.1","status":"closed"}]'
-par_record='[{"id":"ForgeOs-record","status":"open","title":"record parent","labels":["record"]},{"id":"ForgeOs-record.1","status":"closed"}]'
-par_unlabelled='[{"id":"ForgeOs-standing","status":"open","title":"standing parent","labels":[]},{"id":"ForgeOs-standing.1","status":"closed"}]'
+par_standing='[{"id":"fortkit-standing","status":"open","title":"standing parent","labels":["standing"]},{"id":"fortkit-standing.1","status":"closed"}]'
+par_record='[{"id":"fortkit-record","status":"open","title":"record parent","labels":["record"]},{"id":"fortkit-record.1","status":"closed"}]'
+par_unlabelled='[{"id":"fortkit-standing","status":"open","title":"standing parent","labels":[]},{"id":"fortkit-standing.1","status":"closed"}]'
 run_parents "$par_standing" "$out"
 standing_excluded=$(has parents-standing-excluded '0 open bead(s)' "$out" && echo yes || echo no)
 run_parents "$par_unlabelled" "$out"
-standing_reported=$(has parents-standing-relabelled 'ForgeOs-standing ' "$out" && echo yes || echo no)
+standing_reported=$(has parents-standing-relabelled 'fortkit-standing ' "$out" && echo yes || echo no)
 if [ "$standing_excluded" = yes ] && [ "$standing_reported" = yes ]; then
   printf '  PASS  parents: removing standing label changes the reported count\n'; pass=$((pass+1))
 else printf '  FAIL  parents: removing standing label changes the reported count\n'; fail=$((fail+1)); fi
@@ -1368,7 +1368,7 @@ if [ "$mal_rc" -eq 3 ] && has parents-refuse 'stale-parents:' "$out"; then
   printf '  PASS  parents: malformed board refuses with exit 3\n'; pass=$((pass+1))
 else printf '  FAIL  parents: malformed board refuses with exit 3\n'; fail=$((fail+1)); fi
 
-# ForgeOs-76uob.2: Gate-6-only work is a routing question. These fixtures use
+# Proofdelve ForgeOs-76uob.2: Gate-6-only work is a routing question. These fixtures use
 # the helper directly because the backlog wrapper only supplies the fresh board.
 # The checklist is prose, but its Gate 3/5/6 bullet declares this small,
 # backtick-quoted set. Parse only that bounded declaration and compare sets, so
@@ -1506,27 +1506,27 @@ if ! check_gate_path_pin "$misrouted_source" "$fake_checklist" >"$pin_out" 2>&1 
 else
   printf '  FAIL  misrouted: checklist-only gate path red arm names drift\n'; cat "$pin_out"; fail=$((fail+1))
 fi
-mis_gate='[{"id":"ForgeOs-gate","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":[]}]'
-mis_routed='[{"id":"ForgeOs-gate","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":["mayor-lane"]}]'
-mis_human='[{"id":"ForgeOs-human","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":["human"]}]'
-mis_standing='[{"id":"ForgeOs-standing","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":["standing"]}]'
-mis_record='[{"id":"ForgeOs-record","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":["record"]}]'
-mis_split='[{"id":"ForgeOs-split","status":"open","description":"Touches: fort/scripts/fleet.sh, src/ForgeOS.Api/Program.cs","labels":[]}]'
-mis_split_script='[{"id":"ForgeOs-split-script","status":"open","description":"Touches: fort/scripts/fleet.sh, scripts/fleet-harness.sh","labels":[]}]'
-mis_split_docs='[{"id":"ForgeOs-split-docs","status":"open","description":"Touches: fort/scripts/fleet.sh, docs/runbook.md","labels":[]}]'
-mis_product='[{"id":"ForgeOs-product","status":"open","description":"Touches: src/ForgeOS.Api/Program.cs","labels":[]}]'
+mis_gate='[{"id":"fortkit-gate","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":[]}]'
+mis_routed='[{"id":"fortkit-gate","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":["mayor-lane"]}]'
+mis_human='[{"id":"fortkit-human","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":["human"]}]'
+mis_standing='[{"id":"fortkit-standing","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":["standing"]}]'
+mis_record='[{"id":"fortkit-record","status":"open","description":"Touches: fort/scripts/fleet.sh","labels":["record"]}]'
+mis_split='[{"id":"fortkit-split","status":"open","description":"Touches: fort/scripts/fleet.sh, src/Product.Api/Program.cs","labels":[]}]'
+mis_split_script='[{"id":"fortkit-split-script","status":"open","description":"Touches: fort/scripts/fleet.sh, scripts/fleet-harness.sh","labels":[]}]'
+mis_split_docs='[{"id":"fortkit-split-docs","status":"open","description":"Touches: fort/scripts/fleet.sh, docs/runbook.md","labels":[]}]'
+mis_product='[{"id":"fortkit-product","status":"open","description":"Touches: src/Product.Api/Program.cs","labels":[]}]'
 # shellcheck disable=SC2016 # Backticks are fixture content, not command substitution.
-mis_narrative='[{"id":"ForgeOs-narrative","status":"open","description":"Incident quoted `fort/scripts/fleet.sh`.\nTouches: src/ForgeOS.Api/Program.cs","labels":[]}]'
+mis_narrative='[{"id":"fortkit-narrative","status":"open","description":"Incident quoted `fort/scripts/fleet.sh`.\nTouches: src/Product.Api/Program.cs","labels":[]}]'
 # shellcheck disable=SC2016 # Backticks are fixture content, not command substitution.
-mis_touches_wins='[{"id":"ForgeOs-touches-wins","status":"open","description":"Incident quoted `src/ForgeOS.Api/Program.cs`.\nTouches: fort/scripts/fleet.sh","labels":[]}]'
-mis_unshaped='[{"id":"ForgeOs-unshaped","status":"open","description":"Repair fort/scripts/fleet.sh before/after review.verdict ForgeOs-dx34.1.","labels":[]}]'
-mis_false_tokens='[{"id":"ForgeOs-false-tokens","status":"open","description":"Touches: fort/scripts/fleet.sh e.g. before/after ForgeOs-dx34.1 review.verdict fleet.sh","labels":[]}]'
+mis_touches_wins='[{"id":"fortkit-touches-wins","status":"open","description":"Incident quoted `src/Product.Api/Program.cs`.\nTouches: fort/scripts/fleet.sh","labels":[]}]'
+mis_unshaped='[{"id":"fortkit-unshaped","status":"open","description":"Repair fort/scripts/fleet.sh before/after review.verdict Proofdelve ForgeOs-dx34.1.","labels":[]}]'
+mis_false_tokens='[{"id":"fortkit-false-tokens","status":"open","description":"Touches: fort/scripts/fleet.sh e.g. before/after Proofdelve ForgeOs-dx34.1 review.verdict fleet.sh","labels":[]}]'
 run_misrouted "$mis_gate" "$out"
-if has misrouted-gate 'MISROUTED ForgeOs-gate -- gate-6 only: fort/scripts/' "$out"; then
+if has misrouted-gate 'MISROUTED fortkit-gate -- gate-6 only: fort/scripts/' "$out"; then
   printf '  PASS  misrouted: unrouted gate-6-only Touches is reported\n'; pass=$((pass+1))
 else printf '  FAIL  misrouted: unrouted gate-6-only Touches is reported\n'; fail=$((fail+1)); fi
 run_misrouted_from_subdirectory "$mis_gate" "$out"
-if has misrouted-subdirectory 'MISROUTED ForgeOs-gate -- gate-6 only: fort/scripts/' "$out"; then
+if has misrouted-subdirectory 'MISROUTED fortkit-gate -- gate-6 only: fort/scripts/' "$out"; then
   printf '  PASS  misrouted: subdirectory invocation reports the same gate-6 bead\n'; pass=$((pass+1))
 else printf '  FAIL  misrouted: subdirectory invocation reports the same gate-6 bead\n'; fail=$((fail+1)); fi
 if run_misrouted_with_root "$repo/fort" "$mis_gate" "$out"; then
@@ -1546,7 +1546,7 @@ else printf '  FAIL  misrouted: no-git ROOT refuses with exit 3 and names ROOT\n
 bare_misrouted="$work/misrouted-bare-git.py"
 sed 's/\["git", "-C", root, "ls-files"\]/["git", "ls-files"]/' "$misrouted_source" > "$bare_misrouted"
 if run_misrouted_from_root_with_source "$bare_misrouted" "$mis_gate" "$out" \
-  && has misrouted-bare-root 'MISROUTED ForgeOs-gate -- gate-6 only: fort/scripts/' "$out"; then
+  && has misrouted-bare-root 'MISROUTED fortkit-gate -- gate-6 only: fort/scripts/' "$out"; then
   printf '  PASS  misrouted: bare-git red arm still passes from fixture root\n'; pass=$((pass+1))
 else printf '  FAIL  misrouted: bare-git red arm still passes from fixture root\n'; fail=$((fail+1)); fi
 if run_misrouted_from_subdirectory_with_source "$bare_misrouted" "$mis_gate" "$out" \
@@ -1569,7 +1569,7 @@ for fixture in mis_standing mis_record; do
     mis_record) board="$mis_record"; label="record" ;;
   esac
   run_misrouted "$board" "$out"
-  if has "misrouted-$label-reported" "MISROUTED ForgeOs-$label -- gate-6 only: fort/scripts/" "$out"; then
+  if has "misrouted-$label-reported" "MISROUTED fortkit-$label -- gate-6 only: fort/scripts/" "$out"; then
     printf '  PASS  misrouted: %s bead remains reported\n' "$label"; pass=$((pass+1))
   else
     printf '  FAIL  misrouted: %s bead remains reported\n' "$label"; fail=$((fail+1))
@@ -1596,7 +1596,7 @@ if has misrouted-narrative '0 open unrouted gate-6-only bead(s)' "$out"; then
   printf '  PASS  misrouted: product Touches overrides quoted gate-6 narrative\n'; pass=$((pass+1))
 else printf '  FAIL  misrouted: product Touches overrides quoted gate-6 narrative\n'; fail=$((fail+1)); fi
 run_misrouted "$mis_touches_wins" "$out"
-if has misrouted-touches-wins 'MISROUTED ForgeOs-touches-wins -- gate-6 only: fort/scripts/' "$out"; then
+if has misrouted-touches-wins 'MISROUTED fortkit-touches-wins -- gate-6 only: fort/scripts/' "$out"; then
   printf '  PASS  misrouted: gate-6 Touches overrides quoted product narrative\n'; pass=$((pass+1))
 else printf '  FAIL  misrouted: gate-6 Touches overrides quoted product narrative\n'; fail=$((fail+1)); fi
 run_misrouted "$mis_unshaped" "$out"
@@ -1604,25 +1604,25 @@ if has misrouted-unshaped '0 open unrouted gate-6-only bead(s)' "$out"; then
   printf '  PASS  misrouted: unshaped prose is not classified\n'; pass=$((pass+1))
 else printf '  FAIL  misrouted: unshaped prose is not classified\n'; fail=$((fail+1)); fi
 run_misrouted "$mis_false_tokens" "$out"
-if has misrouted-false-tokens 'MISROUTED ForgeOs-false-tokens -- gate-6 only: fort/scripts/' "$out"; then
+if has misrouted-false-tokens 'MISROUTED fortkit-false-tokens -- gate-6 only: fort/scripts/' "$out"; then
   printf '  PASS  misrouted: untracked Touches tokens do not hide gate work\n'; pass=$((pass+1))
 else printf '  FAIL  misrouted: untracked Touches tokens do not hide gate work\n'; fail=$((fail+1)); fi
 if run_backlog "$mis_gate" "$out" && has misrouted-backlog-heading '=== MISROUTED GATE-6 WORK' "$out" \
-  && has misrouted-backlog-report 'MISROUTED ForgeOs-gate -- gate-6 only: fort/scripts/' "$out"; then
+  && has misrouted-backlog-report 'MISROUTED fortkit-gate -- gate-6 only: fort/scripts/' "$out"; then
   printf '  PASS  misrouted: runs only in the exit-zero backlog slice\n'; pass=$((pass+1))
 else printf '  FAIL  misrouted: runs only in the exit-zero backlog slice\n'; fail=$((fail+1)); fi
 
-# ForgeOs-76uob.3: this is the Mayor's stockable slice, not a route choice.
+# Proofdelve ForgeOs-76uob.3: this is the Mayor's stockable slice, not a route choice.
 # Prose counts only exact files or slash-bearing directory prefixes: bare
 # repository directory words are ordinary English, not scope declarations.
-unshaped_plain='[{"id":"ForgeOs-plain","status":"open","priority":1,"description":"Needs decomposition.","labels":[]}]'
-unshaped_path='[{"id":"ForgeOs-path","status":"open","priority":0,"description":"Touches web/src/App.tsx","labels":[]}]'
-unshaped_routed='[{"id":"ForgeOs-routed","status":"open","priority":0,"description":"Needs decomposition.","labels":["mayor-lane"]}]'
-unshaped_epic='[{"id":"ForgeOs-epic","status":"open","issue_type":"epic","priority":0,"description":"Needs decomposition.","labels":[]}]'
-unshaped_version='[{"id":"ForgeOs-version","status":"open","priority":1,"description":"Regression since 1.2.3.","labels":[]}]'
-unshaped_initials='[{"id":"ForgeOs-initials","status":"open","priority":1,"description":"N.B. confirm scope.","labels":[]}]'
+unshaped_plain='[{"id":"fortkit-plain","status":"open","priority":1,"description":"Needs decomposition.","labels":[]}]'
+unshaped_path='[{"id":"fortkit-path","status":"open","priority":0,"description":"Touches web/src/App.tsx","labels":[]}]'
+unshaped_routed='[{"id":"fortkit-routed","status":"open","priority":0,"description":"Needs decomposition.","labels":["mayor-lane"]}]'
+unshaped_epic='[{"id":"fortkit-epic","status":"open","issue_type":"epic","priority":0,"description":"Needs decomposition.","labels":[]}]'
+unshaped_version='[{"id":"fortkit-version","status":"open","priority":1,"description":"Regression since 1.2.3.","labels":[]}]'
+unshaped_initials='[{"id":"fortkit-initials","status":"open","priority":1,"description":"N.B. confirm scope.","labels":[]}]'
 run_unshaped "$unshaped_plain" "$out"
-if has unshaped-plain 'UNSHAPED ForgeOs-plain -- P1, no criteria' "$out"; then
+if has unshaped-plain 'UNSHAPED fortkit-plain -- P1, no criteria' "$out"; then
   printf '  PASS  unshaped: unrouted bead naming no file is reported\n'; pass=$((pass+1))
 else printf '  FAIL  unshaped: unrouted bead naming no file is reported\n'; fail=$((fail+1)); fi
 run_unshaped "$unshaped_path" "$out"
@@ -1641,9 +1641,9 @@ for case in \
   'web:web session' 'docs:docs match' 'tests:tests' 'scripts:scripts' \
   'tools:tools' 'fort:fort is ready' 'src:src'; do
   IFS=: read -r spelling prose <<< "$case"
-  board="[{\"id\":\"ForgeOs-bare-$spelling\",\"status\":\"open\",\"priority\":1,\"description\":\"$prose\",\"labels\":[]}]"
+  board="[{\"id\":\"fortkit-bare-$spelling\",\"status\":\"open\",\"priority\":1,\"description\":\"$prose\",\"labels\":[]}]"
   run_unshaped "$board" "$out"
-  if has "unshaped-bare-$spelling" "UNSHAPED ForgeOs-bare-$spelling" "$out"; then
+  if has "unshaped-bare-$spelling" "UNSHAPED fortkit-bare-$spelling" "$out"; then
     printf '  PASS  unshaped: bare %s prose word is not a path\n' "$spelling"; pass=$((pass+1))
   else printf '  FAIL  unshaped: bare %s prose word is not a path\n' "$spelling"; fail=$((fail+1)); fi
 done
@@ -1653,7 +1653,7 @@ for dotted in version initials; do
     initials) board="$unshaped_initials" ;;
   esac
   run_unshaped "$board" "$out"
-  if has "unshaped-$dotted" "UNSHAPED ForgeOs-$dotted" "$out"; then
+  if has "unshaped-$dotted" "UNSHAPED fortkit-$dotted" "$out"; then
     printf '  PASS  unshaped: dotted %s is not a file\n' "$dotted"; pass=$((pass+1))
   else printf '  FAIL  unshaped: dotted %s is not a file\n' "$dotted"; fail=$((fail+1)); fi
 done
@@ -1675,33 +1675,33 @@ fi
 run_backlog "$unshaped_plain" "$out"
 root_backlog="$(cat "$out")"
 run_backlog_from_subdirectory "$unshaped_plain" "$out"
-if [ "$root_backlog" = "$(cat "$out")" ] && has unshaped-backlog 'UNSHAPED ForgeOs-plain' "$out"; then
+if [ "$root_backlog" = "$(cat "$out")" ] && has unshaped-backlog 'UNSHAPED fortkit-plain' "$out"; then
   printf '  PASS  unshaped: backlog output is identical from a subdirectory\n'; pass=$((pass+1))
 else printf '  FAIL  unshaped: backlog output is identical from a subdirectory\n'; fail=$((fail+1)); fi
 
-# ForgeOs-n1wbd: a Declined bead re-released without a lap, and a Touches token
+# Proofdelve ForgeOs-n1wbd: a Declined bead re-released without a lap, and a Touches token
 # that is not a path. The event stream is a fixture under the fixture repo, removed
 # afterwards so no other case sees it.
 mkdir -p "$repo/fort/events"
-dec_fleet='[{"id":"ForgeOs-dec","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","sign-to-land"]}]'
-dec_events() {  # $1 category of the LAST decision on ForgeOs-dec
-  printf '%s\n' '{"ts":"2026-10-21T22:00:00-08:00","actor":"justin","category":"gate.approved","target":"ForgeOs-dec","detail":"approve"}' \
-    '{"ts":"2026-10-21T22:05:00-08:00","actor":"fleet","category":"gate.declined","target":"ForgeOs-dec","detail":"not his"}' \
-    "{\"ts\":\"2026-10-21T22:10:00-08:00\",\"actor\":\"justin\",\"category\":\"$1\",\"target\":\"ForgeOs-dec\",\"detail\":\"x\"}" \
+dec_fleet='[{"id":"fortkit-dec","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","sign-to-land"]}]'
+dec_events() {  # $1 category of the LAST decision on fortkit-dec
+  printf '%s\n' '{"ts":"2026-10-21T22:00:00-08:00","actor":"justin","category":"gate.approved","target":"fortkit-dec","detail":"approve"}' \
+    '{"ts":"2026-10-21T22:05:00-08:00","actor":"fleet","category":"gate.declined","target":"fortkit-dec","detail":"not his"}' \
+    "{\"ts\":\"2026-10-21T22:10:00-08:00\",\"actor\":\"justin\",\"category\":\"$1\",\"target\":\"fortkit-dec\",\"detail\":\"x\"}" \
     > "$repo/fort/events/events-2026-10-21.jsonl"
 }
 out="$work/declined.out"
 dec_events gate.declined
 run_queue_case "$dec_fleet" "$dec_fleet" "$out"
-if has declined-flagged 'DECLINED ESCALATE RE-RELEASED WITHOUT A LAP' "$out" && has declined-names '  ForgeOs-dec' "$out"; then
+if has declined-flagged 'DECLINED ESCALATE RE-RELEASED WITHOUT A LAP' "$out" && has declined-names '  fortkit-dec' "$out"; then
   printf '  PASS  declined: fleet-safe after a Decline with no lap is flagged\n'; pass=$((pass+1))
 else printf '  FAIL  declined: fleet-safe after a Decline with no lap is flagged\n'; cat "$out"; fail=$((fail+1)); fi
-dec_board='[{"id":"ForgeOs-dec","status":"open","labels":["fleet-safe"]},{"id":"ForgeOs-dec.1","status":"open","labels":["fleet-safe"]}]'
+dec_board='[{"id":"fortkit-dec","status":"open","labels":["fleet-safe"]},{"id":"fortkit-dec.1","status":"open","labels":["fleet-safe"]}]'
 run_queue_case "$dec_fleet" "$dec_board" "$out"
 if ! has declined-lap 'DECLINED ESCALATE' "$out"; then
   printf '  PASS  declined: an open child lap clears it\n'; pass=$((pass+1))
 else printf '  FAIL  declined: an open child lap clears it\n'; fail=$((fail+1)); fi
-dec_closed_lap='[{"id":"ForgeOs-dec","status":"open","labels":["fleet-safe"]},{"id":"ForgeOs-dec.1","status":"closed","labels":[]}]'
+dec_closed_lap='[{"id":"fortkit-dec","status":"open","labels":["fleet-safe"]},{"id":"fortkit-dec.1","status":"closed","labels":[]}]'
 run_queue_case "$dec_fleet" "$dec_closed_lap" "$out"
 if has declined-closed-lap 'DECLINED ESCALATE' "$out"; then
   printf '  PASS  declined: a CLOSED lap does not clear it\n'; pass=$((pass+1))
@@ -1721,31 +1721,31 @@ if grep -q '^if False:$' "$mutant"; then
   else printf '  FAIL  declined red arm: without the check the Declined bead goes unflagged\n'; fail=$((fail+1)); fi
 else printf '  FAIL  declined red arm: mutation anchor not found in the subject\n'; fail=$((fail+1)); fi
 rm -rf "$repo/fort/events"
-nonpath_fleet='[{"id":"ForgeOs-np","status":"open","description":"Touches: scripts/queue-lint.sh (new file)","labels":["fleet-safe","lands-on-review"]},{"id":"ForgeOs-ok","status":"open","description":"Touches: scripts/queue-lint.sh, docs","labels":["fleet-safe","lands-on-review"]}]'
+nonpath_fleet='[{"id":"fortkit-np","status":"open","description":"Touches: scripts/queue-lint.sh (new file)","labels":["fleet-safe","lands-on-review"]},{"id":"fortkit-ok","status":"open","description":"Touches: scripts/queue-lint.sh, docs","labels":["fleet-safe","lands-on-review"]}]'
 run_queue_case "$nonpath_fleet" "$nonpath_fleet" "$out"
-if has nonpath-flag 'ForgeOs-np declares (new' "$out" && has nonpath-flag2 'ForgeOs-np declares file)' "$out" && ! has nonpath-ok 'ForgeOs-ok declares' "$out"; then
+if has nonpath-flag 'fortkit-np declares (new' "$out" && has nonpath-flag2 'fortkit-np declares file)' "$out" && ! has nonpath-ok 'fortkit-ok declares' "$out"; then
   printf '  PASS  touches: (new file) tokens are flagged, plain paths and a bare directory are not\n'; pass=$((pass+1))
 else printf '  FAIL  touches: (new file) tokens are flagged, plain paths and a bare directory are not\n'; cat "$out"; fail=$((fail+1)); fi
 
-# PROMPT SIZE (ForgeOs-2tz10): an open fleet-safe bead whose description and
+# PROMPT SIZE (Proofdelve ForgeOs-2tz10): an open fleet-safe bead whose description and
 # comments pass the limit is flagged from one bd export; a closed one is not.
-size_fleet='[{"id":"ForgeOs-big","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"]},{"id":"ForgeOs-small","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"]},{"id":"ForgeOs-shut","status":"closed","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"]}]'
+size_fleet='[{"id":"fortkit-big","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"]},{"id":"fortkit-small","status":"open","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"]},{"id":"fortkit-shut","status":"closed","description":"Touches: scripts/queue-lint.sh","labels":["fleet-safe","lands-on-review"]}]'
 size_long="$(printf 'x%.0s' $(seq 1 300))"
-size_export="$(printf '{"id":"ForgeOs-big","status":"open","description":"d","comments":[{"text":"%s"}]}\n{"id":"ForgeOs-small","status":"open","description":"d","comments":[{"text":"short"}]}\n{"id":"ForgeOs-shut","status":"closed","description":"d","comments":[{"text":"%s"}]}' "$size_long" "$size_long")"
+size_export="$(printf '{"id":"fortkit-big","status":"open","description":"d","comments":[{"text":"%s"}]}\n{"id":"fortkit-small","status":"open","description":"d","comments":[{"text":"short"}]}\n{"id":"fortkit-shut","status":"closed","description":"d","comments":[{"text":"%s"}]}' "$size_long" "$size_long")"
 run_size_case() {  # $1 lint source, $2 output
   HARNESS_FLEET_JSON="$size_fleet" HARNESS_OPEN_JSON="$size_fleet" HARNESS_EXPORT_JSON="$size_export" HARNESS_COMMENTS_JSON='[]' \
   HARNESS_BD_LOG="$work/bd.log" HARNESS_EMITS="$work/emits.log" QUEUE_LINT_PROMPT_LIMIT=100 \
   QUEUE_LINT_SKIP_IDENTIFIER_SURFACE=1 FLEET_STATE="$work/fleet" HARNESS_REAL_PYTHON3="$real_python3" PATH="$stub:$PATH" "$1" >"$2" 2>&1
 }
 run_size_case "$repo/scripts/queue-lint.sh" "$out"
-if has size-flag 'ForgeOs-big -- 301 characters' "$out" && ! has size-small 'ForgeOs-small --' "$out" && ! has size-closed 'ForgeOs-shut --' "$out"; then
+if has size-flag 'fortkit-big -- 301 characters' "$out" && ! has size-small 'fortkit-small --' "$out" && ! has size-closed 'fortkit-shut --' "$out"; then
   printf '  PASS  prompt size: an open fleet-safe bead past the limit is flagged, small and closed ones are not\n'; pass=$((pass+1))
 else printf '  FAIL  prompt size: an open fleet-safe bead past the limit is flagged, small and closed ones are not\n'; cat "$out"; fail=$((fail+1)); fi
 mutant="$repo/scripts/queue-lint-without-size.sh"
 sed 's/^    if n > limit: print/    if False: print/' "$lint_source" > "$mutant"; chmod 755 "$mutant"
 if grep -q '^    if False: print' "$mutant"; then
   run_size_case "$mutant" "$out"
-  if has size-red-arm-ran 'queue-lint' "$out" && ! has size-red-arm 'ForgeOs-big --' "$out"; then
+  if has size-red-arm-ran 'queue-lint' "$out" && ! has size-red-arm 'fortkit-big --' "$out"; then
     printf '  PASS  prompt size red arm: without the comparison the oversized bead goes unflagged\n'; pass=$((pass+1))
   else printf '  FAIL  prompt size red arm: without the comparison the oversized bead goes unflagged\n'; fail=$((fail+1)); fi
 else printf '  FAIL  prompt size red arm: mutation anchor not found in the subject\n'; fail=$((fail+1)); fi

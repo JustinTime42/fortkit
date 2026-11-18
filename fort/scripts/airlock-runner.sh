@@ -1,19 +1,19 @@
 #!/bin/bash
-# Airlock host runner (ForgeOs-mbv54 item A, Regent edict 2026-10-15, the
-# Overseer present). Fired by fort/systemd/proofdelve-airlock-runner.path on
+# Airlock host runner (Proofdelve ForgeOs-mbv54 item A, Regent edict 2026-10-15, the
+# Overseer present). Fired by fort/systemd/manyhalls-airlock-runner.path on
 # every write to the Overseer's approvals store, and by
-# proofdelve-airlock-runner.timer as a safety net; runs `airlock.sh run` with
+# manyhalls-airlock-runner.timer as a safety net; runs `airlock.sh run` with
 # NO id until it reports nothing left, then exits.
 #
 # WHAT THIS ADDS, AND WHAT IT DOES NOT. It removes the one typed command from a
 # staging deploy: the Mayor requests, he clicks Approve in the Civ Keep, and
 # this runs it. `run` with no id selects requests approved IN THE STORE for
 # the bytes on disk (airlock.sh, the 72ot.1 rules; the store is read-only in
-# every seat mask), AND, since ForgeOs-emshb (Regent sitting 2026-10-23),
+# every seat mask), AND, since Proofdelve ForgeOs-emshb (Regent sitting 2026-10-23),
 # requests for an operation operations.json declares `auto_run` beside
 # requires_approval false: host-test and preview-stop. FOR THOSE TWO A REQUEST
 # A SEAT WRITES STARTS A RUN with no click, by the Overseer's decision recorded
-# on ForgeOs-emshb (host-test executes the named worktree's code on the host,
+# on Proofdelve ForgeOs-emshb (host-test executes the named worktree's code on the host,
 # with Docker). Everything else still needs his click. An operation declared
 # requires_approval:false WITHOUT auto_run (feedback-scan) is NOT run by this
 # unit: it is never selected, so a scan still needs a person's

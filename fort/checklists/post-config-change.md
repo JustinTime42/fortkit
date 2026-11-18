@@ -21,7 +21,7 @@ Standing order 10: every config fix gets a follow-up verification.
    |---|---|
    | `PASS` | Durably refused or verified covered — a deny rule that binds, a kernel mask, static lists that agree. |
    | `FRAGILE` | Refused only by allow-list absence or the built-in classifier heuristic. Both evaporate in interactive and auto mode. Not a hole today, not coverage either. |
-   | `COVERED-CANONICAL` | The reader executes and only the canonical absolute-path spelling is bound. Not coverage: obfuscated spellings of the same path bind nothing (ForgeOs-21f.8). |
+   | `COVERED-CANONICAL` | The reader executes and only the canonical absolute-path spelling is bound. Not coverage: obfuscated spellings of the same path bind nothing (Proofdelve ForgeOs-21f.8). |
    | `NAMED` | A rule mentions the command but does not match the absolute-path form. Naming is not binding. |
    | `GAP` | Demonstrated open hole. Expected, tracked in beads, not a regression. |
    | `INCONCLUSIVE` | No evidence either way — model declined, evidence uncorrelated, session timed out, or the refusing boundary could not be identified. Never read as a pass. |
@@ -57,6 +57,6 @@ Standing order 10: every config fix gets a follow-up verification.
 
 ## Automation status
 
-`ForgeOs-4bs` (config-checksum watcher) is specified to trigger step 1
+`Proofdelve ForgeOs-4bs` (config-checksum watcher) is specified to trigger step 1
 automatically on config drift and file a bead on any `FAIL`. Until that bead
 lands, steps 1-5 are manual. This checklist is the interim mechanism.

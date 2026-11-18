@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Which fleet-safe beads have ALREADY had their work merged into main?
 
-The failure this catches, measured 2026-09-15 on ForgeOs-7hxc: the Mayor read a
+The failure this catches, measured 2026-09-15 on Proofdelve ForgeOs-7hxc: the Mayor read a
 bead as "open, has criteria, no touch set", marked it fleet-safe, and the fleet
 spent two Forge launches discovering that the fix was already on main. It then
 returned twice ("no product change: handoff only") and escalated.

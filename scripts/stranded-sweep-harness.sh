@@ -1,5 +1,5 @@
 #!/bin/bash
-# Graph fixtures for ForgeOs-46xh. A zero-commit branch at an older mainline
+# Graph fixtures for Proofdelve ForgeOs-46xh. A zero-commit branch at an older mainline
 # commit is CLAIMED-NO-WORK; branches at main's exact tip and live locks are
 # silent; a fleet --no-ff landing remains MERGED-NOT-CLOSED.
 set -uo pipefail
@@ -104,16 +104,16 @@ g add file; commit '2023-11-14T22:13:26Z' unmerged
 g switch -q main
 mkdir -p "$repo/fort/events"
 printf '%s\n' \
-  '{"id":"ForgeOs-refreshed","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-fresh-zero-commit","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-hand-ff-accepted-residual","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-landed","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-live-locked","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-unmerged","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-graph-padding-1","status":"open"}' \
-  '{"id":"ForgeOs-graph-padding-2","status":"open"}' \
-  '{"id":"ForgeOs-graph-padding-3","status":"open"}' \
-  '{"id":"ForgeOs-graph-padding-4","status":"open"}' > "$work/issues.jsonl"
+  '{"id":"fortkit-refreshed","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-fresh-zero-commit","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-hand-ff-accepted-residual","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-landed","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-live-locked","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-unmerged","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-graph-padding-1","status":"open"}' \
+  '{"id":"fortkit-graph-padding-2","status":"open"}' \
+  '{"id":"fortkit-graph-padding-3","status":"open"}' \
+  '{"id":"fortkit-graph-padding-4","status":"open"}' > "$work/issues.jsonl"
 
 out="$work/output"
 bash "$sweep" --repo "$repo" --bd-export "$work/issues.jsonl" > "$out"
@@ -286,7 +286,7 @@ else
   no "dated unmerged branch is STRANDED-NOT-LANDABLE" "$(cat "$out")"
 fi
 
-# Dirty-tree fixtures for ForgeOs-w8iez. All three branches are zero-commit
+# Dirty-tree fixtures for Proofdelve ForgeOs-w8iez. All three branches are zero-commit
 # refs at an older mainline commit, so the graph classification is identical;
 # only tracked worktree state may split their rendered remediation.
 dirty_repo="$work/dirty-repo"; git init -q -b main "$dirty_repo"
@@ -304,16 +304,16 @@ printf 'uncommitted tracked change\n' >> "$work/tracked-dirty/tracked"
 printf 'untracked verifier artifact\n' > "$work/log-only/verification-fixture.log"
 mkdir -p "$dirty_repo/fort/events"
 printf '%s\n' \
-  '{"id":"ForgeOs-clean-tree","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-tracked-dirty","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-log-only","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-dirty-padding-1","status":"open"}' \
-  '{"id":"ForgeOs-dirty-padding-2","status":"open"}' \
-  '{"id":"ForgeOs-dirty-padding-3","status":"open"}' \
-  '{"id":"ForgeOs-dirty-padding-4","status":"open"}' \
-  '{"id":"ForgeOs-dirty-padding-5","status":"open"}' \
-  '{"id":"ForgeOs-dirty-padding-6","status":"open"}' \
-  '{"id":"ForgeOs-dirty-padding-7","status":"open"}' > "$work/dirty-issues.jsonl"
+  '{"id":"fortkit-clean-tree","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-tracked-dirty","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-log-only","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-dirty-padding-1","status":"open"}' \
+  '{"id":"fortkit-dirty-padding-2","status":"open"}' \
+  '{"id":"fortkit-dirty-padding-3","status":"open"}' \
+  '{"id":"fortkit-dirty-padding-4","status":"open"}' \
+  '{"id":"fortkit-dirty-padding-5","status":"open"}' \
+  '{"id":"fortkit-dirty-padding-6","status":"open"}' \
+  '{"id":"fortkit-dirty-padding-7","status":"open"}' > "$work/dirty-issues.jsonl"
 dirty_index="$(git -C "$work/tracked-dirty" rev-parse --git-path index)"
 dirty_index_before="$(stat -c %y "$dirty_index")"
 bash "$sweep" --repo "$dirty_repo" --bd-export "$work/dirty-issues.jsonl" > "$work/dirty.out"; dirty_rc=$?
@@ -433,9 +433,9 @@ if [ -z "${SWEEP_PREFIX_MUTATION:-}" ] && [ -z "${SWEEP_MUTATION:-}" ] \
   fi
 fi
 
-# 6 NEGATIVE CONTROL, RUN BY THIS HARNESS ITSELF (ForgeOs-6qn1). Until
+# 6 NEGATIVE CONTROL, RUN BY THIS HARNESS ITSELF (Proofdelve ForgeOs-6qn1). Until
 # 2026-09-16 the classifier removal at the top of this file ran only when a
-# person set SWEEP_DISABLE_CLASSIFIER=1 by hand (measured on ForgeOs-m37a and
+# person set SWEEP_DISABLE_CLASSIFIER=1 by hand (measured on Proofdelve ForgeOs-m37a and
 # again on l2wz), so the gate proved fixture 5 PASSES and never that it CAN
 # FAIL. This re-runs the file once in disabled mode and scores the inner run
 # as a case. The expectation is exact on purpose: inner exit 1 (a refusal is
@@ -487,12 +487,12 @@ mkdir -p "$bd_repo/fort/events" "$work/bin"
 cat > "$work/bin/bd" <<'SH'
 #!/bin/bash
 case "${BD_SHAPE:-absent}" in
-  absent) for n in $(seq 1 10); do printf '{"id":"ForgeOs-unrelated-%s","status":"open","assignee":"veyra"}\n' "$n"; done ;;
-  short) for n in $(seq 1 3); do printf '{"id":"ForgeOs-short-%s","status":"open","assignee":"veyra"}\n' "$n"; done ;;
+  absent) for n in $(seq 1 10); do printf '{"id":"fortkit-unrelated-%s","status":"open","assignee":"kethra"}\n' "$n"; done ;;
+  short) for n in $(seq 1 3); do printf '{"id":"fortkit-short-%s","status":"open","assignee":"kethra"}\n' "$n"; done ;;
   truncated)
-    for n in $(seq 1 9); do printf '{"id":"ForgeOs-truncated-%s","status":"open","assignee":"veyra"}\n' "$n"; done
-    printf '{"id":"ForgeOs-candidate","status":"in_progress"}\n'
-    printf '{"id":"ForgeOs-half"\n'
+    for n in $(seq 1 9); do printf '{"id":"fortkit-truncated-%s","status":"open","assignee":"kethra"}\n' "$n"; done
+    printf '{"id":"fortkit-candidate","status":"in_progress"}\n'
+    printf '{"id":"fortkit-half"\n'
     ;;
   enoent) echo "openat LOCK: no such file or directory" >&2; exit 1 ;;
 esac
@@ -511,7 +511,7 @@ else
   no "ENOENT-shaped bd export failure refuses at exit 3" "exit $enoent_rc; $(cat "$work/enoent.out" "$work/enoent.err")"
 fi
 
-# Regression controls for ForgeOs-4q03 and ForgeOs-71kb. They use normal mode
+# Regression controls for Proofdelve ForgeOs-4q03 and Proofdelve ForgeOs-71kb. They use normal mode
 # through the fake bd so their assertions pin the rendered output, rather than
 # merely observing an exit code in fixture mode.
 if [ "${SWEEP_DISABLE_CLASSIFIER:-0}" != 1 ]; then
@@ -617,19 +617,19 @@ ag switch -q main; ag switch -q -c bead/age-recent; printf 'recent\n' >> "$age_r
 ag switch -q main
 mkdir -p "$age_repo/fort/events"
 printf '%s\n' \
-  '{"id":"ForgeOs-age-old","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-age-recent","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-verdict-recent","status":"in_progress","assignee":"veyra"}' \
-  '{"id":"ForgeOs-age-padding-1","status":"open"}' \
-  '{"id":"ForgeOs-age-padding-2","status":"open"}' \
-  '{"id":"ForgeOs-age-padding-3","status":"open"}' \
-  '{"id":"ForgeOs-age-padding-4","status":"open"}' \
-  '{"id":"ForgeOs-age-padding-5","status":"open"}' \
-  '{"id":"ForgeOs-age-padding-6","status":"open"}' \
-  '{"id":"ForgeOs-age-padding-7","status":"open"}' > "$work/age-issues.jsonl"
+  '{"id":"fortkit-age-old","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-age-recent","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-verdict-recent","status":"in_progress","assignee":"kethra"}' \
+  '{"id":"fortkit-age-padding-1","status":"open"}' \
+  '{"id":"fortkit-age-padding-2","status":"open"}' \
+  '{"id":"fortkit-age-padding-3","status":"open"}' \
+  '{"id":"fortkit-age-padding-4","status":"open"}' \
+  '{"id":"fortkit-age-padding-5","status":"open"}' \
+  '{"id":"fortkit-age-padding-6","status":"open"}' \
+  '{"id":"fortkit-age-padding-7","status":"open"}' > "$work/age-issues.jsonl"
 ag switch -q -c bead/verdict-recent; printf 'verdict\n' >> "$age_repo/file"; ag add file; age_commit "$old_ts" verdict
 ag switch -q main
-printf '{"ts":"%s","category":"review.verdict","target":"ForgeOs-verdict-recent","detail":"APPROVE","payload":{"verdict":"APPROVE"}}\n' "$recent_ts" > "$age_repo/fort/events/events-age.jsonl"
+printf '{"ts":"%s","category":"review.verdict","target":"fortkit-verdict-recent","detail":"APPROVE","payload":{"verdict":"APPROVE"}}\n' "$recent_ts" > "$age_repo/fort/events/events-age.jsonl"
 bash "$sweep" --repo "$age_repo" --bd-export "$work/age-issues.jsonl" --min-age 30 > "$work/age-30.out"; age_30_rc=$?
 bash "$sweep" --repo "$age_repo" --bd-export "$work/age-issues.jsonl" --min-age 0 > "$work/age-0.out"; age_0_rc=$?
 bash "$sweep" --repo "$age_repo" --bd-export "$work/age-issues.jsonl" > "$work/age-default.out"; age_default_rc=$?
@@ -673,7 +673,7 @@ fi
 ag switch -q -c bead/merge-recent; printf 'merged\n' >> "$age_repo/file"; ag add file; age_commit "$old_ts" merged
 ag switch -q main
 GIT_AUTHOR_DATE="$recent_ts" GIT_COMMITTER_DATE="$recent_ts" ag merge --no-ff -q bead/merge-recent -m merged
-printf '%s\n' '{"id":"ForgeOs-merge-recent","status":"in_progress","assignee":"veyra"}' '{"id":"ForgeOs-merge-padding-1","status":"open"}' '{"id":"ForgeOs-merge-padding-2","status":"open"}' '{"id":"ForgeOs-merge-padding-3","status":"open"}' '{"id":"ForgeOs-merge-padding-4","status":"open"}' '{"id":"ForgeOs-merge-padding-5","status":"open"}' '{"id":"ForgeOs-merge-padding-6","status":"open"}' '{"id":"ForgeOs-merge-padding-7","status":"open"}' '{"id":"ForgeOs-merge-padding-8","status":"open"}' '{"id":"ForgeOs-merge-padding-9","status":"open"}' > "$work/merge-issues.jsonl"
+printf '%s\n' '{"id":"fortkit-merge-recent","status":"in_progress","assignee":"kethra"}' '{"id":"fortkit-merge-padding-1","status":"open"}' '{"id":"fortkit-merge-padding-2","status":"open"}' '{"id":"fortkit-merge-padding-3","status":"open"}' '{"id":"fortkit-merge-padding-4","status":"open"}' '{"id":"fortkit-merge-padding-5","status":"open"}' '{"id":"fortkit-merge-padding-6","status":"open"}' '{"id":"fortkit-merge-padding-7","status":"open"}' '{"id":"fortkit-merge-padding-8","status":"open"}' '{"id":"fortkit-merge-padding-9","status":"open"}' > "$work/merge-issues.jsonl"
 bash "$sweep" --repo "$age_repo" --bd-export "$work/merge-issues.jsonl" --min-age 30 > "$work/merge-30.out" 2> "$work/merge-30.err"; merge_30_rc=$?
 echo "MERGE-AGE CONTROL --min-age 30"
 cat "$work/merge-30.out" "$work/merge-30.err"
@@ -686,8 +686,8 @@ fi
 # Malformed verdict time is an unmeasurable age gate, never a quiet suppression.
 ag switch -q -c bead/bad-verdict-time; printf 'bad timestamp\n' >> "$age_repo/file"; ag add file; age_commit "$old_ts" bad-timestamp
 ag switch -q main
-printf '{"ts":"not-a-timestamp","category":"review.verdict","target":"ForgeOs-bad-verdict-time","detail":"APPROVE","payload":{"verdict":"APPROVE"}}\n' >> "$age_repo/fort/events/events-age.jsonl"
-printf '%s\n' '{"id":"ForgeOs-bad-verdict-time","status":"in_progress","assignee":"veyra"}' '{"id":"ForgeOs-bad-padding-1","status":"open"}' '{"id":"ForgeOs-bad-padding-2","status":"open"}' '{"id":"ForgeOs-bad-padding-3","status":"open"}' '{"id":"ForgeOs-bad-padding-4","status":"open"}' '{"id":"ForgeOs-bad-padding-5","status":"open"}' '{"id":"ForgeOs-bad-padding-6","status":"open"}' '{"id":"ForgeOs-bad-padding-7","status":"open"}' '{"id":"ForgeOs-bad-padding-8","status":"open"}' '{"id":"ForgeOs-bad-padding-9","status":"open"}' > "$work/bad-verdict-issues.jsonl"
+printf '{"ts":"not-a-timestamp","category":"review.verdict","target":"fortkit-bad-verdict-time","detail":"APPROVE","payload":{"verdict":"APPROVE"}}\n' >> "$age_repo/fort/events/events-age.jsonl"
+printf '%s\n' '{"id":"fortkit-bad-verdict-time","status":"in_progress","assignee":"kethra"}' '{"id":"fortkit-bad-padding-1","status":"open"}' '{"id":"fortkit-bad-padding-2","status":"open"}' '{"id":"fortkit-bad-padding-3","status":"open"}' '{"id":"fortkit-bad-padding-4","status":"open"}' '{"id":"fortkit-bad-padding-5","status":"open"}' '{"id":"fortkit-bad-padding-6","status":"open"}' '{"id":"fortkit-bad-padding-7","status":"open"}' '{"id":"fortkit-bad-padding-8","status":"open"}' '{"id":"fortkit-bad-padding-9","status":"open"}' > "$work/bad-verdict-issues.jsonl"
 bash "$sweep" --repo "$age_repo" --bd-export "$work/bad-verdict-issues.jsonl" --min-age 30 > "$work/bad-verdict.out" 2> "$work/bad-verdict.err"; bad_verdict_rc=$?
 echo "MALFORMED-VERDICT CONTROL --min-age 30"
 cat "$work/bad-verdict.out" "$work/bad-verdict.err"
@@ -745,7 +745,7 @@ rgit switch -q -c bead/reap-tip; printf 'tip\n' >> "$reap_repo/file"; rgit add f
 rgit switch -q main; rgit merge --ff-only -q bead/reap-tip
 rgit worktree add -q "$work/reap-tip" bead/reap-tip
 mkdir -p "$reap_repo/fort/events"
-printf '%s\n' '{"id":"ForgeOs-reap-tip","status":"closed"}' '{"id":"ForgeOs-reap-padding-1","status":"open"}' '{"id":"ForgeOs-reap-padding-2","status":"open"}' '{"id":"ForgeOs-reap-padding-3","status":"open"}' '{"id":"ForgeOs-reap-padding-4","status":"open"}' '{"id":"ForgeOs-reap-padding-5","status":"open"}' '{"id":"ForgeOs-reap-padding-6","status":"open"}' '{"id":"ForgeOs-reap-padding-7","status":"open"}' '{"id":"ForgeOs-reap-padding-8","status":"open"}' '{"id":"ForgeOs-reap-padding-9","status":"open"}' > "$work/reap-issues.jsonl"
+printf '%s\n' '{"id":"fortkit-reap-tip","status":"closed"}' '{"id":"fortkit-reap-padding-1","status":"open"}' '{"id":"fortkit-reap-padding-2","status":"open"}' '{"id":"fortkit-reap-padding-3","status":"open"}' '{"id":"fortkit-reap-padding-4","status":"open"}' '{"id":"fortkit-reap-padding-5","status":"open"}' '{"id":"fortkit-reap-padding-6","status":"open"}' '{"id":"fortkit-reap-padding-7","status":"open"}' '{"id":"fortkit-reap-padding-8","status":"open"}' '{"id":"fortkit-reap-padding-9","status":"open"}' > "$work/reap-issues.jsonl"
 bash "$sweep" --repo "$reap_repo" --bd-export "$work/reap-issues.jsonl" --reapable --min-age 30 > "$work/reap-tip.out" 2> "$work/reap-tip.err"; reap_tip_rc=$?
 if [ "$reap_tip_rc" -eq 0 ] && grep -q 'REAPABLE.*bead/reap-tip' "$work/reap-tip.out"; then
   ok "tip-equals-main fast-forward landing is REAPABLE at min-age 30, not exit 3"
@@ -758,7 +758,7 @@ rgit switch -q main; rgit merge --ff-only -q bead/reap-ff
 rgit switch -q -c bead/unrelated; printf 'unrelated\n' >> "$reap_repo/file"; rgit add file; reap_commit "$recent_reap_ts" unrelated
 rgit switch -q main; GIT_AUTHOR_DATE="$recent_reap_ts" GIT_COMMITTER_DATE="$recent_reap_ts" rgit merge --no-ff -q bead/unrelated -m unrelated
 rgit worktree add -q "$work/reap-ff" bead/reap-ff
-printf '%s\n' '{"id":"ForgeOs-reap-ff","status":"closed"}' '{"id":"ForgeOs-reap-padding-1","status":"open"}' '{"id":"ForgeOs-reap-padding-2","status":"open"}' '{"id":"ForgeOs-reap-padding-3","status":"open"}' '{"id":"ForgeOs-reap-padding-4","status":"open"}' '{"id":"ForgeOs-reap-padding-5","status":"open"}' '{"id":"ForgeOs-reap-padding-6","status":"open"}' '{"id":"ForgeOs-reap-padding-7","status":"open"}' '{"id":"ForgeOs-reap-padding-8","status":"open"}' '{"id":"ForgeOs-reap-padding-9","status":"open"}' > "$work/reap-ff-issues.jsonl"
+printf '%s\n' '{"id":"fortkit-reap-ff","status":"closed"}' '{"id":"fortkit-reap-padding-1","status":"open"}' '{"id":"fortkit-reap-padding-2","status":"open"}' '{"id":"fortkit-reap-padding-3","status":"open"}' '{"id":"fortkit-reap-padding-4","status":"open"}' '{"id":"fortkit-reap-padding-5","status":"open"}' '{"id":"fortkit-reap-padding-6","status":"open"}' '{"id":"fortkit-reap-padding-7","status":"open"}' '{"id":"fortkit-reap-padding-8","status":"open"}' '{"id":"fortkit-reap-padding-9","status":"open"}' > "$work/reap-ff-issues.jsonl"
 bash "$sweep" --repo "$reap_repo" --bd-export "$work/reap-ff-issues.jsonl" --reapable --min-age 30 > "$work/reap-ff.out" 2> "$work/reap-ff.err"; reap_ff_rc=$?
 if [ "$reap_ff_rc" -eq 0 ] && grep -q 'REAPABLE.*bead/reap-ff' "$work/reap-ff.out"; then
   ok "older fast-forward landing does not adopt a later unrelated merge timestamp"
@@ -782,7 +782,7 @@ ogit switch -q main; GIT_AUTHOR_DATE="$old_order_ts" GIT_COMMITTER_DATE="$old_or
 ogit switch -q -c bead/later-unrelated; printf 'later\n' >> "$order_repo/file"; ogit add file; order_commit "$recent_order_ts" later
 ogit switch -q main; GIT_AUTHOR_DATE="$recent_order_ts" GIT_COMMITTER_DATE="$recent_order_ts" ogit merge --no-ff -q bead/later-unrelated -m later
 mkdir -p "$order_repo/fort/events"
-printf '%s\n' '{"id":"ForgeOs-landed-old","status":"in_progress","assignee":"veyra"}' '{"id":"ForgeOs-order-padding-1","status":"open"}' '{"id":"ForgeOs-order-padding-2","status":"open"}' '{"id":"ForgeOs-order-padding-3","status":"open"}' '{"id":"ForgeOs-order-padding-4","status":"open"}' '{"id":"ForgeOs-order-padding-5","status":"open"}' '{"id":"ForgeOs-order-padding-6","status":"open"}' '{"id":"ForgeOs-order-padding-7","status":"open"}' '{"id":"ForgeOs-order-padding-8","status":"open"}' '{"id":"ForgeOs-order-padding-9","status":"open"}' > "$work/order-issues.jsonl"
+printf '%s\n' '{"id":"fortkit-landed-old","status":"in_progress","assignee":"kethra"}' '{"id":"fortkit-order-padding-1","status":"open"}' '{"id":"fortkit-order-padding-2","status":"open"}' '{"id":"fortkit-order-padding-3","status":"open"}' '{"id":"fortkit-order-padding-4","status":"open"}' '{"id":"fortkit-order-padding-5","status":"open"}' '{"id":"fortkit-order-padding-6","status":"open"}' '{"id":"fortkit-order-padding-7","status":"open"}' '{"id":"fortkit-order-padding-8","status":"open"}' '{"id":"fortkit-order-padding-9","status":"open"}' > "$work/order-issues.jsonl"
 bash "$sweep" --repo "$order_repo" --bd-export "$work/order-issues.jsonl" --min-age 30 > "$work/order-30.out" 2> "$work/order-30.err"; order_30_rc=$?
 echo "LANDING-MERGE ORDER PROBE --min-age 30"
 cat "$work/order-30.out" "$work/order-30.err"

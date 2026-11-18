@@ -64,7 +64,7 @@ def main():
         sys.exit(2)
 
     # A SECOND `Touches:` LINE IS A TRAP, NOT A DUPLICATE (measured 2026-09-19 on
-    # ForgeOs-mi7.1). fleet.sh's touch_set_of() breaks on the FIRST match, so a
+    # Proofdelve ForgeOs-mi7.1). fleet.sh's touch_set_of() breaks on the FIRST match, so a
     # second line is silently ignored: a later hand edits the one they can see and
     # the dispatcher keeps using the other. Refuse, and say which lines collide.
     block_touches = [l.strip() for l in block.splitlines() if re.match(r"\s*Touches:", l)]

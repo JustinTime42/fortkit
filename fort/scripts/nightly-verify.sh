@@ -1,6 +1,6 @@
 #!/bin/bash
 # nightly-verify.sh -- one FULL verify of main, with Docker required, on the host
-# (ForgeOs-s1reg item 2; the Overseer approved the design on the bead,
+# (Proofdelve ForgeOs-s1reg item 2; the Overseer approved the design on the bead,
 # 2026-10-19, before any edit).
 #
 # WHY IT EXISTS. Since s1reg the fleet verifies a bead ONCE: a host verify picked
@@ -37,7 +37,7 @@ fi
 
 # >>> node_compile_cache: KEEP BYTE-IDENTICAL in fort/scripts/fleet.sh, fort/scripts/forge.sh, fort/scripts/nightly-verify.sh and scripts/verify-impl.sh (scripts/node-cache-harness.sh compares them)
 # NODE'S ON-DISK COMPILE CACHE IS OFF for every fleet, Forge, nightly and
-# verifier run (ForgeOs-jfqu4.8 with ForgeOs-lmgue and ForgeOs-x1n09, Regent
+# verifier run (Proofdelve ForgeOs-jfqu4.8 with Proofdelve ForgeOs-lmgue and Proofdelve ForgeOs-x1n09, Regent
 # docket 2026-10-22 item B, the Overseer's choice on 2026-10-23). typescript,
 # eslint, vite and vitest call module.enableCompileCache(); with no
 # NODE_COMPILE_CACHE that writes os.tmpdir()/node-compile-cache, keyed by file
@@ -50,10 +50,10 @@ fi
 # runs too.) The switch wins over a NODE_COMPILE_CACHE the parent set
 # (measured 2026-10-23, node v24.14.0: status DISABLED, nothing written).
 export NODE_DISABLE_COMPILE_CACHE=1
-echo "$(basename "$0"): Node compile cache disabled for this run (NODE_DISABLE_COMPILE_CACHE=1, ForgeOs-jfqu4.8)" >&2
+echo "$(basename "$0"): Node compile cache disabled for this run (NODE_DISABLE_COMPILE_CACHE=1, Proofdelve ForgeOs-jfqu4.8)" >&2
 # <<< node_compile_cache
 root="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
-state="${FLEET_STATE:-$HOME/.local/state/proofdelve-fleet}"
+state="${FLEET_STATE:-$HOME/.local/state/manyhalls-fleet}"
 halt_file="$state/HALT"
 mkdir -p "$state/logs"
 stamp="$(date +%Y%m%dT%H%M%S)"
@@ -73,8 +73,8 @@ trap 'on_signal INT' INT
 trap 'on_signal TERM' TERM
 
 # >>> verify_unrunnable: KEEP BYTE-IDENTICAL in fort/scripts/fleet.sh and fort/scripts/nightly-verify.sh (nightly-verify-harness.sh compares them)
-# UNRUNNABLE IS NOT RED (ForgeOs-s1reg finding 4, Tova's review of docket
-# ForgeOs-x7ojh). A nonzero exit from the verifier used to read as "main is
+# UNRUNNABLE IS NOT RED (Proofdelve ForgeOs-s1reg finding 4, the Warden's review of docket
+# Proofdelve ForgeOs-x7ojh). A nonzero exit from the verifier used to read as "main is
 # red" whatever produced it, so on 2026-10-16 the fleet sat ~9 h behind a halt
 # file that blamed the code for a harness that had REFUSED to run (exit 3).
 # Three shapes measure nothing, or almost nothing, about the code:
@@ -85,8 +85,8 @@ trap 'on_signal TERM' TERM
 #     wrong tree). No "step FAILED" line exists in that output.
 #   * a step that exited 3, the harness convention for REFUSES: the
 #     instrument could not load what it tests. That is EITHER a broken
-#     instrument OR the code it extracts having changed shape (Tova's finding
-#     2 on docket ForgeOs-zw3q5), so the words below say "read the step log"
+#     instrument OR the code it extracts having changed shape (the Warden's finding
+#     2 on docket Proofdelve ForgeOs-zw3q5), so the words below say "read the step log"
 #     and never "not the code".
 # Everything else is a verdict. This classifies; it does not decide. The fleet
 # still halts on a refused post-merge run (the Overseer's call, 2026-10-20) and
@@ -152,7 +152,7 @@ if verify_unrunnable "$log" "$rc"; then
   emit incident "Nightly verify UNRUNNABLE at $sha (exit $rc): $unrunnable_why. This is not a measured red (nor a green) and no halt file was written; read the log, since an instrument refusal can still mean the code changed. Evidence: $log" -a fleet -s fleet -p "{\"nightly\":true,\"ran\":false,\"result\":\"unrunnable\",\"commit\":\"$sha\",\"exitCode\":$rc}"
   exit 69
 fi
-why="the nightly full verify is RED at $sha (exit $rc) -- main is red. Evidence: $log; the worktree it failed in is KEPT at $wt. Remove this file by hand once main is green (ForgeOs-s1reg)."
+why="the nightly full verify is RED at $sha (exit $rc) -- main is red. Evidence: $log; the worktree it failed in is KEPT at $wt. Remove this file by hand once main is green (Proofdelve ForgeOs-s1reg)."
 if [ -e "$halt_file" ]; then
   printf '%s\n' "ALSO: $why" >> "$halt_file"
 else

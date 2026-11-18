@@ -2,7 +2,7 @@
 # shellcheck disable=SC2088 # Alert paths deliberately use a literal ~ for readability.
 # Watch Claude skills and commands for content, link-target, and executable changes.
 #
-# Monitoring limit (ForgeOs-wzdtr): the manifest, snapshots, and append-only log
+# Monitoring limit (Proofdelve ForgeOs-wzdtr): the manifest, snapshots, and append-only log
 # live in the user's state directory. A secrets-only seat can alter that state,
 # so this is monitoring rather than tamper-proof enforcement. A host timer outside
 # seats is the stronger form and is later gate-6 work (fort/scripts, systemd).
@@ -18,7 +18,7 @@ user_skills="${HOME}/.claude/skills"
 user_commands="${HOME}/.claude/commands"
 project_skills="${repo_root}/.claude/skills"
 project_commands="${repo_root}/.claude/commands"
-state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/proofdelve-skills-watch"
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/manyhalls-skills-watch"
 emit_sh="${repo_root}/fort/scripts/emit.sh"
 
 usage() {

@@ -1,5 +1,5 @@
 #!/bin/bash
-# The transcript supplement (ForgeOs-eng3.11), approved by Justin 2026-09-01 on
+# The transcript supplement (Proofdelve ForgeOs-eng3.11), approved by Justin 2026-09-01 on
 # his own suggestion: "maybe the final summary hook needs to also actually read
 # the convo itself to ensure it's not missing anything obvious."
 #

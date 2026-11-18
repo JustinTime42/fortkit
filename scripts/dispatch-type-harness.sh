@@ -1,17 +1,17 @@
 #!/bin/bash
-# THE DEPENDENCY-TYPE HALF OF fleet.sh's DISPATCH GUARD (ForgeOs-czhb).
+# THE DEPENDENCY-TYPE HALF OF fleet.sh's DISPATCH GUARD (Proofdelve ForgeOs-czhb).
 #
 # It runs the SHIPPED bead_json() + dispatchable(), extracted from the launcher by
 # anchors, against bd records — and it exists because the sitting that fixed
-# ForgeOs-czhb proved its acceptance with an ad-hoc script that lived nowhere.
-# Tova Marrowassay's covenant-4.5 review of that sitting said so in terms: the
+# Proofdelve ForgeOs-czhb proved its acceptance with an ad-hoc script that lived nowhere.
+# The Warden's covenant-4.5 review of that sitting said so in terms: the
 # nine-case result was "not committed anywhere", so nobody could re-execute it.
 # This is that script, committed.
 #
 # WHY THE RECORDS ARE BAKED IN RATHER THAN QUERIED. `bd` cannot run from the
 # Warden's mask at all — embedded Dolt opens the database read-write even to
 # serve a read, and .beads is bound read-only, so every invocation dies at LOCK
-# (ForgeOs-rydv's neighbourhood). A harness that shelled out to bd would be
+# (Proofdelve ForgeOs-rydv's neighbourhood). A harness that shelled out to bd would be
 # unrunnable by the one seat whose job is to re-run it. The four REAL records
 # below were captured from this tracker with `bd show <id> --json` on 2026-09-10
 # and trimmed to the fields dispatchable() reads; re-capture them the same way if
@@ -19,7 +19,7 @@
 #
 # ONE FIELD IS EDITED, AND IT IS DISCLOSED BECAUSE IT MATTERS: `labels` is set to
 # ["fleet-safe","lands-on-review"] on every record (lands-on-review since
-# ForgeOs-vee4w round two, whose classification check also sits above the
+# Proofdelve ForgeOs-vee4w round two, whose classification check also sits above the
 # dependency branch; SYN-unclassified below is the one record without it). That gate sits ABOVE the dependency branch in
 # dispatchable(), so without it no specimen reaches the loop under test at all
 # and every case would report "not labelled fleet-safe". Every `dependencies`
@@ -46,10 +46,10 @@ while IFS=$'\t' read -r id js; do
   [ -n "$id" ] || continue
   printf '%s\n' "$js" > "$work/rec/$id.json"
 done <<'RECORDS'
-ForgeOs-b0vj.23	{"id":"ForgeOs-b0vj.23","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"ForgeOs-b0vj","status":"open","issue_type":"epic","dependency_type":"parent-child"}]}
-ForgeOs-s2lx	{"id":"ForgeOs-s2lx","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"ForgeOs-j3kp","status":"open","issue_type":"task","dependency_type":"discovered-from"}]}
-ForgeOs-5md6	{"id":"ForgeOs-5md6","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"ForgeOs-b0vj.4.2","status":"closed","issue_type":"task","dependency_type":"blocks"}]}
-ForgeOs-aqc6.2.3	{"id":"ForgeOs-aqc6.2.3","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":4,"dependencies":[{"id":"ForgeOs-91p2.18","status":"closed","issue_type":"bug","dependency_type":"blocks"},{"id":"ForgeOs-aqc6.2.1","status":"closed","issue_type":"task","dependency_type":"blocks"},{"id":"ForgeOs-aqc6.2","status":"open","issue_type":"feature","dependency_type":"parent-child"},{"id":"ForgeOs-aqc6.2.8","status":"open","issue_type":"feature","dependency_type":"blocks"}]}
+Proofdelve ForgeOs-b0vj.23	{"id":"Proofdelve ForgeOs-b0vj.23","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"Proofdelve ForgeOs-b0vj","status":"open","issue_type":"epic","dependency_type":"parent-child"}]}
+Proofdelve ForgeOs-s2lx	{"id":"Proofdelve ForgeOs-s2lx","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"Proofdelve ForgeOs-j3kp","status":"open","issue_type":"task","dependency_type":"discovered-from"}]}
+Proofdelve ForgeOs-5md6	{"id":"Proofdelve ForgeOs-5md6","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"Proofdelve ForgeOs-b0vj.4.2","status":"closed","issue_type":"task","dependency_type":"blocks"}]}
+Proofdelve ForgeOs-aqc6.2.3	{"id":"Proofdelve ForgeOs-aqc6.2.3","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":4,"dependencies":[{"id":"Proofdelve ForgeOs-91p2.18","status":"closed","issue_type":"bug","dependency_type":"blocks"},{"id":"Proofdelve ForgeOs-aqc6.2.1","status":"closed","issue_type":"task","dependency_type":"blocks"},{"id":"Proofdelve ForgeOs-aqc6.2","status":"open","issue_type":"feature","dependency_type":"parent-child"},{"id":"Proofdelve ForgeOs-aqc6.2.8","status":"open","issue_type":"feature","dependency_type":"blocks"}]}
 SYN-untyped	{"id":"SYN-untyped","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"SYN-parent","status":"open","issue_type":"task"}]}
 SYN-unknown	{"id":"SYN-unknown","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"SYN-parent","status":"open","issue_type":"task","dependency_type":"quantum-entangles"}]}
 SYN-empty	{"id":"SYN-empty","status":"open","labels":["fleet-safe","lands-on-review"],"dependency_count":1,"dependencies":[{"id":"SYN-parent","status":"open","issue_type":"task","dependency_type":""}]}
@@ -94,25 +94,25 @@ run() { # $1 label, $2 bead, $3 expect yes|no, $4 substring the reason must cont
 echo "--- REAL records, captured from the live tracker ---"
 # Cases 1 and 2 are the DISPATCH side and are this file's vacuity controls: a
 # guard that refused everything would sweep all seven refusal cases below.
-run "1 parent-child edge to an OPEN bead DISPATCHES"        ForgeOs-b0vj.23  yes "-"
-run "2 discovered-from edge to an OPEN bead DISPATCHES"     ForgeOs-s2lx     yes "-"
-run "3 blocks edge to a CLOSED bead DISPATCHES"             ForgeOs-5md6     yes "-"
+run "1 parent-child edge to an OPEN bead DISPATCHES"        Proofdelve ForgeOs-b0vj.23  yes "-"
+run "2 discovered-from edge to an OPEN bead DISPATCHES"     Proofdelve ForgeOs-s2lx     yes "-"
+run "3 blocks edge to a CLOSED bead DISPATCHES"             Proofdelve ForgeOs-5md6     yes "-"
 # Case 4 carries FOUR edges -- two closed blocks, an OPEN parent-child, and an
 # OPEN blocks -- so it also proves the loop does not stop at the first open edge.
-# The pre-fix file refuses it naming ForgeOs-aqc6.2, the parent-child one.
+# The pre-fix file refuses it naming Proofdelve ForgeOs-aqc6.2, the parent-child one.
 run "4 blocks edge to an OPEN bead REFUSES, past an open parent-child" \
-                                                            ForgeOs-aqc6.2.3 no  "aqc6.2.8"
+                                                            Proofdelve ForgeOs-aqc6.2.3 no  "aqc6.2.8"
 echo "--- synthetic: shapes bd has not produced in this tracker ---"
 run "5 an absent type REFUSES (bd dep add defaults to blocks)" SYN-untyped  no "records no type"
 run "6 an unrecognised type REFUSES"                          SYN-unknown  no "not a known non-blocking type"
 run "7 an empty-string type REFUSES"                          SYN-empty    no "records no type"
 run "8 a GATE refuses whatever its edge type says"            SYN-gate-pc  no "open gate"
 # bd reports the type under `dependency_type` on `show` and under `type` on
-# `list`, each leaving the other null (ForgeOs-v30w). The guard reads both, and
+# `list`, each leaving the other null (Proofdelve ForgeOs-v30w). The guard reads both, and
 # this is the case that says so.
 run "9 the bd-list key spelling is honoured too"              SYN-listkey  yes "-"
 
-# ForgeOs-vee4w round two: the Mayor's classification is positive. An unlabelled
+# Proofdelve ForgeOs-vee4w round two: the Mayor's classification is positive. An unlabelled
 # bead is refused on an ordinary dispatch and passes on a signed landing, where
 # his signature is the gate.
 run "10 a bead carrying neither landing class REFUSES"        SYN-unclassified no "unclassified"

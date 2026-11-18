@@ -1,5 +1,5 @@
 #!/bin/bash
-# Proofdelve event emitter — append-only stream for the future fortress visualizer.
+# Manyhalls event emitter — append-only stream for the future fortress visualizer.
 # Usage: emit.sh <category> <detail> [-a actor] [-s seat] [-t target] [-p payload-json] [-T iso-timestamp]
 # Works from the main checkout AND from any worktree (all append to the main repo's stream).
 set -euo pipefail
@@ -13,7 +13,7 @@ while getopts "a:s:t:p:T:" opt; do
   esac
 done
 # Resolve the MAIN repo root even when called from a linked worktree.
-gitcommon=$(git rev-parse --git-common-dir 2>/dev/null || echo "/home/justin/dev/ForgeOs/.git")
+gitcommon=$(git rev-parse --git-common-dir 2>/dev/null || echo "/home/justin/dev/fortkit/.git")
 case "$gitcommon" in /*) :;; *) gitcommon="$(pwd)/$gitcommon";; esac
 mainroot="$(cd "$(dirname "$gitcommon")" && pwd)"
 dir="$mainroot/fort/events"

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Hermetic fixtures for untracked_source_clean() in scripts/verify-impl.sh (ForgeOs-ju6r8).
+# Hermetic fixtures for untracked_source_clean() in scripts/verify-impl.sh (Proofdelve ForgeOs-ju6r8).
 #
 # It extracts the path list and the function VERBATIM from the subject and sources
 # them, the locked-dir-clean-harness pattern, so it scores the code that will run.
 #
-# WHY IT EXISTS: on 2026-10-21 a host verify.pass certified ForgeOs-413u8.40's tip
+# WHY IT EXISTS: on 2026-10-21 a host verify.pass certified Proofdelve ForgeOs-413u8.40's tip
 # although the commit did not build. Three new source files sat untracked in the
 # worktree; dirtyAtStart counts tracked files only, so nothing said the run scored
 # more than the commit. ARM 2 is that case: a committed file referring to a sibling

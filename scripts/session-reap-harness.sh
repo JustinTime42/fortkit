@@ -1,6 +1,6 @@
 #!/bin/bash
 # session-reap-harness: the instrument for fort/scripts/lib/session-reap.sh and
-# its two call sites (ForgeOs-ab495; Regent sitting 2026-11-16).
+# its two call sites (Proofdelve ForgeOs-ab495; Regent sitting 2026-11-16).
 #
 # It starts real detached processes under a fixture "worktree" and runs the
 # SHIPPED session_reap() on it: those under the directory must be gone, those

@@ -1,30 +1,30 @@
-# Proofdelve airlock host runner (ForgeOs-mbv54 item A). Drafted under Regent
+# Manyhalls airlock host runner (Proofdelve ForgeOs-mbv54 item A). Drafted under Regent
 # edict 2026-10-15 with the Overseer present; installed by hand into
 # ~/.config/systemd/user/ -- this file does nothing where it lives in the repo.
 #
-# Started by proofdelve-airlock-runner.path (a write to the approvals store,
-# or a new request in fort/airlock/requests) and proofdelve-airlock-runner.timer
+# Started by manyhalls-airlock-runner.path (a write to the approvals store,
+# or a new request in fort/airlock/requests) and manyhalls-airlock-runner.timer
 # (the safety net). Runs fort/scripts/airlock-runner.sh, which loops
 # `airlock.sh run` (no id) until nothing runnable is left. Runnable means
 # approved IN THE STORE (read-only in every seat mask: his click), or, since
-# ForgeOs-emshb, an operation operations.json declares auto_run (host-test,
+# Proofdelve ForgeOs-emshb, an operation operations.json declares auto_run (host-test,
 # preview-stop), which a seat's request starts with no click by his decision.
 # See fort/airlock/README.md and fort/systemd/README.md.
 
 [Unit]
-Description=Proofdelve airlock runner: execute approved requests and auto_run operations (host-test, preview-stop)
+Description=Manyhalls airlock runner: execute approved requests and auto_run operations (host-test, preview-stop)
 
 [Service]
 Type=oneshot
-WorkingDirectory=/home/justin/dev/ForgeOs
+WorkingDirectory=/home/justin/dev/fortkit
 # User units do not inherit a login shell PATH. The deploy needs az, docker,
 # dotnet, git, jq, curl (all /usr/bin on this host) and emit.sh needs nothing
 # else; ~/.local/bin is kept first for parity with the supervisor unit.
 Environment=PATH=/home/justin/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/home/justin/dev/ForgeOs/fort/scripts/airlock-runner.sh
+ExecStart=/home/justin/dev/fortkit/fort/scripts/airlock-runner.sh
 # A staging deploy builds three images and migrates; an hour is generous.
 TimeoutStartSec=90min
-# A preview's servers must outlive the run (ForgeOs-emshb). With the default
+# A preview's servers must outlive the run (Proofdelve ForgeOs-emshb). With the default
 # KillMode=control-group systemd kills every process left in the unit's cgroup
 # when the oneshot exits: measured 2026-10-23 with a transient oneshot, a
 # setsid'd child was killed at unit exit under control-group and survived under

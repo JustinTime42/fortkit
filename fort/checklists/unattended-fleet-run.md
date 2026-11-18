@@ -1,16 +1,16 @@
 ---
 name: unattended-fleet-run
-description: Run the Proofdelve fleet unattended as the Mayor. Use when the Overseer says "run the fleet overnight", "keep the fleet moving while I'm out", "unattended fleet", or "start the nightly run". Covers the grants to collect before he leaves, the loop to arm, the per-cycle checklist, the never-fleet-safe list, the helper scripts, and the failure catalogue from the first run (2026-09-15, 51 merges in 8.5 hours, HALT never fired).
+description: Run the Manyhalls fleet unattended as the Mayor. Use when the Overseer says "run the fleet overnight", "keep the fleet moving while I'm out", "unattended fleet", or "start the nightly run". Covers the grants to collect before he leaves, the loop to arm, the per-cycle checklist, the never-fleet-safe list, the helper scripts, and the failure catalogue from the first run (2026-09-15, 51 merges in 8.5 hours, HALT never fired).
 ---
 
 # Unattended fleet management
 
-Written by Marrek Splitstone after the first run, 2026-09-15 14:24 to 23:20.
+Written by the Mayor after the first run, 2026-09-15 14:24 to 23:20.
 Everything here was measured, not imagined. Where a rule exists because of a
 specific failure, the failure is named, because a rule without its incident
 gets argued away.
 
-> **Posture note, 2026-10-26, permanent by the Overseer's ruling of 2026-11-14 (`ForgeOs-yhn44`; the posture is the one word in `fort/scripts/sandbox-posture`; docket `fort/annals/regent-docket-2026-10-26-secrets-only.txt`).** While the posture is `secrets-only`, every seat has Docker, a headless browser and the network. Suspended below: (a) red-main halt, "The Mayor seat runs it with docker:false": run it with `VERIFY_REQUIRE_DOCKER=1`; (b) gate 2, "The only gate that discriminates is his host Docker run": any seat runs the MigrationTests, and a Docker-backed run in the bead's own worktree, pasted on the bead, is fleet evidence (the Overseer's decision 5), while every migration still needs his signature; (c) "Name the full suite in the criteria": name the full suite without the MigrationTests filter, with `VERIFY_REQUIRE_DOCKER=1`; (d) "Host tests and red arms go through the airlock": a seat runs a Docker-backed test or red arm directly in a worktree, and `host-test` stays for host-only use; seats run `scripts/preview.sh` directly, and the airlock `preview` operation keeps its Keep approval for host use. Unchanged: the never-fleet-safe list, gates 1 to 6, push only through push-ready, signatures only by his hand. Back in `full`, the text as written holds again.
+> **Posture note, 2026-10-26, permanent by the Overseer's ruling of 2026-11-14 (`Proofdelve ForgeOs-yhn44`; the posture is the one word in `fort/scripts/sandbox-posture`; docket `fort/annals/regent-docket-2026-10-26-secrets-only.txt`).** While the posture is `secrets-only`, every seat has Docker, a headless browser and the network. Suspended below: (a) red-main halt, "The Mayor seat runs it with docker:false": run it with `VERIFY_REQUIRE_DOCKER=1`; (b) gate 2, "The only gate that discriminates is his host Docker run": any seat runs the MigrationTests, and a Docker-backed run in the bead's own worktree, pasted on the bead, is fleet evidence (the Overseer's decision 5), while every migration still needs his signature; (c) "Name the full suite in the criteria": name the full suite without the MigrationTests filter, with `VERIFY_REQUIRE_DOCKER=1`; (d) "Host tests and red arms go through the airlock": a seat runs a Docker-backed test or red arm directly in a worktree, and `host-test` stays for host-only use; seats run `scripts/preview.sh` directly, and the airlock `preview` operation keeps its Keep approval for host use. Unchanged: the never-fleet-safe list, gates 1 to 6, push only through push-ready, signatures only by his hand. Back in `full`, the text as written holds again.
 
 ## The one structural fact that decides the whole approach
 
@@ -24,13 +24,13 @@ within a minute. Measured twice on 09-15: 39 s and 95 s gaps. Nothing needed.
 
 Exactly two things stop it:
 1. **An empty queue.** The supervisor idles silently.
-2. **`~/.local/state/proofdelve-fleet/HALT`.** Every future run refuses until a
+2. **`~/.local/state/manyhalls-fleet/HALT`.** Every future run refuses until a
    person removes it, or the Mayor does under grant 2's conditions. Written on
    a red main (post-merge or nightly) or a stall.
 
 One more thing SLOWS it and does not stop it: **the supervisor's back-off**
-(`ForgeOs-s49w`). After a run it started drains having done nothing, it waits
-4, 8, 16, 32, then 60 minutes. Since `ForgeOs-enred` (2026-10-19) each window
+(`Proofdelve ForgeOs-s49w`). After a run it started drains having done nothing, it waits
+4, 8, 16, 32, then 60 minutes. Since `Proofdelve ForgeOs-enred` (2026-10-19) each window
 ends in ONE probe run, and the next firing judges that probe: nothing again
 backs off one step further, work done clears it. Before enred the supervisor
 re-judged the same stale run record after every window and never started a run
@@ -73,7 +73,7 @@ change what you do:
      docker:false; the restarted fleet's first post-merge verify has Docker and
      re-halts if main is still red, so the exposure is one merge.
    - **Never for a red you cannot explain:** a verifier-environment failure
-     (ForgeOs-u65j.4), or a dotnet-test or MigrationTests failure you cannot
+     (Proofdelve ForgeOs-u65j.4), or a dotnet-test or MigrationTests failure you cannot
      reproduce, stays halted for him.
    - **Once per night:** a second red-main halt in the same run stays halted.
    Otherwise: stop dispatching, label `human`, leave it. The mechanical version
@@ -83,13 +83,13 @@ change what you do:
    findings treadmill. Get it in his words; do not assume it carries over.
 
 Also collect `ssh-add -l` showing an identity, or every push fails with
-`Permission denied (publickey)` (ForgeOs-47mq, three times). He runs `ssh-add`
+`Permission denied (publickey)` (Proofdelve ForgeOs-47mq, three times). He runs `ssh-add`
 outside the mask; the agent socket is shared.
 
 **Ask him to close Firefox (and Steam) before he leaves.** His words, 2026-10-14:
 "In future I'll just make sure to close firefox during an unattended run like
 this (no reason to have it open when I'm not even there)." Measured on the night
-of 2026-10-13/14 (ForgeOs-603jn): with zero Forges the host sat at 22-23G of 31G,
+of 2026-10-13/14 (Proofdelve ForgeOs-603jn): with zero Forges the host sat at 22-23G of 31G,
 Firefox content processes holding ~14G, and systemd-oomd killed the WHOLE fleet
 run unit four times (20:44, 20:53, 21:00, 04:56) once six Forges' builds
 overlapped. Every kill orphans every live bead ("NEEDS A PERSON"). If it is
@@ -122,8 +122,8 @@ Monthly: if `scripts/queue-lint.sh` shows `EXPORT SIZE`, run `scripts/bead-archi
 
 ```bash
 # 1. HEALTH
-ls ~/.local/state/proofdelve-fleet/HALT              # absent is good
-cat ~/.local/state/proofdelve-fleet/supervisor.streak
+ls ~/.local/state/manyhalls-fleet/HALT              # absent is good
+cat ~/.local/state/manyhalls-fleet/supervisor.streak
 pgrep -f fort/scripts/fleet.sh
 # significant events since last cycle: review.verdict, fleet.returned, merge,
 # incident, fleet.capped, verify.fail, fleet.ended, fleet.begun, gate.approved
@@ -147,7 +147,7 @@ for f in sorted(glob.glob('fort/events/events-*.jsonl'))[-2:]:
             print(e['ts'][:16], e.get('target'), '|', e['detail'][:200])
 PY
 
-# 2c. A NOTE THAT ASKS FOR MORE WORK IS NOT A LANDING (ForgeOs-kj9c7, 2026-10-14).
+# 2c. A NOTE THAT ASKS FOR MORE WORK IS NOT A LANDING (Proofdelve ForgeOs-kj9c7, 2026-10-14).
 # An Approve whose note says "go on lap N" (or any "fix X first") still records
 # gate.approved with an approvedSha of the CURRENT tip. Restoring fleet-safe on
 # that bead makes fleet.sh's signed-landing path LAND that tip. Measured on
@@ -167,10 +167,10 @@ scripts/queue-lint.sh                                 # exit 0 or fix it
 
 # 5. PUSH -- only through the gate, never by eye
 scripts/push-ready.sh && git push origin main         # exit 0 YES / 1 NO / 2 WAIT / 3 refuse
-fort/scripts/emit.sh push "<range and why>" -a marrek -s mayor -t main
+fort/scripts/emit.sh push "<range and why>" -a emrith -s mayor -t main
 
 # 6. LOG -- append-only, safe quoting (see "Two shell traps")
-bd comment ForgeOs-<runlog> "$(cat <<'EOF'
+bd comment fortkit-<runlog> "$(cat <<'EOF'
 ...
 EOF
 )"
@@ -184,7 +184,7 @@ checks the tree, not the grant.
 
 ## Triage the findings with a budget (Overseer 2026-11-11)
 
-His words: "I feel like Tova ends up with a LOT of findings, and some are trivial,
+His words: "I feel like the Warden ends up with a LOT of findings, and some are trivial,
 and many seem like they could easily be wrapped into a quick fix instead of round
 after round of fleet work", then "let's work through implementing all of that".
 Measured on 11-10/11: about a third of findings were record-only, about half became a
@@ -224,9 +224,9 @@ Ranked by yield on 09-15:
 
 1. **Findings-triage beads** (`Triage the findings from the fleet-merged review
    of X`). The fleet files one per APPROVE-WITH-FINDINGS or MERGE-PARENT-OPEN.
-   Each carries Tova's verbatim review; each yielded 0-2 beads. This is the
+   Each carries the Warden's verbatim review; each yielded 0-2 beads. This is the
    treadmill and by mid-run it is the ONLY source. Read with:
-   `python3 scripts/unattended-fleet/findings.py 1200 ForgeOs-X ForgeOs-Y`
+   `python3 scripts/unattended-fleet/findings.py 1200 fortkit-X fortkit-Y`
 2. **Backlog beads with criteria but no `Touches:` line.** Find with
    `bd list --status open --limit 0 --json | python3 scripts/unattended-fleet/triage.py`
    then add the line with `add-touches.py` (it refuses to double-append and
@@ -245,14 +245,14 @@ directory does not exist), and `--add-label fleet-safe` only after
 `queue-lint` is clean. **Never write a placeholder `Touches:`** (`none`,
 `n/a`, `TBD`): a non-empty prefix that matches no real path means "touches
 NOTHING" to `touch_set_of`, so the bead co-dispatches with every declared bead
-and the guard protects nothing (ForgeOs-pay0, Tova on b9mj). Only an ABSENT line
+and the guard protects nothing (Proofdelve ForgeOs-pay0, the Warden on b9mj). Only an ABSENT line
 or one that normalises to empty (`*`, `/`, `.`) means everything, and everything
 serializes the queue. Name the files, or omit the line and accept the serial.
 
 **NEVER MARKDOWN-FORMAT THE `Touches:` LINE.** `fleet.sh touch_set_of` and
 `queue-lint.sh` match a line that STARTS with `Touches:`. Writing
 `**Touches: a, b**` for emphasis makes the line invisible, and an invisible
-touch set is the WHOLE REPOSITORY. Measured on `ForgeOs-5gbf`, 2026-09-18: I
+touch set is the WHOLE REPOSITORY. Measured on `Proofdelve ForgeOs-5gbf`, 2026-09-18: I
 bolded it, labelled the bead, and queue-lint reported UNDECLARED within minutes.
 Plain text, at the start of its own line, always. The same goes for a `Touches:`
 inside a bullet, a blockquote or a fenced block.
@@ -260,23 +260,23 @@ inside a bullet, a blockquote or a fenced block.
 **ENUMERATE A FALSIFYING CASE PER GUARD, NOT PER BEAD.** Three criteria misses
 in one night, all the same shape: I asked for a property and did not ask for the
 case that would falsify it.
-- `ForgeOs-mi7`: asked for a Docker-backed test the Forge cannot run, so the
+- `Proofdelve ForgeOs-mi7`: asked for a Docker-backed test the Forge cannot run, so the
   suite would print green having executed nothing.
-- `ForgeOs-njz`: asked for three code fixes and never named the spec, so the
+- `Proofdelve ForgeOs-njz`: asked for three code fixes and never named the spec, so the
   merge falsified its own spec while standing order 6 makes spec updates
   expected output.
-- `ForgeOs-4q03`: criterion 1 asked for TWO guards (JSON parse, record-count
+- `Proofdelve ForgeOs-4q03`: criterion 1 asked for TWO guards (JSON parse, record-count
   floor); criterion 4 enumerated RED cases for the parser and for python failure
-  and NONE for the floor. Tova replaced the floor with `if False:` and the
+  and NONE for the floor. The Warden replaced the floor with `if False:` and the
   harness still passed 14/0.
 So when a bead asks for N guards, its evidence criterion names N red cases. The
 question to ask before labelling: **for each thing I just required, what result
 would tell me it is absent?** If the answer is "the suite would look the same,"
-the criterion is decoration (`ForgeOs-8zb7`).
+the criterion is decoration (`Proofdelve ForgeOs-8zb7`).
 
 **SAY WHERE THE INVERSION GOES WHEN THE CODE SITS BEHIND A SHORT-CIRCUIT.**
 "It went red" is compatible with "it went red for the wrong reason." Measured on
-`ForgeOs-2g97`, 2026-09-19: the function under test was the THIRD operand of a
+`Proofdelve ForgeOs-2g97`, 2026-09-19: the function under test was the THIRD operand of a
 `||` chain, after `Uri.TryCreate(..., UriKind.Relative)`. Had `TryCreate`
 rejected the input, the step being pinned would never have been reached — and
 the new test row would have been VACUOUS while still going red under a throw
@@ -290,7 +290,7 @@ is what distinguishes a real pin from a red anywhere upstream of it.
 **A CRITERION THAT ASSERTS A FACT ABOUT THE DATA MUST BE MEASURED BEFORE IT IS
 WRITTEN.** This is a different failure from the missing red case above, and it
 cost more, because the Forge implements it faithfully. Measured on
-`ForgeOs-pezy`, 2026-09-18: my criterion suggested the wording "(open,
+`Proofdelve ForgeOs-pezy`, 2026-09-18: my criterion suggested the wording "(open,
 in_progress and blocked)". **`blocked` is not a status bd stores at all** — bd
 and the Keep derive it from edges — and **`deferred` is, twelve times.** So the
 shipped allow-list `{open, in_progress, blocked}` silently drops every deferred
@@ -314,7 +314,7 @@ reason the evidence exists.
 
 The cause is probably not discipline. The Forge runs RED first, then fixes, then
 runs GREEN — and by handoff time the RED output has left its window (the same
-30-second-command and output-truncation problem as `ForgeOs-y4rg`). It pastes
+30-second-command and output-truncation problem as `Proofdelve ForgeOs-y4rg`). It pastes
 what it still has.
 
 So stop asking it to HOLD the output: **"redirect the RED run to
@@ -325,11 +325,11 @@ failure where "it was not pasted" is ambiguous between forgot, truncated, and
 never ran.
 
 **PUT THOSE FILES UNDER `evidence/`, NOT THE REPO ROOT.** Measured 2026-10-15
-(Tova on `2md9d.2.36`): fifteen `*-red.txt`/`*-green.txt` files had been committed
+(the Warden on `2md9d.2.36`): fifteen `*-red.txt`/`*-green.txt` files had been committed
 at the repository root because this paragraph said "in the worktree" and named no
 directory. Write **`evidence/<bead>-red.txt`** and **`evidence/<bead>-green.txt`**.
 The fifteen were moved there in one records commit the same night.
-Since `ForgeOs-hmdo8` (2026-10-15) `verify-impl.sh` refuses root-level ones.
+Since `Proofdelve ForgeOs-hmdo8` (2026-10-15) `verify-impl.sh` refuses root-level ones.
 
 **AND IN THE `Touches:` LINE NAME THE FILE, NEVER BARE `evidence/`.** The fleet's
 touch guard matches by prefix (`fleet.sh` `touch_sets_intersect`), so two beads
@@ -340,18 +340,18 @@ written that way by me. Write `evidence/<bead>-red.txt`.
 **IF YOU NAME THE FIXTURE, TRACE WHICH CODE PATH IT REACHES.** The most
 repeated mistake of the 2026-09-18/19 run, three times in one night, and every
 time the criterion was *met as written* while the evidence proved nothing:
-- `ForgeOs-8rx8m`: I suggested "point the harness at a nonexistent `flock`" to
+- `Proofdelve ForgeOs-8rx8m`: I suggested "point the harness at a nonexistent `flock`" to
   prove a bounded wait terminates. That hits the `command -v` preflight and
   **exits before the loop** — 0.05 s, and the bound itself was never exercised.
-- `ForgeOs-0nhz4`: my criterion described a manufactured absence (WAIT, **exit
+- `Proofdelve ForgeOs-0nhz4`: my criterion described a manufactured absence (WAIT, **exit
   2**), and the case `rm -f`'d both day files, so the old script returned **exit
-  3** — red, on the wrong axis. Tova called it "the wrong colour of red."
-- `ForgeOs-f4s0`: I asked for "an existing case that depends on normal `awk`
+  3** — red, on the wrong axis. The Warden called it "the wrong colour of red."
+- `Proofdelve ForgeOs-f4s0`: I asked for "an existing case that depends on normal `awk`
   behaviour" as a leak control. No such case could exist; `ld77` had made the
   runbook POSIX-only.
 
 **WHEN A CRITERION SPANS FILES, NAME THE FILE PER CRITERION. "ONE PASS" READS
-AS "ONE PLACE."** Measured on `ForgeOs-b8s2h`, 2026-09-19: criterion 3 said
+AS "ONE PLACE."** Measured on `Proofdelve ForgeOs-b8s2h`, 2026-09-19: criterion 3 said
 "fold this into the same amendment as criterion 1 — one comment pass, not two."
 I meant one commit. The Forge read it as *put everything into
 `push-ready.sh:42`*, did so, and never touched
@@ -363,7 +363,7 @@ sentence can satisfy it. So: say **"one commit, two files: <file A> for
 criterion 1, <file B> for criterion 3."** Never "one pass."
 
 **A "CHECK WHETHER THIS APPEARS ELSEWHERE" INSTRUCTION MUST SAY: FIND THE
-CLAIM, NOT THE PHRASE — AND GIVE THE PATTERN.** Measured on `ForgeOs-2byaz`,
+CLAIM, NOT THE PHRASE — AND GIVE THE PATTERN.** Measured on `Proofdelve ForgeOs-2byaz`,
 2026-09-19: my criterion said "check whether the same claim appears anywhere
 else — `scripts/push-ready.sh` itself, or a handoff." It named the right file.
 The Forge ran an exact-phrase grep for the wording it had just fixed, and the
@@ -384,7 +384,7 @@ covered the old path.
 
 **WHEN A CRITERION PRESCRIBES A COMMAND, STATE THE PROPERTY IT MUST PRESERVE.**
 A command's default output ORDER can be load-bearing, and naming the command
-hides that. Measured on `ForgeOs-u89s`, 2026-09-19: my criterion said "replace
+hides that. Measured on `Proofdelve ForgeOs-u89s`, 2026-09-19: my criterion said "replace
 the oldest-first scan with a single `git rev-list --first-parent --ancestry-path
 "$tip..$main_ref"`". **`git rev-list` outputs newest-first by default**, so the
 recipe implemented faithfully REVERSED the order — and oldest-first was the whole
@@ -407,7 +407,7 @@ criterion that references EXISTING behaviour, read that behaviour at HEAD — no
 at the commit the finding was written against.
 
 **AN "EITHER DO IT OR SAY WHY" SENTENCE WITH NO CRITERION ATTACHED GETS
-SILENTLY DROPPED.** Measured on `ForgeOs-xdlu`, 2026-09-18: I folded in an
+SILENTLY DROPPED.** Measured on `Proofdelve ForgeOs-xdlu`, 2026-09-18: I folded in an
 optional idiom convergence worded as "if it is a small change while you are in
 the file, do it and say so; if it is not, leave it and say that instead." The
 Forge did **neither** — no change and no sentence — and the review had to notice
@@ -418,20 +418,20 @@ need an answer to should say "optional, no report needed" so nobody looks for on
 **"NOTHING UNDER `fort/`" IS A CRITERION NO FORGE CAN SATISFY.** A handoff under
 `fort/handoffs/` is mandated seat output, so a literal reading refuses the
 session its own required artifact. Write **"nothing under `fort/` except your
-own handoff"**. (Tova, finding 6 on `ForgeOs-pezy`. She read it as intended and
+own handoff"**. (the Warden, finding 6 on `Proofdelve ForgeOs-pezy`. She read it as intended and
 passed it; the next reviewer might not, and would be right.)
 
 **A PER-SITE RED ARM AND "MAKE THE SITES ONE" CANNOT BOTH BE CRITERIA.** Measured on
-`ForgeOs-2md9d.2.24.2`, 2026-10-15: I asked for "restore the bug at THAT site only and
+`Proofdelve ForgeOs-2md9d.2.24.2`, 2026-10-15: I asked for "restore the bug at THAT site only and
 show THAT path fail while the other stays green" and, in the same bead, for the two
 duplicate sites to become one implementation. Once they are one, there is no "that
-site" to restore; the Forge inverted the shared method (both paths red) and Tova had
+site" to restore; the Forge inverted the shared method (both paths red) and the Warden had
 to build a private copy to prove per-path discrimination. When a bead dedupes, ask
 for the inversion at each CALL SITE (point that caller at a copy with the bug), and
 say so.
 
 **IN A LANDING LAP, THE SOURCE BRANCH'S OWN RECORDS TRAVEL WITH THE MERGE.**
-Measured on `ForgeOs-2md9d.2.24.1`, 2026-10-14: my criterion said "nothing under
+Measured on `Proofdelve ForgeOs-2md9d.2.24.1`, 2026-10-14: my criterion said "nothing under
 `fort/` changed except your own handoff", and the Forge read it literally and left
 the parent branch's two Forge handoffs (`fort/handoffs/forge-2026-10-14-2md9d.2.24*.md`)
 out of the merge. Nothing was lost (they stay reachable through the second parent),
@@ -440,9 +440,9 @@ and the tree he signs differs from the one he signed. Write the lap criterion as
 **"the merge carries every file of `bead/<parent>`, its handoffs included; beyond
 that, nothing under `fort/` except your own handoff."**
 
-**A SERVER BEAD THAT CHANGES WHAT AN ENDPOINT ACCEPTS NAMES EVERY CONSUMER** (`ForgeOs-481se.3`; the rule and its incident are in `fort/seats/mayor.md`). Refuses a field, requires a field, or assigns fields from the request: grep the web's payload builders and the MCP tool classes `src/ForgeOS.Api/Mcp/*McpTools.cs` for the endpoint (`McpTools.cs` was deleted by `ForgeOs-413u8.41`), and write a round-trip criterion per consumer or a linked consumer bead with a `bd` edge. Prose "ships with X" is not an edge.
+**A SERVER BEAD THAT CHANGES WHAT AN ENDPOINT ACCEPTS NAMES EVERY CONSUMER** (`Proofdelve ForgeOs-481se.3`; the rule and its incident are in `fort/seats/mayor.md`). Refuses a field, requires a field, or assigns fields from the request: grep the web's payload builders and the MCP tool classes `src/Product.Api/Mcp/*McpTools.cs` for the endpoint (`McpTools.cs` was deleted by `Proofdelve ForgeOs-413u8.41`), and write a round-trip criterion per consumer or a linked consumer bead with a `bd` edge. Prose "ships with X" is not an edge.
 
-**AUDIT A READY BEAD AGAINST MAIN BEFORE IT DISPATCHES, AND SAY SO ON IT.** Beads are triaged days ahead and main moves under them (`3.16` and `3.24`, 2026-10-16). When a deploy-critical or large bead is about to become dispatchable, re-read its premises at HEAD (identifiers, files, what already exists), fix it with unlabel/fold/relabel, and add `Checked against main <sha>`. `ForgeOs-481se.1` makes queue-lint list the commits to a ready bead's touched paths since that marker; read the STALE CRITERIA section every cycle once it lands. And when an audit finds ONE bug, sweep its CLASS before reporting: on 2026-10-16 the Mayor found the deal-save refusal, then deal create, then the parcel-save erase, one ask at a time, each time sounding finished.
+**AUDIT A READY BEAD AGAINST MAIN BEFORE IT DISPATCHES, AND SAY SO ON IT.** Beads are triaged days ahead and main moves under them (`3.16` and `3.24`, 2026-10-16). When a deploy-critical or large bead is about to become dispatchable, re-read its premises at HEAD (identifiers, files, what already exists), fix it with unlabel/fold/relabel, and add `Checked against main <sha>`. `Proofdelve ForgeOs-481se.1` makes queue-lint list the commits to a ready bead's touched paths since that marker; read the STALE CRITERIA section every cycle once it lands. And when an audit finds ONE bug, sweep its CLASS before reporting: on 2026-10-16 the Mayor found the deal-save refusal, then deal create, then the parcel-save erase, one ask at a time, each time sounding finished.
 
 **Fold, don't pile.** When a new finding lands in a file that already has an
 unclaimed fleet-safe bead, append a criterion to that bead (read old, append,
@@ -464,9 +464,9 @@ The supervisor will not claim an unlabelled bead. Cost: a couple of minutes of
 that bead's dispatchability, against a whole lap working from stale criteria.
 
 Measured twice on 2026-09-18, and the second one is why this paragraph exists,
-because the obvious rule does not cover it. `ForgeOs-mi7`: a correction landed
+because the obvious rule does not cover it. `Proofdelve ForgeOs-mi7`: a correction landed
 **81 s** after the claim, and the lesson looked like "stock a bead fully, THEN
-label it." `ForgeOs-fruy`: the fold landed **77 s** after the claim — and fruy
+label it." `Proofdelve ForgeOs-fruy`: the fold landed **77 s** after the claim — and fruy
 WAS fully stocked when it was labelled. What arrived later was a finding from a
 DIFFERENT bead's verdict (`njz` -> `gijh`) that belonged in fruy, which is
 exactly what the paragraph above instructs. So "stock fully, then label" is
@@ -477,7 +477,7 @@ and the fold instruction itself is what walks you into the race. Unlabel first.
 
 **This is the one place these two labels are defined. If you find a second
 definition anywhere, one of them is wrong and this one is the survivor
-(`ForgeOs-76uob.4`, criterion 1 and criterion 6).**
+(`Proofdelve ForgeOs-76uob.4`, criterion 1 and criterion 6).**
 
 Every backlog count in this fort divides by the number of open beads, and two
 kinds of open bead are not asking anyone to build anything. Left unlabelled they
@@ -486,7 +486,7 @@ sit in the denominator permanently and read, to any router, as unstarted work.
 | | `record` | `standing` |
 |---|---|---|
 | What it is | A log of a COMPLETED event | A rule the fort works under |
-| Example | a night-run log; a fort-day ledger | `ForgeOs-eng3`, `ForgeOs-8zb7`, `ForgeOs-zwyp` |
+| Example | a night-run log; a fort-day ledger | `Proofdelve ForgeOs-eng3`, `Proofdelve ForgeOs-8zb7`, `Proofdelve ForgeOs-zwyp` |
 | Can it close? | Yes, when nothing is left in it | No. Closing it would MISDESCRIBE it |
 | An open one means | a triage question: is anything left? | nothing. It is correct and expected |
 | Backlog count | excluded | excluded |
@@ -504,7 +504,7 @@ it closed.
 are not work. `bd defer` on a standing discipline says it becomes relevant
 later, which is the opposite of what it is.
 
-**EXCLUSION IS PER-CHECK AND JUSTIFIED PER-CHECK, NEVER GLOBAL.** `ForgeOs-eng3`
+**EXCLUSION IS PER-CHECK AND JUSTIFIED PER-CHECK, NEVER GLOBAL.** `Proofdelve ForgeOs-eng3`
 carries `standing` and is correctly excluded from the stale-parent report, where
 its nineteen closed children make it look abandoned. It must still appear in the
 misrouted report, because it names `.claude/` and `fort/scripts/` and is
@@ -528,7 +528,7 @@ notice, never at session close:
   removes `fleet-safe`, labels `human`, and the merge waits for his signature
   and a Mayor's hand (`orew` went Forge -> verify -> ESCALATE -> signed ->
   re-check -> hand merge `1d0305a`). Write "GATE 1" in the bead's own text so
-  Tova sees it. What stays never-fleet-safe is gate-1 work he has NOT asked
+  the Warden sees it. What stays never-fleet-safe is gate-1 work he has NOT asked
   for, and any gate-1 bead whose text does not say so.
 - **Gate 2**: any migration, including column ADDS. The only gate that
   discriminates is his host Docker run; every agent-visible gate is green
@@ -538,10 +538,10 @@ notice, never at session close:
   `.claude/`, `scripts/verify-impl.sh`).
 - **Anything whose deliverable is an ANSWER rather than a diff.** The fleet
   returns it as "no product change: handoff only", re-dispatches it, and
-  returns it again (ForgeOs-nz3u; pkl9 and nf17 on 09-15, four launches).
+  returns it again (Proofdelve ForgeOs-nz3u; pkl9 and nf17 on 09-15, four launches).
   This includes any bead whose premise may turn out false.
 - **Product direction.** If the bead has to argue for its own direction, that
-  argument IS the doubt (ForgeOs-cf5s). But "he asked for it" is already
+  argument IS the doubt (Proofdelve ForgeOs-cf5s). But "he asked for it" is already
   approved: read the DESCRIPTION, not the title. I sent him b0vj.65 for a
   second signature when its first line read "OVERSEER DECISION 2026-09-12".
 - **The verifier itself.** `scripts/verify-impl.sh` is Mayor-writable and the
@@ -561,7 +561,7 @@ landed `hy13.1/.2` from it. Before carrying a MERGE-PARENT-OPEN parent's
 residuals: `bd list --status closed --limit 0 | grep 'review of <parent>'`,
 open that bead, read its children. (2) I dispatched `eng3.7` (filed 08-30)
 whose "dead guard" was the live quiet exit `eng3.3.1` had installed on
-08-29; the Forge deleted a reviewed behaviour and Tova caught it. Before
+08-29; the Forge deleted a reviewed behaviour and the Warden caught it. Before
 dispatching any bead older than a few days: `git log --since=<filed date> --
 <its files>` and read what landed there. If a finding names a line, look at
 that line on main first.
@@ -574,12 +574,12 @@ is why nothing was damaged. Worse: I had caught this exact flaw an hour
 earlier on a different query and never re-ran the earlier check. **Finding
 that a tool lies is half the work; going back through what you concluded
 with it is the other half.** Before decomposing:
-`for s in open in_progress closed; do bd list --status=$s --limit 0 | grep 'ForgeOs-<parent>\.'; done`
+`for s in open in_progress closed; do bd list --status=$s --limit 0 | grep 'fortkit-<parent>\.'; done`
 
 **bd copies parent labels onto children at create.** Decomposing an escalated
 bead gave the new child `fleet-escalated` (permanently undispatchable) plus
 `fleet-return-1/2` (a false record of failures that never happened). Check
-the child's labels immediately after every `--parent` create (ForgeOs-bbdr).
+the child's labels immediately after every `--parent` create (Proofdelve ForgeOs-bbdr).
 
 **Backticks in a double-quoted bash string execute.** My cycle-3 log
 contained `` `bd list` `` unescaped; the shell ran it and injected its output
@@ -588,7 +588,7 @@ delimiter QUOTED. Command-substitution output is not re-scanned.
 
 **The fleet reopens a bead you closed if its worker is still settling.** The
 return-and-escalate path writes labels without checking status
-(ForgeOs-x2lv). Strip `fleet-safe` FIRST, then close, then verify the status
+(Proofdelve ForgeOs-x2lv). Strip `fleet-safe` FIRST, then close, then verify the status
 by reading it back. Check every close you made when you find one reopened.
 
 **A grep can match the wrong thing and you file a bug.** `grep -c '9t5v'`
@@ -606,14 +606,14 @@ missing). Never trust a checker that has not been shown to fire.
 consecutive sweeps of the parity inventory each fixed the last miss and
 introduced a new one, two under criteria written to prevent it. Stale figures
 live in METHODOLOGY PROSE, not tables. Ask for a mechanical enumeration
-(ForgeOs-scmm), never a fourth sweep.
+(Proofdelve ForgeOs-scmm), never a fourth sweep.
 
 **Warden review is a snapshot; the tree moves.** Three findings I nearly
 filed were already fixed by a later round or a sibling. One grep each.
 
 **The Warden cannot execute any inversion.** node, `npm --prefix tools/keep`,
 python3, sed, `bash <harness>`, and any source mutation are all denied
-(ForgeOs-mskx, ForgeOs-51x1). Every "prove it goes RED" criterion is
+(Proofdelve ForgeOs-mskx, Proofdelve ForgeOs-51x1). Every "prove it goes RED" criterion is
 Forge-pasted evidence she corroborates by reading. Write the criterion so the
 Forge pastes the run; do not demand `--reporter=verbose` (a form), demand
 that the tests executed (a property).
@@ -621,7 +621,7 @@ that the tests executed (a property).
 **Verifier output outruns the Forge's 30-second command window.** Seven
 handoffs on 09-15 said "not verified" while the launcher stamp on the same
 file said verified. The Forge is blameless in all seven: it refused to claim a
-gate it had not seen. Read stamps, not bodies (ForgeOs-y4rg).
+gate it had not seen. Read stamps, not bodies (Proofdelve ForgeOs-y4rg).
 
 ## Two things that stall the fleet from the Mayor's own chair
 
@@ -636,12 +636,12 @@ is exempt: the check names SOURCE.)
 
 **A directory prefix in a gate-1 bead's `Touches:` is held all night.** An
 escalated gate-1 worker keeps its touch set until the branch lands, which is
-the morning signature. `9ysx` declared `src/ForgeOS.Api/` and
-`tests/ForgeOS.Tests/` and starved every .NET bead from 01:34 until I found it
+the morning signature. `9ysx` declared `src/Product.Api/` and
+`tests/Product.Tests/` and starved every .NET bead from 01:34 until I found it
 at 03:00 and narrowed the settled worker's `touches` file to the branch's
 actual files (declared set kept beside it). Declare gate-1 beads by FILE, and
 when one escalates, check what its worker holds:
-`cat ~/.local/state/proofdelve-fleet/workers/<sfx>/touches`.
+`cat ~/.local/state/manyhalls-fleet/workers/<sfx>/touches`.
 
 **Backticks in a `bd create --title` inside double quotes execute** (`reason`
 -> "command not found", title shipped with a hole). Single-quote titles or
@@ -654,19 +654,19 @@ keep backticks out of them; the heredoc rule below covers descriptions only.
    read back, assert the original is still present.
 2. Never `ls`, `cat`, `stat` or `test` anything matching `.env*`. Gate 4. The
    policy layer denied it once on 09-15 mid-command; do not retry in another
-   spelling (ForgeOs-21f.8 measured obfuscated spellings defeating globs 6/6).
+   spelling (Proofdelve ForgeOs-21f.8 measured obfuscated spellings defeating globs 6/6).
 
 ## Loop prompt (the one that ran 18 cycles)
 
 Replace `<runlog>` and the date. Keep it self-contained.
 
 ```
-UNATTENDED FLEET RUN, <date>. You are Marrek Splitstone, Mayor of Proofdelve.
+UNATTENDED FLEET RUN, <date>. You are the Mayor, Mayor of Manyhalls.
 The Overseer is away and asked the fort to keep the fleet fuelled without him.
 Do NOT go quiet, and do NOT wait for him to answer anything.
 
 FIRST read fort/checklists/unattended-fleet-run.md, then the run log and its
-authorizations: `bd show ForgeOs-<runlog> --json`. If your context was
+authorizations: `bd show fortkit-<runlog> --json`. If your context was
 compacted, those two plus fort/seats/mayor.md are your whole brief.
 
 THEN run the cycle in fort/checklists/unattended-fleet-run.md in order: health, inbox, depth, stock,
@@ -693,7 +693,7 @@ verify (01:54). The ref is whatever main is at that instant. Form:
 && git push origin "$SHA:main"`, and the emit names the same SHA.
 
 **A hand reopen keeps the assignee, and the fleet's claim refuses it every
-pass.** `bd update zx04.1 --status open` (04:17) left `assignee=veyra`; three
+pass.** `bd update zx04.1 --status open` (04:17) left `assignee=kethra`; three
 passes of "claim refused" wrote a STALL halt (04:29). Reopen with
 `--status open --assignee ""` in one command. The
 fleet-claim-refused-means-assignee-set memory already said so; a rule you
@@ -724,7 +724,7 @@ reopen (assignee cleared), note it on `dx34.19`.
 **Window the event query from the previous cycle's START.** Windowing from
 its end missed a merge that landed while that cycle was running (`91p2.20.1`,
 cycle 6). Also: a bead's "in flight" state is invisible if you filter
-`"actor":"veyra"` out; the claim events are the fleet's, the progress events
+`"actor":"kethra"` out; the claim events are the fleet's, the progress events
 are hers.
 
 ## Five more from the day run (2026-09-17, 45 fleet merges by 12:33) and the fort day
@@ -738,21 +738,21 @@ cleanup with a `held-for-<chain>` label instead of `fleet-safe`, and release it
 when the chain lands.
 
 **After a Regent sitting, read the docket bead's comments before filing a
-covenant review.** On 2026-10-15 the Regent had Tova review the 9dqa6 sitting
+covenant review.** On 2026-10-15 the Regent had the Warden review the 9dqa6 sitting
 inside the sitting (verdicts on the docket, plus a fold commit), and the Mayor
-filed and launched a duplicate (`ForgeOs-t8cve`) that also nearly missed that the
+filed and launched a duplicate (`Proofdelve ForgeOs-t8cve`) that also nearly missed that the
 push must include the fold. Push only a ref that contains every fold the
 verdicts name (`git merge-base --is-ancestor <fold> <sha>`).
 
 **No Mayor commit to main between a fleet host verify and its merge**
-(`ForgeOs-s1reg`, in force from 2026-10-19). The fleet skips the post-merge
+(`Proofdelve ForgeOs-s1reg`, in force from 2026-10-19). The fleet skips the post-merge
 verify only when the merged tree IS the tree its host verifier passed; a commit
 of yours in that window moves main, the trees differ, and the ~10-minute
 post-merge run happens after all. Records and doc commits batch at push time.
 
 **Commit records right AFTER a push, never between a merge and its post-merge
 verify.** A Mayor records commit on top of a fleet merge puts HEAD past the
-verified tip, and push-ready answers WAIT until the NEXT merge (`ForgeOs-qhr2s`).
+verified tip, and push-ready answers WAIT until the NEXT merge (`Proofdelve ForgeOs-qhr2s`).
 On the 2026-10-14/15 night this cost a push window at least five times. Order:
 wait for the post-merge, push the YES SHA, then commit the export and events.
 
@@ -781,10 +781,10 @@ the P1 is claimed, then swap back.
 child, and the child merges the PARENT'S branch into ITS OWN.** The Forge owns
 only its own worktree (`--rw-tree $wt`); a description that says "work in the
 parent's worktree and merge main" produces a handoff-only return (`o6ct.1` lap
-one, 04:10 on 09-18). Write it as: in `ForgeOs-worktrees/<child>` on
+one, 04:10 on 09-18). Write it as: in `fortkit-worktrees/<child>` on
 `bead/<child>` (cut from main), `git merge bead/<parent>`, resolve, verify; the
-child branch is main plus the parent's work, and Tova re-escalates on it. The Forge merges main into the branch in-session, resolves, commits;
-Tova re-escalates on the resolved diff; one more signature. `aqc6.2.3.1`,
+child branch is main plus the parent's work, and the Warden re-escalates on it. The Forge merges main into the branch in-session, resolves, commits;
+the Warden re-escalates on the resolved diff; one more signature. `aqc6.2.3.1`,
 `2ibw.9.1`, `seqx.1.1` are the pattern; the child's touch set is the branch's
 files, nothing wider.
 
@@ -833,9 +833,9 @@ draft, parks the landing until it is committed.
 
 **A `Touches:` line that names a DIRECTORY serialises the bead behind every
 other bead touching anything inside it.** Measured 2026-09-19 10:42: four beads
-filed in one sitting all declared `tests/ForgeOS.Tests`, and the co-dispatch
+filed in one sitting all declared `tests/Product.Tests`, and the co-dispatch
 guard held four candidates behind one live Forge on
-`tests/ForgeOS.Tests/ExternalSubjectCollisionTests.cs ~ tests/ForgeOS.Tests`. The
+`tests/Product.Tests/ExternalSubjectCollisionTests.cs ~ tests/Product.Tests`. The
 set is a PREFIX set, so the directory form overlaps every test file in the
 repository. Name the FILE, including the file the new tests will be written in,
 which means deciding that name at filing time and saying so in the bead. The
@@ -847,7 +847,7 @@ narrower set risks nothing and a wider one costs throughput directly.
 failure.** retouch.py's first version asserted `old not in new_description` to
 prove the old touch set was gone. That is trivially false whenever the new value
 CONTAINS the old as a prefix substring, which is precisely the
-`tests/ForgeOS.Tests` -> `tests/ForgeOS.Tests/FooTests.cs` case it existed for,
+`tests/Product.Tests` -> `tests/Product.Tests/FooTests.cs` case it existed for,
 so it reported FAIL on four correct writes. A check that cries wolf on its own
 intended input is worse than no check, because the next hand learns to re-run it
 with the assertion commented out. Ask what input makes this check wrong, not only
@@ -875,7 +875,7 @@ of the word "harness" in 6,647 lines, which looks exactly like the steps not
 running; they had run, and the grep was wrong. Either way, the exit code was not the
 evidence.
 
-## Host tests and red arms go through the airlock (ForgeOs-emshb, 2026-10-23)
+## Host tests and red arms go through the airlock (Proofdelve ForgeOs-emshb, 2026-10-23)
 
 Since the Regent sitting of 2026-10-23 (docket `fort/annals/regent-docket-2026-10-22-airlock-fleet.txt`, item A), a Docker-backed test the masked seats cannot run is REQUESTED, not handed to the Overseer:
 
@@ -888,24 +888,24 @@ fort/scripts/airlock.sh show <id>        # the result; the log is fort/airlock/r
 
 - `host-test` is `auto_run` with no approval line: the host runner executes it. `preview` still needs his Approve on the Civ Keep (that click is the "keep button"); `preview-stop` does not.
 - Params are matched whole against the table in `fort/airlock/operations.json` and passed as arguments; anything else is refused with exit 64 before a script runs. A `mutate` patch must not dirty the worktree (`host-test.sh` refuses a dirty tree).
-- **A red arm (`mutate`) needs a CLEAN bead worktree, never `target=main`:** `host-test.sh --mutate` refuses any `git status --porcelain` output, and the main checkout always carries untracked files, so it refuses every time. Measured 2026-10-23 on ForgeOs-7d540: the patch went in the bead's own worktree (`ForgeOs-worktrees/7d540/fort/airlock/requests/`, git-ignored) with `target=7d540`; red 23503 FK violation 1/0, green control 1/0. Always run the unpatched green control with the same filter.
+- **A red arm (`mutate`) needs a CLEAN bead worktree, never `target=main`:** `host-test.sh --mutate` refuses any `git status --porcelain` output, and the main checkout always carries untracked files, so it refuses every time. Measured 2026-10-23 on Proofdelve ForgeOs-7d540: the patch went in the bead's own worktree (`fortkit-worktrees/7d540/fort/airlock/requests/`, git-ignored) with `target=7d540`; red 23503 FK violation 1/0, green control 1/0. Always run the unpatched green control with the same filter.
 - **The Mayor is the requester today.** A Forge cannot file one: `airlock.sh` resolves its root from its own location, so a worktree's copy writes into the worktree's `requests/`, which the runner never reads.
 - This replaces `flag-human.sh <id> "..." run host test` for tests and red arms. It does NOT replace the gate 2 run: a migration bead still waits for his own host MigrationTests run and signature until he says otherwise.
 
-## Whose move (ForgeOs-29j3g)
+## Whose move (Proofdelve ForgeOs-29j3g)
 
 Since 2026-10-19 the Overseer's board is **the open beads assigned to `justin`**,
 in the Civ Keep and this fort's Keep alike. To put something on it, use
 `scripts/flag-human.sh <id> "<one line>" [sign|grant|decide|run host test|answer]`:
 it posts the `ASK:` line and assigns him in one update. Never park a bead with
 `human` and no assignee; that is nobody's board. `fleet-escalated` beads are
-assigned to `marrek` and read with `bd list --assignee marrek`. His answers
+assigned to `emrith` and read with `bd list --assignee emrith`. His answers
 move the bead on by themselves (a bare Approve back to the fleet, anything else
 to the Mayor), so "what is waiting on him" is one query:
 `bd list --assignee justin --status open`, and `scripts/queue-lint.sh` names any
 bead on it without an `ASK:` line.
 
-## Verify once (ForgeOs-s1reg)
+## Verify once (Proofdelve ForgeOs-s1reg)
 
 Since 2026-10-19 a bead is verified ONCE on its way to main:
 
@@ -922,7 +922,7 @@ Since 2026-10-19 a bead is verified ONCE on its way to main:
   (`post-merge verify RUNS: ...`). `push-ready.sh` accepts a reused pass only on
   that tree equality, checked itself.
 - **The backstop is the nightly full verify** of main at 03:30
-  (`proofdelve-nightly-verify.timer`, `fort/scripts/nightly-verify.sh`): every
+  (`manyhalls-nightly-verify.timer`, `fort/scripts/nightly-verify.sh`): every
   step, Docker required, in a fresh worktree. A RED writes the halt file, keeps
   the worktree, and emits an incident, exactly like a post-merge RED.
 - **Kill switches are the Overseer's, in `fleet.conf`:** `FLEET_VERIFY_TIERS=off`

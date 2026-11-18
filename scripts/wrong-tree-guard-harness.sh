@@ -1,7 +1,7 @@
 #!/bin/bash
 # wrong-tree-guard-harness.sh -- re-runs the five postures of the verifier's
-# wrong-tree refusal (ForgeOs-afdr) that were measured by hand on 2026-08-28
-# and never re-run since (ForgeOs-t5vq, Tova's finding 3 on afdr).
+# wrong-tree refusal (Proofdelve ForgeOs-afdr) that were measured by hand on 2026-08-28
+# and never re-run since (Proofdelve ForgeOs-t5vq, the Warden's finding 3 on afdr).
 #
 # THE TECHNIQUE is the original measurement's: invoke the verifier with an
 # invalid argument, so a run that passes the guard dies at argument parsing

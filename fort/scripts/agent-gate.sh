@@ -1,5 +1,5 @@
 #!/bin/bash
-# THE AGENT GATE (ForgeOs-lr8h, enforcement half; Regent edict 2026-10-06,
+# THE AGENT GATE (Proofdelve ForgeOs-lr8h, enforcement half; Regent edict 2026-10-06,
 # Overseer present). A PreToolUse hook on the Agent tool, wired in
 # .claude/settings.json, so it binds every Claude session started in this repo:
 # in practice the Mayor, the one seat that holds the Agent tool (the Warden's
@@ -25,7 +25,7 @@
 # general-purpose REFUSED with this text, web-research spawned and reported its
 # tools as WebSearch and WebFetch only; with the hook removed, general-purpose
 # ran (the control). Hooks run whatever the permission mode.
-# THE MATCHER IS ANCHORED, ^(Agent|Task)$ (Tova, finding B1a on the sitting):
+# THE MATCHER IS ANCHORED, ^(Agent|Task)$ (the Warden, finding B1a on the sitting):
 # unanchored, a regex reading of Agent|Task would also catch TaskCreate and its
 # family -- failing closed, but breaking the Mayor's task tools. Measured: the
 # anchored form still gates Agent. TWO LIMITS, recorded rather than fixed:
@@ -43,5 +43,5 @@ case "$t" in
 esac
 jq -cn --arg t "$t" --arg d "$decision" '{ts: (now|todate), subagent_type: $t, decision: $d}' >> "$log" 2>/dev/null || true
 [ "$decision" = allowed ] && exit 0
-echo "agent-gate (ForgeOs-lr8h): subagent type '$t' is refused in this fort. Use web-research (WebSearch, WebFetch only) for anything on the web, or code-search (Read, Grep, Glob) for local inventory. Neither can run commands or spawn agents." >&2
+echo "agent-gate (Proofdelve ForgeOs-lr8h): subagent type '$t' is refused in this fort. Use web-research (WebSearch, WebFetch only) for anything on the web, or code-search (Read, Grep, Glob) for local inventory. Neither can run commands or spawn agents." >&2
 exit 2

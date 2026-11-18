@@ -12,7 +12,7 @@ esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 events_dir="${FORGE_EVENTS_DIR:-$main_root/fort/events}"
 stale_after_seconds=$((2 * 60 * 60))
-forge_worktrees_root="${FORGE_WORKTREES_ROOT:-/home/justin/dev/ForgeOs-worktrees}"
+forge_worktrees_root="${FORGE_WORKTREES_ROOT:-/home/justin/dev/fortkit-worktrees}"
 
 busy=0
 

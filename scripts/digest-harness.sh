@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hermetic regression harness for digest.sh (ForgeOs-eng3.7). It runs the
+# Hermetic regression harness for digest.sh (Proofdelve ForgeOs-eng3.7). It runs the
 # shipped script in a throwaway git repository with synthetic Beads and events.
 set -uo pipefail
 
@@ -37,44 +37,44 @@ git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit
 git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit -q --allow-empty -m unpushed
 git -C "$repo" update-ref refs/remotes/origin/main HEAD~1
 
-# Captured from `bd human list --json`, ForgeOs-2ibw.2, 2026-09-16. This
+# Captured from `bd human list --json`, Proofdelve ForgeOs-2ibw.2, 2026-09-16. This
 # shape deliberately has no dependencies or parent key.
 cat > "$work/human.json" <<'EOF'
 [
-  {"id":"ForgeOs-2ibw.2","title":"2ibw.2: MEASURE whether a live MCP access token carries client_id (Overseer, staging)","description":"Spec constraint 2 and Decision 4 (docs/specs/mcp-permissions-v1.md). The OAuth\ngrant resolver (ForgeOs-2ibw.6) needs client_id at request time. The ledger\nrecords client_id on a WEB-LOGIN token (fort/memory/facts/workos-issuer-and-\naudience-per-role.md, \"Claims and lifetime\") and does not confirm it on an MCP\ntoken. No seat can complete an OAuth login, so this is the Overseer's hand on\nstaging.\n\nHOW: connect Claude (or any MCP client) to staging, capture one access token\nfrom the /oauth/token exchange or from a request's Authorization header, and\ndecode the JWT payload (base64url of the middle segment; do not paste the token\nitself anywhere durable). Record the CLAIM NAMES present, not the values.\n\nWHY IT MATTERS: if client_id is present, .6 reads it in OnTokenValidated. If\nabsent, .6 records sid -> client_id at the facade's token proxy instead\n(Decision 4, second design). The bead for .6 is blocked on this one so the Forge\ndoes not guess.\n\nTouches: fort/memory/facts/","acceptance_criteria":"1. A comment on this bead lists the claim names of one live MCP access token\n   from staging, and states whether client_id is among them, and for a CIMD\n   client whether its value is the client metadata URL.\n2. fort/memory/facts/workos-issuer-and-audience-per-role.md \"Claims and\n   lifetime\" is amended with that measurement and its date (Mayor may do this\n   from the comment).\n3. ForgeOs-2ibw.6's description is amended by the Mayor to name which of\n   Decision 4's two designs applies.","status":"open","priority":1,"issue_type":"task","owner":"justincase18@msn.com","created_at":"2026-09-16T06:19:16Z","created_by":"marrek","updated_at":"2026-09-16T06:19:16Z","labels":["human"]},
-  {"id":"ForgeOs-offset","title":"offset","status":"open","created_at":"2026-09-14T00:30:00+01:00"},
-  {"id":"ForgeOs-utc","title":"utc","status":"open","created_at":"2026-09-14T00:00:00Z"},
-  {"id":"ForgeOs-later","title":"later","status":"open","created_at":"2026-09-15T00:00:00Z"},
-  {"id":"ForgeOs-raised","title":"raised during this run","status":"open","created_at":"2026-09-14T00:00:00Z"},
-  {"id":"ForgeOs-answered","title":"two raises, answer between them","status":"open","created_at":"2026-09-14T00:00:00Z"},
-  {"id":"ForgeOs-answered-later","title":"answer after its only raise","status":"open","created_at":"2026-09-14T00:00:00Z"},
-  {"id":"ForgeOs-pre-wrapper","title":"pre-wrapper decision","status":"open","created_at":"2026-09-16T01:00:00Z"},
-  {"id":"ForgeOs-null","title":"null","status":"open","created_at":null}
+  {"id":"Proofdelve ForgeOs-2ibw.2","title":"2ibw.2: MEASURE whether a live MCP access token carries client_id (Overseer, staging)","description":"Spec constraint 2 and Decision 4 (docs/specs/mcp-permissions-v1.md). The OAuth\ngrant resolver (Proofdelve ForgeOs-2ibw.6) needs client_id at request time. The ledger\nrecords client_id on a WEB-LOGIN token (fort/memory/facts/workos-issuer-and-\naudience-per-role.md, \"Claims and lifetime\") and does not confirm it on an MCP\ntoken. No seat can complete an OAuth login, so this is the Overseer's hand on\nstaging.\n\nHOW: connect Claude (or any MCP client) to staging, capture one access token\nfrom the /oauth/token exchange or from a request's Authorization header, and\ndecode the JWT payload (base64url of the middle segment; do not paste the token\nitself anywhere durable). Record the CLAIM NAMES present, not the values.\n\nWHY IT MATTERS: if client_id is present, .6 reads it in OnTokenValidated. If\nabsent, .6 records sid -> client_id at the facade's token proxy instead\n(Decision 4, second design). The bead for .6 is blocked on this one so the Forge\ndoes not guess.\n\nTouches: fort/memory/facts/","acceptance_criteria":"1. A comment on this bead lists the claim names of one live MCP access token\n   from staging, and states whether client_id is among them, and for a CIMD\n   client whether its value is the client metadata URL.\n2. fort/memory/facts/workos-issuer-and-audience-per-role.md \"Claims and\n   lifetime\" is amended with that measurement and its date (Mayor may do this\n   from the comment).\n3. Proofdelve ForgeOs-2ibw.6's description is amended by the Mayor to name which of\n   Decision 4's two designs applies.","status":"open","priority":1,"issue_type":"task","owner":"justincase18@msn.com","created_at":"2026-09-16T06:19:16Z","created_by":"emrith","updated_at":"2026-09-16T06:19:16Z","labels":["human"]},
+  {"id":"fortkit-offset","title":"offset","status":"open","created_at":"2026-09-14T00:30:00+01:00"},
+  {"id":"fortkit-utc","title":"utc","status":"open","created_at":"2026-09-14T00:00:00Z"},
+  {"id":"fortkit-later","title":"later","status":"open","created_at":"2026-09-15T00:00:00Z"},
+  {"id":"fortkit-raised","title":"raised during this run","status":"open","created_at":"2026-09-14T00:00:00Z"},
+  {"id":"fortkit-answered","title":"two raises, answer between them","status":"open","created_at":"2026-09-14T00:00:00Z"},
+  {"id":"fortkit-answered-later","title":"answer after its only raise","status":"open","created_at":"2026-09-14T00:00:00Z"},
+  {"id":"fortkit-pre-wrapper","title":"pre-wrapper decision","status":"open","created_at":"2026-09-16T01:00:00Z"},
+  {"id":"fortkit-null","title":"null","status":"open","created_at":null}
 ]
 EOF
 # The stub reproduces bd's default 50-row cap. Its real captured row appears
 # at position 51, proving that a full-board parent lookup needs --limit 0.
 printf '[\n' > "$work/list.json"
 for row in {1..50}; do
-  printf '  {"id":"ForgeOs-filler-%s","status":"open"},\n' "$row" >> "$work/list.json"
+  printf '  {"id":"fortkit-filler-%s","status":"open"},\n' "$row" >> "$work/list.json"
 done
-# Captured from `bd list --status all --json`, ForgeOs-2ibw.2, 2026-09-16.
+# Captured from `bd list --status all --json`, Proofdelve ForgeOs-2ibw.2, 2026-09-16.
 # Unlike the human-list row above, this real list row carries the parent edge.
 cat >> "$work/list.json" <<'EOF'
-  {"id":"ForgeOs-2ibw.2","title":"2ibw.2: MEASURE whether a live MCP access token carries client_id (Overseer, staging)","description":"Spec constraint 2 and Decision 4 (docs/specs/mcp-permissions-v1.md). The OAuth\ngrant resolver (ForgeOs-2ibw.6) needs client_id at request time. The ledger\nrecords client_id on a WEB-LOGIN token (fort/memory/facts/workos-issuer-and-\naudience-per-role.md, \"Claims and lifetime\") and does not confirm it on an MCP\ntoken. No seat can complete an OAuth login, so this is the Overseer's hand on\nstaging.\n\nHOW: connect Claude (or any MCP client) to staging, capture one access token\nfrom the /oauth/token exchange or from a request's Authorization header, and\ndecode the JWT payload (base64url of the middle segment; do not paste the token\nitself anywhere durable). Record the CLAIM NAMES present, not the values.\n\nWHY IT MATTERS: if client_id is present, .6 reads it in OnTokenValidated. If\nabsent, .6 records sid -> client_id at the facade's token proxy instead\n(Decision 4, second design). The bead for .6 is blocked on this one so the Forge\ndoes not guess.\n\nTouches: fort/memory/facts/","acceptance_criteria":"1. A comment on this bead lists the claim names of one live MCP access token\n   from staging, and states whether client_id is among them, and for a CIMD\n   client whether its value is the client metadata URL.\n2. fort/memory/facts/workos-issuer-and-audience-per-role.md \"Claims and\n   lifetime\" is amended with that measurement and its date (Mayor may do this\n   from the comment).\n3. ForgeOs-2ibw.6's description is amended by the Mayor to name which of\n   Decision 4's two designs applies.","status":"open","priority":1,"issue_type":"task","owner":"justincase18@msn.com","created_at":"2026-09-16T06:19:16Z","created_by":"marrek","updated_at":"2026-09-16T06:19:16Z","labels":["human"],"dependencies":[{"issue_id":"ForgeOs-2ibw.2","depends_on_id":"ForgeOs-2ibw","type":"parent-child","created_at":"2026-09-15T22:19:15Z","created_by":"marrek","metadata":"{}"}],"dependency_count":0,"dependent_count":1,"comment_count":0,"parent":"ForgeOs-2ibw"}
+  {"id":"Proofdelve ForgeOs-2ibw.2","title":"2ibw.2: MEASURE whether a live MCP access token carries client_id (Overseer, staging)","description":"Spec constraint 2 and Decision 4 (docs/specs/mcp-permissions-v1.md). The OAuth\ngrant resolver (Proofdelve ForgeOs-2ibw.6) needs client_id at request time. The ledger\nrecords client_id on a WEB-LOGIN token (fort/memory/facts/workos-issuer-and-\naudience-per-role.md, \"Claims and lifetime\") and does not confirm it on an MCP\ntoken. No seat can complete an OAuth login, so this is the Overseer's hand on\nstaging.\n\nHOW: connect Claude (or any MCP client) to staging, capture one access token\nfrom the /oauth/token exchange or from a request's Authorization header, and\ndecode the JWT payload (base64url of the middle segment; do not paste the token\nitself anywhere durable). Record the CLAIM NAMES present, not the values.\n\nWHY IT MATTERS: if client_id is present, .6 reads it in OnTokenValidated. If\nabsent, .6 records sid -> client_id at the facade's token proxy instead\n(Decision 4, second design). The bead for .6 is blocked on this one so the Forge\ndoes not guess.\n\nTouches: fort/memory/facts/","acceptance_criteria":"1. A comment on this bead lists the claim names of one live MCP access token\n   from staging, and states whether client_id is among them, and for a CIMD\n   client whether its value is the client metadata URL.\n2. fort/memory/facts/workos-issuer-and-audience-per-role.md \"Claims and\n   lifetime\" is amended with that measurement and its date (Mayor may do this\n   from the comment).\n3. Proofdelve ForgeOs-2ibw.6's description is amended by the Mayor to name which of\n   Decision 4's two designs applies.","status":"open","priority":1,"issue_type":"task","owner":"justincase18@msn.com","created_at":"2026-09-16T06:19:16Z","created_by":"emrith","updated_at":"2026-09-16T06:19:16Z","labels":["human"],"dependencies":[{"issue_id":"Proofdelve ForgeOs-2ibw.2","depends_on_id":"Proofdelve ForgeOs-2ibw","type":"parent-child","created_at":"2026-09-15T22:19:15Z","created_by":"emrith","metadata":"{}"}],"dependency_count":0,"dependent_count":1,"comment_count":0,"parent":"Proofdelve ForgeOs-2ibw"}
 ]
 EOF
 {
   printf '[\n'
-  printf '  {"id":"ForgeOs-verdict","title":"verdict fixture","status":"in_progress"},\n'
+  printf '  {"id":"fortkit-verdict","title":"verdict fixture","status":"in_progress"},\n'
   for row in {2..60}; do
-    printf '  {"id":"ForgeOs-in-progress-%s","title":"in progress %s","status":"in_progress"}' "$row" "$row"
+    printf '  {"id":"fortkit-in-progress-%s","title":"in progress %s","status":"in_progress"}' "$row" "$row"
     [ "$row" -eq 60 ] || printf ','
     printf '\n'
   done
   printf ']\n'
 } > "$work/in-progress.json"
-printf '%s\n' '[{"id":"ForgeOs-2ibw","labels":["human"]}]' > "$work/parent.json"
+printf '%s\n' '[{"id":"Proofdelve ForgeOs-2ibw","labels":["human"]}]' > "$work/parent.json"
 
 cat > "$work/stub/bd" <<'EOF'
 #!/bin/bash
@@ -86,7 +86,7 @@ case "$args" in
       exit 17
     fi
     ;;
-  # ForgeOs-29j3g: flag-human posts its ASK line as a comment before the update.
+  # Proofdelve ForgeOs-29j3g: flag-human posts its ASK line as a comment before the update.
   *" comment "*" --file "*) cat "${args##* --file }" >> "$HARNESS_BD_LOG.comments" ;;
   *"human list --json"*) cat "$HARNESS_FIXTURES/human.json" ;;
   *"list --status all --limit 0 --json"*) cat "$HARNESS_FIXTURES/list.json" ;;
@@ -95,7 +95,7 @@ case "$args" in
   *"list --status=in_progress --json"*) jq '.[0:50]' "$HARNESS_FIXTURES/in-progress.json" ;;
   *"list --status=open --limit 0 --json"*) printf "[]\n" ;;
   *"list --status=open --json"*) printf "[]\n" ;;
-  *"show ForgeOs-2ibw --json"*) cat "$HARNESS_FIXTURES/parent.json" ;;
+  *"show Proofdelve ForgeOs-2ibw --json"*) cat "$HARNESS_FIXTURES/parent.json" ;;
   *) printf "unexpected bd command: %s\n" "$args" >&2; exit 9 ;;
 esac
 EOF
@@ -185,49 +185,49 @@ wrapper_log="$work/wrapper-bd.log"
 wrapper_emits="$work/wrapper.emits"
 HARNESS_BD_LOG="$wrapper_log" HARNESS_EMITS="$wrapper_emits" \
   FORT_ACTOR=justin FORT_SEAT=overseer \
-  PATH="$work/stub:$PATH" "$wrapper_tree/scripts/flag-human.sh" ForgeOs-flag 'needs review'
-if grep -Fq -- "-C $repo update ForgeOs-flag --remove-label mayor-review --add-label human" "$wrapper_log"; then
+  PATH="$work/stub:$PATH" "$wrapper_tree/scripts/flag-human.sh" fortkit-flag 'needs review'
+if grep -Fq -- "-C $repo update fortkit-flag --remove-label mayor-review --add-label human" "$wrapper_log"; then
   printf '  PASS  flag-human writes the label through the main tracker from a worktree\n'; pass=$((pass + 1))
 else
   printf '  FAIL  flag-human writes the label through the main tracker from a worktree\n'; fail=$((fail + 1))
 fi
-if grep -Fq -- "-C $repo update ForgeOs-flag --remove-label mayor-review --add-label human --assignee justin" "$wrapper_log" \
+if grep -Fq -- "-C $repo update fortkit-flag --remove-label mayor-review --add-label human --assignee justin" "$wrapper_log" \
    && grep -Fq 'ASK: decide -- needs review' "$wrapper_log.comments"; then
   printf '  PASS  flag-human assigns justin in the same update and posts the ASK line first (29j3g)\n'; pass=$((pass + 1))
 else
   printf '  FAIL  flag-human assigns justin in the same update and posts the ASK line first (29j3g)\n'; fail=$((fail + 1))
 fi
-if grep -Fq -- 'decision.raised needs review -a justin -s overseer -t ForgeOs-flag' "$wrapper_emits"; then
+if grep -Fq -- 'decision.raised needs review -a justin -s overseer -t fortkit-flag' "$wrapper_emits"; then
   printf '  PASS  flag-human honors FORT_ACTOR and FORT_SEAT\n'; pass=$((pass + 1))
 else
   printf '  FAIL  flag-human honors FORT_ACTOR and FORT_SEAT\n'; fail=$((fail + 1))
 fi
 # The DEFAULT case unsets the identity it asserts the default of: a verifier run
 # under FORT_ACTOR (a Regent's, emitting under its own name) otherwise makes this
-# case measure the caller (found 2026-10-19 at the docket ForgeOs-x7ojh verify).
+# case measure the caller (found 2026-10-19 at the docket Proofdelve ForgeOs-x7ojh verify).
 env -u FORT_ACTOR -u FORT_SEAT HARNESS_BD_LOG="$wrapper_log" HARNESS_EMITS="$wrapper_emits" \
-  PATH="$work/stub:$PATH" "$wrapper_tree/scripts/flag-human.sh" ForgeOs-default 'default actor'
-if grep -Fq -- 'decision.raised default actor -a marrek -s mayor -t ForgeOs-default' "$wrapper_emits"; then
-  printf '  PASS  flag-human defaults actor and seat to marrek and mayor\n'; pass=$((pass + 1))
+  PATH="$work/stub:$PATH" "$wrapper_tree/scripts/flag-human.sh" fortkit-default 'default actor'
+if grep -Fq -- 'decision.raised default actor -a emrith -s mayor -t fortkit-default' "$wrapper_emits"; then
+  printf '  PASS  flag-human defaults actor and seat to emrith and mayor\n'; pass=$((pass + 1))
 else
-  printf '  FAIL  flag-human defaults actor and seat to marrek and mayor\n'; fail=$((fail + 1))
+  printf '  FAIL  flag-human defaults actor and seat to emrith and mayor\n'; fail=$((fail + 1))
 fi
 HARNESS_BD_LOG="$wrapper_log" HARNESS_EMITS="$wrapper_emits" \
   FORT_ACTOR=justin FORT_SEAT=overseer \
-  PATH="$work/stub:$PATH" "$wrapper_tree/scripts/unflag-human.sh" ForgeOs-unflag 'answer recorded'
-if grep -Fq -- "-C $repo update ForgeOs-unflag --remove-label human --assignee marrek" "$wrapper_log" && \
-  grep -Fq -- 'decision.answered answer recorded -a justin -s overseer -t ForgeOs-unflag' "$wrapper_emits"; then
+  PATH="$work/stub:$PATH" "$wrapper_tree/scripts/unflag-human.sh" fortkit-unflag 'answer recorded'
+if grep -Fq -- "-C $repo update fortkit-unflag --remove-label human --assignee emrith" "$wrapper_log" && \
+  grep -Fq -- 'decision.answered answer recorded -a justin -s overseer -t fortkit-unflag' "$wrapper_emits"; then
   printf '  PASS  unflag-human writes through the main tracker and honors FORT_ACTOR and FORT_SEAT\n'; pass=$((pass + 1))
 else
   printf '  FAIL  unflag-human writes through the main tracker and honors FORT_ACTOR and FORT_SEAT\n'; fail=$((fail + 1))
 fi
 restore_stderr="$work/restore.stderr"
 HARNESS_BD_LOG="$wrapper_log" HARNESS_EMITS="$wrapper_emits" HARNESS_BD_FAIL_RESTORE=1 HARNESS_EMIT_FAIL=1 \
-  PATH="$work/stub:$PATH" "$wrapper_tree/scripts/unflag-human.sh" ForgeOs-restore 'answer' > /dev/null 2>"$restore_stderr"
+  PATH="$work/stub:$PATH" "$wrapper_tree/scripts/unflag-human.sh" fortkit-restore 'answer' > /dev/null 2>"$restore_stderr"
 restore_status=$?
 if [ "$restore_status" -ne 3 ]; then
   printf '  FAIL  unflag-human restore failure returns exit 3\n'; fail=$((fail + 1))
-elif grep -Fq 'ForgeOs-restore; label is absent and decision.answered was not recorded' "$restore_stderr"; then
+elif grep -Fq 'fortkit-restore; label is absent and decision.answered was not recorded' "$restore_stderr"; then
   printf '  PASS  unflag-human restore failure names the bead and label-without-event state\n'; pass=$((pass + 1))
 else
   printf '  FAIL  unflag-human restore failure names the bead and label-without-event state\n'; fail=$((fail + 1))
@@ -248,10 +248,10 @@ fi
 # turn. It exercises every standing property without weakening eng3.3.1.
 standing="$work/standing.out"
 HARNESS_EMITS="$work/standing.emits" run_digest "$standing" --since 2026-09-15T00:00:00Z
-check_contains 'standing inherited suspect is surfaced' '1 may be inherited labels: ForgeOs-2ibw.2' "$standing"
+check_contains 'standing inherited suspect is surfaced' '1 may be inherited labels: Proofdelve ForgeOs-2ibw.2' "$standing"
 oldest_line="$(grep -F 'Also standing:' "$standing")"
 case "$oldest_line" in
-  *'oldest: ForgeOs-offset ('*', ForgeOs-utc ('*)
+  *'oldest: fortkit-offset ('*', fortkit-utc ('*)
   printf '  PASS  standing trio names offset before UTC and excludes null timestamp\n'; pass=$((pass + 1))
   ;;
   *)
@@ -263,18 +263,18 @@ esac
 # unchanged. The same stream also exercises both missing TROUBLE categories.
 # shellcheck disable=SC2016 # JSON fixture must preserve literal backticks.
 printf '%s\n' \
-  '{"ts":"2026-09-16T00:10:00Z","category":"decision.raised","target":"ForgeOs-raised","detail":"raised during this run"}' \
-  '{"ts":"2026-09-16T00:12:00Z","category":"decision.raised","target":"ForgeOs-answered","detail":"later raise by epoch"}' \
-  '{"ts":"2026-09-16T00:11:00Z","category":"decision.raised","target":"ForgeOs-answered","detail":"backdated raise later in stream order"}' \
-  '{"ts":"2026-09-16T00:11:30Z","category":"decision.answered","target":"ForgeOs-answered","detail":"answer between the two raises by epoch"}' \
-  '{"ts":"2026-09-16T00:12:30Z","category":"decision.raised","target":"ForgeOs-answered-later","detail":"only raise before answer"}' \
-  '{"ts":"2026-09-16T00:12:45Z","category":"decision.answered","target":"ForgeOs-answered-later","detail":"answer after only raise"}' \
-  '{"ts":"2026-09-16T01:00:00Z","category":"review.verdict","target":"ForgeOs-verdict","detail":"verdict \"quote\" `backtick` ~tilde~ \\path\tfirst\nsecond\rthird"}' \
+  '{"ts":"2026-09-16T00:10:00Z","category":"decision.raised","target":"fortkit-raised","detail":"raised during this run"}' \
+  '{"ts":"2026-09-16T00:12:00Z","category":"decision.raised","target":"fortkit-answered","detail":"later raise by epoch"}' \
+  '{"ts":"2026-09-16T00:11:00Z","category":"decision.raised","target":"fortkit-answered","detail":"backdated raise later in stream order"}' \
+  '{"ts":"2026-09-16T00:11:30Z","category":"decision.answered","target":"fortkit-answered","detail":"answer between the two raises by epoch"}' \
+  '{"ts":"2026-09-16T00:12:30Z","category":"decision.raised","target":"fortkit-answered-later","detail":"only raise before answer"}' \
+  '{"ts":"2026-09-16T00:12:45Z","category":"decision.answered","target":"fortkit-answered-later","detail":"answer after only raise"}' \
+  '{"ts":"2026-09-16T01:00:00Z","category":"review.verdict","target":"fortkit-verdict","detail":"verdict \"quote\" `backtick` ~tilde~ \\path\tfirst\nsecond\rthird"}' \
   '{"ts":"2026-09-16T01:01:00Z","category":"incident.corrected","detail":"incident corrected"}' \
   '{"ts":"2026-09-16T01:02:00Z","category":"verify.blocked","detail":"verify blocked"}' > "$repo/fort/events/events-2026-09-16.jsonl"
 events="$work/events.out"
 run_digest "$events" --since 2026-09-15T12:00:00Z
-check_contains 'pre-window bead raised during this run is listed' 'ForgeOs-raised [open] raised during this run' "$events"
+check_contains 'pre-window bead raised during this run is listed' 'fortkit-raised [open] raised during this run' "$events"
 # This answer-tracking control removes answer handling from a copy. The
 # later-answered bead must become outstanding, proving the control is red.
 answered_removed_script="$repo/scripts/digest-answer-removed.sh"
@@ -288,7 +288,7 @@ if grep -Fq 'decision.answered) last_answered_epoch["$target"]="$event_epoch" ;;
 else
   answered_removed="$work/answered-removed.out"
   run_digest_script "$answered_removed_script" "$answered_removed" --since 2026-09-15T12:00:00Z
-  if grep -Fq 'ForgeOs-answered-later [open] answer after its only raise' "$answered_removed"; then
+  if grep -Fq 'fortkit-answered-later [open] answer after its only raise' "$answered_removed"; then
     printf '  CONTROL RED  later-answered decision is outstanding without answer tracking\n'
     printf '  PASS  answer-tracking control is RED when answer handling is removed\n'; pass=$((pass + 1))
   else
@@ -297,7 +297,7 @@ else
 fi
 # With answer tracking, the later-answered bead must be absent from every
 # outstanding section. This is the green half of the answer-tracking control.
-if grep -Fq 'ForgeOs-answered-later' "$events"; then
+if grep -Fq 'fortkit-answered-later' "$events"; then
   printf '  FAIL  answer-tracking control is GREEN with answer handling\n'; fail=$((fail + 1))
 else
   printf '  CONTROL GREEN  later-answered decision is absent with answer tracking\n'
@@ -305,15 +305,15 @@ else
 fi
 # This distinct control proves that the two-raise fixture chooses the maximum
 # raise epoch, even when its answer appears later in stream order.
-if grep -Fq 'ForgeOs-answered [open] two raises, answer between them' "$events"; then
+if grep -Fq 'fortkit-answered [open] two raises, answer between them' "$events"; then
   printf '  PASS  max-epoch decision remains outstanding\n'; pass=$((pass + 1))
 else
   printf '  FAIL  max-epoch decision remains outstanding\n'; fail=$((fail + 1))
 fi
 check_contains 'max-epoch decision is excluded from the standing count' 'Also standing: 4 blocked on you' "$events"
-check_contains 'pre-wrapper bead uses the creation-date fallback note' 'ForgeOs-pre-wrapper [open] pre-wrapper decision (no raise event; by creation date)' "$events"
+check_contains 'pre-wrapper bead uses the creation-date fallback note' 'fortkit-pre-wrapper [open] pre-wrapper decision (no raise event; by creation date)' "$events"
 expected_detail=$'    verdict "quote" `backtick` ~tilde~ \\path\tfirst\nsecond\rthird'
-actual_detail="$(sed -n '/^  ForgeOs-verdict: /{n;p;n;p;}' "$events")"
+actual_detail="$(sed -n '/^  fortkit-verdict: /{n;p;n;p;}' "$events")"
 if [ "$actual_detail" = "$expected_detail" ]; then
   printf '  PASS  verdict detail round-trips quote, backtick, tilde, tab, newline, CR and backslash\n'; pass=$((pass + 1))
 else
@@ -334,12 +334,12 @@ if cmp -s "$repo/scripts/digest.sh" "$default_limit_script"; then
 fi
 default_limit="$work/default-limit.out"
 run_digest_script "$default_limit_script" "$default_limit" --since 2026-09-15T12:00:00Z
-if grep -Fq 'ForgeOs-in-progress-60: in progress 60' "$default_limit"; then
+if grep -Fq 'fortkit-in-progress-60: in progress 60' "$default_limit"; then
   printf '  FAIL  default 50-row cap unexpectedly renders row 60\n'; fail=$((fail + 1))
 else
   printf '  PASS  default-limit copy omits row 60\n'; pass=$((pass + 1))
 fi
-check_contains 'in-flight listing includes row 60 beyond the default cap' 'ForgeOs-in-progress-60: in progress 60' "$events"
+check_contains 'in-flight listing includes row 60 beyond the default cap' 'fortkit-in-progress-60: in progress 60' "$events"
 
 printf 'TMPDIR after full digest runs:\n'
 ls -la "$fixture_tmpdir"

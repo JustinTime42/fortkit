@@ -1,5 +1,5 @@
 #!/bin/bash
-# Harness for fort/scripts/scratch-reaper.sh (ForgeOs-nv0j acceptance 4). Runs
+# Harness for fort/scripts/scratch-reaper.sh (Proofdelve ForgeOs-nv0j acceptance 4). Runs
 # the SHIPPED reaper against fixtures under a scratch root, a scratch legacy
 # root and a scratch git repository whose scripts/stranded-sweep.sh wrapper
 # invokes the real sweep with only its bd export fixture substituted. This pins
@@ -94,17 +94,17 @@ echo main-dirty >> "$repo/f"
 flock "$repo-worktrees/locked/.forge.lock" sleep 300 >/dev/null 2>&1 &
 lockholders+=($!)
 cat > "$repo/issues.jsonl" <<'JSON'
-{"id":"ForgeOs-clean","status":"closed"}
-{"id":"ForgeOs-dirty","status":"closed"}
-{"id":"ForgeOs-locked","status":"closed"}
-{"id":"ForgeOs-unmerged","status":"closed"}
-{"id":"ForgeOs-gone","status":"closed"}
-{"id":"ForgeOs-stranded","status":"open"}
-{"id":"ForgeOs-padding-1","status":"open"}
-{"id":"ForgeOs-padding-2","status":"open"}
-{"id":"ForgeOs-padding-3","status":"open"}
-{"id":"ForgeOs-padding-4","status":"open"}
-{"id":"ForgeOs-padding-5","status":"open"}
+{"id":"fortkit-clean","status":"closed"}
+{"id":"fortkit-dirty","status":"closed"}
+{"id":"fortkit-locked","status":"closed"}
+{"id":"fortkit-unmerged","status":"closed"}
+{"id":"fortkit-gone","status":"closed"}
+{"id":"fortkit-stranded","status":"open"}
+{"id":"fortkit-padding-1","status":"open"}
+{"id":"fortkit-padding-2","status":"open"}
+{"id":"fortkit-padding-3","status":"open"}
+{"id":"fortkit-padding-4","status":"open"}
+{"id":"fortkit-padding-5","status":"open"}
 JSON
 cat > "$repo/scripts/stranded-sweep.sh" <<STUB
 #!/bin/bash
@@ -122,8 +122,8 @@ template="\$(printf '%s\\n' "\$out" | grep '^REAPABLE' | head -1)" || exit 3
 source_branch="\$(awk '{print \$2}' <<<"\$template")"
 source_id="\$(awk '{print \$3}' <<<"\$template")"
 source_wt="\$(awk '{print \$4}' <<<"\$template")"
-unmerged="\$(printf '%s\\n' "\$template" | sed "s|\$source_branch|bead/unmerged|; s|\$source_id|ForgeOs-unmerged|; s|\$source_wt|worktree=$repo-worktrees/unmerged|")"
-gone="\$(printf '%s\\n' "\$template" | sed "s|\$source_branch|bead/gone|; s|\$source_id|ForgeOs-gone|; s|\$source_wt|worktree=$repo-worktrees/gone|")"
+unmerged="\$(printf '%s\\n' "\$template" | sed "s|\$source_branch|bead/unmerged|; s|\$source_id|fortkit-unmerged|; s|\$source_wt|worktree=$repo-worktrees/unmerged|")"
+gone="\$(printf '%s\\n' "\$template" | sed "s|\$source_branch|bead/gone|; s|\$source_id|fortkit-gone|; s|\$source_wt|worktree=$repo-worktrees/gone|")"
 printf '%s\\n' "\$unmerged" "\$gone"
 exit "\$rc"
 STUB
@@ -138,7 +138,7 @@ if [ "$fixture_rc" -eq 1 ] && grep -q '^REAPABLE ' <<<"$fixture_output"; then
 else
   no "exit-1 sweep output is retained" "rc=$fixture_rc output=$fixture_output"
 fi
-if grep -q 'WORKTREE-DIRTY.*bead/dirty.*ForgeOs-dirty' <<<"$fixture_output" \
+if grep -q 'WORKTREE-DIRTY.*bead/dirty.*fortkit-dirty' <<<"$fixture_output" \
   && grep -q 'WORKTREE-DIRTY.*DETACHED-HEAD.*worktree=.*/detached' <<<"$fixture_output" \
   && ! grep -q 'worktree=.*/repo;' <<<"$fixture_output"; then
   ok "dirty bead and detached worktrees are reported while dirty main is excluded"
@@ -178,7 +178,7 @@ sleep 0.3   # let the flock holders take their locks
 # The harness runs inside masked seats too (verify-impl.sh runs in Forge and Mayor
 # masks). The reaper refuses under FORT_MASKED by design; the fixtures here are
 # the harness's own temp dirs, so the marker is cleared for the subject runs only.
-# Case 101 below re-asserts the refusal with the marker set (ForgeOs-2sdo).
+# Case 101 below re-asserts the refusal with the marker set (Proofdelve ForgeOs-2sdo).
 run() { env -u FORT_MASKED REAPER_REPO="$repo" REAPER_WARDEN_ROOT="$wr" REAPER_LEGACY_ROOT="$lg" REAPER_MIN_AGE_MIN=120 bash "$reaper" "$@" 2>"$work/err.txt"; }
 
 # 1 masked refusal, nothing touched
@@ -235,7 +235,7 @@ printf '#!/bin/bash\nexit 3\n' > "$repo/scripts/stranded-sweep.sh"
 run; rc=$?
 if [ "$rc" -eq 64 ] && grep -q 'REFUSED worktree sweep' "$work/err.txt" && [ -d "$repo-worktrees/dirty" ]; then ok "stranded-sweep exit 3 is a REFUSAL (exit 64) and touches no worktree"; else no "list refusal" "rc=$rc $(cat "$work/err.txt")"; fi
 
-# ---- ForgeOs-jfqu4.8 sweep C: host /tmp hygiene, and the /tmp usage alarm ----
+# ---- Proofdelve ForgeOs-jfqu4.8 sweep C: host /tmp hygiene, and the /tmp usage alarm ----
 # A fixture /tmp, a fixture worktrees dir, a fixture alarm state. The worktree
 # list is a stub that lists nothing, so sweeps A and B have nothing to do here.
 printf '#!/bin/bash\nexit 0\n' > "$repo/scripts/stranded-sweep.sh"

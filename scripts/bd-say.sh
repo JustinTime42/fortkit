@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # bd-say.sh — write bd field text FROM A FILE and prove it landed.
 #
-# WHY THIS EXISTS (ForgeOs-ptfdx, and three siblings on 2026-09-21/22).
+# WHY THIS EXISTS (Proofdelve ForgeOs-ptfdx, and three siblings on 2026-09-21/22).
 # Four times in two days, bd field text built as an INLINE shell argument was
 # mangled before bd ever saw it: backticks executed and ate two terms from the
-# ForgeOs-iuhnd record; an apostrophe then backticks broke a python -c block;
+# Proofdelve ForgeOs-iuhnd record; an apostrophe then backticks broke a python -c block;
 # `$(...)` plus `$?` shipped an acceptance criterion reading "exit 127"; and
-# backticks ate two identifiers from a ForgeOs-8ge4 diagnosis FORTY MINUTES
+# backticks ate two identifiers from a Proofdelve ForgeOs-8ge4 diagnosis FORTY MINUTES
 # after the Mayor committed a memory fact telling itself never to do this.
 #
 # The fact was correct, recent, and load-bearing, and it lost to the habit of
@@ -27,7 +27,7 @@
 #   scripts/bd-say.sh design-append     <bead-id> <file>
 #   scripts/bd-say.sh notes-append      <bead-id> <file>
 #
-# WHY THE APPEND MODE EXISTS (ForgeOs-dgnjj, measured on the author 2026-09-22).
+# WHY THE APPEND MODE EXISTS (Proofdelve ForgeOs-dgnjj, measured on the author 2026-09-22).
 # The replace modes above are the whole hazard. A caller who wants to ADD a
 # paragraph has to read the field, append, and write the result back -- and the
 # read is the part nothing was checking. I wrote such a helper, read the field
@@ -105,7 +105,7 @@ case "$field" in
 esac
 wrc=$?
 
-# THE READ-BACK. bd's own success line is not evidence (ForgeOs-15k.8: bd show
+# THE READ-BACK. bd's own success line is not evidence (Proofdelve ForgeOs-15k.8: bd show
 # --json returns comment_count and no bodies, so comments are read with
 # `bd comments`). Both anchors must be present in what bd actually stored.
 got="$(

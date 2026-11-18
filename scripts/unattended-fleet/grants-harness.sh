@@ -31,7 +31,7 @@ run_case() {
   local name=$1 want_rc=$2 want_text=$3; shift 3
   set +e
   local output
-  output=$(PROOFDELVE_KEEP_DIR="$fixture" GRANTS_NOW="$now" "$reader" "$@" 2>&1)
+  output=$(MANYHALLS_KEEP_DIR="$fixture" GRANTS_NOW="$now" "$reader" "$@" 2>&1)
   local rc=$?
   set -e
   if [[ $rc == "$want_rc" && $output == *"$want_text"* ]]; then
@@ -84,7 +84,7 @@ sed 's/if not now() < expires:/if now() < expires:/' "$reader" > "$red"
 chmod +x "$red"
 write_records "$(grant grant push "$push_bound" "$past")" "$away"
 set +e
-red_output=$(PROOFDELVE_KEEP_DIR="$fixture" GRANTS_NOW="$now" "$red" check push "$push_bound" 2>&1)
+red_output=$(MANYHALLS_KEEP_DIR="$fixture" GRANTS_NOW="$now" "$red" check push "$push_bound" 2>&1)
 red_rc=$?
 set -e
 if [[ $red_rc == 0 && $red_output == granted ]]; then
@@ -101,7 +101,7 @@ sed '/    if latest\["bound"\] != bound:/,/        return False, "grant bound do
 chmod +x "$bound_red"
 write_records "$(grant grant stock findings-only "$future")" "$away"
 set +e
-bound_red_output=$(PROOFDELVE_KEEP_DIR="$fixture" GRANTS_NOW="$now" "$bound_red" check stock product-first 2>&1)
+bound_red_output=$(MANYHALLS_KEEP_DIR="$fixture" GRANTS_NOW="$now" "$bound_red" check stock product-first 2>&1)
 bound_red_rc=$?
 set -e
 if [[ $bound_red_rc == 0 && $bound_red_output == granted ]]; then

@@ -4,13 +4,13 @@ Host-run operations a seat may REQUEST. The host runs one only on the
 Overseer's approval, or, for an operation the table declares `auto_run`
 (below), without one. The
 table of operations is `operations.json` (kernel read-only to every seat since
-`ForgeOs-72ot`); requests land in `requests/`, results in `results/`. The
+`Proofdelve ForgeOs-72ot`); requests land in `requests/`, results in `results/`. The
 verbs live in `fort/scripts/airlock.sh` (`request`, `approve`, `run`, `status`).
 
-## Parameters, and seat-requestable host operations (`ForgeOs-emshb`, Regent docket 2026-10-22, gate 6)
+## Parameters, and seat-requestable host operations (`Proofdelve ForgeOs-emshb`, Regent docket 2026-10-22, gate 6)
 
 Until 2026-10-23 every operation was parameterless: `request --param k=v` stored
-pairs nothing read back (`ForgeOs-15k.3`, recorded 2026-09-17). Now an operation
+pairs nothing read back (`Proofdelve ForgeOs-15k.3`, recorded 2026-09-17). Now an operation
 may declare, in `operations.json` and ONLY there (a request file is never read
 for any of these):
 
@@ -33,14 +33,14 @@ The operations this added:
   `results/<id>.log` is readable from the Mayor's mask. Request it:
 
       fort/scripts/airlock.sh request host-test --reason "red arm for X" \
-        --param target=ForgeOs-<bead> --param 'filter=FullyQualifiedName~Foo'
+        --param target=fortkit-<bead> --param 'filter=FullyQualifiedName~Foo'
 
   **It is not read-only.** It builds and tests the named worktree (and the
   patch) on the host, unmasked, with Docker. The fleet's host verify already
   runs every Forge branch that way, and the Mayor can write main and every
   worktree, so this is a faster trigger, not a new capability. The Overseer
   chose to build it as approved, on that description (comment on
-  `ForgeOs-emshb`, 2026-10-23).
+  `Proofdelve ForgeOs-emshb`, 2026-10-23).
 - **`preview`** (`scripts/preview.sh`): `target`, `keep_data` (`true` keeps the
   preview database). **Needs his Keep Approve.** The result carries `url`, shown
   on the Airlock page. The preview's servers outlive the run on purpose:
@@ -57,7 +57,7 @@ an auto_run request does not wait for the ten-minute timer. `requests/` is
 seat-writable, so a seat can start the runner; that buys nothing, because the
 runner executes only store-approved requests and auto_run operations.
 
-## One click, and what it builds (`ForgeOs-mbv54`, Regent edict 2026-10-15)
+## One click, and what it builds (`Proofdelve ForgeOs-mbv54`, Regent edict 2026-10-15)
 
 A staging deploy costs the Overseer one click and no typed command:
 
@@ -68,14 +68,14 @@ A staging deploy costs the Overseer one click and no typed command:
    will build, and clicks Approve. That writes one line to
    `~/.local/state/civ-keep/airlock-approvals.jsonl`, read-only in every seat
    mask.
-3. `proofdelve-airlock-runner.path` (fort/systemd/) sees the store change and
+3. `manyhalls-airlock-runner.path` (fort/systemd/) sees the store change and
    starts `fort/scripts/airlock-runner.sh`, which loops `airlock.sh run` with
    no id until nothing approved is left. A ten-minute timer catches an approval
    clicked while a run was already going (a path unit drops that event).
 
 **What runs is the commit he approved, not main's HEAD.** `deploy-staging`
 declares `"runs_from": "pinned-commit"`: `run` cuts a temporary detached
-worktree of the request's `commit` under `~/.local/share/airlock/ForgeOs/<id>`
+worktree of the request's `commit` under `~/.local/share/airlock/fortkit/<id>`
 (no seat can write there), symlinks the declared `env_files` from the root
 (never copies them), runs the script there, and removes the worktree. A pin
 that is not a full sha, not in the repository, or not on main is REFUSED and
@@ -90,15 +90,15 @@ pins both.
 
 ## Closed gaps
 
-- Approval status lived in the seat-writable request file (`ForgeOs-72ot.1`):
+- Approval status lived in the seat-writable request file (`Proofdelve ForgeOs-72ot.1`):
   closed 2026-10-06, approval lives in the Overseer store.
-- A successful `run` emitted no `deploy` event (`ForgeOs-x6hq`): closed; an
+- A successful `run` emitted no `deploy` event (`Proofdelve ForgeOs-x6hq`): closed; an
   operation's `emits` block is announced on exit 0.
 
 ## Known gaps, each with its bead (historical list as of 2026-09-17)
 
-- Approval status lives in the seat-writable request file (`ForgeOs-72ot.1`):
+- Approval status lives in the seat-writable request file (`Proofdelve ForgeOs-72ot.1`):
   a seat can write `"status": "approved"` into its own request. Design work
   for a Regent sitting; the probe the bead demands has not been run.
-- A successful `run` emits no `deploy` event (`ForgeOs-x6hq`, five instances);
+- A successful `run` emits no `deploy` event (`Proofdelve ForgeOs-x6hq`, five instances);
   the Mayor reconstructs one from the result file.

@@ -32,16 +32,16 @@ esac
 EOF
 printf '#!/bin/sh\nexit 1\n' > "$stub/ssh-add"; printf '#!/bin/sh\nexit 1\n' > "$stub/pgrep"
 chmod +x "$stub/bd" "$stub/ssh-add" "$stub/pgrep"
-if refusal_output="$(BD_LOG="$work/bd-refusal.log" "$stub/bd" update ForgeOs-test --notes forbidden 2>&1)"; then
+if refusal_output="$(BD_LOG="$work/bd-refusal.log" "$stub/bd" update fortkit-test --notes forbidden 2>&1)"; then
   echo 'FAIL bd stub accepted a write command'; exit 1
 else
   refusal_exit=$?
 fi
 [ "$refusal_exit" = 99 ] || { echo "FAIL bd stub refusal exit was $refusal_exit, expected 99"; exit 1; }
-printf '%s\n' "$refusal_output" | grep -Fqx 'WRITE OR UNKNOWN ATTEMPT: update ForgeOs-test --notes forbidden' || {
+printf '%s\n' "$refusal_output" | grep -Fqx 'WRITE OR UNKNOWN ATTEMPT: update fortkit-test --notes forbidden' || {
   echo 'FAIL bd stub did not print its refusal marker'; exit 1
 }
-grep -Fqx 'WRITE OR UNKNOWN ATTEMPT: update ForgeOs-test --notes forbidden' "$work/bd-refusal.log" || {
+grep -Fqx 'WRITE OR UNKNOWN ATTEMPT: update fortkit-test --notes forbidden' "$work/bd-refusal.log" || {
   echo 'FAIL bd stub did not record its refusal marker'; exit 1
 }
 run_case() {
@@ -66,10 +66,10 @@ print(os.environ["SATISFIED_HOLDS_OUTPUT"], file=sys.stderr)
 sys.exit(int(os.environ.get("SATISFIED_HOLDS_EXIT", "0")))
 EOF
 }
-mayor='[{"id":"ForgeOs-r","status":"open","labels":["mayor-review"],"title":"review","description":"Touches: x"}]'
+mayor='[{"id":"fortkit-r","status":"open","labels":["mayor-review"],"title":"review","description":"Touches: x"}]'
 empty='[]'
-stockable='[{"id":"ForgeOs-stockable","status":"open","labels":[],"title":"needs prep","description":"Touches: scripts/unattended-fleet/sweep.py\n\n## Acceptance\n\n- A criterion."}]'
-already_merged='[{"id":"ForgeOs-a1","status":"open","labels":["fleet-safe"],"title":"first landed fixture","description":"Touches: x"},{"id":"ForgeOs-b2","status":"open","labels":["fleet-safe"],"title":"second landed fixture","description":"Touches: x"}]'
+stockable='[{"id":"fortkit-stockable","status":"open","labels":[],"title":"needs prep","description":"Touches: scripts/unattended-fleet/sweep.py\n\n## Acceptance\n\n- A criterion."}]'
+already_merged='[{"id":"fortkit-a1","status":"open","labels":["fleet-safe"],"title":"first landed fixture","description":"Touches: x"},{"id":"fortkit-b2","status":"open","labels":["fleet-safe"],"title":"second landed fixture","description":"Touches: x"}]'
 run_case "$mayor"
 [ "$(read_work)" = True ] && echo 'PASS mayor-review fixture sets work bit' || { echo 'FAIL mayor-review fixture sets work bit'; exit 1; }
 if [ "${HARNESS_T4_RESTORATION_PROBE:-}" != 1 ]; then
@@ -87,12 +87,12 @@ write_sweep_fixture
 SATISFIED_HOLDS_OUTPUT='satisfied-holds: no candidates (0 beads scanned, description+notes+design+comments)' run_case "$already_merged"
 already_merged_findings="$(read_sweep_findings already-merged.py)"
 [ "$already_merged_findings" = 0 ] && echo 'PASS real already-merged clean fixture reports zero findings' || { echo "FAIL real already-merged clean fixture did not report zero findings (got $already_merged_findings)"; exit 1; }
-git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit --allow-empty -qm 'ForgeOs-a1: merged by the fleet on fixture verdict'
-git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit --allow-empty -qm 'ForgeOs-b2: merged by the fleet on fixture verdict'
+git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit --allow-empty -qm 'fortkit-a1: merged by the fleet on fixture verdict'
+git -C "$repo" -c user.name=harness -c user.email=harness@example.invalid commit --allow-empty -qm 'fortkit-b2: merged by the fleet on fixture verdict'
 SATISFIED_HOLDS_OUTPUT='satisfied-holds: no candidates (0 beads scanned, description+notes+design+comments)' run_case "$already_merged"
 already_merged_findings="$(read_sweep_findings already-merged.py)"
 [ "$already_merged_findings" = 2 ] && echo 'PASS real already-merged two-hit fixture reports two findings' || { echo "FAIL real already-merged two-hit fixture did not report two findings (got $already_merged_findings)"; exit 1; }
-SATISFIED_HOLDS_EXIT=1 SATISFIED_HOLDS_OUTPUT='satisfied-holds: 3 bead(s) whose comments bd would not return: ForgeOs-a ForgeOs-b ForgeOs-c
+SATISFIED_HOLDS_EXIT=1 SATISFIED_HOLDS_OUTPUT='satisfied-holds: 3 bead(s) whose comments bd would not return: fortkit-a fortkit-b fortkit-c
 satisfied-holds: 1 satisfied, 0 partial, over 4 beads (description+notes+design+comments).' run_case "$empty"
 [ "$(read_sweep_findings satisfied-holds.py)" = 1 ] && echo 'PASS satisfied-holds comment-refusal fixture reports one finding' || { echo 'FAIL satisfied-holds comment-refusal fixture did not report one finding'; exit 1; }
 if [ "${HARNESS_T4_RESTORATION_PROBE:-}" != 1 ]; then
@@ -164,7 +164,7 @@ if [ "${HARNESS_WRITE_PROBE:-}" != 1 ]; then
     echo "FAIL RED arm: stdin-inheriting sweep exit was $stdin_probe_exit; stdin stub marker present=$stdin_marker_present"; exit 1
   }
 fi
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["schema"] == "proofdelve/unattended-mayor-loop/status/v1"; assert isinstance(d["errors"], list)' "$state/status.json"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); assert d["schema"] == "manyhalls/unattended-mayor-loop/status/v1"; assert isinstance(d["errors"], list)' "$state/status.json"
 if grep -Fq 'WRITE OR UNKNOWN ATTEMPT:' "$work/bd.log" "$work/stderr.log"; then
   echo "FAIL bd stub refusal marker reached${HARNESS_WRITE_PROBE_NAME:+ for $HARNESS_WRITE_PROBE_NAME}"; exit 1
 fi
@@ -178,7 +178,7 @@ echo 'PASS status record is schema-shaped and bd stub recorded only reads'
 # recurse.
 if [ "${HARNESS_WRITE_PROBE:-}" != 1 ]; then
   for write_arm in \
-    'injected bare bd write|["bd", "update", "ForgeOs-test", "--notes", "forbidden"]' \
+    'injected bare bd write|["bd", "update", "fortkit-test", "--notes", "forbidden"]' \
     'injected -C bd write|["bd", "-C", str(ROOT), "update", "X"]'; do
     write_name="${write_arm%%|*}"
     write_args="${write_arm#*|}"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # workbench-merge-harness: the instrument for workbench.sh's host-side merge of
-# main (ForgeOs-guue7; Regent sitting 2026-11-16).
+# main (Proofdelve ForgeOs-guue7; Regent sitting 2026-11-16).
 #
 # workbench.sh is sourceable (it runs main only when executed), so this sources
 # the SHIPPED file and calls wb_merge_main() against fixture repositories whose
@@ -15,7 +15,7 @@ unset FORT_MASKED
 here="$(cd "$(dirname "$0")" && pwd)"
 subject="${WORKBENCH_SH:-$here/../fort/scripts/workbench.sh}"
 [ -f "$subject" ] || { echo "HARNESS REFUSES: no subject at $subject (set WORKBENCH_SH)"; exit 3; }
-grep -q '^wb_merge_main() {' "$subject" || { echo "HARNESS REFUSES: no wb_merge_main() in $subject (a launcher from before ForgeOs-guue7)"; exit 3; }
+grep -q '^wb_merge_main() {' "$subject" || { echo "HARNESS REFUSES: no wb_merge_main() in $subject (a launcher from before Proofdelve ForgeOs-guue7)"; exit 3; }
 work="$(mktemp -d "${TMPDIR:-/tmp}/workbench-merge-harness.XXXXXX")"
 case "$work" in /*) ;; *) echo "HARNESS REFUSES: scratch dir is not absolute"; exit 3 ;; esac
 trap 'rm -rf "$work"' EXIT
@@ -55,7 +55,7 @@ mk; main_moves
 if ! contains_main; then ok "2pre positive control: before the launcher's merge the branch does NOT contain main"; else bad "2pre" "the fixture branch already contains main; case 2 would be vacuous"; fi
 call
 if [ "$state" = merged ] && contains_main && [ "$(cat "$wt/fort/scripts/fleet.sh")" = "v2 from main" ] && ! in_merge; then ok "2 main changed fort/scripts: state merged, the branch contains main and carries main's fort/scripts"; else bad "2 merged" "state=[$state] note=[$note]"; fi
-if git -C "$wt" log -1 --format=%s | grep -q '^E2E-s1: merge main into bead/s1 before the sitting (ForgeOs-guue7, by workbench.sh)$' && [ "$(git -C "$wt" rev-list --parents -n1 HEAD | wc -w)" = 3 ]; then ok "2b it is one merge commit whose message names the bead, the reason and the launcher"; else bad "2b" "$(git -C "$wt" log -1 --format=%s)"; fi
+if git -C "$wt" log -1 --format=%s | grep -q '^E2E-s1: merge main into bead/s1 before the sitting (Proofdelve ForgeOs-guue7, by workbench.sh)$' && [ "$(git -C "$wt" rev-list --parents -n1 HEAD | wc -w)" = 3 ]; then ok "2b it is one merge commit whose message names the bead, the reason and the launcher"; else bad "2b" "$(git -C "$wt" log -1 --format=%s)"; fi
 if [ -f "$wt/web/session.ts" ]; then ok "2c the session's own commit is still there"; else bad "2c" "session work lost"; fi
 
 # 3. conflicts: left in progress for the seat, the read-only paths already written.
@@ -87,9 +87,9 @@ if [ "$state" = merged ] && contains_main && [ "$(cat "$wt/web/other.ts")" = scr
 # 7. THE CALL SITE AND THE PROMPT.
 a="$(grep -n '^  wb_merge_main "\$wt" "\$bead"$' "$subject" | cut -d: -f1)"; b="$(grep -n '^  wb_mask "\$REPO" "\$wt" ||' "$subject" | cut -d: -f1)"; c="$(grep -n 'symbolic-ref --short -q HEAD' "$subject" | head -1 | cut -d: -f1)"
 if [ -n "$a" ] && [ -n "$b" ] && [ -n "$c" ] && [ "$c" -lt "$a" ] && [ "$a" -lt "$b" ]; then ok "7 main() merges after the branch check and before the mask is built (so it runs unmasked, on the host)"; else bad "7 call site" "merge call [$a], branch check [$c], wb_mask [$b]"; fi
-if grep -q 'launch+=(--append-system-prompt "MAIN AT LAUNCH (ForgeOs-guue7; state: \$wb_merge_state): \$wb_merge_note")' "$subject"; then ok "7b the seat is told the merge state at launch"; else bad "7b" "no MAIN AT LAUNCH prompt line"; fi
-p="$(bash -c 'source "$1"; wb_prompt ForgeOs-x9 /wt opus' _ "$subject" 2>/dev/null)"
-case "$p" in *"reopen it with fort/scripts/workbench.sh ForgeOs-x9"*"NEVER route around it"*) ok "7c the end-of-sitting rule tells the seat to ask for a reopen, and still forbids routing around" ;; *) bad "7c" "the prompt lacks the reopen instruction" ;; esac
+if grep -q 'launch+=(--append-system-prompt "MAIN AT LAUNCH (Proofdelve ForgeOs-guue7; state: \$wb_merge_state): \$wb_merge_note")' "$subject"; then ok "7b the seat is told the merge state at launch"; else bad "7b" "no MAIN AT LAUNCH prompt line"; fi
+p="$(bash -c 'source "$1"; wb_prompt fortkit-x9 /wt opus' _ "$subject" 2>/dev/null)"
+case "$p" in *"reopen it with fort/scripts/workbench.sh fortkit-x9"*"NEVER route around it"*) ok "7c the end-of-sitting rule tells the seat to ask for a reopen, and still forbids routing around" ;; *) bad "7c" "the prompt lacks the reopen instruction" ;; esac
 
 echo "RESULT workbench-merge-harness: $pass pass / $fail fail / $notrun not run (subject: $subject)"
 [ "$fail" = 0 ] && [ "$notrun" = 0 ]

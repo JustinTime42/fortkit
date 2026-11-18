@@ -1,6 +1,6 @@
 # bead-citation-check.sh allowlist: one id per line, then a reason. A row here
 # is a RECORDED finding, not a pardon: remove it when the citation is fixed.
-ForgeOs-worktrees   the worktrees directory name, not a bead id
-ForgeOs-merge       a truncation of ForgeOs-merge-slot by the id regex
-ForgeOs-nosuchbead  stranded-sweep.sh:112, a deliberate unknown-id fixture inline
-ForgeOs-u65j.3.3.4  the known reissue (ForgeOs-x5u9): five source files cite the first meaning; the bead is a signpost to u65j.3.4
+fortkit-worktrees   the worktrees directory name, not a bead id
+fortkit-merge       a truncation of fortkit-merge-slot by the id regex
+fortkit-nosuchbead  stranded-sweep.sh:112, a deliberate unknown-id fixture inline
+Proofdelve ForgeOs-u65j.3.3.4  the known reissue (Proofdelve ForgeOs-x5u9): five source files cite the first meaning; the bead is a signpost to u65j.3.4

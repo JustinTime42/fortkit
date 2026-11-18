@@ -1,5 +1,5 @@
 #!/bin/bash
-# session-reap.sh: kill what a seat session left running (ForgeOs-ab495).
+# session-reap.sh: kill what a seat session left running (Proofdelve ForgeOs-ab495).
 # Regent sitting 2026-11-16, gate 6, the Overseer present. Sourced by
 # fort/scripts/forge.sh and fort/scripts/warden.sh; it does nothing when run.
 #

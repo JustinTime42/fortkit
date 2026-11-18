@@ -1,6 +1,6 @@
 #!/bin/bash
 # signature-source-harness: which stream events fleet.sh reads as the
-# Overseer's signature (ForgeOs-jib0; ruled 2026-11-14, built at the Regent
+# Overseer's signature (Proofdelve ForgeOs-jib0; ruled 2026-11-14, built at the Regent
 # sitting of 2026-11-16).
 #
 # It extracts the SHIPPED latest_approved_sha() from fleet.sh and runs it
@@ -43,7 +43,7 @@ SHA='{"approvedSha":"abc123","branch":"bead/1"}'
 
 mk; ev justin overseer gate.approved "$SHA"
 is "1 a Keep approve is read: its sha" abc123
-mk; ev justin overseer gate.approved "$SHA"; ev marrek mayor decision.recorded
+mk; ev justin overseer gate.approved "$SHA"; ev emrith mayor decision.recorded
 is "2 a Mayor decision.recorded after a Keep approve: the approval stands" abc123
 mk; ev justin overseer gate.approved "$SHA"; ev calder regent decision.recorded '{"transcribedBy":"calder"}'
 is "2b a Regent decision.recorded after a Keep approve: the approval stands" abc123
@@ -51,23 +51,23 @@ mk; ev justin overseer gate.approved "$SHA"; ev justin overseer gate.declined
 is "3 a Keep decline after a Keep approve still supersedes" "SUPERSEDED gate.declined 2026-11-16T10:00:02-09:00"
 mk; ev justin overseer gate.approved "$SHA"; ev justin overseer decision.recorded
 is "4 the Keep's own decision.recorded after its approve still supersedes" "SUPERSEDED decision.recorded 2026-11-16T10:00:02-09:00"
-mk; ev marrek mayor gate.approved "$SHA"
+mk; ev emrith mayor gate.approved "$SHA"
 is "5 a gate.approved the Keep did not emit is not an approval" ""
 mk; ev justin overseer gate.declined; ev calder regent gate.approved "$SHA"
 is "6 a transcribed gate.approved after a Keep decline does not revive the bead" "SUPERSEDED gate.declined 2026-11-16T10:00:01-09:00"
 mk; ev justin "" gate.approved "$SHA"
 is "7 actor justin without the overseer seat is not the Keep's shape" ""
-mk; ev justin overseer gate.approved "$SHA"; ev marrek mayor gate.declined; ev marrek mayor decision.recorded
+mk; ev justin overseer gate.approved "$SHA"; ev emrith mayor gate.declined; ev emrith mayor decision.recorded
 is "8 two later Mayor events of both kinds: the approval stands" abc123
 
 # RED ARM: the subject with the filter line removed must fail case 2 (it reads the Mayor's event as the newest sign event).
 filter='                if e.get("actor") != "justin" or e.get("seat") != "overseer": continue'
 if [ "$(grep -cxF "$filter" "$work/fn.sh")" = 1 ]; then
   grep -vxF "$filter" "$work/fn.sh" > "$work/fn-red.sh"
-  mk; ev justin overseer gate.approved "$SHA"; ev marrek mayor decision.recorded
+  mk; ev justin overseer gate.approved "$SHA"; ev emrith mayor decision.recorded
   got="$(ask "$work/fn-red.sh")"
   case "$got" in "SUPERSEDED decision.recorded "*) ok "R1 red arm: without the filter a Mayor decision.recorded supersedes the Keep approve [$got]" ;; *) bad "R1 red arm" "the unfiltered variant gave [$got]; case 2 cannot discriminate" ;; esac
-  mk; ev marrek mayor gate.approved "$SHA"
+  mk; ev emrith mayor gate.approved "$SHA"
   got="$(ask "$work/fn-red.sh")"
   if [ "$got" = abc123 ]; then ok "R2 red arm: without the filter a Mayor gate.approved reads as an approval"; else bad "R2 red arm" "got [$got]"; fi
 else

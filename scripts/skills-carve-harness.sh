@@ -1,5 +1,5 @@
 #!/bin/bash
-# Harness for the writable-skills carve (ForgeOs-yhn44, Regent sitting
+# Harness for the writable-skills carve (Proofdelve ForgeOs-yhn44, Regent sitting
 # 2026-10-27, docket item D). Builds the REAL masks from the shipped lib, the
 # Mayor's build_mask call and the Warden's own build_mask line (read out of
 # warden.sh, the probe-boundaries.sh way), against a FIXTURE root, and asks

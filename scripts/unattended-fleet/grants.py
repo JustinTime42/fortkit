@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-DEFAULT_STORE = Path.home() / ".local/state/proofdelve-keep"
+DEFAULT_STORE = Path.home() / ".local/state/manyhalls-keep"
 GRANT_ACTIONS = {
     "push": {"main, fast-forward, push-ready YES at the pushed SHA"},
     "halt-recovery": {"STALL halts only, cause recorded on the run bead"},
@@ -25,7 +25,7 @@ GRANT_ACTIONS = {
 }
 # These names must never become an allowlist entry. Checking the request
 # explicitly prevents it from being treated as a different-action grant; stray
-# records are intentionally ignored (see ForgeOs-initf.4).
+# records are intentionally ignored (see Proofdelve ForgeOs-initf.4).
 NEVER_GRANT_SHAPED = {
     "deploy", "sign", "gate-1-landing", "gate-2-landing",
     "gate-5-landing", "gate-6-landing", "clear-red-main-halt",
@@ -37,7 +37,7 @@ class RecordError(ValueError):
 
 
 def store_dir():
-    return Path(os.environ.get("PROOFDELVE_KEEP_DIR", DEFAULT_STORE))
+    return Path(os.environ.get("MANYHALLS_KEEP_DIR", DEFAULT_STORE))
 
 
 def now():

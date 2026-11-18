@@ -1,6 +1,6 @@
 #!/bin/bash
-# Harness for forge.sh's reused-worktree refresh (ForgeOs-lw8x) and, from
-# 2026-09-13, its handoff stamp (ForgeOs-mdwx; the STAMP-LEVEL section at the
+# Harness for forge.sh's reused-worktree refresh (Proofdelve ForgeOs-lw8x) and, from
+# 2026-09-13, its handoff stamp (Proofdelve ForgeOs-mdwx; the STAMP-LEVEL section at the
 # foot). The refresh half: tests the
 # SHIPPED refresh_reused_worktree(), extracted from the real launcher, against
 # git fixtures that put a bead worktree in each state the function
@@ -23,7 +23,7 @@ no(){ echo "  FAIL  $1 -- $2"; fail=$((fail+1)); }
 # --------------------------------------------------------------------------
 # FIXTURES. A fort whose verifier is the real Shape B resolution: a shim under
 # fort/scripts that execs scripts/verify-impl.sh IN THE TREE THE SHIM LIVES IN
-# (ForgeOs-afdr). v1 is committed, a bead worktree is cut, then main moves to v2.
+# (Proofdelve ForgeOs-afdr). v1 is committed, a bead worktree is cut, then main moves to v2.
 # So "which instrument does the worktree's own verify.sh run" is the property.
 mkfort() {  # $1 name -> prints root; worktree at <root>-worktrees/xyz on bead/xyz, main at v2
   local r="$work/$1"
@@ -73,7 +73,7 @@ mk_trunc() {  # $1 fixture root -> prints path of the truncated launcher
     cut=$(awk '/^printf .\{"pid":%d,"bead":"%s","model":"%s","started":"%s"\}/{print NR; exit}' "$launcher")
   fi
   [ -n "$cut" ] || { echo "HARNESS REFUSES: cannot find a truncation point in $launcher" >&2; exit 3; }
-  head -n "$cut" "$launcher" | sed "s|^root=\"/home/justin/dev/ForgeOs\"$|root=\"$r\"|; s|^wt=\"/home/justin/dev/ForgeOs-worktrees/\$suffix\"$|wt=\"$r-worktrees/\$suffix\"|" > "$t"
+  head -n "$cut" "$launcher" | sed "s|^root=\"/home/justin/dev/fortkit\"$|root=\"$r\"|; s|^wt=\"/home/justin/dev/fortkit-worktrees/\$suffix\"$|wt=\"$r-worktrees/\$suffix\"|" > "$t"
   grep -q "^root=\"$r\"$" "$t" || { echo "HARNESS REFUSES: root= substitution did not land" >&2; exit 3; }
   grep -q "^wt=\"$r-worktrees/\$suffix\"$" "$t" || { echo "HARNESS REFUSES: wt= substitution did not land" >&2; exit 3; }
   printf 'echo LAUNCHER-CONTINUED\nexit 0\n' >> "$t"
@@ -83,7 +83,7 @@ mk_trunc() {  # $1 fixture root -> prints path of the truncated launcher
 }
 # L1 stale worktree, no conflict: the launcher continues AND the worktree now runs v2
 r=$(mkfort l1); t=$(mk_trunc "$r")
-out=$(FORGE_SMOKE=1 "$t" ForgeOs-xyz 2>&1); rc=$?
+out=$(FORGE_SMOKE=1 "$t" fortkit-xyz 2>&1); rc=$?
 if [ "$rc" -eq 0 ] && grep -q LAUNCHER-CONTINUED <<<"$out" && [ "$(instrument "$r-worktrees/xyz")" = "INSTRUMENT v2" ]; then
   ok "launcher: a stale reused worktree is refreshed before the session point -- its own verify.sh now runs INSTRUMENT v2"
 else no "launcher: stale worktree not refreshed" "rc=$rc instrument=$(instrument "$r-worktrees/xyz") out=$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
@@ -92,7 +92,7 @@ r=$(mkfort l2); t=$(mk_trunc "$r")
 echo conflict-on-bead > "$r-worktrees/xyz/subject.txt"; git -C "$r-worktrees/xyz" commit -qam "bead edit"
 echo conflict-on-main > "$r/subject.txt"; git -C "$r" commit -qam "main edit"
 before=$(git -C "$r-worktrees/xyz" rev-parse HEAD)
-out=$(FORGE_SMOKE=1 "$t" ForgeOs-xyz 2>&1); rc=$?
+out=$(FORGE_SMOKE=1 "$t" fortkit-xyz 2>&1); rc=$?
 if [ "$rc" -eq 76 ] && ! grep -q LAUNCHER-CONTINUED <<<"$out" \
    && [ "$(git -C "$r-worktrees/xyz" rev-parse HEAD)" = "$before" ] && clean_tree "$r-worktrees/xyz" \
    && grep -q 'EMIT incident forge.sh REFUSED' "$r/emitted" 2>/dev/null; then
@@ -100,7 +100,7 @@ if [ "$rc" -eq 76 ] && ! grep -q LAUNCHER-CONTINUED <<<"$out" \
 else no "launcher: conflict handling" "rc=$rc head=$(git -C "$r-worktrees/xyz" rev-parse HEAD) before=$before clean=$(clean_tree "$r-worktrees/xyz" && echo y || echo n) emitted=$(cat "$r/emitted" 2>/dev/null | tr '\n' '|') out=$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
 # L3 VACUITY CONTROL: a fresh dispatch (no worktree yet) cuts and continues; nothing refuses
 r=$(mkfort l3); t=$(mk_trunc "$r"); git -C "$r" worktree remove --force "$r-worktrees/xyz"; git -C "$r" branch -qD bead/xyz
-out=$(FORGE_SMOKE=1 "$t" ForgeOs-xyz 2>&1); rc=$?
+out=$(FORGE_SMOKE=1 "$t" fortkit-xyz 2>&1); rc=$?
 if [ "$rc" -eq 0 ] && grep -q LAUNCHER-CONTINUED <<<"$out" && [ -d "$r-worktrees/xyz" ] \
    && [ "$(instrument "$r-worktrees/xyz")" = "INSTRUMENT v2" ] && ! grep -q REFUSED "$r/emitted" 2>/dev/null; then
   ok "vacuity control: a fresh dispatch cuts its worktree and continues -- the refresh refuses nothing it should not"
@@ -117,7 +117,7 @@ if [ "$n" -lt 10 ]; then
 fi
 bash -n "$work/fn.sh" || { echo "HARNESS REFUSES: extracted function does not parse" >&2; exit 3; }
 call(){ # $1 wt, $2 branch, $3 base -> rc; stdout+stderr in $work/call.out
-  bash -c "set -uo pipefail; bead=ForgeOs-xyz; $(cat "$work/fn.sh"); refresh_reused_worktree \"\$@\"" _ "$1" "$2" "$3" > "$work/call.out" 2>&1
+  bash -c "set -uo pipefail; bead=fortkit-xyz; $(cat "$work/fn.sh"); refresh_reused_worktree \"\$@\"" _ "$1" "$2" "$3" > "$work/call.out" 2>&1
 }
 # F1 ancestor branch (no bead commits): fast-forward, no merge commit, HEAD == main
 r=$(mkfort f1); w="$r-worktrees/xyz"
@@ -132,7 +132,7 @@ call "$w" bead/xyz main; rc=$?
 after=$(git -C "$w" rev-parse HEAD); p1=$(git -C "$w" rev-parse HEAD^1 2>/dev/null); p2=$(git -C "$w" rev-parse HEAD^2 2>/dev/null)
 if [ "$rc" -eq 0 ] && [ "$p1" = "$before" ] && [ "$p2" = "$(git -C "$r" rev-parse main)" ] \
    && [ "$(cat "$w/lib.txt")" = bead-work ] && [ "$(instrument "$w")" = "INSTRUMENT v2" ] \
-   && git -C "$w" log -1 --format=%s | grep -q 'ForgeOs-lw8x, by forge.sh'; then
+   && git -C "$w" log -1 --format=%s | grep -q 'Proofdelve ForgeOs-lw8x, by forge.sh'; then
   ok "F2: a diverged branch gets ONE merge commit (parents: its old HEAD, main), keeps its own work, runs v2, and the commit message names the launcher"
 else no "F2 clean merge" "rc=$rc p1=$p1 p2=$p2 before=$before after=$after $(cat "$work/call.out")"; fi
 # F3 conflict: 76, HEAD unchanged, no MERGE_HEAD, no markers, tree clean
@@ -179,7 +179,7 @@ call "$w" bead/xyz no-such-branch; rc=$?
 if [ "$rc" -eq 76 ] && [ "$(git -C "$w" rev-parse HEAD)" = "$before" ] && clean_tree "$w"; then
   ok "F8: a base ref that does not resolve refuses (76) with the tree unchanged"
 else no "F8 missing base" "rc=$rc $(cat "$work/call.out")"; fi
-# F3b Tova's finding 1: a worktree that ALREADY carries MERGE_HEAD on entry (a
+# F3b the Warden's finding 1: a worktree that ALREADY carries MERGE_HEAD on entry (a
 # Forge left a conflicted `git merge main` and stopped) is refused WITHOUT the
 # pre-existing merge being aborted -- the merge is not this launcher's to
 # conclude, and aborting it then reporting "UNCHANGED" would hide a person's
@@ -207,7 +207,7 @@ if [ "$rc" -eq 0 ] && [ "$(cat "$w/subject.txt")" = main-side ] && [ "$(cat "$w/
 else no "F9 divergence without conflict" "rc=$rc $(cat "$work/call.out")"; fi
 
 # ==========================================================================
-# STAMP-LEVEL (ForgeOs-mdwx): the three functions the handoff stamp became --
+# STAMP-LEVEL (Proofdelve ForgeOs-mdwx): the three functions the handoff stamp became --
 # forge_verify_line, forge_stamp_header, stamp_forge_handoff -- extracted from
 # the shipped launcher and scored one case per observed class: (a) a malformed
 # line 1 is normalised rather than refused, (b) a dirty tracked handoff commits
@@ -217,15 +217,15 @@ else no "F9 divergence without conflict" "rc=$rc $(cat "$work/call.out")"; fi
 # a PROPERTY of the output (what line 1 says, what HEAD holds, which word the
 # Verify line carries), not a spelling of the function's prose.
 stamp_fns=(forge_verify_line forge_stamp_header stamp_forge_handoff)
-awk '$0 ~ "^forge_seat_observed\\(\\)[[:space:]]*\\{" {p=1} p{print} p && /^\}$/{exit}' "$launcher" > "$work/seat.sh"   # ForgeOs-y4rg: may be empty against a pre-y4rg launcher
-awk '$0 ~ "^forge_stamp_commit_warn\\(\\)[[:space:]]*\\{" {p=1} p{print} p && /^\}$/{exit}' "$launcher" > "$work/warn.sh"   # ForgeOs-lp2: a callee of stamp_forge_handoff; may be empty against a pre-lp2 launcher, and the lp2 WARNING case then FAILs rather than the whole section refusing
+awk '$0 ~ "^forge_seat_observed\\(\\)[[:space:]]*\\{" {p=1} p{print} p && /^\}$/{exit}' "$launcher" > "$work/seat.sh"   # Proofdelve ForgeOs-y4rg: may be empty against a pre-y4rg launcher
+awk '$0 ~ "^forge_stamp_commit_warn\\(\\)[[:space:]]*\\{" {p=1} p{print} p && /^\}$/{exit}' "$launcher" > "$work/warn.sh"   # Proofdelve ForgeOs-lp2: a callee of stamp_forge_handoff; may be empty against a pre-lp2 launcher, and the lp2 WARNING case then FAILs rather than the whole section refusing
 : > "$work/stamp.sh"
 for f in "${stamp_fns[@]}"; do
   awk -v fn="$f" '$0 ~ ("^" fn "\\(\\)[[:space:]]*\\{") {p=1} p{print} p && /^\}$/{exit}' "$launcher" >> "$work/stamp.sh"
 done
 for f in "${stamp_fns[@]}"; do
   if ! grep -qE "^$f\\(\\)[[:space:]]*\\{" "$work/stamp.sh"; then
-    echo "HARNESS REFUSES the stamp cases: $f() is not defined in $launcher (pre-ForgeOs-mdwx launcher); classes a/b/c are UNMEASURED, not passed" >&2
+    echo "HARNESS REFUSES the stamp cases: $f() is not defined in $launcher (pre-Proofdelve ForgeOs-mdwx launcher); classes a/b/c are UNMEASURED, not passed" >&2
     echo "RESULT: $pass pass / $fail fail before the refusal"
     exit 3
   fi
@@ -248,7 +248,7 @@ mkstamp() {
 ev() { printf '{"ts":"%s","actor":"harness","seat":null,"category":"%s","target":"bead/x","detail":"d","payload":{"steps":[],"tree":"%s"%s}}\n' "$3" "$4" "$5" "$6" >> "$1/fort/events/events-$2.jsonl"; }
 stamp() {  # $1 root $2 handoff -> runs the shipped stamp against the fixture
   # shellcheck source=/dev/null
-  ( source "$work/stamp.sh"; stamp_forge_handoff "$2" "$1" ForgeOs-xyz gpt-5.6-terra "2026-09-13T10:00:00-08:00" "$1/fort/events" "$1/fort/scripts/emit.sh" ) >"$work/stamp.out" 2>&1
+  ( source "$work/stamp.sh"; stamp_forge_handoff "$2" "$1" fortkit-xyz gpt-5.6-terra "2026-09-13T10:00:00-08:00" "$1/fort/events" "$1/fort/scripts/emit.sh" ) >"$work/stamp.out" 2>&1
 }
 body='## State of work
 work.
@@ -289,7 +289,7 @@ else no "S-a3 well-formed header" "$(head -3 "$h" | tr '\n' '|') emitted=$(cat "
 # ---- class (b): the stamp commit carries the HEADER ONLY when the seat left the file dirty
 r=$(mkstamp b1); h="$r/fort/handoffs/forge-2026-09-13-xyz.md"
 printf '# Handoff: Forge 2026-09-13T00:47:00-08:00\nModel: GPT-5\n%s' "$body" > "$h"
-git -C "$r" add -A; git -C "$r" commit -qm "ForgeOs-xyz: handoff"
+git -C "$r" add -A; git -C "$r" commit -qm "fortkit-xyz: handoff"
 printf '\nthis update is intentionally uncommitted\n' >> "$h"
 stamp "$r" "$h"
 head_copy="$(git -C "$r" show HEAD:fort/handoffs/forge-2026-09-13-xyz.md)"
@@ -310,7 +310,7 @@ else no "S-b2 untracked handoff" "status=$(git -C "$r" status --porcelain -- for
 
 r=$(mkstamp b3); h="$r/fort/handoffs/forge-2026-09-13-xyz.md"
 printf '# Handoff: Forge 2026-09-13T00:47:00-08:00\nModel: GPT-5\n%s' "$body" > "$h"
-git -C "$r" add -A; git -C "$r" commit -qm "ForgeOs-xyz: handoff"
+git -C "$r" add -A; git -C "$r" commit -qm "fortkit-xyz: handoff"
 echo other > "$r/base.txt"     # a DIFFERENT dirty file must not be swept either
 stamp "$r" "$h"
 if [ "$(git -C "$r" diff HEAD~1 HEAD --stat -- . | grep -c '|')" -eq 1 ] && git -C "$r" diff HEAD~1 HEAD --name-only | grep -q '^fort/handoffs/' \
@@ -356,7 +356,7 @@ ev "$r" 2026-09-13 2026-09-13T09:01:00-08:00 verify.pass "$r" ',"docker":true,"c
 ev "$r" 2026-09-13 2026-09-13T10:05:00-08:00 verify.run  "$r-other" ',"commit":"abc1234"'   # another tree
 ev "$r" 2026-09-13 2026-09-13T10:06:00-08:00 verify.pass "$r-other" ',"docker":true,"commit":"abc1234"'
 # the grep-trap control: an event whose DETAIL names this tree but whose payload.tree is another
-printf '{"ts":"2026-09-13T10:07:00-08:00","actor":"fleet","seat":"fleet","category":"verify.pass","target":"ForgeOs-xyz","detail":"green in %s","payload":{"tree":"%s-other"}}\n' "$r" "$r" >> "$r/fort/events/events-2026-09-13.jsonl"
+printf '{"ts":"2026-09-13T10:07:00-08:00","actor":"fleet","seat":"fleet","category":"verify.pass","target":"fortkit-xyz","detail":"green in %s","payload":{"tree":"%s-other"}}\n' "$r" "$r" >> "$r/fort/events/events-2026-09-13.jsonl"
 v="$(vline "$r" "$r")"
 case "$v" in "Verify: NO-RUN -- "*) ok "S-c4: a pass BEFORE launch, a pass for ANOTHER tree, and a pass whose detail merely names this tree all count for nothing -- NO RUN (keyed on payload.tree and the launch timestamp)" ;; *) no "S-c4 negative controls" "$v" ;; esac
 
@@ -377,7 +377,7 @@ if [ "$(sed -n 3p "$h" | cut -c1-13)" = "Verify: PASS " ] && grep -q '"verify":"
   ok "S-c6: end to end -- a seat's prose saying no verify.pass was emitted sits beneath a launcher header line saying PASS, and the payload carries verify=PASS"
 else no "S-c6 end to end" "$(head -3 "$h" | tr '\n' '|') emitted=$(cat "$r/emitted" 2>/dev/null | tr '\n' '|')"; fi
 
-# ---- round-two folds (Tova's non-blocking findings on 71a4576)
+# ---- round-two folds (the Warden's non-blocking findings on 71a4576)
 r=$(mkstamp d1); h="$r/fort/handoffs/forge-2026-09-13-xyz.md"
 printf '# Handoff: Forge 2026-09-13T00:47:00-08:00\nModel: GPT-5\n%s\nVerify: I could not tell.\n' "$body" > "$h"   # a BODY line beginning Verify:
 stamp "$r" "$h"
@@ -407,7 +407,7 @@ v="$(vline "$r" "$r")"
 case "$(printf '%s' "$v" | awk '{print $2}')" in NO-RUN) ok "S-d4 (f2): the second word of the Verify: line is a single token (NO-RUN here), so the payload field is queryable" ;; *) no "S-d4 token" "$v" ;; esac
 
 
-# ---- ForgeOs-y4rg: the launcher RECONCILES the seat's observation with the stream
+# ---- Proofdelve ForgeOs-y4rg: the launcher RECONCILES the seat's observation with the stream
 # The seat writes `Seat-observed: PASS|FAIL|NONE-SEEN <ts>` in the header block;
 # forge_verify_line takes it as a 4th argument and the Verify: line says whether
 # the stream agrees, SUPERSEDES it (the outcome landed after the seat looked) or
@@ -462,7 +462,7 @@ if grep -q '^Verify: NO-RUN .*CONTRADICTS' "$h" && grep -q '"seatContradiction":
   ok "y4rg-7: end to end -- a seat PASS with no run on the stream sets seatContradiction=true in handoff.written"
 else no "y4rg-7 contradiction flag" "$(grep -n '^Verify:' "$h" | tr '\n' '|') emitted=$(cat "$r/emitted" 2>/dev/null | tr '\n' '|')"; fi
 
-# ---- ForgeOs-eng3.18: the Seat-observed WORD is validated; a malformed line is
+# ---- Proofdelve ForgeOs-eng3.18: the Seat-observed WORD is validated; a malformed line is
 # MALFORMED, never a CONTRADICTION, and the payload word is one of five literals.
 # Against the pre-eng3.18 launcher: e1 scores CONTRADICTS (the threat-2 flag on
 # a typo), e2's quoted word breaks the -p JSON and the event is never emitted.
@@ -487,7 +487,7 @@ if grep -q '^Verify: NO-RUN .*CONTRADICTS' "$h" && grep -q '"seatContradiction":
   ok "eng3.18-3: a genuine contradiction (seat PASS, stream NO-RUN) still sets seatContradiction=true (y4rg-7 unchanged)"
 else no "eng3.18-3 genuine contradiction" "$(grep -n '^Verify:' "$h" | tr '\n' '|')"; fi
 
-# ---- ForgeOs-lp2: a tolerated stamp-commit failure WARNS, never aborts, never
+# ---- Proofdelve ForgeOs-lp2: a tolerated stamp-commit failure WARNS, never aborts, never
 # silent. Fixture: a pre-commit hook that refuses, the shape agk r2 f2 named.
 # Property: the stamp lands on disk, the launcher's stderr carries a WARNING
 # naming the bead, handoff.written is still emitted, and the function returns 0.
@@ -498,8 +498,8 @@ r=$(mkstamp lp2a); h="$r/fort/handoffs/forge-2026-09-13-xyz.md"
 printf '#!/bin/sh\necho "hook refuses" >&2; exit 1\n' > "$r/.git/hooks/pre-commit"; chmod +x "$r/.git/hooks/pre-commit"
 printf '# Handoff: Forge 2026-09-13T00:47:00-08:00\nModel: GPT-5\n%s' "$body" > "$h"
 # shellcheck source=/dev/null
-( source "$work/stamp.sh"; stamp_forge_handoff "$h" "$r" ForgeOs-xyz gpt-5.6-terra "2026-09-13T10:00:00-08:00" "$r/fort/events" "$r/fort/scripts/emit.sh" ) >"$work/lp2.out" 2>"$work/lp2.err"; lp2_rc=$?
-if grep -q 'WARNING handoff stamp .*failed for ForgeOs-xyz' "$work/lp2.err"; then
+( source "$work/stamp.sh"; stamp_forge_handoff "$h" "$r" fortkit-xyz gpt-5.6-terra "2026-09-13T10:00:00-08:00" "$r/fort/events" "$r/fort/scripts/emit.sh" ) >"$work/lp2.out" 2>"$work/lp2.err"; lp2_rc=$?
+if grep -q 'WARNING handoff stamp .*failed for fortkit-xyz' "$work/lp2.err"; then
   ok "lp2: a refused stamp commit WARNS on stderr and names the bead (not silent)"
 else no "lp2: the refused stamp commit was silent" "stderr=$(tr '\n' '|' < "$work/lp2.err")"; fi
 if [ "$lp2_rc" -eq 0 ] && grep -q '^Verify: ' "$h"; then
@@ -516,7 +516,7 @@ if ! grep -q '^  desc+=' "$launcher" && grep -q '^  handoff_instruction="Before 
   ok "lp2/uyu-f3: the handoff instruction travels in its own labelled LAUNCHER INSTRUCTION section, never appended onto the bead text"
 else no "lp2/uyu-f3: the fort instruction still rides inside \$desc" "desc+= lines: $(grep -c '^  desc+=' "$launcher")"; fi
 
-# ---- ForgeOs-4hzq(A): the prompt-size guard refuses before bwrap -----------
+# ---- Proofdelve ForgeOs-4hzq(A): the prompt-size guard refuses before bwrap -----------
 # The prompt now travels on stdin, so this ceiling is a backstop. Against a
 # pre-4hzq forge.sh (FORGE_SH=<old>) the function is absent and these three
 # report FAIL -- the positive control.
@@ -536,7 +536,7 @@ else
   no "4hzq(A): the size guard is consulted before bwrap" "pre-4hzq launcher"
 fi
 
-# ---- ForgeOs-nz3u: the deliverable declaration reaches the Forge prompt -----
+# ---- Proofdelve ForgeOs-nz3u: the deliverable declaration reaches the Forge prompt -----
 # The fleet half (fleet.sh lets a declared handoff-only bead proceed) is the
 # governor harness's nz3u cases and e2e scenario 56. This is the launcher half:
 # forge_deliverable_of() reads the rendered bead, and the prompt carries the
@@ -553,7 +553,7 @@ if grep -qE '^forge_deliverable_of\(\)[[:space:]]*\{' "$launcher"; then
     ok "nz3u: forge_deliverable_of reads a 'Deliverable: <word>' LINE off the rendered bead (indented, case-folded), not prose that mentions the word"
   else no "nz3u: forge_deliverable_of parsing" "d1=[$d1] d2=[$d2] d3=[$d3] d4=[$d4]"; fi
   # the section is gated on the literal 'answer' AND on not being a smoke, and the prompt carries it.
-  # Later sections may follow it on that line (ForgeOs-6niaz added the FIX-FORWARD lap section);
+  # Later sections may follow it on that line (Proofdelve ForgeOs-6niaz added the FIX-FORWARD lap section);
   # the property is that the deliverable section is in the prompt after the launcher section.
   # shellcheck disable=SC2016  # the single quotes are the point: these are source assertions on forge.sh's own $-bearing lines
   if grep -q '^if \[ "\${FORGE_SMOKE:-0}" != "1" \] && \[ "\$(printf .%s\\n. "\$desc" | forge_deliverable_of)" = answer \]; then$' "$launcher" \
@@ -570,7 +570,7 @@ else
   no "nz3u: the section is not appended onto desc" "pre-nz3u launcher"
 fi
 
-# ---- ForgeOs-4hzq(B): the session exit code is propagated ------------------
+# ---- Proofdelve ForgeOs-4hzq(B): the session exit code is propagated ------------------
 # Structural: the launcher's last executable line is `exit "$rc"`. Against a
 # pre-4hzq forge.sh this is the trailing echo -- the positive control.
 last_exec="$(grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$launcher" | tail -1)"
@@ -581,11 +581,11 @@ if [ "$last_exec" = 'exit "$rc"' ]; then ok '4hzq(B): forge.sh ends by propagati
 wd="$work/wexit"; mkdir -p "$wd"; sr="$work/stubroot/fort/scripts"; mkdir -p "$sr"
 printf '#!/bin/bash\nexit 126\n' > "$sr/forge.sh"; chmod +x "$sr/forge.sh"
 # shellcheck disable=SC2016  # the single-quoted body is the CHILD's script; $1..$4 are its positionals, not this shell's
-( nohup setsid bash -c 'echo $$ > "$3/pid"; "$1/fort/scripts/forge.sh" "$2" "$4" >"$3/forge.log" 2>&1; echo $? > "$3/exit"' _ "$work/stubroot" ForgeOs-x "$wd" m >/dev/null 2>&1 & )
+( nohup setsid bash -c 'echo $$ > "$3/pid"; "$1/fort/scripts/forge.sh" "$2" "$4" >"$3/forge.log" 2>&1; echo $? > "$3/exit"' _ "$work/stubroot" fortkit-x "$wd" m >/dev/null 2>&1 & )
 for _ in $(seq 1 60); do [ -s "$wd/exit" ] && break; sleep 0.1; done
 if [ "$(cat "$wd/exit" 2>/dev/null)" = 126 ]; then ok "4hzq(B): a Forge that exits 126 is recorded as 126 in \$wdir/exit (fleet dispatch child)"; else no "4hzq(B): exit 126 not recorded" "got '$(cat "$wd/exit" 2>/dev/null)'"; fi
 
-# ---- ForgeOs-pwu6: the FORGE_SMOKE completeness gate ------------------------
+# ---- Proofdelve ForgeOs-pwu6: the FORGE_SMOKE completeness gate ------------------------
 # forge_smoke_score() and FORGE_SMOKE_EXPECTED are extracted from the launcher
 # and run against fixture transcripts. Against a pre-pwu6 forge.sh (FORGE_SH=<old>)
 # both are absent and every case here reports FAIL -- the positive control; the
@@ -632,7 +632,7 @@ if grep -qE '^forge_smoke_score\(\)[[:space:]]*\{' "$launcher" && grep -q '^  FO
   # shellcheck disable=SC2016  # grep PATTERNS: literals, not expansions
   sl="$(grep -n 'if ! forge_smoke_score "/tmp/forge-\$suffix.log"; then' "$launcher" | head -1 | cut -d: -f1)"
   # shellcheck disable=SC2016  # grep PATTERN: literal, not an expansion
-  el="$(grep -n '^"\$emit" session.end "Veyra.s session on \$bead ended (exit \$rc)"' "$launcher" | head -1 | cut -d: -f1)"
+  el="$(grep -n '^"\$emit" session.end "the Forge.s session on \$bead ended (exit \$rc)"' "$launcher" | head -1 | cut -d: -f1)"
   x66="$(awk -v s="$sl" 'NR>s && /^    exit 66$/ {print NR; exit}' "$launcher")"
   if [ -n "$sl" ] && [ -n "$el" ] && [ -n "$x66" ] && [ "$sl" -lt "$x66" ] && [ "$x66" -lt "$el" ]; then
     ok "pwu6-f: the smoke gate (line $sl) exits 66 (line $x66) before the ordinary session.end (line $el)"
@@ -641,7 +641,7 @@ else
   for c in a b c d e f; do no "pwu6-$c" "this forge.sh has no forge_smoke_score/FORGE_SMOKE_EXPECTED (pre-pwu6 launcher)"; done
 fi
 
-# ---- ForgeOs-mdwx.1 + ForgeOs-9x3vj: the seat is told how to SEE its gate ----
+# ---- Proofdelve ForgeOs-mdwx.1 + Proofdelve ForgeOs-9x3vj: the seat is told how to SEE its gate ----
 # GENERATED-RIGHT, not source-right: the launcher's own handoff_instruction line
 # is evaluated with stand-in values and the TEXT THE SEAT RECEIVES is asserted.
 # Properties: the gate runs quiet, in the foreground, under a stated timeout;
@@ -653,7 +653,7 @@ hi_line="$(grep -m1 '^  handoff_instruction="Before you finish' "$launcher")"
 if [ -n "$hi_line" ]; then
   # shellcheck disable=SC2034,SC2154  # the stand-ins are read by the eval'd line, which assigns handoff_instruction
   hi="$(expected_handoff=/x/h.md root=/x/root wt=/x/wt; eval "${hi_line#  }"; printf '%s' "$handoff_instruction")"
-  # ForgeOs-gfuc1 A1/A3 (Regent sitting 2026-11-13): the Forge no longer runs
+  # Proofdelve ForgeOs-gfuc1 A1/A3 (Regent sitting 2026-11-13): the Forge no longer runs
   # the full gate. These cases replace mdwx.1's "run it quiet and timed" ones,
   # whose subject is retired; the no-background and no-outcome-is-never-a-pass
   # rules carry over to the targeted run. Against the pre-gfuc1 launcher the
@@ -662,7 +662,7 @@ if [ -n "$hi_line" ]; then
   else no "gfuc1 A1: the generated instruction still tells the seat to run verify.sh" "$(grep -oF 'VERIFY_QUIET=1 bash fort/scripts/verify.sh' <<<"$hi" | head -1)"; fi
   if grep -qF 'NEVER background it' <<<"$hi"; then ok "9x3vj: the seat is told never to background its targeted run (a detached child is killed when its command returns, measured)"
   else no "9x3vj: backgrounding is not forbidden" "a detach-and-poll seat reads nothing in this sandbox"; fi
-  if grep -qF "dotnet test tests/ForgeOS.Tests/ForgeOS.Tests.csproj --filter 'FullyQualifiedName~" <<<"$hi" && grep -qF 'npx --prefix web vitest run' <<<"$hi" && grep -qF 'never the unfiltered suite' <<<"$hi"; then ok "gfuc1 A1: the seat is told to run the TARGETED tests: a dotnet --filter on the touched classes, vitest on the touched files, never the unfiltered suite"
+  if grep -qF "dotnet test tests/Product.Tests/Product.Tests.csproj --filter 'FullyQualifiedName~" <<<"$hi" && grep -qF 'npx --prefix web vitest run' <<<"$hi" && grep -qF 'never the unfiltered suite' <<<"$hi"; then ok "gfuc1 A1: the seat is told to run the TARGETED tests: a dotnet --filter on the touched classes, vitest on the touched files, never the unfiltered suite"
   else no "gfuc1 A1: no targeted-test instruction" "missing in the generated text"; fi
   if grep -qF 'fort/memory/facts/test-depth-follows-risk.md' <<<"$hi"; then ok "gfuc1 A1: the seat is pointed at test-depth-follows-risk for how much testing the bead carries"
   else no "gfuc1 A1: no pointer to test-depth-follows-risk" "missing in the generated text"; fi
@@ -676,7 +676,7 @@ if [ -n "$hi_line" ]; then
   else no "9x3vj: the seat is still told its window is ~30 s" "measured false 2026-10-06 (200 s foreground returned)"; fi
   # The secrets-only posture rewrites one prompt sentence by exact match; if the
   # sentence and its pattern drift apart the rewrite silently does nothing.
-  pl="$(grep -m1 '^prompt="You are Veyra' "$launcher")"
+  pl="$(grep -m1 '^prompt="You are the Forge' "$launcher")"
   # shellcheck disable=SC2016  # literal launcher text
   pat="$(grep -m1 'prompt="${prompt//"The Docker socket is masked' "$launcher" | sed 's/^  prompt="\${prompt\/\/"//; s#"/".*##')"
   if [ -n "$pat" ] && grep -qF -- "$pat" <<<"$pl"; then ok "gfuc1 A1: the secrets-only posture's Docker sentence still matches the prompt it rewrites"
@@ -684,7 +684,7 @@ if [ -n "$hi_line" ]; then
 else no "mdwx.1" "no handoff_instruction line in $launcher"; fi
 
 # --------------------------------------------------------------------------
-# WIP RESCUE (ForgeOs-gvhhk). The SHIPPED forge_rescue_wip(), extracted, run
+# WIP RESCUE (Proofdelve ForgeOs-gvhhk). The SHIPPED forge_rescue_wip(), extracted, run
 # against worktrees in each state its acceptance names. "Handoff-only" is read
 # with fleet.sh's own predicate (the ss9d diff, fort/handoffs excluded), so a
 # PASS here means the fleet would no longer call the branch "no product change".

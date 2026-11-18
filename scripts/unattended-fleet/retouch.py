@@ -46,7 +46,7 @@ bt = touches(back)
 errs = []
 if bt != new: errs.append(f"read-back Touches is '{bt}', wanted '{new}'")
 # NOT `old in back`: the new value can CONTAIN the old as a prefix substring
-# (tests/ForgeOS.Tests -> tests/ForgeOS.Tests/FooTests.cs), which made this
+# (tests/Product.Tests -> tests/Product.Tests/FooTests.cs), which made this
 # check fire on four correct writes on 2026-09-19. Count the Touches LINES and
 # compare the PARSED value instead.
 n_touch = sum(1 for l in back.splitlines() if re.match(r"\s*Touches:", l))

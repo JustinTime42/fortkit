@@ -8,11 +8,11 @@ land, leaving a bead parked for no reason?"
 
 WHY IT EXISTS. `bd blocked` cannot find these: it reports only OPEN dependency
 edges, and a hold living in a sentence is not an edge at all. So a bead whose text
-says "MUST NOT CLOSE while ForgeOs-X's debt stands" sits open forever after X
+says "MUST NOT CLOSE while fortkit-X's debt stands" sits open forever after X
 closes, and nothing anywhere goes red.
 
-MEASURED, 2026-09-18, the run that motivated this file: ForgeOs-11tf.8 (retire
-McpOAuthFacade) carried exactly that sentence about ForgeOs-11tf.10. 11tf.10 closed
+MEASURED, 2026-09-18, the run that motivated this file: Proofdelve ForgeOs-11tf.8 (retire
+McpOAuthFacade) carried exactly that sentence about Proofdelve ForgeOs-11tf.10. 11tf.10 closed
 on 2026-09-18 with a close reason stating the debt itself was gone. Every other
 precondition 11tf.8 named -- 11tf.7, 11tf.12, 2ibw -- was also closed. SIX further
 beads were blocked on 11tf.8 by real bd edges, two of them live bugs. One satisfied
@@ -30,7 +30,7 @@ and it never closes, labels or dispatches anything.
 Usage:  satisfied-holds.py [--all]
         (default: open beads only; --all includes closed, for auditing)
 Exit:   0 no candidates   1 candidates found   3 could not ask bd (a refusal,
-        NOT a clean sweep -- the distinction ForgeOs-kjyj is about)
+        NOT a clean sweep -- the distinction Proofdelve ForgeOs-kjyj is about)
 """
 import json
 import re
@@ -45,23 +45,23 @@ HOLD = re.compile(
     r"revisit (?:when|after)|revisit only (?:when|after)|"
     r"not until|hold(?:ing)? for|held for|parked until|"
     r"take (?:it|this) when|dispatch (?:it|this) (?:when|after)|"
-    r"once\s+\S*ForgeOs-\S+\s+(?:lands|has landed|merges|closes)|"
-    r"after\s+\S*ForgeOs-\S+\s+(?:lands|has landed|merges|closes))",
+    r"once\s+\S*fortkit-\S+\s+(?:lands|has landed|merges|closes)|"
+    r"after\s+\S*fortkit-\S+\s+(?:lands|has landed|merges|closes))",
     re.I,
 )
 # IDS ARE MATCHED AGAINST THE REAL BOARD, NOT AGAINST A GUESSED PATTERN.
 #
-# The first version of this file used r"ForgeOs-[A-Za-z0-9][A-Za-z0-9._-]*" and
+# The first version of this file used r"fortkit-[A-Za-z0-9][A-Za-z0-9._-]*" and
 # found ZERO candidates on a board that contained a known one. The bug: this fort
 # writes bead references BOTH ways, and the motivating instance used the bare form
-# -- ForgeOs-11tf.8's NOTES say "while 11tf.10's enforcement debt stands", with no
-# ForgeOs- prefix anywhere in the sentence. A prefix-only pattern cannot see it.
+# -- Proofdelve ForgeOs-11tf.8's NOTES say "while 11tf.10's enforcement debt stands", with no
+# fortkit- prefix anywhere in the sentence. A prefix-only pattern cannot see it.
 #
 # Widening the regex to accept bare suffixes would match version numbers, section
 # numbers and dotted decimals everywhere. So instead: take the suffix set from the
 # board itself and look for those exact tokens. It cannot match a bead that does
 # not exist, and it cannot miss a spelling the board actually uses.
-BEAD_PREFIXED = re.compile(r"ForgeOs-([A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9])")
+BEAD_PREFIXED = re.compile(r"fortkit-([A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9])")
 
 
 def id_finder(known_suffixes):
@@ -78,7 +78,7 @@ def id_finder(known_suffixes):
         found = set(BEAD_PREFIXED.findall(sentence))
         if bare is not None:
             found |= set(bare.findall(sentence))
-        return {"ForgeOs-" + s for s in found}
+        return {"fortkit-" + s for s in found}
 
     return find
 
@@ -116,9 +116,9 @@ def comment_text(bid):
     """Comment BODIES, which no JSON row carries.
 
     `bd list --json` and `bd show --json` both return `comment_count` and no
-    bodies (this fort's ForgeOs-15k.8: "a reader that trusts it sees every bead as
+    bodies (this fort's Proofdelve ForgeOs-15k.8: "a reader that trusts it sees every bead as
     undecided"). Two of the three real hold sentences measured on 2026-09-18 --
-    ForgeOs-4tk's "Revisit when 11tf.9 lands" and ForgeOs-sk3c.4.3's "REVISIT WHEN
+    Proofdelve ForgeOs-4tk's "Revisit when 11tf.9 lands" and Proofdelve ForgeOs-sk3c.4.3's "REVISIT WHEN
     sk3c.4 lands" -- live in COMMENTS, so a description-only sweep misses the
     majority of the class it exists for.
     """
@@ -154,7 +154,7 @@ def main():
     if not status:
         refuse("no bead ids in the board dump")
 
-    suffixes = {b.split("ForgeOs-", 1)[1] for b in status if b.startswith("ForgeOs-")}
+    suffixes = {b.split("fortkit-", 1)[1] for b in status if b.startswith("fortkit-")}
     names_in = id_finder(suffixes)
 
     scanned = [r for r in rows
@@ -179,13 +179,13 @@ def main():
 
     # Two classes, reported separately, and DEDUPED BY BEAD.
     #
-    # The first run of this reported ForgeOs-11tf.8 TWICE -- once from its NOTES and
+    # The first run of this reported Proofdelve ForgeOs-11tf.8 TWICE -- once from its NOTES and
     # once from the Mayor's own comment quoting those NOTES back. A sweep that
     # reports a bead once per matching sentence inflates its own output the more
     # carefully anyone writes about a finding, which is the wrong incentive.
     #
     # And a hold naming SEVERAL beads where only some have closed is a different,
-    # weaker thing: "w4fm.1 + w4fm.10 DONE; tvm1 HELD" on ForgeOs-15k names two
+    # weaker thing: "w4fm.1 + w4fm.10 DONE; tvm1 HELD" on Proofdelve ForgeOs-15k names two
     # closed beads and one open one, and the hold plainly still holds. Mixing that
     # in with a genuinely satisfied hold is how a report stops being read.
     strong = {}   # bid -> (title, [closed], [open], best_sentence)

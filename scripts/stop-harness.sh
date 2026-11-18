@@ -1,5 +1,5 @@
 #!/bin/bash
-# Harness for fleet.sh's STOP PATH (ForgeOs-a2fx): the signal trap, the reason
+# Harness for fleet.sh's STOP PATH (Proofdelve ForgeOs-a2fx): the signal trap, the reason
 # that reaches the fleet.ended payload, and the leftovers report. Tests the
 # SHIPPED functions and the SHIPPED trap string, extracted from the real
 # launcher. Refuses on an empty or partial extraction.
@@ -11,7 +11,7 @@
 # a killed run and a drained one are the same event. The rest are asked of
 # functions a2fx introduces, so against that file this harness REFUSES at
 # extraction. Both are inversions; a harness that scored a clean pass against a
-# file lacking the code would be measuring nothing (ForgeOs-5m7a round two, and
+# file lacking the code would be measuring nothing (Proofdelve ForgeOs-5m7a round two, and
 # the landable-harness vacuity lesson).
 set -uo pipefail
 launcher="${FLEET_SH:-$(dirname "$0")/../fort/scripts/fleet.sh}"
@@ -22,7 +22,7 @@ work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 awk '/^set_end_reason\(\)[[:space:]]*\{/{f=1} /^on_signal\(\)[[:space:]]*\{/{f=1} /^report_leftovers\(\)[[:space:]]*\{/{f=1} /^say\(\)[[:space:]]*\{/{f=1} /^warn\(\)[[:space:]]*\{/{f=1} /^worker_state\(\)[[:space:]]*\{/{f=1} /^worker_set_state\(\)[[:space:]]*\{/{f=1} /^worker_reason\(\)[[:space:]]*\{/{f=1} /^worker_explain\(\)[[:space:]]*\{/{f=1} /^parked_merges\(\)[[:space:]]*\{/{f=1} /^report_parked_merges\(\)[[:space:]]*\{/{f=1} f{print} /^\}$/{f=0}' \
   "$launcher" > "$work/stop.sh"
 # The predicates are one-liners and do not end at a bare `}`; take them whole
-# by line instead. report_leftovers speaks through the ForgeOs-w7u5 lifecycle
+# by line instead. report_leftovers speaks through the Proofdelve ForgeOs-w7u5 lifecycle
 # owner, so worker_state and its predicates are part of this subject now.
 grep -E '^(signalled|stopping|worker_live|worker_needs_person|worker_reapable)\(\)[[:space:]]*\{' "$launcher" >> "$work/stop.sh" 2>/dev/null || true
 
@@ -38,7 +38,7 @@ no(){ echo "  FAIL  $1 -- $2"; fail=$((fail+1)); }
 
 # say() AND warn() ARE REAL, EACH ON THE STREAM ITS CONTRACT NAMES. A
 # say(){ :; } stub is exactly why the governor harness could not catch
-# ForgeOs-0d0i: it silenced the write that broke the caller.
+# Proofdelve ForgeOs-0d0i: it silenced the write that broke the caller.
 harness() { # $@ = shell body
   bash -c "set -uo pipefail
     run_id=T; launches=2; fleet_actor=fleet; halt_file='$work/HALT'
@@ -58,7 +58,7 @@ trap_out() { # $1 end_reason  $2 interrupted  $3 stop_signal  $4 halted
   bash -c "set -uo pipefail
     run_id=T; launches=2; fleet_actor=fleet
     end_reason='$1'; interrupted=$2; stop_signal='$3'; halted=$4
-    # stalled is a payload field since ForgeOs-dx34.9. Declared false here: no
+    # stalled is a payload field since Proofdelve ForgeOs-dx34.9. Declared false here: no
     # case in this harness ends a run through stall_check(), and the trap must
     # still evaluate against a launcher that carries the field.
     stalled=false; stall_peak=0
@@ -88,15 +88,15 @@ else no "vacuity control: the payload reports interruption unconditionally" "$ou
 # ASSERT EVERY SYMBOL THIS HARNESS DEPENDS ON, BY NAME. landable-harness.sh
 # checked one extracted symbol, the code was split under it, and the missing
 # function then read as a satisfied condition while the vacuity control PASSED
-# (ForgeOs-5m7a, Regent 2026-09-04). A missing function must never be able to
+# (Proofdelve ForgeOs-5m7a, Regent 2026-09-04). A missing function must never be able to
 # look like a met expectation.
 missing=""
-# report_parked_merges JOINED THE SUBJECT WITH ForgeOs-dx34.1's B2, and its
+# report_parked_merges JOINED THE SUBJECT WITH Proofdelve ForgeOs-dx34.1's B2, and its
 # absence from this list was live for one commit: report_leftovers gained a call
 # to it, this harness did not extract it, and every leftovers case here ran
 # against a function whose last statement died `command not found` — on stderr,
 # under a `bash -c` with no `set -e`, so the cases still scored PASS. A harness
-# that keeps passing while the code under it half-executes is the ForgeOs-8zb7
+# that keeps passing while the code under it half-executes is the Proofdelve ForgeOs-8zb7
 # class C failure with the volume turned down. Caught by reading this harness's
 # stderr while adding the ke5u cases below, not by the score.
 for f in set_end_reason signalled stopping on_signal report_leftovers report_parked_merges parked_merges worker_state worker_explain; do
@@ -106,7 +106,7 @@ if [ -n "$missing" ]; then
   echo
   echo "PARTIAL RESULT $pass pass / $fail fail (cases 1-2 only)"
   echo "HARNESS REFUSES the remaining cases: these symbols are absent from $launcher: $missing" >&2
-  echo "  Against a launcher that predates ForgeOs-a2fx (no stop path) or ForgeOs-w7u5 (no" >&2
+  echo "  Against a launcher that predates Proofdelve ForgeOs-a2fx (no stop path) or Proofdelve ForgeOs-w7u5 (no" >&2
   echo "  lifecycle owner) that is the expected outcome and is itself the finding. Cases 1-2" >&2
   echo "  above have already run against the shipped EXIT trap either way." >&2
   exit 3
@@ -162,45 +162,45 @@ if grep -q 'leaves nothing behind' <<<"$out"; then
 else no "an empty state reports nothing at all" "$out"; fi
 
 mkdir -p "$work/state/workers/unreaped"
-printf 'ForgeOs-unreaped\n' > "$work/state/workers/unreaped/bead"
+printf 'fortkit-unreaped\n' > "$work/state/workers/unreaped/bead"
 printf '0\n' > "$work/state/workers/unreaped/exit"
 out="$(harness "report_leftovers")"
-if grep -q 'NOT YET REAPED' <<<"$out" && grep -q 'ForgeOs-unreaped' <<<"$out" \
+if grep -q 'NOT YET REAPED' <<<"$out" && grep -q 'fortkit-unreaped' <<<"$out" \
    && grep -qi 'the next run verifies' <<<"$out"; then
   ok "a finished-but-unreaped worker is named, with what will pick it up"
 else no "an unreaped worker is left unmentioned" "$out"; fi
 
 mkdir -p "$work/state/workers/alive"
-printf 'ForgeOs-alive\n' > "$work/state/workers/alive/bead"
+printf 'fortkit-alive\n' > "$work/state/workers/alive/bead"
 sleep 30 & alive_pid=$!
 printf '%s\n' "$alive_pid" > "$work/state/workers/alive/pid"
 out="$(harness "report_leftovers")"
-if grep -q 'RUNNING — its Forge is alive' <<<"$out" && grep -q 'ForgeOs-alive' <<<"$out"; then
+if grep -q 'RUNNING — its Forge is alive' <<<"$out" && grep -q 'fortkit-alive' <<<"$out"; then
   ok "a live detached Forge is named and is NOT claimed to be dead"
 else no "a live Forge is misreported" "$out"; fi
 kill "$alive_pid" 2>/dev/null; wait "$alive_pid" 2>/dev/null
 
 mkdir -p "$work/state/workers/orphan"
-printf 'ForgeOs-orphan\n' > "$work/state/workers/orphan/bead"
+printf 'fortkit-orphan\n' > "$work/state/workers/orphan/bead"
 printf '4194303\n' > "$work/state/workers/orphan/pid"   # a pid that cannot exist
 out="$(harness "report_leftovers")"
-if grep -q 'NEEDS A PERSON' <<<"$out" && grep -q 'ForgeOs-orphan' <<<"$out"; then
+if grep -q 'NEEDS A PERSON' <<<"$out" && grep -q 'fortkit-orphan' <<<"$out"; then
   ok "a worker with no exit code and a dead pid is escalated to a person, not counted as fine"
 else no "an orphaned worker is reported as ordinary" "$out"; fi
 
 # 11 a settled worker is not reported at all — the report must be about what is
 # LEFT, or a busy successful run buries its own leftovers in a list.
 mkdir -p "$work/state/workers/settled"
-printf 'ForgeOs-settled\n' > "$work/state/workers/settled/bead"
+printf 'fortkit-settled\n' > "$work/state/workers/settled/bead"
 printf '0\n' > "$work/state/workers/settled/exit"; touch "$work/state/workers/settled/done"
 out="$(harness "report_leftovers")"
-if ! grep -q 'ForgeOs-settled' <<<"$out"; then
+if ! grep -q 'fortkit-settled' <<<"$out"; then
   ok "a worker that is finished with is not reported as left behind"
 else no "the report includes workers nothing further will happen to" "$out"; fi
 
 
 # ---------------------------------------------------------------------------
-# 12-15  ForgeOs-dx34.3: THE NARRATIVE IS DURABLE, AND A DEAD TERMINAL CANNOT
+# 12-15  Proofdelve ForgeOs-dx34.3: THE NARRATIVE IS DURABLE, AND A DEAD TERMINAL CANNOT
 # TAKE THE RUN DOWN. The end-to-end proof is a pty whose master is closed under
 # a live run (recorded on the bead); these are the mechanical guards, so the
 # property survives the next edit to say().
@@ -247,7 +247,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# ForgeOs-ke5u ACCEPTANCE 4 — THE TWO FALSE LINES. A worker abandoned in-hand by
+# Proofdelve ForgeOs-ke5u ACCEPTANCE 4 — THE TWO FALSE LINES. A worker abandoned in-hand by
 # a signalled run produced two records that disagreed: the interrupting run's
 # leftovers report said "IN HAND ... No action", and the NEXT run's report said
 # ORPHANED and demanded a person. The second of those also asserted "no exit

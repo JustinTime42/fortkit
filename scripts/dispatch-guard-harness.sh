@@ -1,5 +1,5 @@
 #!/bin/bash
-# Harness for fleet.sh's dispatch guard (ForgeOs-9mfw.2).
+# Harness for fleet.sh's dispatch guard (Proofdelve ForgeOs-9mfw.2).
 #
 # It tests the SHIPPED function against REAL bd state, extracted from the real
 # launcher by anchors, and it exists because the first draft's gate guard was
@@ -15,8 +15,8 @@
 # it. Pass beads that are merely convenient and every case reports "not labelled
 # fleet-safe", which looks like three failures and is three bad fixtures. File
 # throwaway probe beads, run, then close them and resolve the gate.
-# Refuses (exit 3) when the extraction is incomplete, PER SYMBOL (ForgeOs-675g,
-# the class ForgeOs-w7u5 argued for): the anchors are the fragile part, and a
+# Refuses (exit 3) when the extraction is incomplete, PER SYMBOL (Proofdelve ForgeOs-675g,
+# the class Proofdelve ForgeOs-w7u5 argued for): the anchors are the fragile part, and a
 # line count is not a vacuity control. Until 675g this file lifted everything
 # from bead_json() down to dispatchable() -- 718 lines at 5cf27de, most of it
 # preflight, governor and worker code the guard never calls, referencing symbols
@@ -46,7 +46,7 @@ while read -r callee; do
      && ! grep -qE "^$callee\(\)[[:space:]]*\{" "$work/fns.sh"; then
     echo "HARNESS REFUSES: the extracted guard code CALLS $callee() and does not define it (from $launcher)" >&2; exit 3
   fi
-done < <(grep -oE '^[a-z_]+\(\)[[:space:]]*\{' "$launcher" | sed -E 's/\(\)[[:space:]]*\{$//' | sort -u)   # whitespace-tolerant: fleet.sh has four `name()  {` definitions (Tova, 675g f2)
+done < <(grep -oE '^[a-z_]+\(\)[[:space:]]*\{' "$launcher" | sed -E 's/\(\)[[:space:]]*\{$//' | sort -u)   # whitespace-tolerant: fleet.sh has four `name()  {` definitions (the Warden, 675g f2)
 echo "extracted $(wc -l < "$work/fns.sh") lines of shipped guard code (bead_json, dispatchable) from $launcher"
 
 pass=0; fail=0
@@ -69,7 +69,7 @@ run() {  # $1 label, $2 bead, $3 expect yes|no, $4 substring the reason must con
 run "dispatchable (vacuity control)" "$1" yes "-"
 run "human label refused"            "$2" no  "human label"
 run "open gate refused"              "$3" no  "open gate"
-run "unknown bead refused"           "ForgeOs-nosuchbead" no "-"
+run "unknown bead refused"           "fortkit-nosuchbead" no "-"
 
 echo
 echo "RESULT $pass pass / $fail fail"

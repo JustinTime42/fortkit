@@ -29,7 +29,7 @@ set -uo pipefail
 
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")/.." rev-parse --show-toplevel)" || exit 3
 head="$(git -C "$root" rev-parse HEAD)" || exit 3
-# THE TREE, for a REUSED pass (ForgeOs-s1reg). fleet.sh may record main's
+# THE TREE, for a REUSED pass (Proofdelve ForgeOs-s1reg). fleet.sh may record main's
 # post-merge pass without a second run when the merged tree is the tree its host
 # verifier passed; such an event says reused:true and names verifiedTree. It is
 # a verdict for HEAD only if HEAD's tree IS that tree, checked here, never taken
@@ -46,8 +46,8 @@ branch="$(git -C "$root" rev-parse --abbrev-ref HEAD)" || exit 3
 # A post-merge verifier can remain unpushed through several midnights when an
 # empty ssh-agent blocks an otherwise approved push. Keep the decision window
 # bounded at the same N as fleet.sh's 14 day-file horizon — same N, different
-# unit, ForgeOs-uy86j. The calendar must not change a HEAD's verdict
-# (ForgeOs-0nhz4), but make it long enough that a second midnight cannot
+# unit, Proofdelve ForgeOs-uy86j. The calendar must not change a HEAD's verdict
+# (Proofdelve ForgeOs-0nhz4), but make it long enough that a second midnight cannot
 # manufacture an absence. The order is intentional: event files are append-only,
 # and a later calendar day's verdict is later than every verdict in the
 # preceding file.
@@ -72,7 +72,7 @@ if [ "${#streams[@]}" -eq 0 ]; then
   exit 3
 fi
 
-# ForgeOs-47mq: three approved pushes (08-17, 08-21, 08-28) failed with
+# Proofdelve ForgeOs-47mq: three approved pushes (08-17, 08-21, 08-28) failed with
 # "Permission denied (publickey)" AFTER the grant, because the agent held no
 # identity: ~/.ssh is filtered to known_hosts inside the mask, so ssh-add there
 # has nothing to load, and `ssh-add -l` exits 1 ("no identities") or 2 (no
@@ -84,7 +84,7 @@ fi
 # fact ssh-add-must-run-outside-the-mask.
 agent_note=""
 if ! ssh-add -l >/dev/null 2>&1; then
-  agent_note="push-ready: WARN -- ssh-agent holds no identities (ssh-add -l exit $?); a push from this seat will fail with 'Permission denied (publickey)'. Run ssh-add on the HOST, outside the mask; the seat sees the identity at once (ForgeOs-47mq)."
+  agent_note="push-ready: WARN -- ssh-agent holds no identities (ssh-add -l exit $?); a push from this seat will fail with 'Permission denied (publickey)'. Run ssh-add on the HOST, outside the mask; the seat sees the identity at once (Proofdelve ForgeOs-47mq)."
 fi
 
 HEAD_SHA="$head" HEAD_TREE="$head_tree" HEAD_BRANCH="$branch" WINDOW_START="$window_start" WINDOW_END="$today" AGENT_NOTE="$agent_note" python3 - "${streams[@]}" <<'PY'
@@ -119,7 +119,7 @@ try:
                 if len(commit) < 7 or not head.startswith(commit):
                     continue
                 cat = e.get("category")
-                # ForgeOs-l3l8: a verify on a DIRTY tree, or one whose HEAD moved
+                # Proofdelve ForgeOs-l3l8: a verify on a DIRTY tree, or one whose HEAD moved
                 # during the run, scored bytes that commit X does not contain. Such
                 # a pass is real evidence about the working tree and none about X,
                 # so it is not a verdict for HEAD here. Older events lack the keys
@@ -128,7 +128,7 @@ try:
                     if cat == "verify.run":
                         seen_run = True
                     continue
-                # ForgeOs-s1reg: a reused pass counts only on tree equality.
+                # Proofdelve ForgeOs-s1reg: a reused pass counts only on tree equality.
                 if cat == "verify.pass" and p.get("reused") is True \
                         and p.get("verifiedTree") != os.environ["HEAD_TREE"]:
                     continue

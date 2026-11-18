@@ -1,5 +1,5 @@
 #!/bin/bash
-# END-TO-END HARNESS for fleet.sh (ForgeOs-dx34.1, lane B). It runs the REAL
+# END-TO-END HARNESS for fleet.sh (Proofdelve ForgeOs-dx34.1, lane B). It runs the REAL
 # dispatcher — every guard, every state transition, the real reap/dispatch/
 # review/land path — against a scratch fort with stub seats and a stub bd, and
 # watches a bead go from `ready` to merged-and-closed without a token being
@@ -14,7 +14,7 @@
 # the tree is clean. Nothing short of a whole run shows that.
 #
 # THE ONE DEPARTURE FROM "TEST THE SHIPPED FILE", DISCLOSED. fleet.sh hardcodes
-# `root=/home/justin/dev/ForgeOs`, so the copy under test has that ONE LINE
+# `root=/home/justin/dev/fortkit`, so the copy under test has that ONE LINE
 # repointed at the scratch fort and is otherwise byte-identical — asserted
 # below, both that the substitution happened exactly once and that nothing else
 # changed. Same construction the 2026-08-13 mayor.sh probe used, and for the
@@ -33,10 +33,10 @@
 # file that was simply already narrowed. Each is optional, and each is reported
 # NOT RUN, never PASS, when its file is absent: an inversion that did not run
 # has established nothing.
-#   FLEET_SH_PRE_NARROWING  the launcher before ForgeOs-dx34.1's B2. Scenario 3
+#   FLEET_SH_PRE_NARROWING  the launcher before Proofdelve ForgeOs-dx34.1's B2. Scenario 3
 #                           runs scenario 1's fixture against it and it must
 #                           refuse at 64.  git show <sha>:fort/scripts/fleet.sh
-#   FLEET_SH_PRE_KE5U       the launcher before ForgeOs-ke5u. Scenario 7 runs
+#   FLEET_SH_PRE_KE5U       the launcher before Proofdelve ForgeOs-ke5u. Scenario 7 runs
 #                           scenario 4's fixture against it and it must DISCARD
 #                           the recorded verdict and print the false line.
 #   FLEET_SH_PRE_REAP       the launcher before the 2026-09-09 reaping branch.
@@ -54,91 +54,91 @@
 #                           on a test. Scenario 16 runs scenario 15's fixture at
 #                           it and the run must DIE after the merge: no
 #                           fleet-escalated, no incident.
-#   FLEET_SH_PRE_DX349      the launcher before ForgeOs-dx34.9 (stall detection).
+#   FLEET_SH_PRE_DX349      the launcher before Proofdelve ForgeOs-dx34.9 (stall detection).
 #                           Scenario 30b holds a foreign lock on a startable
 #                           bead's worktree and the run must SPIN until the
 #                           timeout: no halt file, no stalled reason.
 #                           git show 233d977:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_B9MJ       the launcher before the touch-set co-dispatch guard
-#                           (ForgeOs-b9mj). Scenario 42g dispatches two beads
+#                           (Proofdelve ForgeOs-b9mj). Scenario 42g dispatches two beads
 #                           with OVERLAPPING Touches at concurrency 2 and both
 #                           must go in one pass.
 #                           git show 87b8afa:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_36B9       the launcher before landability-before-review
-#                           (ForgeOs-36b9). Scenario 44c moves main into
+#                           (Proofdelve ForgeOs-36b9). Scenario 44c moves main into
 #                           conflict after the Forge cut its branch; the old
 #                           launcher must spend a review and fail at the merge.
 #                           git show 025a52f:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_R3         the launcher after round two and before round three
-#                           of ForgeOs-b9mj (the false stall-halt on a parked
+#                           of Proofdelve ForgeOs-b9mj (the false stall-halt on a parked
 #                           merge). Scenario 45b must HALT as stalled.
 #                           git show ad911a7:fort/scripts/fleet.sh
-#   FLEET_SH_PRE_UBGX       the launcher before signed landings (ForgeOs-ubgx).
+#   FLEET_SH_PRE_UBGX       the launcher before signed landings (Proofdelve ForgeOs-ubgx).
 #                           Scenario 46b approves an escalated, unchanged branch
 #                           and the old launcher must DISPATCH A FORGE at it.
 #                           git show 4cfa84df:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_FOLD       the launcher before the 2026-09-17 sitting's fold of
-#                           Tova's findings 1.2/1.3/1.4/1.7 on ForgeOs-ubgx.
+#                           The Warden's findings 1.2/1.3/1.4/1.7 on Proofdelve ForgeOs-ubgx.
 #                           Scenario 48's four inversions run against it.
 #                           git show ecd75295:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_S2LX       the launcher before the ESCALATE branch checked its
-#                           bd write (ForgeOs-s2lx). Scenario 47b refuses that
+#                           bd write (Proofdelve ForgeOs-s2lx). Scenario 47b refuses that
 #                           write and the old launcher must still emit
 #                           fleet.returned asserting the label. Same file as
 #                           FLEET_SH_PRE_UBGX serves (both predate the check).
 #   FLEET_SH_PRE_PBKK       the launcher before the post-merge verifier required
-#                           Docker (ForgeOs-pbkk). Scenario 49 records the
+#                           Docker (Proofdelve ForgeOs-pbkk). Scenario 49 records the
 #                           environment the stub verifier saw and the old
 #                           launcher must show VERIFY_REQUIRE_DOCKER unset on the
 #                           post-merge run. git show cb247897:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_FHAK       the launcher before the halt file was consulted per
 #                           claim and the halt incident measured the live locks
-#                           (ForgeOs-fhak). Scenario 50c places a HALT during a
+#                           (Proofdelve ForgeOs-fhak). Scenario 50c places a HALT during a
 #                           review and the old launcher must still CLAIM the next
 #                           bead; 50a's incident on it names no in-flight Forge.
 #                           git show cb247897:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_B26I       the launcher before a stopping run stopped spending
-#                           ladder rungs (ForgeOs-b26i). Scenario 52 completes a
+#                           ladder rungs (Proofdelve ForgeOs-b26i). Scenario 52 completes a
 #                           review under SIGTERM with a token that will not
 #                           parse, on a TWO-rung ladder; the old launcher launches
 #                           rung 2. git show 5aac33c2:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_S49W       the launcher before the run wrote its outcome record
-#                           (ForgeOs-s49w). Scenario 55 runs to a drain and reads
+#                           (Proofdelve ForgeOs-s49w). Scenario 55 runs to a drain and reads
 #                           $FLEET_STATE/last-run.outcome; the old launcher
 #                           writes none. git show 9eb4fb42:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_LV7X       the launcher before the MERGE-PARENT-OPEN write
-#                           checked its bd exit (ForgeOs-stpx repair, a2acdbe8).
+#                           checked its bd exit (Proofdelve ForgeOs-stpx repair, a2acdbe8).
 #                           Scenario 54 refuses that one write; the old launcher
 #                           marks the worker settled and emits fleet.parent-open
 #                           over a write that did not happen.
 #                           git show a2acdbe8^:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_NZ3U       the launcher before the deliverable declaration
-#                           (ForgeOs-nz3u). Scenario 56 runs a declared
+#                           (Proofdelve ForgeOs-nz3u). Scenario 56 runs a declared
 #                           handoff-only bead to a landing; the old launcher
 #                           returns it "no product change" whatever the bead
 #                           says. git show 93594250:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_J3GA       the launcher before the halt refusal learned the
-#                           empty case (ForgeOs-j3ga). Scenario 57 refuses on a
+#                           empty case (Proofdelve ForgeOs-j3ga). Scenario 57 refuses on a
 #                           zero-byte halt file; the old launcher prints the
 #                           header, then nothing, then "Read the record".
 #                           git show 86b51c37:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_OHSY       the launcher before the signed resume point
-#                           (ForgeOs-ohsy). Scenario 58 kills a signed
+#                           (Proofdelve ForgeOs-ohsy). Scenario 58 kills a signed
 #                           landing's verifier with Ctrl-C; the old launcher
 #                           parks it `finished` and re-reviews it, and returns
 #                           a merge-failed signed bead into a Forge lap.
 #                           git show f9fec86c:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_1KAK       the launcher before the signed question moved above
-#                           the slot gate (ForgeOs-1kak). Scenario 59 approves a
+#                           the slot gate (Proofdelve ForgeOs-1kak). Scenario 59 approves a
 #                           bead while the only Forge slot is held; the old
 #                           launcher returns at the slot gate and lands nothing.
 #                           git show 9e09cabf:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_YZ7W       the launcher before the reviewed tip was captured
-#                           BEFORE the Warden launched (ForgeOs-yz7w). Scenario
+#                           BEFORE the Warden launched (Proofdelve ForgeOs-yz7w). Scenario
 #                           60 moves the branch during the review; the old
 #                           launcher records the moved tip as the reviewed one.
 #                           git show 5824a861:fort/scripts/fleet.sh
-#   FLEET_SH_PRE_VEE4W      the launcher before the signature hold (ForgeOs-vee4w).
+#   FLEET_SH_PRE_VEE4W      the launcher before the signature hold (Proofdelve ForgeOs-vee4w).
 #                           Scenario 61f merges a sign-to-land bead on
 #                           MERGE-PARENT-OPEN with no signature.
 #                           git show dae80d8e:fort/scripts/fleet.sh
@@ -146,12 +146,12 @@
 #                           Scenario 61i merges an unclassified bead on APPROVE.
 #                           git show a1ecc348:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_UBGX4      the launcher before the Keep's record corroborated a
-#                           signed landing (ForgeOs-ubgx.4). Scenario 62c writes a
+#                           signed landing (Proofdelve ForgeOs-ubgx.4). Scenario 62c writes a
 #                           gate.approved into the stream with NO Keep record and
 #                           the old launcher must LAND it.
 #                           git show 4d60791c:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_D          the launcher before the 2026-10-06 record-defect item
-#                           (ForgeOs-e2rbu, owt37, a13g8). Scenario 63's RED arms.
+#                           (Proofdelve ForgeOs-e2rbu, owt37, a13g8). Scenario 63's RED arms.
 #                           git show 74b1382b:fort/scripts/fleet.sh
 #   FLEET_SH_PRE_VEE4W_R3   the round-two launcher. Scenario 61k refuses a
 #                           signed, unclassified bead as unclassified.
@@ -163,9 +163,9 @@ set -uo pipefail
 # seat, every scenario below "failed" with that refusal on stderr and the
 # harness scored them as scenario failures, then gave up at s4 with "the stub
 # Warden never started" -- which is where verify-impl.sh's exclusion note got
-# its wording (ForgeOs-g0ev, measured 2026-09-11 from the Mayor mask: 13 FAIL
+# its wording (Proofdelve ForgeOs-g0ev, measured 2026-09-11 from the Mayor mask: 13 FAIL
 # lines, all rc=64, before the s4 refusal). That is the misattribution class
-# (ForgeOs-8zb7 step 3): "I could not run" reported as "the subject failed".
+# (Proofdelve ForgeOs-8zb7 step 3): "I could not run" reported as "the subject failed".
 # So refuse here, first, and name the reason. Do NOT unset FORT_MASKED to get
 # past this: the refusal is the control working, and a harness that strips a
 # seat's mask marker to run its subject is routing around a boundary.
@@ -206,7 +206,7 @@ pre_ubgx4="${FLEET_SH_PRE_UBGX4:-}"
 pre_d="${FLEET_SH_PRE_D:-}"
 # THE ONE THING THIS HARNESS WRITES OUTSIDE ITS OWN TEMPORARY DIRECTORY, AND IT
 # CLEANS UP AFTER ITSELF. warden.sh's result-file contract is a fixed path keyed
-# on the bead suffix. Since ForgeOs-nv0j (2026-09-12) that path is
+# on the bead suffix. Since Proofdelve ForgeOs-nv0j (2026-09-12) that path is
 # $warden_root/<sfx>.log.result.json with warden_root under XDG_DATA_HOME, and
 # this harness exports XDG_DATA_HOME into its own $work below, so the SHIPPED
 # launcher's records land in scratch and vanish with it. Every FLEET_SH_PRE_*
@@ -248,20 +248,20 @@ work="$(mktemp -d)"
 # name this run's directory even if the variable is later reassigned.
 trap "rm -rf '$work'; rm -f $(e2e_tmp_files)" EXIT
 export PATH="$work/bin:$PATH"
-# A GENEROUS MEMINFO FOR EVERY SCENARIO (ForgeOs-asad6). The launcher's memory
+# A GENEROUS MEMINFO FOR EVERY SCENARIO (Proofdelve ForgeOs-asad6). The launcher's memory
 # gate reads FLEET_MEMINFO when it is set, and this host's real memory must not
 # decide a case written about something else: on 2026-10-15 it had 14 GiB
 # available, which refuses a second launch. Scenario 65 points it elsewhere.
 printf 'MemTotal: 67108864 kB\nMemAvailable: 67108864 kB\nSwapTotal: 0 kB\nSwapFree: 0 kB\n' > "$work/meminfo-generous"
 export FLEET_MEMINFO="$work/meminfo-generous"
 # The nv0j launcher reads warden.sh's records from
-# ${XDG_DATA_HOME:-$HOME/.local/share}/proofdelve/warden; pointing XDG_DATA_HOME
+# ${XDG_DATA_HOME:-$HOME/.local/share}/manyhalls/warden; pointing XDG_DATA_HOME
 # into $work keeps every probe record out of the real root (the "a probe must
-# never seed the record it probes" rule, ForgeOs-nv0j).
+# never seed the record it probes" rule, Proofdelve ForgeOs-nv0j).
 export XDG_DATA_HOME="$work/xdg-data"
-e2e_res_root="$XDG_DATA_HOME/proofdelve/warden"; mkdir -p "$e2e_res_root"
+e2e_res_root="$XDG_DATA_HOME/manyhalls/warden"; mkdir -p "$e2e_res_root"
 # The Overseer store the fleet corroborates a signed landing against
-# (ForgeOs-ubgx.4) resolves through XDG_STATE_HOME, as the Keeps do; pointed into
+# (Proofdelve ForgeOs-ubgx.4) resolves through XDG_STATE_HOME, as the Keeps do; pointed into
 # $work so no scenario reads, or could ever append to, the real civ-keep record.
 export XDG_STATE_HOME="$work/xdg-state"; mkdir -p "$XDG_STATE_HOME/civ-keep"
 
@@ -277,7 +277,7 @@ mk_launcher() { # $1 src, $2 dst, $3 new root
 import sys
 src, dst, newroot = sys.argv[1], sys.argv[2], sys.argv[3]
 t = open(src).read()
-old = 'root="/home/justin/dev/ForgeOs"\n'
+old = 'root="/home/justin/dev/fortkit"\n'
 if t.count(old) != 1:
     sys.exit("HARNESS REFUSES: expected exactly 1 root= line in %s, found %d" % (src, t.count(old)))
 n = t.replace(old, 'root="%s"\n' % newroot, 1)
@@ -301,10 +301,10 @@ mkfort() { # $1 name, $2 subject content committed by the Forge -> prints root
   cat > "$r/fort/scripts/verify.sh" <<V
 #!/bin/bash
 # Stub verifier. It judges the tree it is standing in, which is the property
-# fleet.sh relies on and ForgeOs-afdr is about.
+# fleet.sh relies on and Proofdelve ForgeOs-afdr is about.
 printf '%s\n' "\$PWD" >> "$r/verify-calls"
-git -C "\$PWD" rev-parse HEAD 2>/dev/null >> "$r/verify-heads"   # ForgeOs-36b9 scenario 44: the tip the verifier actually scored
-# AN OPT-IN PAUSE THE SIGNAL SCENARIOS CAN AIM AT (ForgeOs-ohsy, scenario 58).
+git -C "\$PWD" rev-parse HEAD 2>/dev/null >> "$r/verify-heads"   # Proofdelve ForgeOs-36b9 scenario 44: the tip the verifier actually scored
+# AN OPT-IN PAUSE THE SIGNAL SCENARIOS CAN AIM AT (Proofdelve ForgeOs-ohsy, scenario 58).
 # Inert unless E2E_VERIFY_MARK is set, and ONE-SHOT: the mark's own existence
 # switches it off, so a post-merge verifier later in the same run does not also
 # stop. Every earlier scenario keeps its timing exactly.
@@ -331,25 +331,25 @@ b="\$1"; sfx="\${b##*-}"
 # HOW LONG THE FORGE "WORKS". Default 0, so every earlier scenario keeps its
 # timing. Scenario 32 sets it to several FLEET_POLLs so the run has a quiet
 # stretch with a Forge LIVE and a bead queued behind it -- the healthy long gap
-# of run 20260910T143714, which a stall detector must not touch (ForgeOs-dx34.9).
+# of run 20260910T143714, which a stall detector must not touch (Proofdelve ForgeOs-dx34.9).
 sleep "\${E2E_FORGE_SLEEP:-0}"
-# ONE BEAD CAN BE MADE SLOW (ForgeOs-dx34.18, scenario 39): the strand needs a
+# ONE BEAD CAN BE MADE SLOW (Proofdelve ForgeOs-dx34.18, scenario 39): the strand needs a
 # Forge that finishes while the loop is inside ANOTHER bead's reap pass.
 [ "\$b" = "\${E2E_FORGE_SLOW_BEAD:-}" ] && sleep "\${E2E_FORGE_SLOW_SLEEP:-0}"
 # THE REAL forge.sh REUSES AN EXISTING WORKTREE (\`if [ ! -d "\$wt" ]\`); this stub
-# never needed to until ForgeOs-ubgx's scenarios re-dispatch a bead whose
+# never needed to until Proofdelve ForgeOs-ubgx's scenarios re-dispatch a bead whose
 # branch and worktree still stand. Opt-in, so every earlier scenario keeps the
 # exit-1-on-existing-worktree it was written against.
-# EVERY CALL, ITS FIX-FORWARD BRIEF AND ITS WORKTREE (ForgeOs-6niaz scenario 6niaz).
+# EVERY CALL, ITS FIX-FORWARD BRIEF AND ITS WORKTREE (Proofdelve ForgeOs-6niaz scenario 6niaz).
 printf '%s brief=%s wt=%s model=%s\n' "\$b" "\${FORGE_FIX_FORWARD_BRIEF:-}" "$r-worktrees/\$sfx" "\${2:-}" >> "$r/forge-calls"
 if [ -n "\${E2E_FORGE_REUSE:-}" ] && [ -d "$r-worktrees/\$sfx" ]; then :; else
 git -C "$r" worktree add "$r-worktrees/\$sfx" -b "bead/\$sfx" >/dev/null 2>&1
 fi
-# ONE EXTRA EDIT ON REQUEST (ForgeOs-ubgx scenario 46d): append a line to a
+# ONE EXTRA EDIT ON REQUEST (Proofdelve ForgeOs-ubgx scenario 46d): append a line to a
 # named file that already exists on main, so a later change on main to a
 # NEIGHBOURING line merges cleanly and still changes the branch's patch-id.
 [ -n "\${E2E_FORGE_TOUCH:-}" ] && printf 'forge line by %s\n' "\$b" >> "$r-worktrees/\$sfx/\$E2E_FORGE_TOUCH"
-# A HANDOFF-ONLY SESSION (ForgeOs-nz3u, scenario 56): the Forge that stopped
+# A HANDOFF-ONLY SESSION (Proofdelve ForgeOs-nz3u, scenario 56): the Forge that stopped
 # with a blocked handoff, or answered an investigation bead -- forge.sh's stamp
 # step commits the handoff and NOTHING ELSE is on the branch. vky8's shape.
 if [ -n "\${E2E_FORGE_HANDOFF_ONLY:-}" ]; then
@@ -362,26 +362,26 @@ fi
 # A DISTINCT COMMIT EVERY TIME. An earlier draft wrote content identical to
 # what was already committed, so \`git commit\` found nothing to commit, exited 1
 # under set -e, and the whole scenario read as "the Forge failed" — a defect in
-# the instrument presenting as a defect in the subject (ForgeOs-8zb7 class C).
+# the instrument presenting as a defect in the subject (Proofdelve ForgeOs-8zb7 class C).
 printf '%s\n' "$2" > "$r-worktrees/\$sfx/subject.txt"
-# PER-BEAD, since ForgeOs-36b9: two beads cut from one base that both created
+# PER-BEAD, since Proofdelve ForgeOs-36b9: two beads cut from one base that both created
 # ONE marker.txt conflicted at the second landing, which the old order only
 # found after the review and scenarios 39/41 tolerated as "the stub's doing".
 # The refresh now finds it BEFORE the verifier and pages, so the shared file
 # would turn three unrelated scenarios into conflict fixtures.
 printf 'work by %s\n' "\$b" >> "$r-worktrees/\$sfx/marker-\$sfx.txt"
-printf '%s\n' "\$sfx" > "$r-worktrees/\$sfx/by-\$sfx.txt"   # ForgeOs-hifw scenario 41: a file only this bead has, with content only it has (identical content reads as a RENAME, not D+A)
+printf '%s\n' "\$sfx" > "$r-worktrees/\$sfx/by-\$sfx.txt"   # Proofdelve ForgeOs-hifw scenario 41: a file only this bead has, with content only it has (identical content reads as a RENAME, not D+A)
 git -C "$r-worktrees/\$sfx" add -A >/dev/null
 git -C "$r-worktrees/\$sfx" commit -qm "\$b: the work"
 F
   cat > "$r/fort/scripts/warden.sh" <<'W'
 #!/bin/bash
-# Stub Warden. Writes the result file the real launcher writes (ForgeOs-9mfw.5).
+# Stub Warden. Writes the result file the real launcher writes (Proofdelve ForgeOs-9mfw.5).
 # Its timing and its output shape are steered from the environment so the signal
 # scenarios can decide WHEN the signal lands relative to the review finishing —
-# which is the whole of ForgeOs-ke5u.
+# which is the whole of Proofdelve ForgeOs-ke5u.
 b="$1"; sfx="${b##*-}"
-# THE RANGE THE FLEET HANDED THIS REVIEW, recorded for ForgeOs-hifw's scenario:
+# THE RANGE THE FLEET HANDED THIS REVIEW, recorded for Proofdelve ForgeOs-hifw's scenario:
 # the property under test is the diff spec itself, not what a stub does with it.
 fr="$(cd "$(dirname "$0")/../.." && pwd)"
 printf '%s %s\n' "$1" "$2" >> "$fr/warden-ranges"
@@ -390,7 +390,7 @@ printf '%s %s\n' "$1" "$2" >> "$fr/warden-ranges"
 git -C "$fr" diff --name-status "$2" > "$fr/warden-diff-$sfx" 2>/dev/null || true
 [ -n "${E2E_WARDEN_MARK:-}" ] && : > "$E2E_WARDEN_MARK"
 sleep "${E2E_WARDEN_SLEEP:-0}"
-# A HAND MOVING THE BRANCH WHILE THE REVIEW RUNS (ForgeOs-yz7w, scenario 60).
+# A HAND MOVING THE BRANCH WHILE THE REVIEW RUNS (Proofdelve ForgeOs-yz7w, scenario 60).
 # This is the documented lw8x remedy -- a person merging main into a bead
 # branch -- happening at the one moment it is invisible to the fleet. Opt-in,
 # so every earlier scenario is untouched. $3 is the worktree the fleet handed
@@ -400,17 +400,17 @@ if [ -n "${E2E_WARDEN_MOVE_BRANCH:-}" ] && [ -d "${3:-}" ]; then
   git -C "$3" add -A >/dev/null 2>&1
   git -C "$3" commit -qm "$1: a hand moved this branch while it was under review" >/dev/null 2>&1
 fi
-# TWO RESULT ROOTS (ForgeOs-nv0j): the nv0j launcher reads
-# $XDG_DATA_HOME/proofdelve/warden/<sfx>..., every pre-nv0j "before" launcher
+# TWO RESULT ROOTS (Proofdelve ForgeOs-nv0j): the nv0j launcher reads
+# $XDG_DATA_HOME/manyhalls/warden/<sfx>..., every pre-nv0j "before" launcher
 # reads /tmp/warden-<sfx>...; the stub writes both so either can be under test.
-nroot="${XDG_DATA_HOME:-$HOME/.local/share}/proofdelve/warden"; mkdir -p "$nroot"
+nroot="${XDG_DATA_HOME:-$HOME/.local/share}/manyhalls/warden"; mkdir -p "$nroot"
 res_write() { printf '%s' "$2" > "$nroot/$sfx.log.$1"; printf '%s' "$2" > "/tmp/warden-$sfx.log.$1"; }
 res_rm()    { rm -f "$nroot/$sfx.log.$1" "/tmp/warden-$sfx.log.$1"; }
 # THE TOKEN IS A KNOB AND ITS DEFAULT IS APPROVE, so every scenario written
-# before ForgeOs-j3kp keeps the behaviour it had. The verdict vocabulary is the
+# before Proofdelve ForgeOs-j3kp keeps the behaviour it had. The verdict vocabulary is the
 # subject of scenarios 10-14 and cannot be exercised by a stub that can only say
 # one word.
-# A TOKEN SEQUENCE, ONE PER REVIEW OF THIS BEAD (ForgeOs-6niaz scenario 6niaz:
+# A TOKEN SEQUENCE, ONE PER REVIEW OF THIS BEAD (Proofdelve ForgeOs-6niaz scenario 6niaz:
 # FIX-FORWARD, then the re-check's verdict), and the re-check's two variables
 # as the fleet passed them. Opt-in; every earlier scenario uses E2E_WARDEN_TOKEN.
 printf '%s base=%s items=%s\n' "$1" "${WARDEN_FIX_FORWARD_BASE:-}" "${WARDEN_FIX_FORWARD_ITEMS:-}" >> "$fr/warden-ff-env"
@@ -422,7 +422,7 @@ fbody=$'1. non-blocking: naming.\n'
 [ -n "${E2E_WARDEN_TIERED:-}" ] && fbody=$'FINDINGS:\n1. [polish] non-blocking: rename the stub helper.\nEND FINDINGS\n'
 case "${E2E_WARDEN_RESULT:-approve}" in
   none)    exit 65 ;;
-  # ForgeOs-g3n1 / 7gag: the Warden that died mid-record on the full /tmp. Its
+  # Proofdelve ForgeOs-g3n1 / 7gag: the Warden that died mid-record on the full /tmp. Its
   # stdout (the fleet's wlog) carries the EDQUOT line, no result file appears.
   envfail) printf 'warden.sh: line 201: printf: write error: Disk quota exceeded\n'; exit 65 ;;
   # g3n1 round one, the blocking finding: a COMPLETED review whose prose mentions
@@ -470,11 +470,11 @@ C
 #   <id>|<status>|<assignee>|<labels>[|<deps>[|<touches>]]
 # where <deps> is a comma-separated list of <depid>:<depstatus>:<deptype>. The
 # fifth field is OPTIONAL and is written only when non-empty, so every fixture
-# and every assertion written before ForgeOs-czhb keeps its exact four-field
-# line. The SIXTH (ForgeOs-b9mj) is the bead's `Touches:` declaration, rendered
+# and every assertion written before Proofdelve ForgeOs-czhb keeps its exact four-field
+# line. The SIXTH (Proofdelve ForgeOs-b9mj) is the bead's `Touches:` declaration, rendered
 # into `description` by `show` exactly as the Mayor would write it; a fixture
 # that needs one but has no deps writes the fifth field EMPTY (`||web/`). The
-# SEVENTH (ForgeOs-nz3u) is the bead's `Deliverable:` declaration, rendered the
+# SEVENTH (Proofdelve ForgeOs-nz3u) is the bead's `Deliverable:` declaration, rendered the
 # same way; a fixture that declares it and touches nothing writes `|||answer`.
 mkbd() {
   mkdir -p "$work/bin"
@@ -488,7 +488,7 @@ if [ "${args[0]:-}" = "-C" ]; then args=("${args[@]:2}"); fi
 # logged line begins with the subcommand and a scenario can anchor on it. It
 # costs one line and it is what lets a scenario assert THE CALL rather than its
 # outcome — the only honest way to test the dependency-type half of
-# ForgeOs-j3kp. Whether an edge type leaves a bead in `bd ready` is a claim
+# Proofdelve ForgeOs-j3kp. Whether an edge type leaves a bead in `bd ready` is a claim
 # about bd, not about fleet.sh, and a harness that measured it would fail when
 # bd changed and blame fleet.sh. That claim is measured once, by hand, and
 # lives in fort/memory/facts/bd-dependency-types-and-what-actually-blocks.md.
@@ -498,8 +498,8 @@ rec() { grep "^$1|" "$db" 2>/dev/null | head -1; }
 put() { local id="$1" st="$2" as="$3" lb="$4" dp="${5:-}" tc="${6:-}" dl="${7:-}"; grep -v "^$id|" "$db" > "$db.n" 2>/dev/null || true
   # THE FIFTH FIELD IS WRITTEN ONLY WHEN IT EXISTS, so a bead with no
   # dependencies keeps the exact four-field line every earlier fixture and
-  # assertion was written against. The sixth likewise (ForgeOs-b9mj), and the
-  # seventh (ForgeOs-nz3u).
+  # assertion was written against. The sixth likewise (Proofdelve ForgeOs-b9mj), and the
+  # seventh (Proofdelve ForgeOs-nz3u).
   if [ -n "$dl" ]; then printf '%s|%s|%s|%s|%s|%s|%s\n' "$id" "$st" "$as" "$lb" "$dp" "$tc" "$dl" >> "$db.n"
   elif [ -n "$tc" ]; then printf '%s|%s|%s|%s|%s|%s\n' "$id" "$st" "$as" "$lb" "$dp" "$tc" >> "$db.n"
   elif [ -n "$dp" ]; then printf '%s|%s|%s|%s|%s\n' "$id" "$st" "$as" "$lb" "$dp" >> "$db.n"
@@ -517,13 +517,13 @@ case "$cmd" in
     echo "$out]" ;;
   show)
     id="${args[1]}"; r="$(rec "$id")" || true
-    # ForgeOs-vee4w scenario 61e: a tracker that will not answer show at all.
+    # Proofdelve ForgeOs-vee4w scenario 61e: a tracker that will not answer show at all.
     # Opt-in by the file's existence; every earlier scenario never creates it.
     [ -e "$db.show-null" ] && { echo "null"; exit 0; }
     [ -n "$r" ] || { echo "null"; exit 0; }
     IFS='|' read -r i st as lb dp tc dl <<< "$r"
     labels=""; for l in ${lb//,/ }; do labels="$labels${labels:+,}\"$l\""; done
-    # THE MAYOR'S CLASSIFICATION, SUPPLIED BY DEFAULT (ForgeOs-vee4w round two).
+    # THE MAYOR'S CLASSIFICATION, SUPPLIED BY DEFAULT (Proofdelve ForgeOs-vee4w round two).
     # Since criterion 6, fleet.sh refuses a bead carrying neither sign-to-land
     # nor lands-on-review. Every fixture written before that models a bead the
     # Mayor classified for review, so this stub reports lands-on-review on such
@@ -533,10 +533,10 @@ case "$cmd" in
     if [ "${E2E_BD_CLASSIFY:-on}" != off ]; then
       case ",$lb," in *,sign-to-land,*|*,lands-on-review,*) ;; *) labels="$labels${labels:+,}\"lands-on-review\"" ;; esac
     fi
-    # DEPENDENCIES, WHICH THIS STUB COULD NOT EXPRESS AT ALL UNTIL ForgeOs-czhb.
+    # DEPENDENCIES, WHICH THIS STUB COULD NOT EXPRESS AT ALL UNTIL Proofdelve ForgeOs-czhb.
     # It hardcoded "dependency_count":0, so dispatchable()'s dependency loop was
     # unreachable from here and the branch had NO end-to-end control of any kind
-    # -- the same ForgeOs-8zb7 class A shape as the always-succeeding bd create
+    # -- the same Proofdelve ForgeOs-8zb7 class A shape as the always-succeeding bd create
     # this stub carried until 2026-09-10. Every fixture that predates the fifth
     # field keeps its exact four-field line and its "dependency_count":0.
     #
@@ -558,11 +558,11 @@ case "$cmd" in
         dn=$((dn+1))
       done
     fi
-    # THE DESCRIPTION CARRIES THE Touches LINE (ForgeOs-b9mj) in the shape the
+    # THE DESCRIPTION CARRIES THE Touches LINE (Proofdelve ForgeOs-b9mj) in the shape the
     # Mayor writes it, after a line of prose, so touch_set_of() is parsing a
     # description and not a bare value. Empty sixth field: no such line.
     desc="OBSERVED: fixture."; [ -n "${tc:-}" ] && desc="$desc\\nTouches: $tc"
-    # THE DELIVERABLE LINE (ForgeOs-nz3u), likewise after prose, so deliverable_of()
+    # THE DELIVERABLE LINE (Proofdelve ForgeOs-nz3u), likewise after prose, so deliverable_of()
     # is parsing a description and not a bare value. Empty seventh field: no line.
     [ -n "${dl:-}" ] && desc="$desc\\nDeliverable: $dl"
     printf '{"id":"%s","status":"%s","assignee":"%s","labels":[%s],"dependency_count":%d,"dependencies":[%s],"description":"%s"}\n' "$i" "$st" "$as" "$labels" "$dn" "$deps" "$desc" ;;
@@ -572,14 +572,14 @@ case "$cmd" in
     for ((k=2;k<${#args[@]};k++)); do
       case "${args[k]}" in
         --claim)
-          # ForgeOs-dx34.9 KNOBS, BOTH DEFAULTING OFF. E2E_BD_CLAIM=refuse
+          # Proofdelve ForgeOs-dx34.9 KNOBS, BOTH DEFAULTING OFF. E2E_BD_CLAIM=refuse
           # refuses EVERY claim: a tracker under permanent write contention
-          # (ForgeOs-dx34.2's unmeasured case), which is a wedge the loop cannot
+          # (Proofdelve ForgeOs-dx34.2's unmeasured case), which is a wedge the loop cannot
           # clear. E2E_BD_CLAIM_REFUSE_N=k refuses the first k claims and grants
           # the rest: the transient the stall counter's N exists to absorb. Both
           # exit before anything is written, as a real refused claim does.
           if [ "${E2E_BD_CLAIM:-ok}" = refuse ]; then exit 1; fi
-          # NOT `k`: that is the enclosing argument-loop index (Tova, round one,
+          # NOT `k`: that is the enclosing argument-loop index (the Warden, round one,
           # finding 3). Reusing it worked only because REFUSE_N=2 equalled the
           # index of --claim; at 1 the loop never terminated and at 3 it skipped
           # the assignee -- the instrument changing what it measures at the next
@@ -596,14 +596,14 @@ case "$cmd" in
         --remove-label) shift_rm="${args[k+1]}" ;;
       esac
     done
-    # A WRITE THAT CAN BE REFUSED, SELECTIVELY (ForgeOs-s2lx; the shape
-    # ForgeOs-lv7x asked for). E2E_BD_UPDATE_REFUSE_LABEL=<label> makes every
+    # A WRITE THAT CAN BE REFUSED, SELECTIVELY (Proofdelve ForgeOs-s2lx; the shape
+    # Proofdelve ForgeOs-lv7x asked for). E2E_BD_UPDATE_REFUSE_LABEL=<label> makes every
     # update that would ADD that label exit 1 before anything is written, and
     # leaves every other update alone -- so a scenario can refuse exactly the
     # ESCALATE branch's write (which adds `human`) while the claim, the
     # returns and the rest of the run succeed. Default off.
     if [ -n "${E2E_BD_UPDATE_REFUSE_LABEL:-}" ] && [ "$shift_add" = "$E2E_BD_UPDATE_REFUSE_LABEL" ]; then exit 1; fi
-    # THE OTHER SELECTIVE REFUSAL (ForgeOs-lv7x): E2E_BD_UPDATE_REFUSE_RMLABEL=<label>
+    # THE OTHER SELECTIVE REFUSAL (Proofdelve ForgeOs-lv7x): E2E_BD_UPDATE_REFUSE_RMLABEL=<label>
     # refuses exactly the update that would REMOVE that label, which is the
     # MERGE-PARENT-OPEN write (remove fleet-safe, --status open, unassign) and
     # nothing earlier in the run -- the claim adds nothing and removes nothing.
@@ -627,10 +627,10 @@ case "$cmd" in
     # APPROVE-WITH-FINDINGS scenario reads as "the follow-up could not be
     # filed". A defect in the instrument presenting as a defect in the subject,
     # for the third time in this file. grep -c always prints exactly one number.
-    # AND IT CAN BE TOLD TO FAIL, WHICH IS THE WHOLE OF ForgeOs-8zb7 CLASS A
+    # AND IT CAN BE TOLD TO FAIL, WHICH IS THE WHOLE OF Proofdelve ForgeOs-8zb7 CLASS A
     # HERE. Until 2026-09-10 this stub ALWAYS succeeded and ALWAYS printed a
     # parseable id, so every scenario in this file exercised the world in which
-    # filing a follow-up works and the ForgeOs-bzyk merge-but-do-not-close path
+    # filing a follow-up works and the Proofdelve ForgeOs-bzyk merge-but-do-not-close path
     # had NO CONTROL AT ALL — the harness reported the same score whether that
     # path was correct or fatal. E2E_BD_CREATE=silent prints nothing and exits
     # 0, which is the subtler of the two ways the path is reached: a nonzero
@@ -643,11 +643,11 @@ case "$cmd" in
     n=$(grep -c '^E2E-fu' "$db" 2>/dev/null); n=$((n + 1))
     put "E2E-fu$n" open "" ""
     echo "Created issue: E2E-fu$n (task)" ;;
-  # ForgeOs-29j3g: a comment's text is kept, so a scenario can read the ASK line.
+  # Proofdelve ForgeOs-29j3g: a comment's text is kept, so a scenario can read the ASK line.
   comment) if [ "${args[2]:-}" = --file ] && [ -r "${args[3]:-}" ]; then cat "${args[3]}" >> "$db.comments"; fi ;;
   dep) : ;;
   # LIST, WITH --label (all must match) AND --status (comma list) FILTERS
-  # (ForgeOs-6niaz belt 2 asks which Workbench sittings are held). Every
+  # (Proofdelve ForgeOs-6niaz belt 2 asks which Workbench sittings are held). Every
   # scenario before 6niaz never called list.
   list)
     want_l=(); want_s=""
@@ -685,7 +685,7 @@ B
 run_pass() { # $1 launcher, $2 state, $3 bd store -> rc; output in $2/out.txt
   FLEET_STATE="$2" BD_STORE="$3" "$1" --once > "$2/out.txt" 2>&1
 }
-run_dry_pass() { # the same, under --dry-run (ForgeOs-geym)
+run_dry_pass() { # the same, under --dry-run (Proofdelve ForgeOs-geym)
   FLEET_STATE="$2" BD_STORE="$3" "$1" --once --dry-run > "$2/out.txt" 2>&1
 }
 wait_forge() { # $1 state, $2 sfx
@@ -695,7 +695,7 @@ wait_forge() { # $1 state, $2 sfx
 mkbd
 echo "=========================================================================="
 echo "SCENARIO 0 — A WRONG BRANCH. The run must REFUSE at preflight, exit 64,"
-echo "             and dispatch nothing (ForgeOs-dx34.1 round two)"
+echo "             and dispatch nothing (Proofdelve ForgeOs-dx34.1 round two)"
 echo "=========================================================================="
 # THE HALF THAT DID NOT MOVE, AND THE REASON THIS IS END TO END RATHER THAN A
 # UNIT CASE. Scenario 1 below proves a dirty root STARTS; this proves a wrong
@@ -738,7 +738,7 @@ else no "the on-main control did not start" "rc=$rc
 $out"; fi
 wait_forge "$st2" fff
 
-# SCENARIO 0d — ForgeOs-geym, AT RUN LEVEL. The unit half is in
+# SCENARIO 0d — Proofdelve ForgeOs-geym, AT RUN LEVEL. The unit half is in
 # scripts/landable-harness.sh (cases 2d, 3d, 3bd); this is the sentence a person
 # would actually say out loud: on a wrong branch, `fleet.sh --dry-run` starts,
 # says a real run would refuse, and STILL CLAIMS NOTHING AND CUTS NOTHING. The
@@ -795,7 +795,7 @@ if [ "$(grep -c '^E2E-aaa|closed' "$db")" -eq 0 ] \
   ok "nothing was merged and nothing was closed while the tree was dirty"
 else no "something landed on a dirty tree" "$(cat "$db")"; fi
 # THE REAPING CONSTRAINT, MEASURED AT THE MOMENT IT MATTERS (2026-09-09 docket
-# item 1, acceptance 3). ForgeOs-usz6's retry READS FROM THIS WORKTREE — it
+# item 1, acceptance 3). Proofdelve ForgeOs-usz6's retry READS FROM THIS WORKTREE — it
 # re-attempts the merge alone, without re-running the verifier and without
 # spending a second review launch. A reap between the deferral and the retry
 # turns a recoverable park into a lost bead, which is the exact failure w7u5 and
@@ -814,7 +814,7 @@ if grep -q 'RETRYING THE DEFERRED MERGE ALONE' <<<"$out" \
   ok "the parked merge landed on the next pass once the tree was clean"
 else no "the parked merge did not land" "rc=$rc
 $out"; fi
-# THE RETRY SPENDS NEITHER A VERIFIER RUN NOR A REVIEW LAUNCH (ForgeOs-usz6).
+# THE RETRY SPENDS NEITHER A VERIFIER RUN NOR A REVIEW LAUNCH (Proofdelve ForgeOs-usz6).
 if ! grep -q 'running the host verifier' <<<"$out" \
    && ! grep -q 'review starting on' <<<"$out"; then
   ok "the retry re-ran neither the pre-review verifier nor a review launch"
@@ -835,7 +835,7 @@ $out"; fi
 # entry for it (an `rm -rf` would satisfy the first test and not the second),
 # and the bead.closed payload says `reaped`. The narration is deliberately not
 # pinned: a control that pins a spelling goes red for the next correct rewording
-# and teaches its fort to ignore it (ForgeOs-8zb7 class B, three cases moved for
+# and teaches its fort to ignore it (Proofdelve ForgeOs-8zb7 class B, three cases moved for
 # it on 2026-09-08). The payload token is not wording — it is the interface a
 # morning reader and every later query read, and scenario 9 holds it fixed while
 # rewording everything around it.
@@ -849,7 +849,7 @@ else no "the landed bead's worktree was not reaped" "dir=$( [ -e "$r-worktrees/a
 # nor blamed the merged work.
 # THE INJECTION MUST BE SHOWN TO HAVE FIRED. Without that half, "the run did
 # not halt" is satisfied just as well by an injection that never happened, and
-# the case would pass while measuring nothing (ForgeOs-8zb7 class A).
+# the case would pass while measuring nothing (Proofdelve ForgeOs-8zb7 class A).
 #
 # AND THE HALT TEST NAMES THE ANNOUNCEMENT, NOT THE WORD. An earlier draft
 # grepped the output for HALT and matched the run's own opening line, which
@@ -933,7 +933,7 @@ $out"; fi
 fi
 
 # ==========================================================================
-# ForgeOs-ke5u — THE TWO SIGNAL POSTURES, RUN FOR REAL AGAINST THE REAL
+# Proofdelve ForgeOs-ke5u — THE TWO SIGNAL POSTURES, RUN FOR REAL AGAINST THE REAL
 # DISPATCHER. A signalled review that COMPLETED must have its verdict honoured;
 # one that was genuinely KILLED must still take the safe path; and a result file
 # that exists and will not parse must be distinguishable from one that is
@@ -1094,8 +1094,8 @@ fi
 #      merge-and-close on the same fixture, must LEAVE the worktree. Without it,
 #      "no worktree afterwards" is equally satisfied by a fixture in which one
 #      was never created.
-#   9  CORRECT VARIANT (ForgeOs-8zb7 step 2), GENERATED HERE RATHER THAN
-#      DESCRIBED (ForgeOs-dx34.1 round two). Every sentence and every internal
+#   9  CORRECT VARIANT (Proofdelve ForgeOs-8zb7 step 2), GENERATED HERE RATHER THAN
+#      DESCRIBED (Proofdelve ForgeOs-dx34.1 round two). Every sentence and every internal
 #      symbol name is changed and nothing about the behaviour is; the assertions
 #      must all still pass. The line between them is stated at the generator.
 
@@ -1138,7 +1138,7 @@ echo "==========================================================================
 # change. INTERFACE: the four outcome tokens (reaped/absent/failed/refused) and
 # the `worktree` key in the bead.closed payload, because those are what the
 # durable record carries and what a later query reads. The variant changes all of
-# the first and none of the second, which is exactly the line ForgeOs-8zb7 step 2
+# the first and none of the second, which is exactly the line Proofdelve ForgeOs-8zb7 step 2
 # asks a control to respect.
 variant="$work/variant-fleet.sh"
 python3 - "$launcher" "$variant" <<'PYV' || { skip "the reap assertions survive a correct rewording" "the variant could not be generated: this launcher has no reaping branch to reword"; variant=""; }
@@ -1176,7 +1176,7 @@ $(cat "$st/out.txt")"; fi
 fi
 
 # ==========================================================================
-# ForgeOs-j3kp — THE VERDICT VOCABULARY. Five scenarios, because the bead's
+# Proofdelve ForgeOs-j3kp — THE VERDICT VOCABULARY. Five scenarios, because the bead's
 # acceptance 4 asks for three outcomes and its acceptance 2 asks for a fourth
 # thing that is easy to skip: THE TWO EXISTING TOKENS MUST NOT CHANGE MEANING.
 # A vocabulary change that retroactively reinterprets the record is worse than
@@ -1261,9 +1261,9 @@ else no "the new token did not merge, or closed the parent anyway" "merged=$(mer
 $out"; fi
 # ACCEPTANCE 3, AND IT IS THREE SEPARATE FACTS ABOUT THE PARENT, NOT ONE. Open,
 # not claimed, and not re-eligible: a bead left open still carrying `fleet-safe`
-# would be picked up on the next pass, which is ForgeOs-p0a6's consent boundary
+# would be picked up on the next pass, which is Proofdelve ForgeOs-p0a6's consent boundary
 # in reverse.
-# (ForgeOs-e2rbu, 2026-10-06: the parent now carries mayor-lane, its next owner;
+# (Proofdelve ForgeOs-e2rbu, 2026-10-06: the parent now carries mayor-lane, its next owner;
 # this assertion read `open||` -- no label at all -- which pinned that defect.)
 if [ "$(grep -c '^E2E-lll|open||mayor-lane$' "$db")" -eq 1 ]; then
   ok "j3kp acceptance 3: the parent is OPEN, UNASSIGNED, no longer fleet-safe, and routed to mayor-lane"
@@ -1313,7 +1313,7 @@ echo "==========================================================================
 echo "SCENARIO 12 — RED (acceptance 4). A launcher that CLOSES on the new token"
 echo "              must fail these assertions"
 echo "=========================================================================="
-# GENERATED, NOT DESCRIBED (ForgeOs-dx34.1 round two). The wrong variant is the
+# GENERATED, NOT DESCRIBED (Proofdelve ForgeOs-dx34.1 round two). The wrong variant is the
 # candidate with the closure branch's own condition disabled, so the new token
 # falls through to the close path — which is precisely the defect: a third token
 # that quietly behaves like APPROVE-WITH-FINDINGS. The RED case exists because
@@ -1388,7 +1388,7 @@ if [ -n "$renamed" ]; then
   IFS='|' read -r r st db <<< "$(run_with_token s14b ppp "$renamed" APPROVE-WITH-FINDINGS)"
   b_ok=0; [ "$(grep -c '^E2E-ppp|closed' "$db")" -eq 1 ] && [ "$(grep -c '^E2E-fu1|' "$db")" -eq 1 ] && b_ok=1
   IFS='|' read -r r st db <<< "$(run_with_token s14c qqq "$renamed" LAND-DIFF-PARENT-OPEN)"
-  # (ForgeOs-e2rbu: the open parent now carries mayor-lane; `open||$` pinned the defect.)
+  # (Proofdelve ForgeOs-e2rbu: the open parent now carries mayor-lane; `open||$` pinned the defect.)
   c_ok=0; merged_in "$r" qqq && [ "$(grep -c '^E2E-qqq|open||mayor-lane$' "$db")" -eq 1 ] \
     && [ "$(grep -c '^E2E-qqq|closed' "$db")" -eq 0 ] && [ -d "$r-worktrees/qqq" ] && c_ok=1
   if [ "$a_ok$b_ok$c_ok" = "111" ]; then
@@ -1397,7 +1397,7 @@ if [ -n "$renamed" ]; then
 fi
 
 # ==========================================================================
-# ForgeOs-bzyk / the 2026-09-10 sitting-two blocker — THE PATH WHERE FILING
+# Proofdelve ForgeOs-bzyk / the 2026-09-10 sitting-two blocker — THE PATH WHERE FILING
 # THE FOLLOW-UP FAILS. Three scenarios, and they are here because until today
 # there was no control on this path in any harness in this fort: the stub bd
 # always succeeded, so every scenario above measured the world in which the
@@ -1417,7 +1417,7 @@ fi
 #
 # WHAT IS DELIBERATELY NOT ASSERTED. Not the incident's WORDING and not the
 # follow-up bead's ID FORMAT — there is no follow-up id on this path, and the
-# sentence differs by verdict on purpose (ForgeOs-j3kp: on APPROVE-WITH-FINDINGS
+# sentence differs by verdict on purpose (Proofdelve ForgeOs-j3kp: on APPROVE-WITH-FINDINGS
 # not closing IS the failure; on MERGE-PARENT-OPEN the parent was never going to
 # close and only the findings lost their bead). Scenario 17 is what proves the
 # assertions are about the behaviour and not about this spelling of it.
@@ -1489,7 +1489,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 17 — GREEN across a correct variant (ForgeOs-8zb7 step 2). Rename"
+echo "SCENARIO 17 — GREEN across a correct variant (Proofdelve ForgeOs-8zb7 step 2). Rename"
 echo "              the internals, reword every sentence, same behaviour"
 echo "=========================================================================="
 # GENERATED, NOT DESCRIBED. The variant renames both of file_followup()'s return
@@ -1520,7 +1520,7 @@ for old, new in prose:
     t = t.replace(old, new, 1)
 # ANCHORED ON THE SENTENCE'S HEAD, NOT ITS FULL SPELLING (the 2026-09-14 rule:
 # a generator pinning a whole line refuses the whole scenario for the next
-# CORRECT change). ForgeOs-s2lx appended the label-write outcome to this
+# CORRECT change). Proofdelve ForgeOs-s2lx appended the label-write outcome to this
 # detail's tail and this generator went NOT RUN for it. The detail carries no
 # inner double quote, so the match runs to the closing one.
 old_head = 'emit incident "Fleet merged $bead on $verdict but could NOT file the follow-up bead: $lost.'
@@ -1562,7 +1562,7 @@ fi
 pre_s3="${FLEET_SH_PRE_S3:-}"
 
 # Run the dispatcher WITHOUT --once, bounded. Exit 124 means it never
-# terminated, which is the whole of ForgeOs-czhb acceptance 7.
+# terminated, which is the whole of Proofdelve ForgeOs-czhb acceptance 7.
 run_loop() { # $1 launcher, $2 state, $3 db, $4 timeout secs -> rc
   FLEET_STATE="$2" BD_STORE="$3" timeout "$4" "$1" > "$2/out.txt" 2>&1
 }
@@ -1630,13 +1630,13 @@ if [ "$rc" -ne 124 ] && grep -q 'queue drained' <<<"$out"; then
   ok "czhb 7: a queue of only-refused beads DRAINS and the run exits (rc=$rc, passes=$(printf '%s' "$out" | grep -c 'skip E2E-w19'))"
 else no "the run did not terminate" "rc=$rc (124 = killed by timeout, i.e. still polling)
 $out"; fi
-# THE VACUITY CONTROL, AND IT MUST NOT USE --once (Tova Marrowassay, covenant-4.5
+# THE VACUITY CONTROL, AND IT MUST NOT USE --once (the Warden, covenant-4.5
 # review of this sitting, blocking finding). The first version of this case ran
 # under run_pass, which passes --once -- and the main loop breaks on --once at
 # fleet.sh:2506, BEFORE the drain check at :2542. The drain check never executed,
 # so "queue drained" could not have been printed by any launcher right or wrong,
 # and the case passed unconditionally while guarding the very property the
-# scenario above exists to establish. A control that cannot fail is ForgeOs-8zb7
+# scenario above exists to establish. A control that cannot fail is Proofdelve ForgeOs-8zb7
 # class A, and this was one.
 #
 # AND THE FIXTURE HAS TO REACH THE CHECK WITH NOTHING RUNNING AND WORK STILL
@@ -1652,7 +1652,7 @@ st="$work/s19b-state"; mkdir -p "$st"; db="$work/s19b.bd"
 printf 'E2E-g19|open||fleet-safe\n' > "$db"
 run_loop "$work/s19b-fleet.sh" "$st" "$db" 8; rc=$?; out=$(cat "$st/out.txt")
 # THE PROPERTY IS "NO DRAIN DECLARED", AND ITS SHAPE CHANGED ON 2026-09-10
-# (ForgeOs-dx34.9). Zero slots with startable work is a run that can never
+# (Proofdelve ForgeOs-dx34.9). Zero slots with startable work is a run that can never
 # change state, which is a stall by construction: the launcher now HALTS ITSELF
 # on it (rc 70, reason stalled) where it used to poll until the timeout (rc
 # 124). Both shapes satisfy this control and a launcher that DRAINS fails it;
@@ -1771,7 +1771,7 @@ echo "==========================================================================
 # record check would hand a recordless MERGE-PARENT-OPEN to a path only ever
 # exercised for the two tokens it already knew: the merge lands and the
 # follow-up that carries the findings cannot be written, which is the
-# ForgeOs-bzyk orphan unmasked by a second route inside the fix for the first.
+# Proofdelve ForgeOs-bzyk orphan unmasked by a second route inside the fix for the first.
 IFS='|' read -r r st db <<< "$(defer_to_park s23 mpx "$launcher" MERGE-PARENT-OPEN)"
 : > "$st/workers/mpx/warden-record"
 resume_park s23 "$r" "$st" "$db" MERGE-PARENT-OPEN; out=$(cat "$st/out.txt")
@@ -1779,7 +1779,7 @@ if grep -q 'NEEDS A PERSON' <<<"$out" && ! merged_in "$r" mpx; then
   ok "j3kp 4: a recordless MERGE-PARENT-OPEN stops at NEEDS A PERSON and nothing is merged"
 else no "the second trigger fired: a recordless new token was acted on" "merged=$(merged_in "$r" mpx && echo yes || echo no)
 $out"; fi
-# THE LOOSEST FORM THAT STILL DISCRIMINATES (ForgeOs-8zb7 class B). What must
+# THE LOOSEST FORM THAT STILL DISCRIMINATES (Proofdelve ForgeOs-8zb7 class B). What must
 # be true is that the refusal names THE VERDICT IT ACTUALLY HAD and says the
 # RECORD is what is missing -- the pre-fix message names neither, because it
 # stops at the verdict arm and its text is hardcoded to the other token. The
@@ -1900,7 +1900,7 @@ echo "==========================================================================
 # Teach the verdict arm the third token but leave the RECORD check hardcoded to
 # APPROVE-WITH-FINDINGS, which is the one-line repair the docket warns against.
 # A recordless MERGE-PARENT-OPEN then reaches land(), and the findings it exists
-# to carry cannot be written: the ForgeOs-bzyk orphan by a second route.
+# to carry cannot be written: the Proofdelve ForgeOs-bzyk orphan by a second route.
 naive2="$work/naive-2173-only.sh"
 # shellcheck disable=SC2016  # the single quotes are the point: these are
 # sed and grep patterns matching literal shell text inside the launcher.
@@ -1920,7 +1920,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 29 — GREEN across a CORRECT variant (ForgeOs-8zb7 step 2). Rename"
+echo "SCENARIO 29 — GREEN across a CORRECT variant (Proofdelve ForgeOs-8zb7 step 2). Rename"
 echo "              both predicates and reword both refusals: same behaviour"
 echo "=========================================================================="
 # The half that says the three scenarios above assert the PROPERTY rather than
@@ -1977,7 +1977,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 30 — ForgeOs-dx34.9 acceptance 1-3, POSITIVE. A WEDGED RUN HALTS"
+echo "SCENARIO 30 — Proofdelve ForgeOs-dx34.9 acceptance 1-3, POSITIVE. A WEDGED RUN HALTS"
 echo "              ITSELF: no halt file from a person, no person"
 echo "=========================================================================="
 # THE WEDGE RECIPE, AND WHY IT IS NOT czhb's. The bead names "a bead bd ready
@@ -2009,7 +2009,7 @@ $out"; fi
 if grep -q '"reason":"stalled: ' <<<"$ended" && grep -q '"stalled":true' <<<"$ended" \
    && ! grep -q '"reason":"drained' <<<"$ended" && ! grep -q '"reason":"halted: ' <<<"$ended" \
    && ! grep -q '"interrupted":true' <<<"$ended"; then
-  ok "acceptance 2 / ForgeOs-6843: fleet.ended says stalled -- not drained, not halted:, not interrupted -- and carries stalled:true"
+  ok "acceptance 2 / Proofdelve ForgeOs-6843: fleet.ended says stalled -- not drained, not halted:, not interrupted -- and carries stalled:true"
 else no "the stall did not record itself as a stall in fleet.ended" "$ended"; fi
 if printf '%s' "$out" | grep 'stall 1/3' | grep -q 'a live launcher already holds' \
    && grep -q 'a live launcher already holds' "$st/HALT"; then
@@ -2047,7 +2047,7 @@ fi
 echo
 echo "=========================================================================="
 echo "SCENARIO 31 — dx34.9 POSITIVE, second cause. A TRACKER THAT REFUSES EVERY"
-echo "              CLAIM (ForgeOs-dx34.2's contention) is the same stall"
+echo "              CLAIM (Proofdelve ForgeOs-dx34.2's contention) is the same stall"
 echo "=========================================================================="
 # The detector is about the SHAPE of a pass and not about any one cause, and
 # this is the second cause: dispatchable() says yes, bd refuses the claim,
@@ -2084,7 +2084,7 @@ echo "==========================================================================
 # (an uncommitted edit to it would itself dirty the tree and park the merge).
 # Deletes the INJECTION line only (the `case "$PWD"` that writes POISON); the
 # RED predicate below it stays, so this verifier is still one that CAN fail
-# (Tova, round one, finding 7: the first spelling deleted both).
+# (the Warden, round one, finding 7: the first spelling deleted both).
 unpoison() { sed -i '/printf .POISON/d' "$1/fort/scripts/verify.sh"
   grep -q 'grep -q POISON' "$1/fort/scripts/verify.sh" || { echo "HARNESS REFUSES: unpoison removed the RED predicate" >&2; exit 3; }
   ! grep -q 'printf .POISON' "$1/fort/scripts/verify.sh" || { echo "HARNESS REFUSES: unpoison left the injection" >&2; exit 3; }
@@ -2157,7 +2157,7 @@ echo "SCENARIO 33 — dx34.9 acceptance 5. THE COUNTER RESETS ON A PASS THAT DOE
 echo "              WORK, executed: two refused claims, then a grant"
 echo "=========================================================================="
 # N absorbing the transient it exists for: bd refuses the first two claims
-# (contention, ForgeOs-dx34.2) and grants the third. The counter must read 1,
+# (contention, Proofdelve ForgeOs-dx34.2) and grants the third. The counter must read 1,
 # then 2, then reset on the dispatch, and the run must end DRAINED with the bead
 # landed -- and the drain line must carry the peak, so a reader of a real run
 # can see a transient that was absorbed rather than only one that was not.
@@ -2178,10 +2178,10 @@ $out"; fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 34 — ForgeOs-dx34.11, POSITIVE. A MERGE THAT DEFERS FOREVER ON ONE"
+echo "SCENARIO 34 — Proofdelve ForgeOs-dx34.11, POSITIVE. A MERGE THAT DEFERS FOREVER ON ONE"
 echo "              REASON NO LONGER MASKS A REAL STALL"
 echo "=========================================================================="
-# THE SCENARIO dx34.9's own stall detector could not reach (Tova's finding 2).
+# THE SCENARIO dx34.9's own stall detector could not reach (the Warden's finding 2).
 # stall_check only accumulates when startable=yes, so a LONE deferred merge just
 # drains -- it is NOT the spin. The spin needs a deferred merge (reapable every
 # pass, so the OLD counter reset every pass) COEXISTING with genuinely startable
@@ -2231,11 +2231,11 @@ import sys, re
 src, dst = sys.argv[1], sys.argv[2]
 t = open(src, encoding="utf-8").read()
 # remove the dx34.11 back-out: from its comment start through its closing fi
-m = re.search(r"\n        # ForgeOs-dx34\.11 shape \(a\)\..*?\n        fi\n", t, re.S)
+m = re.search(r"\n        # Proofdelve ForgeOs-dx34\.11 shape \(a\)\..*?\n        fi\n", t, re.S)
 if not m:
     sys.exit("could not find the dx34.11 back-out block to strip")
 t2 = t[:m.start()] + "\n" + t[m.end():]
-# GUARD ON THE DECREMENT ITSELF (Tova, dx34.11 review finding 7). The prior
+# GUARD ON THE DECREMENT ITSELF (the Warden, dx34.11 review finding 7). The prior
 # spelling checked for "pre_state = deferred-merge", which never appears -- the
 # shipped text is `[ "$pre_state" = deferred-merge ]` -- so the `and` made the
 # whole assertion unfirable and only the regex's own sys.exit protected the strip.
@@ -2268,7 +2268,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 36 — ForgeOs-dx34.12 finding 4. --dry-run WITHOUT --once EXITS"
+echo "SCENARIO 36 — Proofdelve ForgeOs-dx34.12 finding 4. --dry-run WITHOUT --once EXITS"
 echo "              AFTER ONE PASS instead of spinning forever"
 echo "=========================================================================="
 # --dry-run counts a pass as dispatched but claims nothing, so any_dispatchable()
@@ -2328,7 +2328,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 37 — ForgeOs-6843, third sighting. AN UNEXPECTED DEATH IS LEGIBLE"
+echo "SCENARIO 37 — Proofdelve ForgeOs-6843, third sighting. AN UNEXPECTED DEATH IS LEGIBLE"
 echo "              AS UNDETERMINED, NOT RECORDED AS A CLEAN DRAIN"
 echo "=========================================================================="
 # The drain vocabulary is unchanged (criterion 2): a real drain still says drained.
@@ -2388,7 +2388,7 @@ if [ -s "$prefix" ]; then
   FLEET_STATE="$st" BD_STORE="$db" timeout 15 "$work/s37c-fleet.sh" >/dev/null 2>&1; rc=$?
   ended="$(grep 'fleet.ended' "$r/emitted" | tail -1)"
   if grep -q '"reason":"drained"' <<<"$ended"; then
-    ok "RED: with the pre-fix default (\"drained\"), the identical unhandled death records a CLEAN DRAIN -- the ForgeOs-6843 bug reproduced -- so scenario 37 can fail"
+    ok "RED: with the pre-fix default (\"drained\"), the identical unhandled death records a CLEAN DRAIN -- the Proofdelve ForgeOs-6843 bug reproduced -- so scenario 37 can fail"
   else no "the pre-fix default did not reproduce the clean-drain-on-crash bug" "rc=$rc
 $ended"; fi
 else
@@ -2397,7 +2397,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 38 — ForgeOs-g3n1 (incident ForgeOs-7gag). A REVIEW THAT DIES OF"
+echo "SCENARIO 38 — Proofdelve ForgeOs-g3n1 (incident Proofdelve ForgeOs-7gag). A REVIEW THAT DIES OF"
 echo "              A FULL DISK HALTS THE RUN; IT DOES NOT SPEND THE LADDER AND PAGE"
 echo "=========================================================================="
 # THE 7gag SHAPE ON THE REVIEW PATH: the Warden on b0vj.70 died mid-record with
@@ -2477,7 +2477,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 39 — ForgeOs-dx34.18. A WORKER THAT FINISHES INSIDE ANOTHER BEAD'S"
+echo "SCENARIO 39 — Proofdelve ForgeOs-dx34.18. A WORKER THAT FINISHES INSIDE ANOTHER BEAD'S"
 echo "              REAP PASS IS REAPED, NOT STRANDED BY THE DRAIN CHECK"
 echo "=========================================================================="
 # THE 15k.6 SHAPE, BUILT. Two ready beads at Forge concurrency 2. Pass 1
@@ -2490,7 +2490,7 @@ echo "==========================================================================
 # finished and unreaped (run log :91 of 20260911T222003). Post-fix: the foot
 # sees one reapable worker, says so once, and pass 3 takes rc1 -- the assertion
 # is that it was TAKEN (its verifier ran; it did not end the run as finished),
-# not how its own merge went (since ForgeOs-36b9 the second is refreshed from
+# not how its own merge went (since Proofdelve ForgeOs-36b9 the second is refreshed from
 # main before its verifier and lands cleanly; before it, both beads wrote one
 # marker file and the second was returned at the merge). Two earlier drafts of this fixture measured
 # nothing: one pre-built the finished worker and dispatched the other in the
@@ -2500,10 +2500,10 @@ r=$(mkfort s39 ok); unpoison "$r"
 sed -i 's/^FLEET_FORGE_START=1$/FLEET_FORGE_START=2/' "$r/fort/scripts/fleet.conf"; git -C "$r" commit -qam "conc 2"
 mk_launcher "$launcher" "$work/s39-fleet.sh" "$r" || exit 3
 st="$work/s39-state"; mkdir -p "$st"; db="$work/s39.bd"
-printf 'E2E-rc1|open||fleet-safe||src/a/\nE2E-rd1|open||fleet-safe||src/b/\n' > "$db"   # disjoint Touches: both must be live at once (ForgeOs-b9mj; the guard is scenario 42's subject)
+printf 'E2E-rc1|open||fleet-safe||src/a/\nE2E-rd1|open||fleet-safe||src/b/\n' > "$db"   # disjoint Touches: both must be live at once (Proofdelve ForgeOs-b9mj; the guard is scenario 42's subject)
 E2E_FORGE_SLOW_BEAD=E2E-rc1 E2E_FORGE_SLOW_SLEEP=2 E2E_WARDEN_SLEEP=3 run_loop "$work/s39-fleet.sh" "$st" "$db" 60; rc=$?; out=$(cat "$st/out.txt")
 ended="$(grep 'fleet.ended' "$r/emitted" | tail -1)"
-# SINCE ForgeOs-4bzvk (Regent sitting 2026-10-23) reap_pass re-asks the order
+# SINCE Proofdelve ForgeOs-4bzvk (Regent sitting 2026-10-23) reap_pass re-asks the order
 # after every worker, so rc1 -- finished inside rd1's reap -- is taken in that
 # SAME pass, and the foot of the pass finds nothing reapable: the drain term
 # below never has to speak. What this fixture asserts on the shipped launcher
@@ -2570,7 +2570,7 @@ if [ -s "$pre" ]; then
   sed -i 's/^FLEET_FORGE_START=1$/FLEET_FORGE_START=2/' "$r/fort/scripts/fleet.conf"; git -C "$r" commit -qam "conc 2"
   mk_launcher "$pre" "$work/s39b-fleet.sh" "$r" || exit 3
   st="$work/s39b-state"; mkdir -p "$st"; db="$work/s39b.bd"
-  printf 'E2E-rc1|open||fleet-safe||src/a/\nE2E-rd1|open||fleet-safe||src/b/\n' > "$db"   # disjoint Touches: both must be live at once (ForgeOs-b9mj; the guard is scenario 42's subject)
+  printf 'E2E-rc1|open||fleet-safe||src/a/\nE2E-rd1|open||fleet-safe||src/b/\n' > "$db"   # disjoint Touches: both must be live at once (Proofdelve ForgeOs-b9mj; the guard is scenario 42's subject)
   E2E_FORGE_SLOW_BEAD=E2E-rc1 E2E_FORGE_SLOW_SLEEP=2 E2E_WARDEN_SLEEP=3 run_loop "$work/s39b-fleet.sh" "$st" "$db" 60; rc=$?; out=$(cat "$st/out.txt")
   ended="$(grep 'fleet.ended' "$r/emitted" | tail -1)"
   # a never-taken worker has no state file (its 'finished' is derived from its exit file), so assert on that and the leftovers line
@@ -2586,7 +2586,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 40 — ForgeOs-dx34.18 step 2. A DEFERRED MERGE KEEPS THE RUN ALIVE"
+echo "SCENARIO 40 — Proofdelve ForgeOs-dx34.18 step 2. A DEFERRED MERGE KEEPS THE RUN ALIVE"
 echo "              (VISIBLY) INSTEAD OF DRAINING AND STRANDING IT"
 echo "=========================================================================="
 # A worker parked at the merge on a persistently dirty root. Pre-fix the run
@@ -2638,7 +2638,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 41 — ForgeOs-hifw. THE REVIEW RANGE IS THREE-DOT: A SIBLING BEAD THAT"
+echo "SCENARIO 41 — Proofdelve ForgeOs-hifw. THE REVIEW RANGE IS THREE-DOT: A SIBLING BEAD THAT"
 echo "              LANDED FIRST DOES NOT RENDER AS DELETIONS IN THE WARDEN'S DIFF"
 echo "=========================================================================="
 # Two beads cut from ONE base in one pass (Forge concurrency 2), then reaped in
@@ -2650,7 +2650,7 @@ r=$(mkfort s41 ok); unpoison "$r"
 sed -i 's/^FLEET_FORGE_START=1$/FLEET_FORGE_START=2/' "$r/fort/scripts/fleet.conf"; git -C "$r" commit -qam "conc 2"
 mk_launcher "$launcher" "$work/s41-fleet.sh" "$r" || exit 3
 st="$work/s41-state"; mkdir -p "$st"; db="$work/s41.bd"
-printf 'E2E-hf1|open||fleet-safe||src/a/\nE2E-hf2|open||fleet-safe||src/b/\n' > "$db"   # disjoint Touches: both must be live at once (ForgeOs-b9mj)
+printf 'E2E-hf1|open||fleet-safe||src/a/\nE2E-hf2|open||fleet-safe||src/b/\n' > "$db"   # disjoint Touches: both must be live at once (Proofdelve ForgeOs-b9mj)
 run_pass "$work/s41-fleet.sh" "$st" "$db" || true          # dispatches BOTH from one base
 wait_forge "$st" hf1; wait_forge "$st" hf2
 run_pass "$work/s41-fleet.sh" "$st" "$db" || true          # reaps hf1 (lands), then hf2 (reviewed against a moved main)
@@ -2685,7 +2685,7 @@ old = '"$main_branch...bead/$sfx"'
 if t.count(old) != 1:
     sys.exit("expected exactly one three-dot review range, found %d" % t.count(old))
 t = t.replace(old, '"$main_branch' + '..' + 'bead/$sfx"', 1)
-# AND WITHOUT ForgeOs-36b9's refresh: once the branch contains main, the two
+# AND WITHOUT Proofdelve ForgeOs-36b9's refresh: once the branch contains main, the two
 # spellings agree (that is the docket's own point (b)), so the pre-hifw shape
 # is two-dot AND no refresh. On a launcher without the function this is a no-op.
 import re
@@ -2700,7 +2700,7 @@ if [ -s "$pre" ]; then
   sed -i 's/^FLEET_FORGE_START=1$/FLEET_FORGE_START=2/' "$r/fort/scripts/fleet.conf"; git -C "$r" commit -qam "conc 2"
   mk_launcher "$pre" "$work/s41c-fleet.sh" "$r" || exit 3
   st="$work/s41c-state"; mkdir -p "$st"; db="$work/s41c.bd"
-  printf 'E2E-hf4|open||fleet-safe||src/a/\nE2E-hf5|open||fleet-safe||src/b/\n' > "$db"   # disjoint Touches (ForgeOs-b9mj)
+  printf 'E2E-hf4|open||fleet-safe||src/a/\nE2E-hf5|open||fleet-safe||src/b/\n' > "$db"   # disjoint Touches (Proofdelve ForgeOs-b9mj)
   run_pass "$work/s41c-fleet.sh" "$st" "$db" || true; wait_forge "$st" hf4; wait_forge "$st" hf5
   run_pass "$work/s41c-fleet.sh" "$st" "$db" || true
   range5="$(awk '$1=="E2E-hf5"{print $2}' "$r/warden-ranges" | tail -1)"
@@ -2716,7 +2716,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 42 — ForgeOs-b9mj. THE CO-DISPATCH GUARD: OVERLAPPING TOUCH SETS"
+echo "SCENARIO 42 — Proofdelve ForgeOs-b9mj. THE CO-DISPATCH GUARD: OVERLAPPING TOUCH SETS"
 echo "              NEVER SHARE A PASS; DISJOINT ONES DO; NO LINE MEANS SERIAL"
 echo "=========================================================================="
 # Forge concurrency 2 and two ready beads, in ONE dispatch pass. The property is
@@ -2749,7 +2749,7 @@ $(cat "$db")"; fi
 wait_forge "$st" tsa
 
 # 42b DISJOINT: both go in one pass
-b9mj_fixture s42b 'E2E-tsc|open||fleet-safe||src/ForgeOS.Api/Program.cs\nE2E-tsd|open||fleet-safe||web/src/\n'
+b9mj_fixture s42b 'E2E-tsc|open||fleet-safe||src/Product.Api/Program.cs\nE2E-tsd|open||fleet-safe||web/src/\n'
 E2E_FORGE_SLEEP=3 run_pass "$work/s42b-fleet.sh" "$st" "$db" || true; out=$(cat "$st/out.txt")
 if [ "$(dispatched_count "$st")" -eq 2 ] && [ -s "$st/workers/tsc/touches" ] && [ -s "$st/workers/tsd/touches" ] \
    && [ "$(cat "$st/workers/tsd/touches")" = "web/src/" ]; then
@@ -2782,11 +2782,11 @@ wait_forge "$st" tsg
 
 # 42e THE WAIT ENDS: once the overlapping Forge is reaped the held bead dispatches
 # on the next pass, unblocked by nothing but time -- a refusal is not a block edge.
-b9mj_fixture s42e 'E2E-tsi|open||fleet-safe||src/ForgeOS.Infrastructure/Migrations/2026_a.cs\nE2E-tsj|open||fleet-safe||src/ForgeOS.Infrastructure/Migrations/2026_b.cs\n'
+b9mj_fixture s42e 'E2E-tsi|open||fleet-safe||src/Product.Infrastructure/Migrations/2026_a.cs\nE2E-tsj|open||fleet-safe||src/Product.Infrastructure/Migrations/2026_b.cs\n'
 E2E_FORGE_SLEEP=2 run_pass "$work/s42e-fleet.sh" "$st" "$db" || true; out1=$(cat "$st/out.txt")
 wait_forge "$st" tsi
 run_pass "$work/s42e-fleet.sh" "$st" "$db" || true; out2=$(cat "$st/out.txt")
-if grep -q 'skip E2E-tsj: its touch set overlaps worker E2E-tsi on src/ForgeOS.Infrastructure/Migrations/ ~ src/ForgeOS.Infrastructure/Migrations/' <<<"$out1" \
+if grep -q 'skip E2E-tsj: its touch set overlaps worker E2E-tsi on src/Product.Infrastructure/Migrations/ ~ src/Product.Infrastructure/Migrations/' <<<"$out1" \
    && grep -q 'dispatched E2E-tsj' <<<"$out2"; then
   ok "b9mj: two MIGRATION beads declaring different files are widened to the whole Migrations/ directory (the model snapshot lives there) and serialise; the held one dispatches on the pass after the first Forge is reaped"
 else no "b9mj: migration widening or the release after reap" "pass1: $(grep -E 'dispatched|skip' <<< "$out1")
@@ -2807,7 +2807,7 @@ else no "b9mj: dispatchable() ordering or the one-slot case changed" "dispatched
 $(grep -E 'dispatched|skip|touch' "$st/out.txt")"; fi
 wait_forge "$st" tsl
 
-# 42h DRY-RUN CONSULTS ITS OWN PASS (Tova finding 3 on 40c3d6d): the same
+# 42h DRY-RUN CONSULTS ITS OWN PASS (the Warden finding 3 on 40c3d6d): the same
 # overlapping pair under --dry-run reports ONE would-dispatch and one skip,
 # as a real pass would; before the fold both printed would-dispatch.
 b9mj_fixture s42h 'E2E-tsr|open||fleet-safe||web/src/App.tsx\nE2E-tss|open||fleet-safe||web/src/\n'
@@ -2818,7 +2818,7 @@ if [ "$(grep -c 'DRY-RUN would dispatch' "$st/out.txt")" -eq 1 ] && grep -q 'DRY
   ok "b9mj: under --dry-run the second of an overlapping pair is held against the first's dry set, reported as such, nothing claimed, and the pass-local set is cleaned up"
 else no "b9mj: dry-run pair" "$(grep -E 'DRY-RUN|skip' "$st/out.txt") dry_dir=$([ -d "$st/.touches-dry" ] && echo present || echo absent)"; fi
 
-# THE INVERSION: the launcher before ForgeOs-b9mj co-dispatches the overlapping
+# THE INVERSION: the launcher before Proofdelve ForgeOs-b9mj co-dispatches the overlapping
 # pair of 42a. Reported NOT RUN, never PASS, when the before-file is absent.
 if [ -n "$pre_b9mj" ] && [ -s "$pre_b9mj" ]; then
   b9mj_fixture s42g 'E2E-tsa|open||fleet-safe||web/src/App.tsx, docs/\nE2E-tsb|open||fleet-safe||web/src/\n' "$pre_b9mj"
@@ -2834,7 +2834,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 43 — ForgeOs-xzg1. THE CEILING IS CARRIED ACROSS RUNS BY AN"
+echo "SCENARIO 43 — Proofdelve ForgeOs-xzg1. THE CEILING IS CARRIED ACROSS RUNS BY AN"
 echo "              ORDINARY END AND RESET BY A HALT"
 echo "=========================================================================="
 # The unit half (clamping, an unreadable file, budget_stop) is in
@@ -2883,7 +2883,7 @@ $(tail -3 "$st/ceiling.log")"; fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 44 — ForgeOs-36b9. LANDABILITY BEFORE THE REVIEW, REFRESH BEFORE"
+echo "SCENARIO 44 — Proofdelve ForgeOs-36b9. LANDABILITY BEFORE THE REVIEW, REFRESH BEFORE"
 echo "              THE VERIFY: a conflict is paged with no launch spent; a clean"
 echo "              branch is verified and reviewed at the tip that will land"
 echo "=========================================================================="
@@ -2900,7 +2900,7 @@ run_pass "$work/s44-fleet.sh" "$st" "$db"; rc=$?; out=$(cat "$st/out.txt")
 if grep -q 'E2E-tso: bead/tso CONFLICTS with main on marker-tso.txt' <<<"$out" && grep -q 'PAGED the Overseer' <<<"$out" \
    && ! grep -q '^E2E-tso ' "$r/warden-ranges" 2>/dev/null && ! grep -q 'running the host verifier' <<<"$out" \
    && [ "$(git -C "$r" rev-parse bead/tso)" = "$before" ] && [ "$(wstate "$st/workers/tso")" = needs-person ] \
-   && grep -q '^E2E-tso|in_progress|justin|human' "$db" && ! merged_in "$r" tso; then   # ForgeOs-29j3g: a page assigns the Overseer
+   && grep -q '^E2E-tso|in_progress|justin|human' "$db" && ! merged_in "$r" tso; then   # Proofdelve ForgeOs-29j3g: a page assigns the Overseer
   ok "36b9: a branch that CONFLICTS with a moved main is PAGED before the verifier and before any Warden launch, naming the path; the branch is untouched, nothing merged, the bead carries human and not fleet-safe"
 else no "36b9: the conflict was not caught before the review" "rc=$rc state=$(wstate "$st/workers/tso") ranges=[$(cat "$r/warden-ranges" 2>/dev/null)] db=$(cat "$db")
 $(grep -E 'tso' "$st/out.txt" | tail -6)"; fi
@@ -2940,11 +2940,11 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 45 — ForgeOs-b9mj round three. A CANDIDATE HELD BEHIND A PARKED"
+echo "SCENARIO 45 — Proofdelve ForgeOs-b9mj round three. A CANDIDATE HELD BEHIND A PARKED"
 echo "              MERGE IS A WAITING PASS, NOT A STALL; THE HOLD ENDS WHEN THE"
 echo "              MERGE LANDS"
 echo "=========================================================================="
-# Tova's blocking finding on ad911a7, reproduced at run level: bead tst
+# The Warden's blocking finding on ad911a7, reproduced at run level: bead tst
 # (declared src/a/) lands into a DIRTY root, so its merge parks (deferred-merge,
 # scenario 1's shape); bead tsu is undeclared (everything) and ready; no Forge
 # is live. Under ad911a7 the third quiet pass HALTED the fleet as stalled.
@@ -2979,12 +2979,12 @@ if [ -n "$pre_r3" ] && [ -s "$pre_r3" ]; then
   echo two >> "$r/subject.txt"
   run_loop "$work/s45b-fleet.sh" "$st" "$db" 12; rc=$?
   # halt() writes the date and the REASON to the halt file; the reason's text
-  # is "N consecutive passes changed no state", not the kind word (Tova, round
+  # is "N consecutive passes changed no state", not the kind word (the Warden, round
   # three, note 1: an earlier spelling grepped for 'stalled' inside an
   # unparenthesised && chain, so only the out.txt half ever decided).
   if [ "$rc" -eq 70 ] && [ -e "$st/HALT" ] && grep -q 'consecutive passes changed no state' "$st/HALT" \
      && grep -q 'HALT: 3 consecutive passes' "$st/out.txt"; then
-    ok "RED: the pre-fix launcher (ad911a7) HALTS the same fixture as stalled -- Tova's finding reproduced by execution -- so scenario 45 can fail"
+    ok "RED: the pre-fix launcher (ad911a7) HALTS the same fixture as stalled -- the Warden's finding reproduced by execution -- so scenario 45 can fail"
   else no "the pre-fix launcher did not false-halt" "rc=$rc halt=$([ -e "$st/HALT" ] && echo yes || echo no)
 $(grep -E 'stall|HALT' "$st/out.txt" | tail -5)"; fi
 else
@@ -2992,7 +2992,7 @@ else
 fi
 
 # ==========================================================================
-# ForgeOs-ubgx — AN APPROVAL IS PINNED TO A CHANGE. Six scenarios, one per
+# Proofdelve ForgeOs-ubgx — AN APPROVAL IS PINNED TO A CHANGE. Six scenarios, one per
 # criterion on the bead plus the refresh cases. Written in the herestring form
 # (`grep -q PATTERN <<<"$out"`) because bead/c815 is rewriting every
 # `printf | grep -q` site in this file and will refresh against main after the
@@ -3012,31 +3012,31 @@ run_to_escalate() { # $1 name, $2 sfx, $3 launcher-src
   E2E_WARDEN_TOKEN=ESCALATE run_pass "$work/$1-fleet.sh" "$st" "$db" || true
   printf '%s|%s|%s' "$r" "$st" "$db"
 }
-# The Overseer's Approve on the Keep, as ForgeOs-bwfv and the ubgx Keep half
+# The Overseer's Approve on the Keep, as Proofdelve ForgeOs-bwfv and the ubgx Keep half
 # leave the tracker and the stream: human removed, fleet-safe restored, and a
 # gate.approved whose payload pins the branch tip (or null). The line is
 # written into the fort's OWN day file, which is where the fleet reads it; the
 # stub emit.sh writes elsewhere.
-# Since ForgeOs-ubgx.4 the Keep ALSO writes a pin line into its own audit in
+# Since Proofdelve ForgeOs-ubgx.4 the Keep ALSO writes a pin line into its own audit in
 # the Overseer store, and the fleet requires it: keep_approve writes both, as the
 # Civ Keep does. stream_only_approve writes the stream line alone -- what a seat
 # that can run emit.sh, and cannot write the store, is able to produce.
 stream_only_approve() { # $1 root, $2 db, $3 sfx, $4 approvedSha as JSON ("<sha>" or null)
   local bead="E2E-$3"
   BD_STORE="$2" bd update "$bead" --remove-label human >/dev/null
-  BD_STORE="$2" bd update "$bead" --assignee "" >/dev/null   # ForgeOs-29j3g: the Keep's Approve hands the bead back to the fleet
+  BD_STORE="$2" bd update "$bead" --assignee "" >/dev/null   # Proofdelve ForgeOs-29j3g: the Keep's Approve hands the bead back to the fleet
   BD_STORE="$2" bd update "$bead" --add-label fleet-safe >/dev/null
   printf '{"ts":"%s","actor":"justin","seat":"overseer","category":"gate.approved","target":"%s","detail":"%s: approve — approved","payload":{"approvedSha":%s,"branch":"bead/%s"}}\n' \
     "$(date -Is)" "$bead" "$bead" "$4" "$3" >> "$1/fort/events/events-$(date +%F).jsonl"
 }
 keep_pin() { # $1 sfx, $2 approvedSha as JSON -- what the Civ Keep writes on an Approve: an intent line and a pin line sharing one ts
   local ts; ts="$(date -u +%FT%T.%3NZ)"
-  printf '{"ts":"%s","fort":"forgeos","bead":"E2E-%s","action":"approve","option":null,"text":""}\n' "$ts" "$1" >> "$XDG_STATE_HOME/civ-keep/signatures.jsonl"
-  printf '{"ts":"%s","fort":"forgeos","bead":"E2E-%s","step":"pin","approvedSha":%s,"branch":"bead/%s"}\n' \
+  printf '{"ts":"%s","fort":"fortkit","bead":"E2E-%s","action":"approve","option":null,"text":""}\n' "$ts" "$1" >> "$XDG_STATE_HOME/civ-keep/signatures.jsonl"
+  printf '{"ts":"%s","fort":"fortkit","bead":"E2E-%s","step":"pin","approvedSha":%s,"branch":"bead/%s"}\n' \
     "$ts" "$1" "$2" "$1" >> "$XDG_STATE_HOME/civ-keep/signatures.jsonl"
 }
 keep_decline() { # $1 sfx -- a later Decline on the Keep's desk: an intent line, no pin
-  printf '{"ts":"%s","fort":"forgeos","bead":"E2E-%s","action":"decline","option":null,"text":"not this"}\n' \
+  printf '{"ts":"%s","fort":"fortkit","bead":"E2E-%s","action":"decline","option":null,"text":"not this"}\n' \
     "$(date -u +%FT%T.%3NZ)" "$1" >> "$XDG_STATE_HOME/civ-keep/signatures.jsonl"
 }
 keep_approve() { # $1 root, $2 db, $3 sfx, $4 approvedSha as JSON ("<sha>" or null)
@@ -3047,7 +3047,7 @@ pendings() { grep -c '^review.pending ' "$1/emitted" 2>/dev/null; }
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 46 — ForgeOs-ubgx. A SIGNED, UNCHANGED BRANCH LANDS WITHOUT A"
+echo "SCENARIO 46 — Proofdelve ForgeOs-ubgx. A SIGNED, UNCHANGED BRANCH LANDS WITHOUT A"
 echo "              SECOND LAP; ANY CHANGE TO THE PATCH ROUTES TO REVIEW"
 echo "=========================================================================="
 # 46a — criterion 1. ESCALATE, approve at the tip, next pass MERGES: no second
@@ -3055,7 +3055,7 @@ echo "==========================================================================
 IFS='|' read -r r st db <<< "$(run_to_escalate s46a uba "$launcher")"
 tip="$(git -C "$r" rev-parse bead/uba)"
 if [ "$(cat "$st/workers/uba/verdict" 2>/dev/null)" = ESCALATE ] && grep -q '^E2E-uba|open|justin|human$' "$db" && [ "$(pendings "$r")" -eq 1 ]; then
-  ok "ubgx fixture: the review ESCALATED, the tracker reads open/assigned to justin/human (ForgeOs-29j3g), and the worker record stores the verdict ESCALATE"
+  ok "ubgx fixture: the review ESCALATED, the tracker reads open/assigned to justin/human (Proofdelve ForgeOs-29j3g), and the worker record stores the verdict ESCALATE"
 else no "ubgx fixture did not escalate" "verdict=$(cat "$st/workers/uba/verdict" 2>/dev/null) db=$(cat "$db") pendings=$(pendings "$r")
 $(tail -6 "$st/out.txt")"; fi
 keep_approve "$r" "$db" uba "\"$tip\""
@@ -3066,21 +3066,21 @@ if merged_in "$r" uba && grep -q '^E2E-uba|closed' "$db" && grep -q 'SIGNED LAND
    && grep -q "^fleet.signed .*$tip" "$r/emitted" && grep -q '"storedVerdict":"ESCALATE"' "$r/emitted" \
    && grep -q '^close E2E-uba --reason=merged and closed by fort/scripts/fleet.sh on OVERSEER-SIGNED' "$db.calls" \
    && git -C "$r" log -1 --format=%B | grep -q "Overseer's recorded approval" && git -C "$r" log -1 --format=%B | grep -q "$tip"; then
-  ok "ubgx 1: approved at its tip, the escalated branch MERGED and CLOSED on the next pass on OVERSEER-SIGNED -- no Forge dispatched (claim -a fleet, not veyra), no second review.pending, fleet.signed names the sha, the merge message names the approval"
+  ok "ubgx 1: approved at its tip, the escalated branch MERGED and CLOSED on the next pass on OVERSEER-SIGNED -- no Forge dispatched (claim -a fleet, not kethra), no second review.pending, fleet.signed names the sha, the merge message names the approval"
 else no "ubgx 1: the signed landing did not happen" "rc=$rc merged=$(merged_in "$r" uba && echo yes || echo no) db=$(grep uba "$db") claims=$(claims_of uba "$db") pendings=$(pendings "$r") dispatched=$(dispatched_count "$st")
 $(grep -E 'uba|SIGNED' "$st/out.txt" | tail -8)"; fi
 
 # 46b — criterion 2, THE RED CONTROL. The launcher before ubgx meets the same
-# state and DISPATCHES A FORGE at the signed work: a second claim for veyra.
+# state and DISPATCHES A FORGE at the signed work: a second claim for kethra.
 if [ -n "$pre_ubgx" ] && [ -s "$pre_ubgx" ]; then
   IFS='|' read -r r st db <<< "$(run_to_escalate s46b ubb "$pre_ubgx")"
   tip="$(git -C "$r" rev-parse bead/ubb)"
   keep_approve "$r" "$db" ubb "\"$tip\""
   E2E_FORGE_REUSE=1 run_pass "$work/s46b-fleet.sh" "$st" "$db"; rc=$?; out=$(cat "$st/out.txt")
   wait_forge "$st" ubb
-  if grep -q 'dispatched E2E-ubb' <<<"$out" && [ "$(claims_of ubb "$db")" -eq 2 ] && grep -q '^update E2E-ubb --claim -a veyra ' "$db.calls" \
+  if grep -q 'dispatched E2E-ubb' <<<"$out" && [ "$(claims_of ubb "$db")" -eq 2 ] && grep -q '^update E2E-ubb --claim -a kethra ' "$db.calls" \
      && ! merged_in "$r" ubb && ! grep -q 'fleet.signed' "$r/emitted"; then
-    ok "RED: the pre-ubgx launcher DISPATCHES A FORGE at the signed, unchanged branch (a second claim for veyra, nothing merged) -- the duplicate lap reproduced, so 46a can fail"
+    ok "RED: the pre-ubgx launcher DISPATCHES A FORGE at the signed, unchanged branch (a second claim for kethra, nothing merged) -- the duplicate lap reproduced, so 46a can fail"
   else no "the pre-ubgx launcher did not reproduce the second lap" "rc=$rc claims=$(claims_of ubb "$db") merged=$(merged_in "$r" ubb && echo yes || echo no)
 $(grep -E 'ubb' "$st/out.txt" | tail -6)"; fi
 else
@@ -3161,7 +3161,7 @@ $(grep -E 'ubf' "$st/out.txt" | tail -5)"; fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 47 — ForgeOs-s2lx. THE ESCALATE BRANCH CHECKS ITS bd WRITE: a"
+echo "SCENARIO 47 — Proofdelve ForgeOs-s2lx. THE ESCALATE BRANCH CHECKS ITS bd WRITE: a"
 echo "              refused write is an incident naming the exit, never a"
 echo "              fleet.returned asserting a label that is not there"
 echo "=========================================================================="
@@ -3176,7 +3176,7 @@ E2E_WARDEN_TOKEN=ESCALATE run_pass "$work/s47a-fleet.sh" "$st" "$db" || true; wa
 E2E_WARDEN_TOKEN=ESCALATE E2E_BD_UPDATE_REFUSE_LABEL=human run_pass "$work/s47a-fleet.sh" "$st" "$db"; rc=$?; out=$(cat "$st/out.txt")
 if grep -q '^incident Fleet recorded ESCALATE on E2E-sla but could NOT remove fleet-safe and apply human: the bd write failed (exit 1)' "$r/emitted" \
    && grep -q '"bd_exit":1' "$r/emitted" && ! grep -q '^fleet.returned E2E-sla' "$r/emitted" \
-   && [ "$(wstate "$st/workers/sla")" = needs-person ] && grep -q '^E2E-sla|in_progress|veyra|fleet-safe$' "$db" \
+   && [ "$(wstate "$st/workers/sla")" = needs-person ] && grep -q '^E2E-sla|in_progress|kethra|fleet-safe$' "$db" \
    && [ "$(cat "$st/workers/sla/verdict" 2>/dev/null)" = ESCALATE ] && grep -q 'the bd write that puts it on the Overseer.s queue FAILED (exit 1)' <<<"$out"; then
   ok "s2lx: with the human-label write REFUSED, the ESCALATE branch emits an incident naming bd exit 1, emits NO fleet.returned, marks the worker needs-person, and the tracker reads what it is (still claimed, still fleet-safe)"
 else no "s2lx: the refused write was not reported truthfully" "rc=$rc state=$(wstate "$st/workers/sla") db=$(cat "$db") emitted=$(grep -E 'sla' "$r/emitted" | cut -c1-120)
@@ -3187,7 +3187,7 @@ $(grep -E 'sla' "$st/out.txt" | tail -5)"; fi
 IFS='|' read -r r st db <<< "$(run_to_escalate s47v slb "$launcher")"
 if grep -q '^fleet.returned E2E-slb escalated by review to the Overseer; fleet-safe removed, human label applied' "$r/emitted" \
    && ! grep -q '^incident Fleet recorded ESCALATE on E2E-slb' "$r/emitted" && grep -q '^E2E-slb|open|justin|human$' "$db" && [ "$(wstate "$st/workers/slb")" = settled ]; then
-  ok "VACUITY: with the write permitted the branch still emits fleet.returned, no incident, and the tracker reads open/assigned to justin/human (ForgeOs-29j3g)"
+  ok "VACUITY: with the write permitted the branch still emits fleet.returned, no incident, and the tracker reads open/assigned to justin/human (Proofdelve ForgeOs-29j3g)"
 else no "s2lx vacuity: the permitted write no longer records as before" "db=$(cat "$db") emitted=$(grep -E 'slb' "$r/emitted" | cut -c1-120)"; fi
 # 47b — THE INVERSION. The launcher before the check emits fleet.returned
 # "fleet-safe removed, human label applied" over a refused write.
@@ -3198,8 +3198,8 @@ if [ -n "$pre_s2lx" ] && [ -s "$pre_s2lx" ]; then
   E2E_WARDEN_TOKEN=ESCALATE run_pass "$work/s47b-fleet.sh" "$st" "$db" || true; wait_forge "$st" sla
   E2E_WARDEN_TOKEN=ESCALATE E2E_BD_UPDATE_REFUSE_LABEL=human run_pass "$work/s47b-fleet.sh" "$st" "$db" || true
   if grep -q '^fleet.returned E2E-sla escalated by review to the Overseer; fleet-safe removed, human label applied' "$r/emitted" \
-     && grep -q '^E2E-sla|in_progress|veyra|fleet-safe$' "$db"; then
-    ok "RED: the pre-s2lx launcher emits fleet.returned 'fleet-safe removed, human label applied' while the tracker still reads claimed and fleet-safe -- Tova's finding reproduced by execution, so 47a can fail"
+     && grep -q '^E2E-sla|in_progress|kethra|fleet-safe$' "$db"; then
+    ok "RED: the pre-s2lx launcher emits fleet.returned 'fleet-safe removed, human label applied' while the tracker still reads claimed and fleet-safe -- the Warden's finding reproduced by execution, so 47a can fail"
   else no "the pre-s2lx launcher did not reproduce the false record" "db=$(cat "$db") emitted=$(grep -E 'sla' "$r/emitted" | cut -c1-120)"; fi
 else
   skip "s2lx inversion" "FLEET_SH_PRE_S2LX not set (git show 4cfa84df:fort/scripts/fleet.sh serves)"
@@ -3207,7 +3207,7 @@ fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 48 — ForgeOs-ubgx, the fold of Tova's 1.2 / 1.3 / 1.4 / 1.7. Each"
+echo "SCENARIO 48 — Proofdelve ForgeOs-ubgx, the fold of the Warden's 1.2 / 1.3 / 1.4 / 1.7. Each"
 echo "              case runs against the shipped launcher and then against the"
 echo "              pre-fold one (FLEET_SH_PRE_FOLD), where it must go the old way"
 echo "=========================================================================="
@@ -3236,7 +3236,7 @@ $(grep -E 'ubg' <<<"$ws_out" | tail -4)"; fi
 if [ -n "$pre_fold" ] && [ -s "$pre_fold" ]; then
   ws_case s48ai ubk "$pre_fold"
   if [ "$ws_merged" = yes ] && [ "$ws_signed" -eq 1 ]; then
-    ok "RED 1.3: the pre-fold launcher LANDS the whitespace-only post-approval commit on the signature -- Tova's 1.3 reproduced, so 48a can fail"
+    ok "RED 1.3: the pre-fold launcher LANDS the whitespace-only post-approval commit on the signature -- the Warden's 1.3 reproduced, so 48a can fail"
   else no "the pre-fold launcher did not reproduce 1.3" "merged=$ws_merged signed=$ws_signed
 $(grep -E 'ubk' <<<"$ws_out" | tail -4)"; fi
 else skip "fold 1.3 inversion" "FLEET_SH_PRE_FOLD not set (git show ecd75295:fort/scripts/fleet.sh)"; fi
@@ -3279,7 +3279,7 @@ dc_case() { # $1 name, $2 sfx, $3 launcher
 }
 dc_case s48c ubi "$launcher"
 if [ "$ws_merged" = no ] && [ "$ws_signed" -eq 0 ] && grep -q 'the newest sign event for E2E-ubi is gate.declined .* and not an approve, so the approval is superseded' <<<"$ws_out"; then
-  ok "fold 1.4: an Approve followed by a Decline is NOT landed -- the newest sign event decides, only an approve counts, and the refusal NAMES the superseding event (Tova 2.2)"
+  ok "fold 1.4: an Approve followed by a Decline is NOT landed -- the newest sign event decides, only an approve counts, and the refusal NAMES the superseding event (the Warden 2.2)"
 else no "fold 1.4: a declined-after-approve bead landed on the stale approval" "merged=$ws_merged signed=$ws_signed
 $(grep -E 'ubi' <<<"$ws_out" | tail -4)"; fi
 if [ -n "$pre_fold" ] && [ -s "$pre_fold" ]; then
@@ -3289,13 +3289,13 @@ if [ -n "$pre_fold" ] && [ -s "$pre_fold" ]; then
   else no "the pre-fold launcher did not reproduce 1.4" "merged=$ws_merged signed=$ws_signed"; fi
 else skip "fold 1.4 inversion" "FLEET_SH_PRE_FOLD not set"; fi
 
-# 48e — ForgeOs-jib0 (ruled 2026-11-14; Regent sitting 2026-11-16): ONLY THE
+# 48e — Proofdelve ForgeOs-jib0 (ruled 2026-11-14; Regent sitting 2026-11-16): ONLY THE
 # KEEP'S OWN EVENTS ARE SIGN EVENTS. A Keep approve followed by a Mayor's
 # decision.recorded (a transcription under the Mayor's own name). Shipped: the
 # approval stands and the bead lands on the signature. Pre-jib0: the Mayor's
 # event is the newest sign event, the approval reads superseded, no landing.
 mayor_sign() { # $1 root, $2 sfx -- a decision.recorded as the MAYOR emits one
-  printf '{"ts":"%s","actor":"marrek","seat":"mayor","category":"decision.recorded","target":"E2E-%s","detail":"E2E-%s: transcribed from the session","payload":null}\n' \
+  printf '{"ts":"%s","actor":"emrith","seat":"mayor","category":"decision.recorded","target":"E2E-%s","detail":"E2E-%s: transcribed from the session","payload":null}\n' \
     "$(date -Is)" "$2" "$2" >> "$1/fort/events/events-$(date +%F).jsonl"
 }
 md_case() { # $1 name, $2 sfx, $3 launcher, $4 who signs afterwards (mayor|keep)
@@ -3352,13 +3352,13 @@ $(grep -E 'claimed by' <<<"$ws_page")"; fi
 else skip "fold 1.7 inversion" "FLEET_SH_PRE_FOLD not set"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 49 — ForgeOs-pbkk. THE POST-MERGE VERIFIER REQUIRES DOCKER BY"
+echo "SCENARIO 49 — Proofdelve ForgeOs-pbkk. THE POST-MERGE VERIFIER REQUIRES DOCKER BY"
 echo "             CONSTRUCTION: its run carries VERIFY_REQUIRE_DOCKER=1 and the"
 echo "             pre-review run does not"
 echo "=========================================================================="
 # warden.sh's HOST VERIFY cites the fleet's post-merge verify.pass as
-# docker:true (ForgeOs-ehre). The verifier's Docker precheck only WARNS unless
-# VERIFY_REQUIRE_DOCKER=1, so the claim held on an assumption (Tova, B finding
+# docker:true (Proofdelve ForgeOs-ehre). The verifier's Docker precheck only WARNS unless
+# VERIFY_REQUIRE_DOCKER=1, so the claim held on an assumption (the Warden, B finding
 # 5). The stub verifier here records the ENVIRONMENT it was run under, per
 # call, and the property is asserted per call site: the post-merge worktree
 # run sees the variable set to 1; the bead's pre-review worktree run does not.
@@ -3396,7 +3396,7 @@ if [ -n "$pre_pbkk" ] && [ -s "$pre_pbkk" ]; then
 else skip "pbkk inversion" "set FLEET_SH_PRE_PBKK to the launcher before this sitting (git show cb247897:fort/scripts/fleet.sh)"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 50 — ForgeOs-fhak. A HALT PLACED WHILE THE RUN IS LIVE: the incident"
+echo "SCENARIO 50 — Proofdelve ForgeOs-fhak. A HALT PLACED WHILE THE RUN IS LIVE: the incident"
 echo "             NAMES the Forges still holding launcher locks (measured, not"
 echo "             bookkept), names none when none is held, and the halt is seen"
 echo "             BEFORE the next claim, not after it"
@@ -3480,11 +3480,11 @@ $(grep -E 'dispatched|HALT' <<<"$cc_out" | tail -4)"; fi
 else skip "fhak inversions" "set FLEET_SH_PRE_FHAK to the launcher before this sitting (git show cb247897:fort/scripts/fleet.sh)"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 51 — ForgeOs-lzvo. THE CEILING IS CARRIED ONCE, AT LOOP EXIT: a run"
+echo "SCENARIO 51 — Proofdelve ForgeOs-lzvo. THE CEILING IS CARRIED ONCE, AT LOOP EXIT: a run"
 echo "             that ends 'budget spent' writes exactly one carry, equal to"
 echo "             its final forge_conc"
 echo "=========================================================================="
-# WHAT THIS DOES AND DOES NOT MEASURE. Tova's finding 2 (025a52f) reasoned that
+# WHAT THIS DOES AND DOES NOT MEASURE. The Warden's finding 2 (025a52f) reasoned that
 # budget_stop(), called mid-pass, carried a value a later governor_down in the
 # same pass would make stale. Walked at run level while writing this scenario:
 # the reap loop BREAKS at the budget (the feeq gate at its head), and
@@ -3518,7 +3518,7 @@ if grep -q 'carry forge_conc=' "$work/s51-state/ceiling.log" && [ "$(grep -n 'ca
 else no "51: the carry is not the run's last ceiling event" "$(cat "$work/s51-state/ceiling.log")"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 52 — ForgeOs-b26i. A STOPPING RUN SPENDS NO LADDER RUNG: a review"
+echo "SCENARIO 52 — Proofdelve ForgeOs-b26i. A STOPPING RUN SPENDS NO LADDER RUNG: a review"
 echo "             that COMPLETED under SIGTERM with a token that will not parse"
 echo "             does not launch rung 2 on a two-rung ladder"
 echo "=========================================================================="
@@ -3556,13 +3556,13 @@ $(grep -E 'review starting|parsed' <<<"$bi_out" | tail -4)"; fi
 else skip "b26i inversion" "set FLEET_SH_PRE_B26I to the launcher before this sitting (git show 5aac33c2:fort/scripts/fleet.sh)"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 53 — ForgeOs-uwj5 finding 2. HALT AND HARD-STOP STILL END A RUN"
+echo "SCENARIO 53 — Proofdelve ForgeOs-uwj5 finding 2. HALT AND HARD-STOP STILL END A RUN"
 echo "             WITH A FINISHED WORKER PRESENT: the reason is 'stopped' /"
 echo "             'budget spent', never 'drained', and the worker is named"
 echo "=========================================================================="
 # dx34.18 criterion 3's third must-not-change clause was true because the halt
 # check and the budget break sit ABOVE the drain check in the main loop, which
-# Tova verified by reading and no harness pinned. Pinned here by execution.
+# The Warden verified by reading and no harness pinned. Pinned here by execution.
 # 53a: a worker finishes, the HALT file appears before it is reaped: the file
 # is placed the moment the Forge's exit file exists, which is inside pass 1's
 # FLEET_POLL sleep, so pass 2's reap loop breaks on stopping() before taking it.
@@ -3595,13 +3595,13 @@ else no "53b: budget with a finished worker" "rc=$rc ended=$ended
 $(grep -E 'budget|FINISHED|PARKED|leaves' <<<"$out" | tail -4)"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 54 — ForgeOs-lv7x. THE MERGE-PARENT-OPEN WRITE IS REFUSED: the diff"
+echo "SCENARIO 54 — Proofdelve ForgeOs-lv7x. THE MERGE-PARENT-OPEN WRITE IS REFUSED: the diff"
 echo "             is landed, the worker needs a person, an incident is emitted,"
 echo "             and fleet.parent-open is NOT"
 echo "=========================================================================="
-# The branch a2acdbe8 repaired (ForgeOs-stpx: report the write that happened)
+# The branch a2acdbe8 repaired (Proofdelve ForgeOs-stpx: report the write that happened)
 # had no control, because the stub bd could not refuse one update selectively
-# -- ForgeOs-8zb7 class A, the criticism the same docket levelled one branch
+# -- Proofdelve ForgeOs-8zb7 class A, the criticism the same docket levelled one branch
 # over. E2E_BD_UPDATE_REFUSE_RMLABEL=fleet-safe refuses exactly that write.
 lv7x_case() { # $1 name, $2 sfx, $3 launcher -> sets lv_merged lv_state lv_incident lv_popen lv_db
   local r st db
@@ -3616,18 +3616,18 @@ lv7x_case() { # $1 name, $2 sfx, $3 launcher -> sets lv_merged lv_state lv_incid
   lv_popen="$(grep -c '^fleet.parent-open ' "$r/emitted")"; lv_db="$(grep "^E2E-$2|" "$db")"
 }
 lv7x_case s54 lva "$launcher"
-if [ "$lv_merged" = yes ] && [ "$lv_state" = needs-person ] && [ "$lv_incident" -eq 1 ] && [ "$lv_popen" -eq 0 ] && grep -q '|in_progress|veyra|fleet-safe' <<<"$lv_db"; then
+if [ "$lv_merged" = yes ] && [ "$lv_state" = needs-person ] && [ "$lv_incident" -eq 1 ] && [ "$lv_popen" -eq 0 ] && grep -q '|in_progress|kethra|fleet-safe' <<<"$lv_db"; then
   ok "54: with the parent-open write refused, the diff is MERGED, the worker is needs-person, one incident names the failed write (bd_exit), fleet.parent-open is NOT emitted, and the bead stays claimed and fleet-safe (the tracker state the incident describes)"
 else no "54: the refused parent-open write is misreported" "merged=$lv_merged state=$lv_state incident=$lv_incident parent-open=$lv_popen db=$lv_db"; fi
 if [ -n "$pre_lv7x" ] && [ -s "$pre_lv7x" ]; then
   lv7x_case s54i lvb "$pre_lv7x"
-  if [ "$lv_merged" = yes ] && [ "$lv_state" = settled ] && [ "$lv_popen" -eq 1 ] && grep -q '|in_progress|veyra|fleet-safe' <<<"$lv_db"; then
+  if [ "$lv_merged" = yes ] && [ "$lv_state" = settled ] && [ "$lv_popen" -eq 1 ] && grep -q '|in_progress|kethra|fleet-safe' <<<"$lv_db"; then
     ok "RED: the pre-stpx launcher marks the worker settled and emits fleet.parent-open over a write that was refused (the bead is still claimed and fleet-safe) -- so 54 can fail"
   else no "the pre-stpx launcher did not reproduce the unconditional report" "merged=$lv_merged state=$lv_state parent-open=$lv_popen db=$lv_db"; fi
 else skip "lv7x inversion" "set FLEET_SH_PRE_LV7X to the launcher before the stpx repair (git show a2acdbe8^:fort/scripts/fleet.sh)"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 55 — ForgeOs-s49w, the fleet.sh half. A RUN WRITES ITS OUTCOME"
+echo "SCENARIO 55 — Proofdelve ForgeOs-s49w, the fleet.sh half. A RUN WRITES ITS OUTCOME"
 echo "             RECORD on the ordinary exit path: run, autostart, launches,"
 echo "             reason, duration -- what the supervisor's back-off reads"
 echo "=========================================================================="
@@ -3636,13 +3636,13 @@ outcome_case() { # $1 name, $2 sfx, $3 launcher -> sets oc_file oc_out
   r=$(mkfort "$1" ok); unpoison "$r"; mk_launcher "$3" "$work/$1-fleet.sh" "$r" || exit 3
   st="$work/$1-state"; mkdir -p "$st"; db="$work/$1.bd"
   printf 'E2E-%s|open||fleet-safe\n' "$2" > "$db"
-  FLEET_AUTOSTART=proofdelve-fleet-run-FIXTURE E2E_FORGE_SLEEP=1 run_loop "$work/$1-fleet.sh" "$st" "$db" 30 || true
+  FLEET_AUTOSTART=manyhalls-fleet-run-FIXTURE E2E_FORGE_SLEEP=1 run_loop "$work/$1-fleet.sh" "$st" "$db" 30 || true
   oc_out="$(cat "$st/out.txt")"; oc_file="$(cat "$st/last-run.outcome" 2>/dev/null)"
 }
 outcome_case s55 oca "$launcher"
 oc_dur="$(grep -m1 '^duration_s=' <<<"$oc_file" | cut -d= -f2)"
 if grep -q 'queue drained' <<<"$oc_out" && grep -q '^reason=drained$' <<<"$oc_file" && grep -q '^launches=2$' <<<"$oc_file" \
-   && grep -q '^autostart=proofdelve-fleet-run-FIXTURE$' <<<"$oc_file" && [ "$oc_dur" -ge 0 ] 2>/dev/null && grep -q '^run=' <<<"$oc_file"; then
+   && grep -q '^autostart=manyhalls-fleet-run-FIXTURE$' <<<"$oc_file" && [ "$oc_dur" -ge 0 ] 2>/dev/null && grep -q '^run=' <<<"$oc_file"; then
   ok "55: a drained run leaves last-run.outcome with reason=drained, launches=2 (one Forge, one review), the FLEET_AUTOSTART unit it was started under, a run id and a numeric duration ($oc_dur s)"
 else no "55: the outcome record is missing or wrong" "file=[$(tr '\n' '|' <<<"$oc_file")]
 $(grep -E 'drained|budget' <<<"$oc_out" | tail -2)"; fi
@@ -3654,7 +3654,7 @@ if [ -n "$pre_s49w" ] && [ -s "$pre_s49w" ]; then
 else skip "s49w inversion" "set FLEET_SH_PRE_S49W to the launcher before this sitting (git show 9eb4fb42:fort/scripts/fleet.sh)"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 56 — ForgeOs-nz3u. A BEAD THAT DECLARES 'Deliverable: answer' AND"
+echo "SCENARIO 56 — Proofdelve ForgeOs-nz3u. A BEAD THAT DECLARES 'Deliverable: answer' AND"
 echo "             whose Forge commits ONLY its handoff is verified, reviewed and"
 echo "             LANDS; the same shape undeclared is RETURNED as before (ss9d)"
 echo "=========================================================================="
@@ -3700,7 +3700,7 @@ else skip "nz3u inversion" "set FLEET_SH_PRE_NZ3U to the launcher before this si
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 57 — ForgeOs-j3ga. THE PREFLIGHT REFUSAL DISCRIMINATES FOUR HALT"
+echo "SCENARIO 57 — Proofdelve ForgeOs-j3ga. THE PREFLIGHT REFUSAL DISCRIMINATES FOUR HALT"
 echo "              FILES: absent, halt()-written, empty, whitespace-only"
 echo "=========================================================================="
 # THE DEFECT WAS ASYMMETRY, SO THE CASE IS A DISCRIMINATION AND NOT A STRING
@@ -3798,7 +3798,7 @@ else skip "j3ga inversion" "set FLEET_SH_PRE_J3GA to the launcher before this si
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 58 — ForgeOs-ohsy, Tova's 1.5. A SIGNED LANDING INTERRUPTED BY"
+echo "SCENARIO 58 — Proofdelve ForgeOs-ohsy, the Warden's 1.5. A SIGNED LANDING INTERRUPTED BY"
 echo "              Ctrl-C RESUMES AS A LANDING, NOT AS A SECOND REVIEW"
 echo "=========================================================================="
 # WHY A REAL PTY AND NOT `kill -TERM` (the same reason as scenario 5, from the
@@ -3891,7 +3891,7 @@ if [ "$(wstate "$st/workers/uwe")" = parked-signed ]; then
 $(grep -E 'uwe|signature|SIGNED' "$st/out.txt" | tail -6)"; fi
 else no "ohsy 58b fixture: the interrupt did not park" "state=$(wstate "$st/workers/uwe")"; fi
 
-# 58c — THE RARER HALF Tova named in the same finding. land() writes the verdict
+# 58c — THE RARER HALF the Warden named in the same finding. land() writes the verdict
 # token BEFORE anything can defer, so a signed landing whose `git merge` fails
 # goes back to the queue carrying OVERSEER-SIGNED -- the fleet's own token. Read
 # as "not a signed bead" it took a full FORGE LAP over signed work.
@@ -3913,10 +3913,10 @@ rm -f "$r/by-uwf.txt"
 E2E_FORGE_REUSE=1 run_pass "$work/s58c-fleet.sh" "$st" "$db" || true; out2=$(cat "$st/out.txt")
 if merged_in "$r" uwf && grep -q 'SIGNED LANDING' <<<"$out2" && [ "$(dispatched_count "$st")" -eq 0 ] \
    && grep -q '^update E2E-uwf --claim -a fleet ' "$db.calls" \
-   && [ "$(grep -c '^update E2E-uwf --claim -a veyra ' "$db.calls")" -eq 1 ] \
+   && [ "$(grep -c '^update E2E-uwf --claim -a kethra ' "$db.calls")" -eq 1 ] \
    && grep -q '^close E2E-uwf --reason=merged and closed by fort/scripts/fleet.sh on OVERSEER-SIGNED' "$db.calls"; then
   ok "ohsy: the returned bead is recognised as signed on the next pass and LANDS -- claimed by the fleet actor, no Forge lap over work the Overseer signed"
-else no "ohsy: the returned signed bead took the ordinary path" "merged=$(merged_in "$r" uwf && echo yes || echo no) dispatched=$(dispatched_count "$st") forge_claims=$(grep -c '^update E2E-uwf --claim -a veyra ' "$db.calls") (1 = the original dispatch only)
+else no "ohsy: the returned signed bead took the ordinary path" "merged=$(merged_in "$r" uwf && echo yes || echo no) dispatched=$(dispatched_count "$st") forge_claims=$(grep -c '^update E2E-uwf --claim -a kethra ' "$db.calls") (1 = the original dispatch only)
 $(grep -E 'uwf|SIGNED|dispatched' <<<"$out2" | tail -6)"; fi
 
 # THE INVERSIONS. Both halves of the finding, against the launcher before it.
@@ -3942,15 +3942,15 @@ $(grep -E 'uwg' "$st/out.txt" | tail -6)"; fi
   rm -f "$r/by-uwh.txt"
   E2E_FORGE_REUSE=1 run_pass "$work/s58j-fleet.sh" "$st" "$db" || true; out=$(cat "$st/out.txt")
   wait_forge "$st" uwh
-  if grep -q 'dispatched E2E-uwh' <<<"$out" && grep -q '^update E2E-uwh --claim -a veyra ' "$db.calls"; then
-    ok "RED: the pre-ohsy launcher DISPATCHES A FORGE at the returned signed bead (a claim for veyra) -- the rarer half of 1.5 reproduced"
+  if grep -q 'dispatched E2E-uwh' <<<"$out" && grep -q '^update E2E-uwh --claim -a kethra ' "$db.calls"; then
+    ok "RED: the pre-ohsy launcher DISPATCHES A FORGE at the returned signed bead (a claim for kethra) -- the rarer half of 1.5 reproduced"
   else no "the pre-ohsy launcher did not reproduce the Forge lap" "dispatched=$(grep -c 'dispatched E2E-uwh' <<<"$out") claims=$(grep '^update E2E-uwh --claim' "$db.calls" | tr '\n' ' ')
 $(grep -E 'uwh' "$st/out.txt" | tail -6)"; fi
 else skip "ohsy inversions" "set FLEET_SH_PRE_OHSY to the launcher before this item (git show f9fec86c:fort/scripts/fleet.sh)"; fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 59 — ForgeOs-1kak, Tova's 1.6. A SIGNED BEAD QUEUED BEHIND A LIVE"
+echo "SCENARIO 59 — Proofdelve ForgeOs-1kak, the Warden's 1.6. A SIGNED BEAD QUEUED BEHIND A LIVE"
 echo "              FORGE AT CONCURRENCY 1 LANDS IN THE SAME PASS"
 echo "=========================================================================="
 # THE BEAD'S OWN NAMED CASE, verbatim: "a signed bead queued behind a live Forge
@@ -4023,7 +4023,7 @@ else skip "1kak inversion" "set FLEET_SH_PRE_1KAK to the launcher before this it
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 60 — ForgeOs-yz7w, Tova's 2.3. THE REVIEWED TIP IS THE TIP AT"
+echo "SCENARIO 60 — Proofdelve ForgeOs-yz7w, the Warden's 2.3. THE REVIEWED TIP IS THE TIP AT"
 echo "              LAUNCH, NOT WHATEVER THE BRANCH IS WHEN THE REVIEW RETURNS"
 echo "=========================================================================="
 # The Warden's range is main...bead/X and git resolves it when warden.sh runs,
@@ -4081,7 +4081,7 @@ else skip "yz7w inversion" "set FLEET_SH_PRE_YZ7W to the launcher before this it
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 61 — ForgeOs-vee4w. A sign-to-land BEAD NEVER LANDS ON A WARDEN"
+echo "SCENARIO 61 — Proofdelve ForgeOs-vee4w. A sign-to-land BEAD NEVER LANDS ON A WARDEN"
 echo "              VERDICT ALONE; IT LANDS ON THE OVERSEER'S SIGNATURE, DOING"
 echo "              WHAT THE WARDEN DECIDED"
 echo "=========================================================================="
@@ -4165,11 +4165,11 @@ else no "vee4w fail-closed: the resumed merge landed unsigned" "merged=$(merged_
 if [ -n "$pre_vee4w" ] && [ -s "$pre_vee4w" ]; then
   IFS='|' read -r r st db <<< "$(run_to_hold s61f vkf MERGE-PARENT-OPEN fleet-safe,sign-to-land "$pre_vee4w")"
   if merged_in "$r" vkf && ! grep -q 'HELD for the Overseer' "$st/out.txt"; then
-    ok "RED: the pre-vee4w launcher MERGES a sign-to-land bead on MERGE-PARENT-OPEN with no signature -- the ForgeOs-etmwb miss reproduced, so 61a-c can fail"
+    ok "RED: the pre-vee4w launcher MERGES a sign-to-land bead on MERGE-PARENT-OPEN with no signature -- the Proofdelve ForgeOs-etmwb miss reproduced, so 61a-c can fail"
   else no "the pre-vee4w launcher did not reproduce the unsigned merge" "merged=$(merged_in "$r" vkf && echo yes || echo no) db=$(cat "$db")"; fi
 else skip "vee4w inversion" "set FLEET_SH_PRE_VEE4W to the launcher before this item (git show dae80d8e:fort/scripts/fleet.sh)"; fi
 
-# ROUND TWO, criterion 6 (Tova's finding 1; the Overseer chose a positive
+# ROUND TWO, criterion 6 (the Warden's finding 1; the Overseer chose a positive
 # marker). These cases switch the stub's default classification OFF, so the
 # bead carries exactly the labels its fixture line names.
 # 61g -- an UNCLASSIFIED fleet-safe bead is never dispatched.
@@ -4216,7 +4216,7 @@ if [ -n "$pre_vee4w_r2" ] && [ -s "$pre_vee4w_r2" ]; then
 else skip "vee4w round-two inversion" "set FLEET_SH_PRE_VEE4W_R2 to the round-one launcher (git show a1ecc348:fort/scripts/fleet.sh)"; fi
 # 61j -- a bead ESCALATED before the marker existed (no classification label)
 # lands on his signature: the signed landing skips the classification check
-# (Tova, round two, finding 1). Escalated with the stub's default classification
+# (the Warden, round two, finding 1). Escalated with the stub's default classification
 # on, which the store line does not record; landed with it off.
 IFS='|' read -r r st db <<< "$(run_to_escalate s61j vkj "$launcher")"
 tip="$(git -C "$r" rev-parse bead/vkj 2>/dev/null)"
@@ -4232,14 +4232,14 @@ if [ -n "$pre_vee4w_r3" ] && [ -s "$pre_vee4w_r3" ]; then
   keep_approve "$r" "$db" vkk "\"$tip\""
   E2E_BD_CLASSIFY=off run_pass "$work/s61k-fleet.sh" "$st" "$db" || true
   if ! merged_in "$r" vkk && grep -q 'skip E2E-vkk: unclassified' "$st/out.txt"; then
-    ok "RED: the round-two launcher refuses the same signed bead as unclassified -- Tova's round-two finding 1 reproduced"
+    ok "RED: the round-two launcher refuses the same signed bead as unclassified -- the Warden's round-two finding 1 reproduced"
   else no "the round-two launcher did not reproduce the refused signed landing" "merged=$(merged_in "$r" vkk && echo yes || echo no)
 $(grep -E 'vkk' "$st/out.txt" | tail -4)"; fi
 else skip "vee4w round-three inversion" "set FLEET_SH_PRE_VEE4W_R3 to the round-two launcher (git show 2869ad0d:fort/scripts/fleet.sh)"; fi
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 62 — ForgeOs-ubgx.4. A SIGNED LANDING NEEDS THE KEEP'S OWN RECORD,"
+echo "SCENARIO 62 — Proofdelve ForgeOs-ubgx.4. A SIGNED LANDING NEEDS THE KEEP'S OWN RECORD,"
 echo "              NOT ONLY A gate.approved IN THE SEAT-WRITABLE STREAM"
 echo "=========================================================================="
 # 62a -- the forgery: a gate.approved at the tip with no Keep record. Refused,
@@ -4273,7 +4273,7 @@ run_pass "$work/s62d-fleet.sh" "$st" "$db" || true
 if ! merged_in "$r" kpb && grep -q 'no Keep record in the Overseer store pins it' "$st/out.txt"; then
   ok "ubgx.4: a Keep pin naming a different sha does not corroborate the stream's approval"
 else no "ubgx.4: a mismatched pin corroborated" "merged=$(merged_in "$r" kpb && echo yes || echo no)"; fi
-# 62e -- Tova's A2: he approved at the tip on the Keep, then DECLINED there; a
+# 62e -- the Warden's A2: he approved at the tip on the Keep, then DECLINED there; a
 # forged newer approve in the stream names the once-approved sha. The Keep's
 # newest decision is decline, so nothing lands.
 IFS='|' read -r r st db <<< "$(run_to_escalate s62e kpe "$launcher")"
@@ -4289,7 +4289,7 @@ $(grep -E 'kpe' "$st/out.txt" | tail -4)"; fi
 # snapshot carries (bead, sha). It lands; with another sha in the snapshot it would not.
 IFS='|' read -r r st db <<< "$(run_to_escalate s62f kpf "$launcher")"
 tip="$(git -C "$r" rev-parse bead/kpf 2>/dev/null)"
-printf '{"fort":"forgeos","bead":"E2E-kpf","approvedSha":"%s","source":"fixture snapshot"}\n' "$tip" >> "$XDG_STATE_HOME/civ-keep/legacy-approvals.jsonl"
+printf '{"fort":"fortkit","bead":"E2E-kpf","approvedSha":"%s","source":"fixture snapshot"}\n' "$tip" >> "$XDG_STATE_HOME/civ-keep/legacy-approvals.jsonl"
 stream_only_approve "$r" "$db" kpf "\"$tip\""
 run_pass "$work/s62f-fleet.sh" "$st" "$db" || true
 if merged_in "$r" kpf && grep -q 'SIGNED LANDING' "$st/out.txt"; then
@@ -4309,7 +4309,7 @@ else skip "ubgx.4 inversion" "set FLEET_SH_PRE_UBGX4 to the pre-sitting launcher
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 63 — ForgeOs-e2rbu, owt37, a13g8. THE RECORDS SAY WHAT HAPPENED,"
+echo "SCENARIO 63 — Proofdelve ForgeOs-e2rbu, owt37, a13g8. THE RECORDS SAY WHAT HAPPENED,"
 echo "              AND EVERY BEAD LEAVING THE FLEET HAS AN OWNER"
 echo "=========================================================================="
 # The labels the Mayor's session start reads, taken from her seat file's inbox
@@ -4369,7 +4369,7 @@ else no "a13g8 2: fleet.signed announced a verdict the worker did not have" "mer
 # 63f -- the churn note: the run records landings for the supervisor.
 if grep -q '^landings=1$' "$st/last-run.outcome" 2>/dev/null; then ok "owt37 churn: a run that merged one bead records landings=1 in last-run.outcome"
 else no "owt37 churn: landings not recorded" "$(tr '\n' ' ' < "$st/last-run.outcome" 2>/dev/null)"; fi
-# 63g -- a13g8 criterion 3, EXECUTED (Tova D1): a variant of THIS launcher with
+# 63g -- a13g8 criterion 3, EXECUTED (the Warden D1): a variant of THIS launcher with
 # the literal ESCALATE restored in fleet.signed must fail 63e's assertion.
 lit="$work/fleet-a13g8-literal.sh"
 # shellcheck disable=SC2016  # sed and grep PATTERNS: the $ names the launcher's own variable, literally
@@ -4395,12 +4395,12 @@ if [ -n "$pre_d" ] && [ -s "$pre_d" ]; then
   IFS='|' read -r r st db <<< "$(run_to_hold s63s rdg APPROVE-WITH-FINDINGS fleet-safe,sign-to-land "$pre_d")"
   tip="$(git -C "$r" rev-parse bead/rdg 2>/dev/null)"; keep_approve "$r" "$db" rdg "\"$tip\""
   run_pass "$work/s63s-fleet.sh" "$st" "$db" || true
-  if grep -q 'fleet-merged review of E2E-rdg (OVERSEER-SIGNED)' "$db.calls"; then ok "RED owt37: the pre-D launcher titles the held AWF follow-up '(OVERSEER-SIGNED)' -- ForgeOs-5rc4g's shape reproduced"
+  if grep -q 'fleet-merged review of E2E-rdg (OVERSEER-SIGNED)' "$db.calls"; then ok "RED owt37: the pre-D launcher titles the held AWF follow-up '(OVERSEER-SIGNED)' -- Proofdelve ForgeOs-5rc4g's shape reproduced"
   else no "RED owt37: the pre-D launcher did not reproduce" "$(grep -m1 '^create .*E2E-rdg' "$db.calls" | cut -c1-160)"; fi
 else skip "record-defect inversions" "set FLEET_SH_PRE_D to the launcher before item D (git show 74b1382b:fort/scripts/fleet.sh)"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 64 — ForgeOs-uwjme. Freed Forge slots refill BETWEEN completion"
+echo "SCENARIO 64 — Proofdelve ForgeOs-uwjme. Freed Forge slots refill BETWEEN completion"
 echo "              steps; they do not wait for the serial lane to drain."
 echo "=========================================================================="
 # THE MEASURED DEFECT, AT RUN LEVEL. reap_pass() took every finished worker
@@ -4453,7 +4453,7 @@ noih="$work/fleet-uwjme-no-inhand.sh"
 # shellcheck disable=SC2016  # a sed PATTERN: the $ names the launcher's own text, literally
 sed 's/ && \[ "\$(worker_state "\$d")" != in-hand \]; then continue; fi/; then continue; fi/' "$launcher" > "$noih"
 # The guard asks only that this launcher HAS a refill: an earlier draft pinned
-# the call-site count at 3, and the fold of Tova's finding 1 removed one site
+# the call-site count at 3, and the fold of the Warden's finding 1 removed one site
 # correctly and turned this control into a false "could not be generated".
 if ! cmp -s "$launcher" "$noih" && grep -q '^refill_slots() {' "$noih"; then
   uw_fixture s64c "$uw_db2" "$noih"
@@ -4483,7 +4483,7 @@ if [ -s "$pre_uw" ] && ! grep -q 'refill_slots' "$pre_uw" && grep -q '^dispatch_
 else skip "uwjme inversion" "could not derive the pre-sitting launcher (git show bd26dbd2:fort/scripts/fleet.sh), or it already has refill_slots"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 65 — ForgeOs-asad6 step 2. A launch waits for memory; the wait is"
+echo "SCENARIO 65 — Proofdelve ForgeOs-asad6 step 2. A launch waits for memory; the wait is"
 echo "              not a stall; and a second launch reserves for the first."
 echo "=========================================================================="
 # The harness exports a GENEROUS FLEET_MEMINFO for every scenario (see the head),
@@ -4530,7 +4530,7 @@ else no "asad6: the young-Forge reservation at run level" "dispatched=$(dispatch
 $(grep -nE 'dispatch' "$st/out.txt" | head -5)"; fi
 wait_forge "$st" mgc
 
-# 65d FOLD of Tova's finding 2: with two finished workers in the lane and memory
+# 65d FOLD of the Warden's finding 2: with two finished workers in the lane and memory
 # short, the refills at every step ask the gate again, and the wait is said ONCE
 # in that pass, with ONE ceiling.log line.
 b9mj_fixture s65d 'E2E-mge|open||fleet-safe||docs/e/\nE2E-mgf|open||fleet-safe||docs/f/\nE2E-mgg|open||fleet-safe||docs/g/\n'
@@ -4544,7 +4544,7 @@ else no "9dqa6 fold 2: the memory wait repeats within one pass" "refills=$(grep 
 $(grep -nE 'refill|waits|dispatched' "$st/out.txt" | head -8)"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 66 — ForgeOs-xu0mj. A NEEDS A PERSON record whose bead is CLOSED"
+echo "SCENARIO 66 — Proofdelve ForgeOs-xu0mj. A NEEDS A PERSON record whose bead is CLOSED"
 echo "              is settled; a live one is still said, once per pass."
 echo "=========================================================================="
 # Two planted workers, both stopped deliberately by an earlier run: xca's bead a
@@ -4557,7 +4557,7 @@ xu_plant() { # $1 state dir, $2 sfx, $3 why
   printf 'needs-person|OLDRUN|%s\n' "$3" > "$1/workers/$2/state"
 }
 xu_fixture() { # $1 name, [$2 launcher] -> sets r st db
-  b9mj_fixture "$1" 'E2E-xca|closed||fleet-safe\nE2E-xcb|in_progress|veyra|fleet-safe\n' "${2:-$launcher}"
+  b9mj_fixture "$1" 'E2E-xca|closed||fleet-safe\nE2E-xcb|in_progress|kethra|fleet-safe\n' "${2:-$launcher}"
   xu_plant "$st" xca "the merge STANDS on main and the post-merge verifier is RED"
   xu_plant "$st" xcb "bead/xcb conflicts with main on src/X.cs"
 }
@@ -4593,7 +4593,7 @@ if [ -s "${pre_uw:-}" ] && ! grep -q 'settle_answered_workers' "$pre_uw"; then
 else skip "xu0mj inversion" "the pre-sitting launcher was not derived in scenario 64"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 67 — ForgeOs-s1reg. VERIFY ONCE: a merge whose tree IS the tree"
+echo "SCENARIO 67 — Proofdelve ForgeOs-s1reg. VERIFY ONCE: a merge whose tree IS the tree"
 echo "              the host verify passed (full tier, Docker) runs no second"
 echo "              verify; a merge after main moved, or after a Docker-less"
 echo "              host verify, runs the post-merge verify as before."
@@ -4617,7 +4617,7 @@ case "\$PWD" in *-worktrees/postmerge-*) ;; *-worktrees/*)
 esac
 echo "VERIFIER GREEN in \$PWD"; exit 0
 V
-  # A NIGHTLY THAT RAN TWO HOURS AGO (ForgeOs-s1reg finding 3): without one the
+  # A NIGHTLY THAT RAN TWO HOURS AGO (Proofdelve ForgeOs-s1reg finding 3): without one the
   # launcher refuses every reuse, which is 67d's subject and nobody else's.
   if [ -z "${VO_NO_NIGHTLY:-}" ]; then
     printf '{"ts":"%s","actor":"fleet","seat":"fleet","category":"progress","detail":"Nightly full verify GREEN","payload":{"nightly":true,"ran":true,"result":"green"}}\n' \
@@ -4657,7 +4657,7 @@ vo_case s67c vo3 false 0
 if merged_in "$vo_r" vo3 && [ "${vo_post:-0}" -eq 1 ] && grep -q 'E2E-vo3: post-merge verify RUNS: .*Docker did not run' <<<"$vo_out"; then
   ok "s1reg narrowing: a host verify without Docker is not reused; the post-merge verify ran"
 else no "s1reg narrowing" "post=$vo_post $(grep -nE 'post-merge|RUNS' <<<"$vo_out" | head -3)"; fi
-# 67d NO NIGHTLY IN THE STREAM (ForgeOs-s1reg finding 3): the same perfect host
+# 67d NO NIGHTLY IN THE STREAM (Proofdelve ForgeOs-s1reg finding 3): the same perfect host
 # verify as 67a is NOT reused, the post-merge verify runs, and the record says why.
 VO_NO_NIGHTLY=1 vo_case s67d vo5 true 0
 if merged_in "$vo_r" vo5 && [ "${vo_post:-0}" -eq 1 ] && grep -q 'E2E-vo5: post-merge verify RUNS: .*no nightly backstop: ' <<<"$vo_out" \
@@ -4683,7 +4683,7 @@ if [ -s "$pre_vo" ] && ! grep -q 'verified_reusable' "$pre_vo" && grep -q '^land
 else skip "s1reg inversion" "could not derive the pre-sitting launcher (git show 7fee1a6b:fort/scripts/fleet.sh), or it already has verified_reusable"; fi
 
 echo "=========================================================================="
-echo "SCENARIO 68 — ForgeOs-29j3g. WHOSE MOVE = THE ASSIGNEE: an ESCALATE and a"
+echo "SCENARIO 68 — Proofdelve ForgeOs-29j3g. WHOSE MOVE = THE ASSIGNEE: an ESCALATE and a"
 echo "              signature hold are ASSIGNED to the Overseer with one ASK line;"
 echo "              his Approve hands the bead back to the fleet, which lands it."
 echo "=========================================================================="
@@ -4715,7 +4715,7 @@ else no "RED 29j3g" "the blanked variant could not be generated (sed matched not
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 69 — ForgeOs-jfqu4.7. A SIGNED LANDING GOES FIRST IN THE PASS:"
+echo "SCENARIO 69 — Proofdelve ForgeOs-jfqu4.7. A SIGNED LANDING GOES FIRST IN THE PASS:"
 echo "              it lands before the completion lane verifies a finished bead."
 echo "=========================================================================="
 # Measured 2026-10-21: two beads the Overseer signed at 10:04 had not landed by
@@ -4751,10 +4751,10 @@ else no "RED jfqu4.7" "the no-signed-first variant could not be generated (sed m
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 70 — ForgeOs-0x25g (a). A DECLINE AFTER ESCALATE, RE-RELEASED"
+echo "SCENARIO 70 — Proofdelve ForgeOs-0x25g (a). A DECLINE AFTER ESCALATE, RE-RELEASED"
 echo "              WITHOUT A LAP, IS HANDED TO THE MAYOR ONCE, NOT LOOPED ON."
 echo "=========================================================================="
-# Measured 2026-10-20 on ForgeOs-2md9d.4.49.2: Decline, relabel fleet-safe, and
+# Measured 2026-10-20 on Proofdelve ForgeOs-2md9d.4.49.2: Decline, relabel fleet-safe, and
 # "taking the ordinary path" every pass for twenty minutes. Fixture: ESCALATE,
 # Approve at the tip, then a Decline in the stream, then the Mayor's relabel.
 decl_fixture() { # $1 name, $2 sfx, $3 launcher-src -> "root|state|db" after the relabel
@@ -4776,7 +4776,7 @@ IFS='|' read -r r st db <<< "$(decl_fixture s70a dc1 "$launcher")"
 run_pass "$work/s70a-fleet.sh" "$st" "$db" || true; out="$(cat "$st/out.txt")"
 rec="$(grep '^E2E-dc1|' "$db")"
 if grep -q 'E2E-dc1: DECLINED by the Overseer after ESCALATE and NOT landable on the signature (.*gate.declined' <<<"$out" && ! merged_in "$r" dc1 \
-   && grep -q '|marrek|' <<<"$rec" && grep -q 'fleet-escalated' <<<"$rec" && ! grep -q 'fleet-safe' <<<"$rec" \
+   && grep -q '|emrith|' <<<"$rec" && grep -q 'fleet-escalated' <<<"$rec" && ! grep -q 'fleet-safe' <<<"$rec" \
    && [ "$(dispatched_count "$st")" -eq 0 ] && grep -q 'File a LAP bead carrying the Decline note' "$db.comments"; then
   ok "0x25g: a Declined ESCALATE bead re-released without a lap is NOT dispatched or landed; fleet-safe comes off, it goes to the Mayor with a comment saying to file a lap"
 else no "0x25g: the Decline guard" "rec=$rec dispatched=$(dispatched_count "$st") $(grep -E 'dc1' <<<"$out" | tail -4 | tr '\n' '|')"; fi
@@ -4797,10 +4797,10 @@ else no "RED 0x25g" "the no-guard variant could not be generated (sed matched no
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 71 — ForgeOs-9srgz A4. fleet.sh --review-only: a Workbench session"
+echo "SCENARIO 71 — Proofdelve ForgeOs-9srgz A4. fleet.sh --review-only: a Workbench session"
 echo "             branch, built by no Forge, gets host verify, ONE Warden launch at"
 echo "             the front of the reap order, and merge or escalate; findings go"
-echo "             back to the Workbench (hollis), never to a Forge"
+echo "             back to the Workbench (dunmar), never to a Forge"
 echo "=========================================================================="
 wb_fixture() { # $1 name, $2 sfx, $3 launcher-src, $4 labels -> "root|state|db"
   local r st db
@@ -4809,7 +4809,7 @@ wb_fixture() { # $1 name, $2 sfx, $3 launcher-src, $4 labels -> "root|state|db"
   git -C "$r" worktree add -q "$r-worktrees/$2" -b "bead/$2" >/dev/null 2>&1
   printf 'workbench sitting line for %s\n' "$2" > "$r-worktrees/$2/wb-$2.txt"
   git -C "$r-worktrees/$2" add -A >/dev/null; git -C "$r-worktrees/$2" commit -qm "E2E-$2: the sitting's work"
-  printf 'E2E-%s|in_progress|hollis|%s\n' "$2" "$4" > "$db"
+  printf 'E2E-%s|in_progress|dunmar|%s\n' "$2" "$4" > "$db"
   printf '%s|%s|%s' "$r" "$st" "$db"
 }
 enqueue() { # $1 launcher copy, $2 state, $3 db, $4 bead -> rc; output in $2/enq.txt
@@ -4836,7 +4836,7 @@ E2E_WARDEN_TOKEN=ESCALATE run_pass "$work/s71b-fleet.sh" "$st" "$db" || true
 if ! merged_in "$r" wbe && grep -q '^E2E-wbe|open|justin|' "$db" && [ "$(cat "$st/workers/wbe/verdict" 2>/dev/null)" = ESCALATE ]; then
   ok "9srgz A4 escalate: the session branch is HELD for the Overseer (not merged, assigned justin, ESCALATE stored)"
 else no "9srgz A4 escalate" "merged=$(merged_in "$r" wbe && echo yes || echo no) rec=$(grep '^E2E-wbe|' "$db") $(grep -E 'wbe' "$st/out.txt" | tail -4 | tr '\n' '|')"; fi
-# 71c -- REQUEST-CHANGES: back to hollis, fleet-safe off, no return counter, never a Forge.
+# 71c -- REQUEST-CHANGES: back to dunmar, fleet-safe off, no return counter, never a Forge.
 rc_case() { # $1 name, $2 sfx, $3 launcher -> sets rcr rcst rcdb
   IFS='|' read -r rcr rcst rcdb <<< "$(wb_fixture "$1" "$2" "$3" workbench,fleet-safe)"
   enqueue "$work/$1-fleet.sh" "$rcst" "$rcdb" "E2E-$2" >/dev/null
@@ -4844,9 +4844,9 @@ rc_case() { # $1 name, $2 sfx, $3 launcher -> sets rcr rcst rcdb
 }
 rc_case s71c wbr "$launcher"
 rec="$(grep '^E2E-wbr|' "$rcdb")"
-if ! merged_in "$rcr" wbr && [ "$rec" = "E2E-wbr|open|hollis|workbench" ] \
+if ! merged_in "$rcr" wbr && [ "$rec" = "E2E-wbr|open|dunmar|workbench" ] \
    && grep -q '^fleet.returned .*"to_workbench":true' "$rcr/emitted" && grep -q 'HAND-BACK TO THE WORKBENCH' "$rcdb.comments"; then
-  ok "9srgz A4 request-changes: handed back to the Workbench -- open, assigned hollis, fleet-safe removed, no fleet-return counter, comment and event say so"
+  ok "9srgz A4 request-changes: handed back to the Workbench -- open, assigned dunmar, fleet-safe removed, no fleet-return counter, comment and event say so"
 else no "9srgz A4 request-changes" "rec=$rec $(grep -E 'wbr' "$rcst/out.txt" | tail -4 | tr '\n' '|')"; fi
 run_pass "$work/s71c-fleet.sh" "$rcst" "$rcdb" || true
 if ! grep -q 'dispatched E2E-wbr' "$rcst/out.txt" && ! grep -q '^update E2E-wbr --claim' "$rcdb.calls"; then
@@ -4867,7 +4867,7 @@ PY
 if ! cmp -s "$launcher" "$nohb"; then
   rc_case s71cr wbs "$nohb"
   rec="$(grep '^E2E-wbs|' "$rcdb")"
-  if [ "$rec" != "E2E-wbs|open|hollis|workbench" ] && grep -q 'fleet-return-1' <<<"$rec"; then
+  if [ "$rec" != "E2E-wbs|open|dunmar|workbench" ] && grep -q 'fleet-return-1' <<<"$rec"; then
     ok "RED 9srgz A4: without the hand-back the bead goes to the ready queue (rec=$rec), so 71c discriminates"
   else no "RED 9srgz A4: the no-hand-back variant did not reproduce the Forge return" "rec=$rec"; fi
 else no "RED 9srgz A4 hand-back" "the variant could not be generated (block not found)"; fi
@@ -4913,7 +4913,7 @@ else no "9srgz A4: re-queue over a live worker" "rc=$q2 $(cat "$st/enq.txt")"; f
 
 echo
 echo "=========================================================================="
-echo "SCENARIO 72 — ForgeOs-9srgz A5 (the Overseer's corrected Q2: keep running)."
+echo "SCENARIO 72 — Proofdelve ForgeOs-9srgz A5 (the Overseer's corrected Q2: keep running)."
 echo "             While a Workbench sitting is live the fleet keeps dispatching;"
 echo "             the touch-set guard HOLDS a fleet bead whose files overlap the"
 echo "             sitting's live set (branch diff + uncommitted paths), names why,"
@@ -4999,8 +4999,8 @@ nowait9="$work/fleet-9srgz-nowait.sh"
 python3 - "$launcher" "$nowait9" <<'PY'
 import sys
 t = open(sys.argv[1]).read()
-old = '  if [ "${pass_workbench_held:-0}" -gt 0 ]; then\n    # ForgeOs-9srgz A5'
-open(sys.argv[2], 'w').write(t.replace(old, '  if false; then\n    # ForgeOs-9srgz A5', 1) if t.count(old) == 1 else t)
+old = '  if [ "${pass_workbench_held:-0}" -gt 0 ]; then\n    # Proofdelve ForgeOs-9srgz A5'
+open(sys.argv[2], 'w').write(t.replace(old, '  if false; then\n    # Proofdelve ForgeOs-9srgz A5', 1) if t.count(old) == 1 else t)
 PY
 if ! cmp -s "$launcher" "$nowait9"; then
   gd_case s72w "$nowait9" 'E2E-pgw|open||fleet-safe||docs/\n' "" docs/u.md
@@ -5008,7 +5008,7 @@ if ! cmp -s "$launcher" "$nowait9"; then
   if [ -e "$gdst/HALT" ]; then ok "RED 9srgz A5: without the waiting clause the held run HALTS as stalled, so 72c discriminates"
   else no "RED 9srgz A5 waiting clause" "$(grep -E 'stall' "$gdst/loop.txt" | tail -2 | tr '\n' '|')"; fi
 else no "RED 9srgz A5 waiting clause" "the variant could not be generated"; fi
-# --- FOLD of Tova's docket-review findings 1 and 2 (ForgeOs-9srgz) ---
+# --- FOLD of the Warden's docket-review findings 1 and 2 (Proofdelve ForgeOs-9srgz) ---
 # 72h -- the poll does not rewrite the sitting's index (finding 1): a stat-stale
 # tracked file makes a plain `git status` refresh and rewrite the index; with
 # GIT_OPTIONAL_LOCKS=0 it reads without writing.
@@ -5023,7 +5023,7 @@ ix_case() { # $1 name, $2 launcher -> sets ixb ixa (index mtimes before/after a 
 }
 ix_case s72h "$launcher"
 if [ -n "$ixb" ] && [ "$ixb" = "$ixa" ] && grep -q 'skip E2E-pix: HELD' "$gdst/out.txt"; then
-  ok "9srgz fold 1: the guard's per-pass status read leaves the sitting's index untouched (no index.lock taken under Hollis)"
+  ok "9srgz fold 1: the guard's per-pass status read leaves the sitting's index untouched (no index.lock taken under the Workbench)"
 else no "9srgz fold 1: the poll rewrote the index" "before=$ixb after=$ixa"; fi
 nolock9="$work/fleet-9srgz-nolock.sh"
 # shellcheck disable=SC2016  # a sed PATTERN: the $ names the launcher's own text
@@ -5076,7 +5076,7 @@ run_pass "$work/s72k-fleet.sh" "$gdst" "$gddb" || true; gd_stop
 if grep -q 'skip E2E-pna: HELD -- its touch set overlaps the live Workbench sitting E2E-wbl on docs/' "$gdst/out.txt"; then
   ok "9srgz fold 2: a non-ASCII uncommitted path (docs/é.md, quoted by plain porcelain) holds an overlapping bead"
 else no "9srgz fold 2 non-ASCII path" "$(grep -E 'pna|HELD' "$gdst/out.txt" | tail -3 | tr '\n' '|')"; fi
-# 72l -- --review-only's queued touches file carries a non-ASCII path RAW (Tova round two, finding 1).
+# 72l -- --review-only's queued touches file carries a non-ASCII path RAW (the Warden round two, finding 1).
 nq_case() { # $1 name, $2 launcher -> sets nqst
   local r db
   r=$(mkfort "$1" ok); unpoison "$r"; mk_launcher "$2" "$work/$1-fleet.sh" "$r" || exit 3
@@ -5084,7 +5084,7 @@ nq_case() { # $1 name, $2 launcher -> sets nqst
   git -C "$r" worktree add -q "$r-worktrees/wbn" -b bead/wbn >/dev/null 2>&1
   mkdir -p "$r-worktrees/wbn/docs"; echo n > "$r-worktrees/wbn/docs/é.md"
   git -C "$r-worktrees/wbn" add -A >/dev/null; git -C "$r-worktrees/wbn" commit -qm "E2E-wbn: non-ascii"
-  printf 'E2E-wbn|in_progress|hollis|workbench\n' > "$db"
+  printf 'E2E-wbn|in_progress|dunmar|workbench\n' > "$db"
   FLEET_STATE="$nqst" BD_STORE="$db" "$work/$1-fleet.sh" --review-only E2E-wbn > "$nqst/enq.txt" 2>&1
 }
 nq_case s72l "$launcher"
@@ -5098,7 +5098,7 @@ if ! cmp -s "$launcher" "$noz9"; then
     ok "RED 9srgz nit 1: without -z the path is written QUOTED, so 72l discriminates"
   else no "RED 9srgz nit 1" "touches=$(cat "$nqst/workers/wbn/touches" 2>/dev/null | tr '\n' '|')"; fi
 else no "RED 9srgz nit 1" "the variant could not be generated"; fi
-# RED for 72k (Tova round two, finding 3): the pre-fold read -- plain porcelain,
+# RED for 72k (the Warden round two, finding 3): the pre-fold read -- plain porcelain,
 # newline-delimited -- quotes the non-ASCII path and the bead dispatches.
 noz9k="$work/fleet-9srgz-nozk.sh"
 python3 - "$launcher" "$noz9k" <<'PY'
@@ -5123,7 +5123,7 @@ echo "==========================================================================
 echo "SCENARIO 6niaz — FIX-FORWARD: ONE bounded lap on the same worktree, then the"
 echo "                 re-check's verdict; a second FIX-FORWARD is APPROVE-WITH-FINDINGS"
 echo "=========================================================================="
-# ForgeOs-6niaz part B at run level. The stub Warden returns the tokens in
+# Proofdelve ForgeOs-6niaz part B at run level. The stub Warden returns the tokens in
 # order, one per review of the bead, with a tiered record carrying one [polish]
 # item. Up to six passes; a pass that closes the bead ends the loop.
 ff_run() { # $1 name, $2 sfx, $3 tokens, $4 launcher
@@ -5157,14 +5157,14 @@ if grep -q '^E2E-ffb|closed' "$db" && merged_in "$r" ffb && [ "$(grep -c '^E2E-f
   ok "6niaz B: AT MOST ONE LAP -- the second FIX-FORWARD is read as APPROVE-WITH-FINDINGS: merged, closed, its [polish] item filed as a polish-batch bead, no third Forge"
 else no "6niaz B: the bound" "db=$(cat "$db" | tr '\n' '|') forge=$(tr '\n' '|' <<<"$fcalls")
 $(grep -E 'ffb|FIX' "$st/all.txt" | tail -8)"; fi
-# BELT 1 (the Overseer's ruling on Tova's finding 2): a Workbench range that
+# BELT 1 (the Overseer's ruling on the Warden's finding 2): a Workbench range that
 # touches a gated path waits for his signature even on an APPROVE.
 IFS='|' read -r r st db <<< "$(wb_fixture s6ng wg1 "$launcher" workbench,lands-on-review)"
-mkdir -p "$r-worktrees/wg1/src/ForgeOS.Api"; printf 'auth change\n' > "$r-worktrees/wg1/src/ForgeOS.Api/Program.cs"
+mkdir -p "$r-worktrees/wg1/src/Product.Api"; printf 'auth change\n' > "$r-worktrees/wg1/src/Product.Api/Program.cs"
 git -C "$r-worktrees/wg1" add -A >/dev/null; git -C "$r-worktrees/wg1" commit -qm "E2E-wg1: a gate-1 file"
 enqueue "$work/s6ng-fleet.sh" "$st" "$db" E2E-wg1 >/dev/null
 E2E_BD_CLASSIFY=off E2E_WARDEN_TOKEN=APPROVE run_pass "$work/s6ng-fleet.sh" "$st" "$db" || true
-if ! merged_in "$r" wg1 && grep -q '^E2E-wg1|open|justin|.*sign-to-land' "$db" && grep -q 'touches a gated path (src/ForgeOS.Api/Program.cs is gate-1 surface)' "$st/out.txt"; then
+if ! merged_in "$r" wg1 && grep -q '^E2E-wg1|open|justin|.*sign-to-land' "$db" && grep -q 'touches a gated path (src/Product.Api/Program.cs is gate-1 surface)' "$st/out.txt"; then
   ok "6niaz belt 1: a Workbench range touching a gate-1 file is HELD for the Overseer on an APPROVE (not merged, sign-to-land added, assigned justin)"
 else no "6niaz belt 1" "merged=$(merged_in "$r" wg1 && echo yes || echo no) rec=$(grep '^E2E-wg1|' "$db") $(grep -E 'wg1' "$st/out.txt" | tail -4 | tr '\n' '|')"; fi
 # and its vacuity control: the same fixture without the gated file lands.
@@ -5177,19 +5177,19 @@ else no "6niaz belt 1 vacuity" "merged=$(merged_in "$r" wi1 && echo yes || echo 
 # BELT 2: a range stacked on a sitting held for his signature does not land.
 r=$(mkfort s6nh ok); unpoison "$r"; mk_launcher "$launcher" "$work/s6nh-fleet.sh" "$r" || exit 3
 st="$work/s6nh-state"; mkdir -p "$st"; db="$work/s6nh.bd"
-# THE HELD SITTING IS HELD BY THE REAL ESCALATE ROUTE (Tova, round two, finding
+# THE HELD SITTING IS HELD BY THE REAL ESCALATE ROUTE (the Warden, round two, finding
 # 1): the first draft hand-wrote workbench,sign-to-land,human, a label set the
 # fleet never produces for a session bead, and so hid that belt 2 could not see
 # the ordinary held sitting.
 git -C "$r" worktree add -q "$r-worktrees/wh1" -b bead/wh1 >/dev/null 2>&1
 printf 'held sitting\n' > "$r-worktrees/wh1/wh.txt"; git -C "$r-worktrees/wh1" add -A >/dev/null; git -C "$r-worktrees/wh1" commit -qm "E2E-wh1: held work"
-printf 'E2E-wh1|in_progress|hollis|workbench,lands-on-review\n' > "$db"
+printf 'E2E-wh1|in_progress|dunmar|workbench,lands-on-review\n' > "$db"
 enqueue "$work/s6nh-fleet.sh" "$st" "$db" E2E-wh1 >/dev/null
 E2E_BD_CLASSIFY=off E2E_WARDEN_TOKEN=ESCALATE run_pass "$work/s6nh-fleet.sh" "$st" "$db" || true
 held_rec="$(grep '^E2E-wh1|' "$db")"
 git -C "$r" worktree add -q "$r-worktrees/ws1" -b bead/ws1 bead/wh1 >/dev/null 2>&1
 printf 'stacked sitting\n' > "$r-worktrees/ws1/ws.txt"; git -C "$r-worktrees/ws1" add -A >/dev/null; git -C "$r-worktrees/ws1" commit -qm "E2E-ws1: stacked work"
-printf 'E2E-ws1|in_progress|hollis|workbench,lands-on-review\n' >> "$db"
+printf 'E2E-ws1|in_progress|dunmar|workbench,lands-on-review\n' >> "$db"
 enqueue "$work/s6nh-fleet.sh" "$st" "$db" E2E-ws1 >/dev/null
 E2E_BD_CLASSIFY=off E2E_WARDEN_TOKEN=APPROVE run_pass "$work/s6nh-fleet.sh" "$st" "$db" || true
 if [ "${held_rec#*|*|}" != "${held_rec}" ] && grep -q '^E2E-wh1|open|justin|.*human' <<<"$held_rec" && ! grep -q 'sign-to-land' <<<"$held_rec" \

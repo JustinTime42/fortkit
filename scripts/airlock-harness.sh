@@ -1,5 +1,5 @@
 #!/bin/bash
-# Airlock harness (ForgeOs-x6hq, ForgeOs-5fyc). Drives the REAL
+# Airlock harness (Proofdelve ForgeOs-x6hq, Proofdelve ForgeOs-5fyc). Drives the REAL
 # fort/scripts/airlock.sh (or AIRLOCK_SH=<candidate>) against a FIXTURE fort
 # under AIRLOCK_ROOT: a git repo with its own operations.json, a stub emit.sh
 # that logs every event as one line, and stub operation scripts that exit 0 or
@@ -10,10 +10,10 @@
 # Against the pre-x6hq airlock.sh the `deploy` cases FAIL (it emits only
 # airlock.result) and `announce` is an unknown verb (exit 2): the positive
 # control. Refuses (exit 3) when the fixture cannot be built.
-# ForgeOs-mbv54 (Regent edict 2026-10-15) adds cases 12-17: a pinned operation
+# Proofdelve ForgeOs-mbv54 (Regent edict 2026-10-15) adds cases 12-17: a pinned operation
 # runs the approved commit whatever HEAD has become, refuses a bad pin as a
 # recorded result, and the host runner (fort/scripts/airlock-runner.sh, or
-# AIRLOCK_RUNNER_SH) runs only store-approved requests; and ForgeOs-72ot.1.1
+# AIRLOCK_RUNNER_SH) runs only store-approved requests; and Proofdelve ForgeOs-72ot.1.1
 # adds 18-20 (the snapshot race by a jq shim, non-object store lines, the
 # snapshot trap).
 set -uo pipefail
@@ -51,13 +51,13 @@ mkfix() { # $1 name -> prints fixture root
   # shellcheck disable=SC2016  # literal $(...) written into the fixture script
   printf '#!/bin/bash\necho "head=$(git rev-parse HEAD)"\necho "marker=$(cat marker.txt)"\n[ -L .env.fix ] && echo "envlink=$(cat .env.fix)"\necho "pwd=$PWD"\nexit 0\n' > "$r/scripts/op-pin.sh"
   echo X > "$r/marker.txt"
-  # ForgeOs-emshb: an operation script that reports exactly what reached it.
+  # Proofdelve ForgeOs-emshb: an operation script that reports exactly what reached it.
   # shellcheck disable=SC2016  # literal $... written into the fixture script
   printf '#!/bin/bash\necho "pwd=$PWD"\necho "script=$0"\necho "argc=$#"\nfor a in "$@"; do printf "arg=[%%s]\\n" "$a"; done\n[ -e /proc/$$/fd/8 ] && echo "fd8=OPEN" || echo "fd8=closed"\necho "preview: ${FIX_URL:-http://localhost:5173}"\nexit 0\n' > "$r/scripts/op-args.sh"
   cat > "$r/fort/airlock/operations.json" <<'J'
 {"operations":[
- {"name":"hostcheck","script":"scripts/op-args.sh","requires_approval":false,"auto_run":true,"runs_from":"bead-worktree","params":{"target":"main|(ForgeOs-)?[a-z0-9]+(\\.[0-9]+)*","filter":"[A-Za-z0-9._~=!&|() ]{1,200}","mutate":"(([A-Za-z0-9_][A-Za-z0-9._-]*/)*[A-Za-z0-9_][A-Za-z0-9._-]*\\.patch)?"},"path_params":["mutate"],"args":["$target","$filter",{"when":"mutate","args":["--mutate","$mutate"]}],"description":"fixture: host-test shaped"},
- {"name":"show","script":"scripts/op-args.sh","requires_approval":true,"runs_from":"bead-worktree","params":{"target":"main|(ForgeOs-)?[a-z0-9]+(\\.[0-9]+)*","keep_data":"(true|false)?"},"args":["$target",{"when":"keep_data","equals":"true","args":["--keep-data"]}],"result_url":"^preview: (?<url>http://\\S+)$","description":"fixture: preview shaped"},
+ {"name":"hostcheck","script":"scripts/op-args.sh","requires_approval":false,"auto_run":true,"runs_from":"bead-worktree","params":{"target":"main|(fortkit-)?[a-z0-9]+(\\.[0-9]+)*","filter":"[A-Za-z0-9._~=!&|() ]{1,200}","mutate":"(([A-Za-z0-9_][A-Za-z0-9._-]*/)*[A-Za-z0-9_][A-Za-z0-9._-]*\\.patch)?"},"path_params":["mutate"],"args":["$target","$filter",{"when":"mutate","args":["--mutate","$mutate"]}],"description":"fixture: host-test shaped"},
+ {"name":"show","script":"scripts/op-args.sh","requires_approval":true,"runs_from":"bead-worktree","params":{"target":"main|(fortkit-)?[a-z0-9]+(\\.[0-9]+)*","keep_data":"(true|false)?"},"args":["$target",{"when":"keep_data","equals":"true","args":["--keep-data"]}],"result_url":"^preview: (?<url>http://\\S+)$","description":"fixture: preview shaped"},
  {"name":"greedy","script":"scripts/op-ok.sh","requires_approval":true,"auto_run":true,"description":"fixture: declares auto_run beside requires_approval true"},
  {"name":"deploy-ok","script":"scripts/op-ok.sh","requires_approval":true,"emits":{"category":"deploy","target":"staging"},"description":"fixture"},
  {"name":"deploy-bad","script":"scripts/op-bad.sh","requires_approval":true,"emits":{"category":"deploy","target":"staging"},"description":"fixture"},
@@ -68,9 +68,9 @@ J
   git -C "$r" add -A >/dev/null; git -C "$r" commit -qm base
   printf '%s' "$r"
 }
-# Every fixture brings its own Overseer store (ForgeOs-72ot.1): AIRLOCK_STORE
+# Every fixture brings its own Overseer store (Proofdelve ForgeOs-72ot.1): AIRLOCK_STORE
 # points inside the fixture, so no case can append to the real civ-keep record.
-air() { AIRLOCK_ROOT="$1" AIRLOCK_STORE="$1/.store" AIRLOCK_WORKTREES="$1-wt" FORT_ACTOR=marrek FORT_SEAT=mayor bash "$AIRLOCK_SH" "${@:2}"; }
+air() { AIRLOCK_ROOT="$1" AIRLOCK_STORE="$1/.store" AIRLOCK_WORKTREES="$1-wt" FORT_ACTOR=emrith FORT_SEAT=mayor bash "$AIRLOCK_SH" "${@:2}"; }
 cat_events() { local r="$1" c="$2"; grep -c "^$c " "$r/emitted" 2>/dev/null || true; }   # the CATEGORY at column one, never the word
 last_id() { find "$1/fort/airlock/requests" -maxdepth 1 -name '*.json' -printf '%f\n' 2>/dev/null | sort | tail -1 | sed 's/\.json$//'; }
 
@@ -129,7 +129,7 @@ if [ "$(jq -r '.operations[] | select(.name=="deploy-staging") | .emits.category
   ok "operations.json: deploy-staging emits deploy/staging and feedback-scan emits nothing"
 else no "operations.json: the emits blocks are not as the sitting declared them" "$(jq -c '.operations[] | {name, emits}' "$ops_table" 2>&1)"; fi
 
-# --- ForgeOs-72ot.1: approval lives in the Overseer store, never in the request file ---
+# --- Proofdelve ForgeOs-72ot.1: approval lives in the Overseer store, never in the request file ---
 # Each forgery case asserts the OPERATION DID NOT RUN (no result file, no
 # ran-ok in any log), not merely a nonzero exit: a refusal printed after the
 # script executed would score as a pass on exit code alone.
@@ -174,15 +174,15 @@ else no "72ot.1: an approval replayed" "rc=$rc deploys before=$before after=$(ca
 
 # 11. a fixture root without a fixture store is refused, so no harness can write the real store
 r=$(mkfix g5) || exit 3
-AIRLOCK_ROOT="$r" FORT_ACTOR=marrek FORT_SEAT=mayor bash "$AIRLOCK_SH" list >/dev/null 2>&1; rc=$?
+AIRLOCK_ROOT="$r" FORT_ACTOR=emrith FORT_SEAT=mayor bash "$AIRLOCK_SH" list >/dev/null 2>&1; rc=$?
 if [ "$rc" -ne 0 ]; then ok "72ot.1: AIRLOCK_ROOT without AIRLOCK_STORE is refused (rc $rc)"
 else no "72ot.1: a fixture root ran against the default store" "rc=$rc"; fi
 
-# --- ForgeOs-mbv54: the pinned commit, the host runner, and ForgeOs-72ot.1.1 ---
+# --- Proofdelve ForgeOs-mbv54: the pinned commit, the host runner, and Proofdelve ForgeOs-72ot.1.1 ---
 RUNNER_SH="${AIRLOCK_RUNNER_SH:-$(dirname "$AIRLOCK_SH")/airlock-runner.sh}"
 [ -f "$RUNNER_SH" ] || RUNNER_SH="$here/fort/scripts/airlock-runner.sh"
 # env -u FORT_MASKED: verify-impl.sh runs this harness inside seat masks too,
-# and the runner refuses under the marker (Tova, finding 1 on the mbv54 review;
+# and the runner refuses under the marker (the Warden, finding 1 on the mbv54 review;
 # the scratch-reaper-harness.sh:183 pattern). Case 16 calls the runner directly.
 runner() { env -u FORT_MASKED AIRLOCK_ROOT="$1" AIRLOCK_STORE="$1/.store" AIRLOCK_WORKTREES="$1-wt" AIRLOCK_SH="$AIRLOCK_SH" bash "$RUNNER_SH" "${@:2}"; }
 movehead() { echo Y > "$1/marker.txt"; git -C "$1" commit -qam "move HEAD to Y"; }
@@ -249,7 +249,7 @@ if [ "$rc" -eq 0 ] && ran "$r" "$id" && [ "$(cat_events "$r" deploy)" -eq 1 ] &&
   ok "mbv54 A: the runner ran the store-approved request with no id, looped until nothing was left, and a second firing ran nothing (a consumed approval does not run twice)"
 else no "mbv54 A: the runner did not run the approved request exactly once" "rc=$rc rc2=$rc2 deploys=$(cat_events "$r" deploy) out=$(printf '%s' "$out" | tr '\n' '|' | cut -c1-200)"; fi
 
-# 15. the runner does NOT run a requires_approval:false request (feedback-scan's shape, ForgeOs-jhc6p) nor a forged-status one
+# 15. the runner does NOT run a requires_approval:false request (feedback-scan's shape, Proofdelve ForgeOs-jhc6p) nor a forged-status one
 r=$(mkfix q2) || exit 3
 air "$r" request scan --reason "fixture" >/dev/null; sid=$(last_id "$r"); sleep 1
 air "$r" request deploy-ok --reason "fixture" >/dev/null; fid=$(last_id "$r")
@@ -269,16 +269,16 @@ else no "mbv54 A: the runner ran under FORT_MASKED" "rc=$rc"; fi
 # Beside the launcher under test, not $here: verify-impl.sh copies this harness
 # out of the repo before running it, so $here is not the fort there.
 sysd="${AIRLOCK_SYSTEMD:-$(cd -- "$(dirname -- "$AIRLOCK_SH")/../systemd" 2>/dev/null && pwd -P)}"
-if grep -qx "PathModified=$HOME/.local/state/civ-keep/airlock-approvals.jsonl" "$sysd/proofdelve-airlock-runner.path" 2>/dev/null \
-   && grep -qx 'Unit=proofdelve-airlock-runner.service' "$sysd/proofdelve-airlock-runner.path" \
-   && grep -qx 'Unit=proofdelve-airlock-runner.service' "$sysd/proofdelve-airlock-runner.timer" \
-   && grep -q '^ExecStart=.*/fort/scripts/airlock-runner.sh$' "$sysd/proofdelve-airlock-runner.service" \
+if grep -qx "PathModified=$HOME/.local/state/civ-keep/airlock-approvals.jsonl" "$sysd/manyhalls-airlock-runner.path" 2>/dev/null \
+   && grep -qx 'Unit=manyhalls-airlock-runner.service' "$sysd/manyhalls-airlock-runner.path" \
+   && grep -qx 'Unit=manyhalls-airlock-runner.service' "$sysd/manyhalls-airlock-runner.timer" \
+   && grep -q '^ExecStart=.*/fort/scripts/airlock-runner.sh$' "$sysd/manyhalls-airlock-runner.service" \
    && [ "$(jq -r '.operations[] | select(.name=="deploy-staging") | .runs_from' "$ops_table")" = pinned-commit ] \
    && [ "$(jq -r '.operations[] | select(.name=="feedback-scan") | .requires_approval' "$ops_table")" = false ]; then
   ok "mbv54 A: the path unit watches the approvals store airlock.sh reads and fires the runner service; the timer fires the same service; deploy-staging runs from its pinned commit; feedback-scan still needs no approval and so is never auto-run"
-else no "mbv54 A: the shipped units or table do not wire the runner as designed" "$(grep -h -E '^(PathModified|Unit|ExecStart)=' "$sysd"/proofdelve-airlock-runner.* 2>&1 | tr '\n' '|')"; fi
+else no "mbv54 A: the shipped units or table do not wire the runner as designed" "$(grep -h -E '^(PathModified|Unit|ExecStart)=' "$sysd"/manyhalls-airlock-runner.* 2>&1 | tr '\n' '|')"; fi
 
-# 18. ForgeOs-72ot.1.1 (2): the request-snapshot race. A jq shim swaps the
+# 18. Proofdelve ForgeOs-72ot.1.1 (2): the request-snapshot race. A jq shim swaps the
 # approved bytes back in right after the operation field is read from the
 # request file. airlock.sh before be140bb2 read the operation from the file and
 # then hashed the file, so it judged two byte sets and ran deploy-bad on
@@ -300,7 +300,7 @@ if [ "$rc" -ne 0 ] && ! ran "$r" "$id" && ! grep -rqs ran-bad "$r/fort/airlock/r
   ok "72ot.1.1: a request swapped between the field read and the hash is judged as ONE byte set and refused (the approved bytes restored behind the read do not lend their approval)"
 else no "72ot.1.1: the snapshot race ran an operation on another request's approval" "rc=$rc result=$(ran "$r" "$id" && echo present || echo absent)"; fi
 
-# 19. ForgeOs-72ot.1.1 (3): a store line that is valid JSON but not an object is skipped, not fatal for every id
+# 19. Proofdelve ForgeOs-72ot.1.1 (3): a store line that is valid JSON but not an object is skipped, not fatal for every id
 r=$(mkfix nonobj) || exit 3
 air "$r" request deploy-ok --reason "fixture" >/dev/null; id=$(last_id "$r")
 mkdir -p "$r/.store"; printf '5\n"text"\n[1]\n' > "$r/.store/airlock-approvals.jsonl"
@@ -309,7 +309,7 @@ if [ "$rc" -eq 0 ] && ran "$r" "$id"; then
   ok "72ot.1.1: non-object JSON lines in the store (5, a string, an array) are skipped and a genuine approval after them is honoured"
 else no "72ot.1.1: a non-object store line disabled approvals" "rc=$rc"; fi
 
-# 20. ForgeOs-72ot.1.1 (3): a die after the snapshot leaves nothing in TMPDIR
+# 20. Proofdelve ForgeOs-72ot.1.1 (3): a die after the snapshot leaves nothing in TMPDIR
 r=$(mkfix snaptrap) || exit 3
 air "$r" request deploy-ok --reason "fixture" >/dev/null; id=$(last_id "$r")
 mkdir -p "$work/tmpd"; TMPDIR="$work/tmpd" air "$r" run "$id" >/dev/null 2>&1; rc=$?
@@ -318,7 +318,7 @@ if [ "$rc" -ne 0 ] && [ "$left" -eq 0 ]; then
   ok "72ot.1.1: run dying on an unapproved request after taking its snapshot leaves no snapshot behind in TMPDIR"
 else no "72ot.1.1: the snapshot survived a die" "rc=$rc left=$left"; fi
 
-# --- ForgeOs-emshb: declared params, bead-worktree runs, auto_run, result_url ---
+# --- Proofdelve ForgeOs-emshb: declared params, bead-worktree runs, auto_run, result_url ---
 # Every refusal case asserts the script NEVER RAN (no log, no result log line),
 # and each has a control that runs the same shape and shows it does.
 forge_params() { local f="$1/fort/airlock/requests/$2.json"; jq --argjson p "$3" '.params = $p' "$f" > "$f.t" && mv "$f.t" "$f"; }
@@ -366,7 +366,7 @@ else no "emshb: request-time validation did not hold" "rc1=$rc1 rc2=$rc2 rc3=$rc
 # 23. runs_from bead-worktree: cwd is the named bead's worktree, the script is MAIN's copy, the run lock is closed for it
 r=$(mkfix e3) || exit 3
 mkdir -p "$r-wt/oye5y/.git" "$r-wt/oye5y/scripts"; printf '#!/bin/bash\necho WORKTREE-COPY\n' > "$r-wt/oye5y/scripts/op-args.sh"
-air "$r" request hostcheck --reason fixture --param target=ForgeOs-oye5y --param 'filter=A~1' >/dev/null; id=$(last_id "$r")
+air "$r" request hostcheck --reason fixture --param target=Proofdelve ForgeOs-oye5y --param 'filter=A~1' >/dev/null; id=$(last_id "$r")
 runner "$r" >/dev/null 2>&1; log="$r/fort/airlock/results/$id.log"
 if grep -qx "pwd=$r-wt/oye5y" "$log" 2>/dev/null && grep -qx "script=$r/scripts/op-args.sh" "$log" && ! grep -q WORKTREE-COPY "$log" && grep -qx 'fd8=closed' "$log"; then
   ok "emshb: a bead-worktree operation runs with cwd in \$root-worktrees/oye5y, executes main's script (never the worktree's seat-writable copy), and does not inherit the run lock (fd 8 closed)"
@@ -441,7 +441,7 @@ tp() { jq -r --arg n "$1" --arg k "$2" --arg v "$3" '.operations[] | select(.nam
 bad=""
 for o in host-test preview; do
   for v in 'oye5y;id' '../x' $'main\n' 'oye5y id'; do [ "$(tp "$o" target "$v")" = false ] || bad="$bad $o:accepts[$v]"; done
-  for v in main oye5y ForgeOs-oye5y ForgeOs-2md9d.7.2; do [ "$(tp "$o" target "$v")" = true ] || bad="$bad $o:refuses[$v]"; done
+  for v in main oye5y Proofdelve ForgeOs-oye5y Proofdelve ForgeOs-2md9d.7.2; do [ "$(tp "$o" target "$v")" = true ] || bad="$bad $o:refuses[$v]"; done
 done
 [ "$(tp host-test filter 'x; rm -rf /')" = false ] || bad="$bad filter-injection"
 [ "$(tp host-test mutate '../x.patch')" = false ] || bad="$bad mutate-traversal"
@@ -456,11 +456,11 @@ if [ -z "$bad" ] \
 else no "emshb: the shipped table is not as the sitting declared it" "${bad:-flags} $(jq -c '.operations[] | {name, requires_approval, auto_run, runs_from}' "$ops_table" | tr '\n' ' ')"; fi
 
 # 29. the shipped units: the path unit also watches requests/ (an auto_run request needs no click to fire it) and the service lets a preview outlive the run
-unitroot="$(sed -n 's/^WorkingDirectory=//p' "$sysd/proofdelve-airlock-runner.service" 2>/dev/null)"
-if [ -n "$unitroot" ] && grep -qx "PathChanged=$unitroot/fort/airlock/requests" "$sysd/proofdelve-airlock-runner.path" 2>/dev/null \
-   && grep -qx 'KillMode=process' "$sysd/proofdelve-airlock-runner.service"; then
+unitroot="$(sed -n 's/^WorkingDirectory=//p' "$sysd/manyhalls-airlock-runner.service" 2>/dev/null)"
+if [ -n "$unitroot" ] && grep -qx "PathChanged=$unitroot/fort/airlock/requests" "$sysd/manyhalls-airlock-runner.path" 2>/dev/null \
+   && grep -qx 'KillMode=process' "$sysd/manyhalls-airlock-runner.service"; then
   ok "emshb: the runner's path unit fires on a new request in fort/airlock/requests, and its service is KillMode=process (measured 2026-10-23: the default control-group kills a detached preview at unit exit)"
-else no "emshb: the units do not carry the emshb wiring" "$(grep -h -E '^(PathChanged|PathModified|KillMode)=' "$sysd"/proofdelve-airlock-runner.* 2>&1 | tr '\n' '|')"; fi
+else no "emshb: the units do not carry the emshb wiring" "$(grep -h -E '^(PathChanged|PathModified|KillMode)=' "$sysd"/manyhalls-airlock-runner.* 2>&1 | tr '\n' '|')"; fi
 
 echo; echo "RESULT $pass pass / $fail fail"
 [ "$fail" -eq 0 ]

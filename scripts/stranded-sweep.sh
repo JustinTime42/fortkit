@@ -1,11 +1,11 @@
 #!/bin/bash
-# Stranded-unit sweeper (ForgeOs-p0a6, option b; ForgeOs-mpaw's reaper is the
+# Stranded-unit sweeper (Proofdelve ForgeOs-p0a6, option b; Proofdelve ForgeOs-mpaw's reaper is the
 # same join read the other way). REPORTS AND NEVER ACTS.
 #
 # The question, from bd and git rather than from fleet worker state: which
 # beads are claimed or in progress, have a bead/* branch ahead of main, and are
 # merged by nobody? Worker state only knows about work the fleet dispatched; the
-# live specimen (ForgeOs-b0vj.12.11, stranded 2026-09-02 to 2026-09-08) was
+# live specimen (Proofdelve ForgeOs-b0vj.12.11, stranded 2026-09-02 to 2026-09-08) was
 # hand-dispatched and no dispatcher ever had a record of it.
 #
 # CLASSES, and why they are kept apart:
@@ -57,7 +57,7 @@
 # asked, which is a REFUSAL and not a clean sweep (a broken sweeper also returns
 # nothing; the exit status is how you tell them apart).
 #
-# WHICH bd SURFACES ARE TRUSTED, AND WHY (ForgeOs-l0e7, ForgeOs-p0a6 c5):
+# WHICH bd SURFACES ARE TRUSTED, AND WHY (Proofdelve ForgeOs-l0e7, Proofdelve ForgeOs-p0a6 c5):
 #   The candidate set comes from GIT, not from bd. The loop asks bd state about
 #   EVERY bead/* branch (385 today), not only the 11 unmerged ones, because
 #   merged branches can be MERGED-NOT-CLOSED, CLAIMED-NO-WORK, or REAPABLE.
@@ -66,7 +66,7 @@
 #   `bd list --label-pattern`, it is not a filter and cannot fail open (357 of
 #   357 for a nonsense pattern); `bd search` also misses titles. Verdicts come
 #   from fort/events/*.jsonl review.verdict events, which warden.sh writes from
-#   the transcript's VERDICT-LINE (ForgeOs-9mfw.5).
+#   the transcript's VERDICT-LINE (Proofdelve ForgeOs-9mfw.5).
 #
 # FIXTURE MODE (the executed negative control, criterion 3):
 #   --main <ref>          treat <ref> as main (history: --main ecb1162)
@@ -199,10 +199,10 @@ for f in sorted(glob.glob(os.path.join(d, "events-*.jsonl"))):
         v = (p.get("verdict") or "").upper()
         if not v:
             # No payload.verdict (every event before 2026-09-03). Take the
-            # EARLIEST token by position, never by a priority list: Tova's
+            # EARLIEST token by position, never by a priority list: the Warden's
             # "ESCALATE ... merits APPROVE-WITH-FINDINGS, awaiting sign-off"
-            # (ForgeOs-u65j.3) is a gate-6 hold, and a priority parse read it
-            # as landable (Tova, p0a6 finding 1). Uppercase first: the
+            # (Proofdelve ForgeOs-u65j.3) is a gate-6 hold, and a priority parse read it
+            # as landable (the Warden, p0a6 finding 1). Uppercase first: the
             # 2026-08-03 payloads are lowercase.
             det = (e.get("detail") or "").upper()
             hits = [(det.find(tok), tok) for tok in ("MERGE-PARENT-OPEN", "APPROVE-WITH-FINDINGS", "REQUEST-CHANGES", "ESCALATE", "APPROVE") if det.find(tok) >= 0]
@@ -356,10 +356,10 @@ tracked_tree_state() {  # $1 ref -> prints CLEAN/0 or DIRTY/count, then worktree
 
 while read -r ref; do
   [ -n "$ref" ] || continue
-  branch="${ref#refs/heads/}"; id="ForgeOs-${branch#bead/}"
+  branch="${ref#refs/heads/}"; id="fortkit-${branch#bead/}"
   ahead=$(git -C "$repo" rev-list --count "$main_ref..$ref" 2>/dev/null || echo "?")
   if [ "$ahead" = "0" ]; then
-    # THE MIRROR CASE (Tova, p0a6 finding 6): branch merged, bead still open or
+    # THE MIRROR CASE (the Warden, p0a6 finding 6): branch merged, bead still open or
     # in_progress. The b0vj.23 halt shape: landed, and nobody closed it. Not
     # stranded (the work is on main) but a person is waiting for nothing.
     # A newly cut branch is exactly main's tip. It is live work, not landed
@@ -439,7 +439,7 @@ dirty_report="$({
       exit 3
     }
     [[ "$tree_state" == DIRTY* ]] || continue
-    branch="${ref#refs/heads/}"; id="ForgeOs-${branch#bead/}"
+    branch="${ref#refs/heads/}"; id="fortkit-${branch#bead/}"
     printf 'WORKTREE-DIRTY        %-24s %-14s %s; fact only, preserve for human assessment\n' "$branch" "$id" "$tree_state"
   done
   for wt in "${detached_worktrees[@]}"; do
@@ -463,7 +463,7 @@ if [ "$reapable" = 1 ]; then
     [ -n "$wt" ] || continue
     b=$(git -C "$wt" symbolic-ref --quiet --short HEAD 2>/dev/null) || continue
     case "$b" in bead/*) ;; *) continue ;; esac
-    id="ForgeOs-${b#bead/}"
+    id="fortkit-${b#bead/}"
     ahead=$(git -C "$repo" rev-list --count "$main_ref..refs/heads/$b" 2>/dev/null || echo "?")
     [ "$ahead" = "0" ] || continue
     state_of "$id"

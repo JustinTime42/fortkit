@@ -39,7 +39,7 @@ ev verify.pass "$short" bead/x > "$stream";                  check "9 pass on an
 ev verify.pass "$sha" HEAD > "$stream";                      check "10 full sha in the event -> YES"       0 "$(run)"
 ev verify.pass "${short:0:3}" HEAD > "$stream";              check "11 3-char prefix is not an identifier -> WAIT" 2 "$(run)"
 
-# ForgeOs-47mq: the agent warning rides a YES and never changes the verdict.
+# Proofdelve ForgeOs-47mq: the agent warning rides a YES and never changes the verdict.
 # Stub ssh-add on PATH: exit 1 = "no identities", exit 0 = an identity loaded.
 stub="$tmp/bin"; mkdir -p "$stub"
 ev verify.pass "$short" HEAD > "$stream"
@@ -55,7 +55,7 @@ printf '#!/bin/sh\nexit 1\n' > "$stub/ssh-add"
 out="$(cd "$repo" && PATH="$stub:$PATH" scripts/push-ready.sh 2>&1)"; rc=$?
 check "14 no identities on a WAIT -> WAIT, no WARN (the tree verdict comes first)" 2 "$rc"
 
-# ForgeOs-l3l8: a pass on a dirty tree, or one whose HEAD moved mid-run, is not a
+# Proofdelve ForgeOs-l3l8: a pass on a dirty tree, or one whose HEAD moved mid-run, is not a
 # verdict for HEAD; an event without the keys is read as before.
 evd() { printf '{"ts":"t","category":"%s","payload":{"commit":"%s","branch":"%s",%s}}\n' "$1" "$2" "$3" "$4"; }
 evd verify.pass "$short" HEAD '"dirtyAtStart":true'  > "$stream";  check "15 pass on a dirty tree -> WAIT"          2 "$(run)"
@@ -64,8 +64,8 @@ evd verify.pass "$short" HEAD '"headMoved":true'     > "$stream";  check "17 pas
 evd verify.pass "$short" HEAD '"dirtyAtStart":false,"dirtyAtEnd":false,"headMoved":false' > "$stream"; check "18 pass, clean and still -> YES" 0 "$(run)"
 { evd verify.pass "$short" HEAD '"dirtyAtStart":true'; ev verify.pass "$short" HEAD; } > "$stream"; check "19 a later clean pass after a dirty one -> YES" 0 "$(run)"
 
-# ForgeOs-uy86j: fleet.sh:1795 counts 14 day-files while push-ready counts 14
-# calendar days: the same N, deliberately different units. ForgeOs-0nhz4: the
+# Proofdelve ForgeOs-uy86j: fleet.sh:1795 counts 14 day-files while push-ready counts 14
+# calendar days: the same N, deliberately different units. Proofdelve ForgeOs-0nhz4: the
 # calendar must not change a HEAD's verdict; append-only event files make a newer
 # failure win in chronological order (see scripts/push-ready.sh:45-47).
 rm -f "$yesterday_stream" "$two_days_ago_stream"
@@ -88,7 +88,7 @@ check "26 unreadable historical day file -> refuse" 3 "$(run)"
 chmod 600 "$two_days_ago_stream"
 printf '#!/bin/sh\nexit 0\n' > "$stub/ssh-add"
 
-# ForgeOs-s1reg criterion 2: a REUSED post-merge pass (fleet.sh, no second run)
+# Proofdelve ForgeOs-s1reg criterion 2: a REUSED post-merge pass (fleet.sh, no second run)
 # is a verdict for HEAD only when HEAD's tree IS its verifiedTree. Both arms.
 rm -f "$yesterday_stream" "$two_days_ago_stream"
 # The fixture's commits are empty (one tree), so give HEAD a tree of its own first.

@@ -1,11 +1,11 @@
 #!/bin/bash
-# Proofdelve scratch reaper — removes what a finished or killed review left on
+# Manyhalls scratch reaper — removes what a finished or killed review left on
 # disk, and the bead worktrees whose work has landed and whose bead is closed.
-# ForgeOs-nv0j (Regent edict 2026-09-12, gate 6), the durable half of incident
-# ForgeOs-7gag; ForgeOs-mpaw's worktree half rides on the same timer.
+# Proofdelve ForgeOs-nv0j (Regent edict 2026-09-12, gate 6), the durable half of incident
+# Proofdelve ForgeOs-7gag; Proofdelve ForgeOs-mpaw's worktree half rides on the same timer.
 #
 # WHAT THIS IS. A host-level process fired hourly by
-# fort/systemd/proofdelve-scratch-reaper.timer. Two sweeps, each refusing more
+# fort/systemd/manyhalls-scratch-reaper.timer. Two sweeps, each refusing more
 # often than it acts:
 #
 #   A. WARDEN SCRATCH. warden.sh copies the whole repo per review into
@@ -28,7 +28,7 @@
 #   B. BEAD WORKTREES. The list comes from `scripts/stranded-sweep.sh
 #      --reapable` and from nowhere else: a worktree on a bead/* branch that is
 #      merged into main (ahead=0) whose bead is CLOSED. This file re-derives none
-#      of that (ForgeOs-mpaw: reuse it, never re-derive). It then refuses on its
+#      of that (Proofdelve ForgeOs-mpaw: reuse it, never re-derive). It then refuses on its
 #      own account when the tree is DIRTY (any status line, untracked included),
 #      when its branch is NOT an ancestor of main (re-checked here, never taken
 #      from the list), or when a launcher holds its .forge.lock, and otherwise runs
@@ -40,7 +40,7 @@
 #      that bead die rc=255 'a branch named bead/<sfx> already exists' (measured
 #      2026-09-09, the w7u5 reaping sitting). Remove both or neither.
 #
-#   C. HOST /tmp HYGIENE (ForgeOs-jfqu4.8 with ForgeOs-lmgue, Regent docket
+#   C. HOST /tmp HYGIENE (Proofdelve ForgeOs-jfqu4.8 with Proofdelve ForgeOs-lmgue, Regent docket
 #      2026-10-22 item B). The host /tmp is a tmpfs with a per-user quota
 #      (12764M) and filling it halted the fleet three times (2026-10-16 twice,
 #      2026-10-22). The root cause, Node's compile cache, is now disabled in
@@ -82,20 +82,20 @@
 # twenty-four times a day is a stream nobody reads, fortkit-or2.8). A listed
 # worktree whose directory is ABSENT while its branch survives (the rc=255
 # shape) is named in the journal and counted in the summary line but raises NO
-# event -- decided, not overlooked (Tova, round two, finding 2): it is a
+# event -- decided, not overlooked (the Warden, round two, finding 2): it is a
 # persistent state this reaper cannot repair, so an event per firing would be
 # 24 identical lines a day until a person acts, which is fortkit-or2.8 exactly. A FAILED
 # removal -- the command ran and the thing is still there -- is reported as
-# failed, never as reaped and never as refused (ForgeOs-w7u5's four outcomes).
+# failed, never as reaped and never as refused (Proofdelve ForgeOs-w7u5's four outcomes).
 #
 # IT REFUSES FROM A MASKED SEAT. The scratch root is read-only inside every seat
-# mask since round two of ForgeOs-nv0j (it moved off the ~/.cache grant), so
+# mask since round two of Proofdelve ForgeOs-nv0j (it moved off the ~/.cache grant), so
 # sweep A could do nothing from a seat -- but $root-worktrees is rw in the
 # Mayor's mask (lib/seat-sandbox.sh RW_PATHS, the fortkit-1q9 grant), so a
 # masked Mayor COULD run sweep B and remove worktrees and branches; she must
 # not, because a seat deleting trees on a bd-derived list is the agent-accident
 # class the charter ranks first. The marker is the control, exactly as in
-# fleet.sh. (Tova Marrowassay, round two: the earlier sentence here cited the
+# fleet.sh. (the Warden, round two: the earlier sentence here cited the
 # scratch root as the rw grant, which round two's own fold made false.)
 #
 # Usage:
@@ -120,7 +120,7 @@
 #   REAPER_NODE_CACHE_MAX_MB  node-compile-cache size that is removed (1024)
 #   REAPER_TMP_USAGE     "<used_kb> <limit_kb>" instead of measuring (harness)
 #   REAPER_TMP_ALARM_PCT the lowest alarm band (80)
-#   REAPER_STATE         where the alarm keeps its last band (~/.local/share/proofdelve/reaper)
+#   REAPER_STATE         where the alarm keeps its last band (~/.local/share/manyhalls/reaper)
 
 set -uo pipefail
 
@@ -140,11 +140,11 @@ case "${1:-}" in
   *) echo "scratch-reaper.sh: unknown argument: $1" >&2; exit 64 ;;
 esac
 
-root="${REAPER_REPO:-/home/justin/dev/ForgeOs}"
+root="${REAPER_REPO:-/home/justin/dev/fortkit}"
 # The same expression fort/scripts/warden.sh and fort/scripts/fleet.sh carry as
 # warden_root=; governor-harness.sh holds those two byte-equal, and this one is
 # overridable so a harness can point the sweep at a fixture.
-warden_root="${REAPER_WARDEN_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/proofdelve/warden}"
+warden_root="${REAPER_WARDEN_ROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/manyhalls/warden}"
 legacy_root="${REAPER_LEGACY_ROOT:-/tmp}"
 min_age="${REAPER_MIN_AGE_MIN:-120}"
 emit="$root/fort/scripts/emit.sh"
@@ -160,7 +160,7 @@ if [ -n "${REAPER_REPO:-}" ] && [ -z "${REAPER_TMP_DIR:-}" ]; then
   tmp_sweep=0
   echo "scratch-reaper.sh: REAPER_REPO is set without REAPER_TMP_DIR: a fixture repo never touches the real /tmp, so sweep C and the /tmp alarm are skipped" >&2
 fi
-reaper_state="${REAPER_STATE:-${XDG_DATA_HOME:-$HOME/.local/share}/proofdelve/reaper}"
+reaper_state="${REAPER_STATE:-${XDG_DATA_HOME:-$HOME/.local/share}/manyhalls/reaper}"
 
 # ---------------------------------------------------------------------------
 # The /tmp usage alarm (see the header). Exit 0 always: an alarm that could
@@ -193,7 +193,7 @@ tmp_alarm() {
   if [ "$last_day" = "$today" ] && [ "${last_band:-0}" -ge "$band" ]; then return 0; fi
   mkdir -p "$reaper_state" && printf '%s %s\n' "$today" "$band" > "$reaper_state/tmp-alarm"
   echo "scratch-reaper.sh: ALARM /tmp at ${pct}% (band ${band}%)" >&2
-  ( cd "$root" && "$emit" incident "Host /tmp is at ${pct}% of this user's limit ($((used / 1024)) of $((limit / 1024)) MiB, by $src): a fill makes the next verify unrunnable and halts the fleet (ForgeOs-lmgue, ForgeOs-jfqu4.8). The hourly scratch reaper prunes old forge and verify-fail logs and an oversized /tmp/node-compile-cache; look at du -xsh /tmp/* on the host for anything else." -a fleet -s fleet \
+  ( cd "$root" && "$emit" incident "Host /tmp is at ${pct}% of this user's limit ($((used / 1024)) of $((limit / 1024)) MiB, by $src): a fill makes the next verify unrunnable and halts the fleet (Proofdelve ForgeOs-lmgue, Proofdelve ForgeOs-jfqu4.8). The hourly scratch reaper prunes old forge and verify-fail logs and an oversized /tmp/node-compile-cache; look at du -xsh /tmp/* on the host for anything else." -a fleet -s fleet \
       -p "{\"pct\":$pct,\"band\":$band,\"used_kb\":$used,\"limit_kb\":$limit,\"source\":\"$src\"}" ) || true
 }
 if [ "$tmp_check_only" = 1 ]; then tmp_alarm; exit 0; fi
@@ -239,7 +239,7 @@ sweep_scratch() {  # $1 dir, $2 lock, $3 label
     return 0
   fi
   if [ "$dry" = 1 ]; then note "WOULD REMOVE $label ${age}min"; reaped=$((reaped + 1)); return 0; fi
-  # THE LOCK IS HELD ACROSS THE REMOVAL (Tova, round one, finding 5): a probe
+  # THE LOCK IS HELD ACROSS THE REMOVAL (the Warden, round one, finding 5): a probe
   # that takes and drops it leaves a window in which a review of the same bead
   # can start, take the lock, and rsync into a tree this rm is still deleting.
   # Held, that review sees the lock taken and refuses with exit 75 -- a false
@@ -290,7 +290,7 @@ sweep_worktrees() {
     [ -n "${wt:-}" ] || continue
     wt="${wt#worktree=}"
     # A LISTED WORKTREE WHOSE DIRECTORY IS GONE IS THE rc=255 SHAPE ALREADY
-    # (Tova, round one, finding 6): the branch survives with no tree, so a
+    # (the Warden, round one, finding 6): the branch survives with no tree, so a
     # re-dispatch of that bead dies on `git worktree add -b`. Not this reaper's
     # to repair (it never made the state), but never silent: named, counted.
     if [ ! -d "$wt" ]; then

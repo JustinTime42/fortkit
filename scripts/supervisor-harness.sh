@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deterministic harness for fort/scripts/fleet-supervisor.sh (ForgeOs-dx34.4).
+# Deterministic harness for fort/scripts/fleet-supervisor.sh (Proofdelve ForgeOs-dx34.4).
 # No model, no tokens, no real record touched: the supervisor is copied with
 # its hardcoded `root=` repointed at a scratch fort whose fort/scripts/ holds a
 # stub fleet.sh and a stub emit.sh, and `bd` and `systemd-run` are stubs first
@@ -12,7 +12,7 @@
 #
 # THE CONTROLS ARE GENERATED, NOT ARGUED. Three sabotaged variants of the
 # shipped file are made by sed and each must FAIL the case whose property it
-# removes (ForgeOs-8zb7 class A: a case that passes against a file lacking the
+# removes (Proofdelve ForgeOs-8zb7 class A: a case that passes against a file lacking the
 # property is not a control). A substitution that does not land exactly once
 # reports NOT RUN, never PASS.
 #
@@ -39,7 +39,7 @@ mkdir -p "$fort/fort/scripts" "$scratch/bin" "$scratch/state"
 cat > "$fort/fort/scripts/fleet.sh" <<'STUB'
 #!/bin/bash
 echo "STUB fleet.sh ran: $*" >> "${STUB_LOG:?}"
-# --reapable (ForgeOs-dx34.18): the real launcher prints one count; the stub
+# --reapable (Proofdelve ForgeOs-dx34.18): the real launcher prints one count; the stub
 # prints STUB_REAPABLE (default 0) so every earlier case keeps its world, or
 # fails like a broken launcher under STUB_REAPABLE_RC.
 case "${1:-}" in --reapable) [ "${STUB_REAPABLE_RC:-0}" = 0 ] || exit "${STUB_REAPABLE_RC}"; echo "${STUB_REAPABLE:-0}"; exit 0 ;; esac
@@ -73,9 +73,9 @@ echo '[{"id":"E2E-aaa"},{"id":"E2E-bbb"}]' > "$scratch/ready-two.json"
 # --- rendering a subject with its root repointed -----------------------------
 render() {  # $1 source file, $2 destination; asserts the root line lands once
   local n
-  n="$(grep -c '^root="/home/justin/dev/ForgeOs"$' "$1")"
+  n="$(grep -c '^root="/home/justin/dev/fortkit"$' "$1")"
   [ "$n" = 1 ] || { echo "HARNESS REFUSES: expected exactly one root= line in $1, found $n" >&2; return 3; }
-  sed "s|^root=\"/home/justin/dev/ForgeOs\"$|root=\"$fort\"|" "$1" > "$2"
+  sed "s|^root=\"/home/justin/dev/fortkit\"$|root=\"$fort\"|" "$1" > "$2"
   chmod +x "$2"
   # nothing else changed
   [ "$(diff <(grep -v '^root=' "$1") <(grep -v '^root=' "$2") | wc -l)" = 0 ] \
@@ -161,14 +161,14 @@ if [ "$(sha "$S/supervisor.streak")" = "$before" ]; then ok "c5b: a further quie
 fire "$S" "$scratch/ready-two.json"
 n_launch="$(grep -c '^SYSTEMD-RUN' "$log")"
 if [ $rc = 0 ] && [ "$n_launch" = 1 ] && grep -q "^SYSTEMD-RUN .*$fort/fort/scripts/fleet.sh\$" "$log" && grep -q -- "--setenv FLEET_STATE=$S " "$log" \
-   && grep -q -- '--unit proofdelve-fleet-run-' "$log" && grep -q -- '-p KillMode=process' "$log" \
+   && grep -q -- '--unit manyhalls-fleet-run-' "$log" && grep -q -- '-p KillMode=process' "$log" \
    && grep -q '^EMIT fleet.autostart ' "$log" && grep -q '"candidates":2' "$log" \
-   && [ "$(printf '%s' "$out" | wc -l)" = 0 ] && grep -q '^fleet-supervisor.sh: started proofdelve-fleet-run-' <<<"$out"; then
-  ok "c1: lock free, 2 ready -> systemd-run asked ONCE for fleet.sh as unit proofdelve-fleet-run-*, KillMode=process, one stderr line, fleet.autostart emitted with candidates=2"
+   && [ "$(printf '%s' "$out" | wc -l)" = 0 ] && grep -q '^fleet-supervisor.sh: started manyhalls-fleet-run-' <<<"$out"; then
+  ok "c1: lock free, 2 ready -> systemd-run asked ONCE for fleet.sh as unit manyhalls-fleet-run-*, KillMode=process, one stderr line, fleet.autostart emitted with candidates=2"
 else bad "c1: start (rc=$rc launches=$n_launch out='$out' log: $(tr '\n' '|' < "$log" | cut -c1-300))"; fi
 if [ "$(val "$S" count)" = 0 ]; then ok "c1b: starting a run leaves the streak at 0"; else bad "c1b: streak changed on a start"; fi
 
-# --- ForgeOs-eedj: ONE PATH, forwarded and checked ---------------------------
+# --- Proofdelve ForgeOs-eedj: ONE PATH, forwarded and checked ---------------------------
 # The supervisor used to hand systemd-run its own hardcoded copy of the unit's
 # PATH. Now it forwards the PATH it was fired under and refuses, naming the
 # tool, when that PATH does not resolve what a run needs. Against the pre-eedj
@@ -182,7 +182,7 @@ else bad "e1 (eedj): the run's PATH is not the firing's PATH: $(grep -o -- '--se
 # a PATH that resolves the stubs and the coreutils but NOT codex: a toolchain dir went missing (the node-upgrade shape)
 mkdir -p "$scratch/thinbin"
 for t in bd systemd-run; do ln -sf "$scratch/bin/$t" "$scratch/thinbin/$t"; done
-# THE TOOL LIST IS READ OUT OF THE SUBJECT, NEVER COPIED FROM IT (ForgeOs-ip9z
+# THE TOOL LIST IS READ OUT OF THE SUBJECT, NEVER COPIED FROM IT (Proofdelve ForgeOs-ip9z
 # finding 6 added claude and dotnet to fleet_tools and this hand-written copy
 # went stale in the same commit, turning e2's own vacuity control red). A list
 # that must match a list in another file is generated from that file or it is
@@ -207,7 +207,7 @@ if [ $rc = 0 ] && grep -q 'SYSTEMD-RUN' "$log"; then
   ok "e2 control: the same thin PATH with codex present starts the run -- e2 measured the missing tool, not a broken PATH"
 else bad "e2 control: (rc=$rc out='$out')"; fi
 
-# --- ForgeOs-s49w: THE BACK-OFF, driven by the outcome record fleet.sh writes ---
+# --- Proofdelve ForgeOs-s49w: THE BACK-OFF, driven by the outcome record fleet.sh writes ---
 # The supervisor decides nothing about beads; it reads $FLEET_STATE/last-run.outcome
 # (run, autostart, launches, reason, duration_s) and backs off only when ITS own
 # last run drained quickly with zero launches. Fixtures write that record by hand
@@ -216,7 +216,7 @@ else bad "e2 control: (rc=$rc out='$out')"; fi
 B="$scratch/state/bo"; mkdir -p "$B"
 outcome() { printf 'run=R\nautostart=%s\nlaunches=%s\nreason=%s\nduration_s=%s\nended_at=T\n' "$1" "$2" "$3" "$4" > "$B/last-run.outcome"; }
 fire "$B" "$scratch/ready-two.json"     # a first start: records the unit it started
-u1="$(grep -o 'proofdelve-fleet-run-[0-9T]*' "$log" | head -1)"
+u1="$(grep -o 'manyhalls-fleet-run-[0-9T]*' "$log" | head -1)"
 if [ -n "$u1" ] && grep -q -- "--setenv FLEET_AUTOSTART=$u1 " "$log" && [ "$(grep -m1 '^last_autostart_unit=' "$B/supervisor.backoff" | cut -d= -f2)" = "$u1" ]; then
   ok "b0 (s49w): a start passes FLEET_AUTOSTART=<unit> to the run and records that unit as the one to judge next time"
 else bad "b0 (s49w): (unit='$u1' backoff=$(tr '\n' '|' < "$B/supervisor.backoff" 2>/dev/null) log=$(grep -o -- '--setenv FLEET_AUTOSTART=[^ ]*' "$log"))"; fi
@@ -231,7 +231,7 @@ fire "$B" "$scratch/ready-two.json"     # inside the window
 if [ $rc = 0 ] && [ -z "$out" ] && ! grep -q 'SYSTEMD-RUN\|^EMIT' "$log" && [ "$(grep -m1 '^skips=' "$B/supervisor.backoff" | cut -d= -f2)" = 1 ]; then
   ok "b2 (s49w): a firing inside the back-off window is silent -- no output, no event, no launch -- and counted (skips=1)"
 else bad "b2 (s49w): (rc=$rc out='$out' calls=$(wc -l < "$log") backoff=$(tr '\n' '|' < "$B/supervisor.backoff" 2>/dev/null))"; fi
-# THE WINDOW EXPIRES WITH THE SAME OUTCOME ON RECORD (ForgeOs-enred). That
+# THE WINDOW EXPIRES WITH THE SAME OUTCOME ON RECORD (Proofdelve ForgeOs-enred). That
 # outcome was already judged, and no run has started since, so judging it
 # again proves nothing: ONE probe run starts, carrying the step count. b3 read
 # "the step doubles" until 2026-10-19 -- it asserted the defect: measured that
@@ -264,7 +264,7 @@ if [ $rc = 0 ] && [ -n "$up2" ] && grep -q SYSTEMD-RUN "$log" && [ "$(grep -m1 '
   ok "b4 (s49w, enred): the probe LAUNCHED something -> a run starts and the back-off is cleared (backoff_n=0)"
 else bad "b4 (s49w, enred): (rc=$rc out='$out' launch=$(grep -c SYSTEMD-RUN "$log") backoff=$(tr '\n' '|' < "$B/supervisor.backoff" 2>/dev/null))"; fi
 
-# --- The churn note on ForgeOs-owt37: LANDINGS, NOT DURATION ---
+# --- The churn note on Proofdelve ForgeOs-owt37: LANDINGS, NOT DURATION ---
 # 2026-10-05 16:06-16:16: zero-launch drains of 20-28 s, past the 20 s cutoff,
 # so the supervisor started a run every firing. fleet.sh now records landings=N;
 # when the field is present the supervisor backs off on 0 launches AND 0
@@ -272,28 +272,28 @@ else bad "b4 (s49w, enred): (rc=$rc out='$out' launch=$(grep -c SYSTEMD-RUN "$lo
 # (it starts a run at 28 s) -- the RED arm.
 BL="$scratch/state/bl"; mkdir -p "$BL"
 outcome_l() { printf 'run=R\nautostart=%s\nlaunches=%s\nlandings=%s\nreason=%s\nduration_s=%s\nended_at=T\n' "$2" "$3" "$4" "$5" "$6" > "$1/last-run.outcome"; }
-fire "$BL" "$scratch/ready-two.json"; ul="$(grep -o 'proofdelve-fleet-run-[0-9T]*' "$log" | head -1)"
+fire "$BL" "$scratch/ready-two.json"; ul="$(grep -o 'manyhalls-fleet-run-[0-9T]*' "$log" | head -1)"
 outcome_l "$BL" "$ul" 0 0 drained 28
 fire "$BL" "$scratch/ready-two.json"
 if [ $rc = 0 ] && ! grep -q SYSTEMD-RUN "$log" && grep -q 'BACKING OFF (1)' <<<"$out" && grep -q '0 landings' <<<"$out"; then
   ok "l1 (owt37 churn): our last run drained in 28 s with 0 launches and 0 landings -> it BACKS OFF (the 2026-10-05 shape, which the 20 s cutoff missed)"
 else bad "l1 (owt37 churn): (rc=$rc out='$out' launch=$(grep -c SYSTEMD-RUN "$log"))"; fi
 BL2="$scratch/state/bl2"; mkdir -p "$BL2"
-fire "$BL2" "$scratch/ready-two.json"; ul2="$(grep -o 'proofdelve-fleet-run-[0-9T]*' "$log" | head -1)"
+fire "$BL2" "$scratch/ready-two.json"; ul2="$(grep -o 'manyhalls-fleet-run-[0-9T]*' "$log" | head -1)"
 outcome_l "$BL2" "$ul2" 0 1 drained 28
 fire "$BL2" "$scratch/ready-two.json"
 if [ $rc = 0 ] && grep -q SYSTEMD-RUN "$log" && ! grep -q '^EMIT fleet.backoff ' "$log"; then
   ok "l2 (owt37 churn): the same 28 s, 0-launch run that LANDED one merge does not back off -- a run starts (the control: l1 measured landings, not a blanket back-off)"
 else bad "l2 (owt37 churn): (rc=$rc out='$out' launch=$(grep -c SYSTEMD-RUN "$log"))"; fi
 BL3="$scratch/state/bl3"; mkdir -p "$BL3"
-fire "$BL3" "$scratch/ready-two.json"; ul3="$(grep -o 'proofdelve-fleet-run-[0-9T]*' "$log" | head -1)"
+fire "$BL3" "$scratch/ready-two.json"; ul3="$(grep -o 'manyhalls-fleet-run-[0-9T]*' "$log" | head -1)"
 printf 'run=R\nautostart=%s\nlaunches=0\nreason=drained\nduration_s=28\nended_at=T\n' "$ul3" > "$BL3/last-run.outcome"
 fire "$BL3" "$scratch/ready-two.json"
 if [ $rc = 0 ] && grep -q SYSTEMD-RUN "$log"; then
   ok "l3 (owt37 churn): an outcome record with NO landings field (an older fleet.sh) keeps the duration test: 28 s starts a run, as before"
 else bad "l3 (owt37 churn): (rc=$rc out='$out')"; fi
 
-# --- ForgeOs-ip9z finding 7: THE BACK-OFF WINDOW MUST NEVER LAND IN THE PAST ---
+# --- Proofdelve ForgeOs-ip9z finding 7: THE BACK-OFF WINDOW MUST NEVER LAND IN THE PAST ---
 # `mins=$((4 << (n - 1)))` with the 60-minute cap applied AFTERWARDS still
 # performs the shift, and the shift overflows signed 64-bit at n >= 62
 # (4 << 61 = -9223372036854775808, 4 << 62 = 0). A negative or zero value is
@@ -309,7 +309,7 @@ outcome_into() { printf 'run=R\nautostart=%s\nlaunches=%s\nreason=%s\nduration_s
 fire "$B7" "$scratch/ready-two.json"                 # firing 1: starts a run, records the unit
 u7="$(grep -o -- '--setenv FLEET_AUTOSTART=[^ ]*' "$log" | head -1 | cut -d= -f2)"
 outcome_into "$B7" "$u7" 0 drained 2
-# backoff_until EMPTY since ForgeOs-enred: that is the state a run (or a probe)
+# backoff_until EMPTY since Proofdelve ForgeOs-enred: that is the state a run (or a probe)
 # leaves behind carrying its step count, and the only state in which an outcome
 # is judged. An expired until now means "already judged" and starts a probe.
 printf 'last_autostart_unit=%s\nbackoff_n=61\nbackoff_until=\nskips=0\n' "$u7" > "$B7/supervisor.backoff"
@@ -337,7 +337,7 @@ if [ -z "${seqbad:-}" ]; then
   ok "b7b (ip9z 7): the doubling below the cap is untouched -- steps 1-5 give 4, 8, 16, 32, 60 minutes"
 else bad "b7b (ip9z 7): the sequence moved:$seqbad"; fi
 
-# --- ForgeOs-ip9z finding 8: A LOCK FILE THAT CANNOT BE WRITTEN IS NOT A LIVE RUN ---
+# --- Proofdelve ForgeOs-ip9z finding 8: A LOCK FILE THAT CANNOT BE WRITTEN IS NOT A LIVE RUN ---
 # The fixture is the realistic one the bead names: the lock file exists and is
 # readable, and the probe cannot WRITE it. The old `9>>` redirection failed,
 # the `if` was false, and the supervisor took the run-is-live branch -- silently,
@@ -366,9 +366,9 @@ if [ $rc = 0 ] && grep -q SYSTEMD-RUN "$log"; then
 else bad "b8: a virgin state dir did not start a run (rc=$rc)"; fi
 
 # --- THE INVERSIONS for findings 7 and 8, against a mutated shipped subject ---
-# THE "BEFORE" FILE IS DERIVED FROM THE SUBJECT, NOT GIT (ForgeOs-64s8o).
+# THE "BEFORE" FILE IS DERIVED FROM THE SUBJECT, NOT GIT (Proofdelve ForgeOs-64s8o).
 # verify-impl.sh copies this harness outside its checkout before it runs it, and
-# the Warden deliberately verifies from an rsync scratch tree without .git.
+# The Warden deliberately verifies from an rsync scratch tree without .git.
 # SUPERVISOR_SH_PRE_IP9Z may supply that derived pre-ip9z control explicitly.
 # Both substitutions are anchored and must land exactly once: if the subject no
 # longer has the two fixed spellings, this is a REFUSAL, never a skipped control.
@@ -497,7 +497,7 @@ fire "$B" "$scratch/ready-two.json"
 if [ $rc = 0 ] && grep -q SYSTEMD-RUN "$log"; then
   ok "b5 (s49w): a quick zero-launch drain by a run this supervisor did NOT start is not held against it -> a run starts"
 else bad "b5 (s49w): (rc=$rc out='$out')"; fi
-u3="$(grep -o 'proofdelve-fleet-run-[0-9T]*' "$log" | head -1)"
+u3="$(grep -o 'manyhalls-fleet-run-[0-9T]*' "$log" | head -1)"
 # a zero-launch run that LASTED (a parked merge landing: verifier time) is work, not a wedge
 outcome "$u3" 0 drained 45
 sleep 1.1   # unit names carry one-second resolution; b7 needs the unit this fire starts to DIFFER from u3
@@ -505,7 +505,7 @@ fire "$B" "$scratch/ready-two.json"
 if [ $rc = 0 ] && grep -q SYSTEMD-RUN "$log"; then
   ok "b6 (s49w): our zero-launch run that lasted 45 s (a landing) is not a wedge -> a run starts (the duration is the discriminator)"
 else bad "b6 (s49w): (rc=$rc out='$out')"; fi
-u4="$(grep -o 'proofdelve-fleet-run-[0-9T]*' "$log" | head -1)"
+u4="$(grep -o 'manyhalls-fleet-run-[0-9T]*' "$log" | head -1)"
 # a halted last run writes no record: the record still names an OLDER unit -> no back-off
 outcome "$u3" 0 drained 2
 fire "$B" "$scratch/ready-two.json"
@@ -513,7 +513,7 @@ if [ $rc = 0 ] && grep -q SYSTEMD-RUN "$log"; then
   ok "b7 (s49w): the outcome record names an older unit than the last start ($u3 != $u4, the halted-last-run shape) -> not ours to judge, a run starts"
 else bad "b7 (s49w): (rc=$rc out='$out')"; fi
 
-# --- the kill switch (Tova, round one, finding 2): disabled is nothing to do ----
+# --- the kill switch (the Warden, round one, finding 2): disabled is nothing to do ----
 printf 'FLEET_ENABLED=0\n' > "$fort/fort/scripts/fleet.conf"
 fire "$S" "$scratch/ready-two.json"
 if [ $rc = 0 ] && [ -z "$out" ] && ! grep -q 'SYSTEMD-RUN\|^BD\|EMIT' "$log"; then
@@ -521,7 +521,7 @@ if [ $rc = 0 ] && [ -z "$out" ] && ! grep -q 'SYSTEMD-RUN\|^BD\|EMIT' "$log"; th
 else bad "disabled: (rc=$rc out='$out' calls=$(wc -l < "$log"))"; fi
 rm -f "$fort/fort/scripts/fleet.conf"
 fire "$S" "$scratch/ready-two.json"
-# INVERTED under ForgeOs-81p9 (Tova, dx34.4 round two, finding 2): an unreadable
+# INVERTED under Proofdelve ForgeOs-81p9 (the Warden, dx34.4 round two, finding 2): an unreadable
 # config used to read as disabled and exit 0 silently; it is an OUTAGE and now
 # refuses at 64 with one stderr line naming the file, like bd not answering.
 # Disabled (the case above) stays silent. Against the pre-81p9 file this FAILS.
@@ -555,7 +555,7 @@ SUP_ARGS=(--status); fire "$S" "$scratch/ready-empty.json"; SUP_ARGS=()
 if [ $rc = 0 ] && grep -q '^count=0$' <<<"$out" && grep -q '^previous_streak=2$' <<<"$out"; then
   ok "c7: --status prints the record (count=0, previous_streak=2)"
 else bad "c7: --status (rc=$rc out='$out')"; fi
-# One awk, no pipe (ForgeOs-pyte): the usage block is >8 KiB, so `awk | grep -q`
+# One awk, no pipe (Proofdelve ForgeOs-pyte): the usage block is >8 KiB, so `awk | grep -q`
 # under pipefail raced -- grep -q exited on the first match, awk's second write
 # took SIGPIPE, and a TRUE predicate scored FAIL 34 times in 300 idle runs.
 if grep -q 'supervisor.streak' "$subject" && awk '/^[^#]/{exit} /first_refusal=/{found=1} END{exit !found}' "$subject"; then
@@ -563,14 +563,14 @@ if grep -q 'supervisor.streak' "$subject" && awk '/^[^#]/{exit} /first_refusal=/
 else bad "c7b: usage block does not document the record"; fi
 
 # ============================================================================
-# --- ForgeOs-dx34.18 criterion 5: leftovers start a run when nothing is ready ---
+# --- Proofdelve ForgeOs-dx34.18 criterion 5: leftovers start a run when nothing is ready ---
 # The stub fleet.sh answers --reapable from STUB_REAPABLE; the supervisor must ask
 # it ONLY when bd ready is empty, start a run on a nonzero answer, and treat a
 # failed query as a refusal rather than as zero.
 D="$scratch/state/d"; mkdir -p "$D"
 STUB_REAPABLE=1 fire "$D" "$scratch/ready-empty.json"
 if [ $rc = 0 ] && grep -q '^STUB fleet.sh ran: --reapable$' "$log" && [ "$(grep -c SYSTEMD-RUN "$log")" = 1 ] \
-   && grep -q 'EMIT fleet.autostart.*reapable worker' "$log" && grep -q '"reapable":1' "$log" && grep -q 'started proofdelve-fleet-run-' <<<"$out"; then
+   && grep -q 'EMIT fleet.autostart.*reapable worker' "$log" && grep -q '"reapable":1' "$log" && grep -q 'started manyhalls-fleet-run-' <<<"$out"; then
   ok "dx34.18 c5: queue empty, fleet.sh --reapable says 1 -> ONE run started, fleet.autostart names the reapable worker and carries reapable=1"
 else bad "dx34.18 c5: leftover pickup (rc=$rc out='$out' log=$(tr '\n' '|' < "$log" | cut -c1-300))"; fi
 STUB_REAPABLE=0 fire "$D" "$scratch/ready-empty.json"

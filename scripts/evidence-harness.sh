@@ -1,5 +1,5 @@
 #!/bin/bash
-# evidence-harness.sh -- ForgeOs-tgm5o (Regent docket 2026-10-22 item C): a RED
+# evidence-harness.sh -- Proofdelve ForgeOs-tgm5o (Regent docket 2026-10-22 item C): a RED
 # host verify returns the failing step, not the verify log's last 60 lines.
 #
 # Extracts the SHIPPED evidence_of() from fort/scripts/fleet.sh (FLEET_SH
@@ -25,11 +25,11 @@ ok() { echo "  PASS  $1"; pass=$((pass + 1)); }
 no() { echo "  FAIL  $1 -- $2"; fail=$((fail + 1)); }
 ev() { bash -c "source '$work/eo.sh'; evidence_of \"\$1\"" _ "$1"; }
 noise() { local i; for ((i = 0; i < $1; i++)); do printf '[testcontainers.org 00:02:%02d.10] Execute "pg_isready --host localhost" at Docker container 74f5da7fb4a1\n' "$((i % 60))"; done; }
-app_noise() { printf 'info: ForgeOS.Api.DealApplicationService[0]\n      Failed to load deal detail. DealId=bbbbbbbb UserId=44444444 UserRole=Member\n'; }
+app_noise() { printf 'info: Product.Api.DealApplicationService[0]\n      Failed to load deal detail. DealId=bbbbbbbb UserId=44444444 UserRole=Member\n'; }
 block() {  # $1 test name, $2 message, $3 file:line
-  printf '  Failed ForgeOS.Tests.%s [921 ms]\n  Error Message:\n   %s\n  Stack Trace:\n' "$1" "$2"
+  printf '  Failed Product.Tests.%s [921 ms]\n  Error Message:\n   %s\n  Stack Trace:\n' "$1" "$2"
   printf '     at FluentAssertions.Execution.XUnit2TestFramework.Throw(String message)\n'
-  printf '   at ForgeOS.Tests.%s() in /home/justin/dev/ForgeOs-worktrees/x/tests/ForgeOS.Tests/%s\n' "$1" "$3"
+  printf '   at Product.Tests.%s() in /home/justin/dev/fortkit-worktrees/x/tests/Product.Tests/%s\n' "$1" "$3"
   printf -- '--- End of stack trace from previous location ---\n'
 }
 
@@ -42,8 +42,8 @@ block() {  # $1 test name, $2 message, $3 file:line
   printf "verify: step 'dotnet-test' FAILED (exit 1). Its full output is kept at %s/gone.log\n" "$work"
 } > "$work/full.txt"
 out="$(ev "$work/full.txt")"
-if grep -qF 'Failed ForgeOS.Tests.MigrationTests.Upload_round_trips [921 ms]' <<<"$out" && grep -qF 'NullReferenceException' <<<"$out" \
-   && grep -qF 'first frame: at ForgeOS.Tests.MigrationTests.Upload_round_trips() in /home/justin/dev/ForgeOs-worktrees/x/tests/ForgeOS.Tests/MigrationTests.DocumentUploads.cs:line 53' <<<"$out" \
+if grep -qF 'Failed Product.Tests.MigrationTests.Upload_round_trips [921 ms]' <<<"$out" && grep -qF 'NullReferenceException' <<<"$out" \
+   && grep -qF 'first frame: at Product.Tests.MigrationTests.Upload_round_trips() in /home/justin/dev/fortkit-worktrees/x/tests/Product.Tests/MigrationTests.DocumentUploads.cs:line 53' <<<"$out" \
    && grep -qF "verify: step 'dotnet-test' FAILED" <<<"$out" && ! grep -q 'pg_isready' <<<"$out" && ! grep -q 'Failed to load deal detail' <<<"$out"; then
   ok "a dotnet failure 2000 lines above the end is returned: test name, error message, the first frame in tests/ (file:line), the step's FAILED line; no Testcontainers line and no app 'Failed to load' line"
 else no "the failing test did not reach the return" "$(printf '%s' "$out" | head -8 | tr '\n' '|' | cut -c1-300)"; fi

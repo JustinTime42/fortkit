@@ -1,5 +1,5 @@
 #!/bin/bash
-# nightly-verify-harness.sh -- ForgeOs-s1reg criterion 3: the nightly full verify
+# nightly-verify-harness.sh -- Proofdelve ForgeOs-s1reg criterion 3: the nightly full verify
 # runs on main with Docker required, and a RED halts the fleet.
 #
 # Runs the SHIPPED fort/scripts/nightly-verify.sh, copied into a throwaway fort
@@ -87,7 +87,7 @@ if ! cmp -s "$subject" "$nohalt"; then
   else no "RED: no-halt variant" "a halt file appeared anyway: $(cat "$st/HALT")"; fi
 else no "RED: no-halt variant" "could not be generated (sed matched nothing)"; fi
 
-# 7-9 UNRUNNABLE IS NOT RED (ForgeOs-s1reg finding 4). Docker down under the
+# 7-9 UNRUNNABLE IS NOT RED (Proofdelve ForgeOs-s1reg finding 4). Docker down under the
 # nightly's own VERIFY_REQUIRE_DOCKER=1, and a harness refusing (exit 3, the
 # 2026-10-16 class), exit 69 with NO halt and a ran:false incident; a real step
 # failure still halts (case 9, the vacuity control).

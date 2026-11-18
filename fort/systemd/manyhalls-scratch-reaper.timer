@@ -1,4 +1,4 @@
-# Proofdelve scratch reaper timer (ForgeOs-nv0j). Installed by hand into
+# Manyhalls scratch reaper timer (Proofdelve ForgeOs-nv0j). Installed by hand into
 # ~/.config/systemd/user/ under Regent edict 2026-09-12 with the Overseer's
 # gate-6 signature.
 #
@@ -10,12 +10,12 @@
 # (the machine asleep) has exactly the same work waiting when it wakes and
 # should not wait for the next boundary.
 #
-# TO STOP IT: `systemctl --user disable --now proofdelve-scratch-reaper.timer`.
+# TO STOP IT: `systemctl --user disable --now manyhalls-scratch-reaper.timer`.
 # It has no halt file: it starts nothing and touches no fleet state, so there
 # is nothing a halt would protect.
 
 [Unit]
-Description=Proofdelve scratch reaper — hourly
+Description=Manyhalls scratch reaper — hourly
 
 [Timer]
 OnCalendar=hourly

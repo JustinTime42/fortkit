@@ -1,6 +1,6 @@
 #!/bin/bash
-# Proofdelve fleet — the consumer side of this fort's architecture.
-# ForgeOs-9mfw (.2 dispatcher, .3 portcullis, .4 governor).
+# Manyhalls fleet — the consumer side of this fort's architecture.
+# Proofdelve ForgeOs-9mfw (.2 dispatcher, .3 portcullis, .4 governor).
 # Regent edict fortkit-fzpf, 2026-09-02, Overseer present throughout.
 #
 # WHAT THIS IS. This fort has producers and no consumers: forge.sh takes one
@@ -26,7 +26,7 @@
 # 1. OPT-IN, NEVER OPT-OUT. It dispatches only beads the Mayor has labelled
 #    `fleet-safe`. No bead is fleet-safe until she says so. That is what keeps
 #    the first run small and deliberate, and it means an honest `bd ready` is
-#    not load-bearing here (ForgeOs-9mfw.1 is the Mayor's, and it is an offer).
+#    not load-bearing here (Proofdelve ForgeOs-9mfw.1 is the Mayor's, and it is an offer).
 #
 # 2. FAIL CLOSED, ALWAYS. Every guard that cannot reach a verdict refuses. If
 #    `bd` will not answer, if the gate list will not parse, if a claim cannot be
@@ -38,7 +38,7 @@
 # 3. THE VERIFIER IS RUN HERE, ON THE HOST, AND IS NEVER SELF-REPORTED. This is
 #    the crux and the Overseer asked for it in terms. forge.sh does not run
 #    fort/scripts/verify.sh at all and prints its `Next: warden.sh` recipe
-#    unconditionally after any exit (ForgeOs-bk5k). So this file runs the
+#    unconditionally after any exit (Proofdelve ForgeOs-bk5k). So this file runs the
 #    verifier itself, in the bead's own worktree, and gates on the exit code IT
 #    observed. Nothing forge.sh prints and nothing the Forge says about its own
 #    run is consulted, ever. Running here also means Docker is reachable, so
@@ -48,7 +48,7 @@
 # 4. AN ABSENT VERDICT IS NEVER AN APPROVAL. 17.4% of this fort's Warden runs
 #    recorded no verdict at all (32 of 184, measured 2026-09-02), which under
 #    automatic closure would mean closing beads on reviews that never happened.
-#    warden.sh was repaired first (ForgeOs-9mfw.5) to publish a machine-readable
+#    warden.sh was repaired first (Proofdelve ForgeOs-9mfw.5) to publish a machine-readable
 #    result file, and this file reads that file and refuses anything that is not
 #    an unambiguous APPROVE or APPROVE-WITH-FINDINGS.
 #
@@ -62,14 +62,14 @@
 #   - It never continues past a red main. A post-merge verifier failure halts
 #     the whole run and leaves a halt file that a person must remove. That
 #     verification runs in a FRESH WORKTREE AT THE MERGED COMMIT and never in
-#     the shared checkout (ForgeOs-dx34.1), so what it scores is a commit rather
+#     the shared checkout (Proofdelve ForgeOs-dx34.1), so what it scores is a commit rather
 #     than a directory anyone may be editing; the worktree is removed when it is
 #     green and KEPT when it is red, and the run says which.
 #   - It never records "main is red" for a verification that never ran. A
 #     post-merge verification that could not start stops the run WITHOUT
 #     writing a halt file, and says so in its own event.
 #   - It never merges into a tree it cannot land on. That condition is asked AT
-#     MERGE TIME and no longer at run start (ForgeOs-dx34.1): a dirty root does
+#     MERGE TIME and no longer at run start (Proofdelve ForgeOs-dx34.1): a dirty root does
 #     not stop the run, it PARKS every merge until the tree is landable. The
 #     narrative and --status both say how many are waiting.
 #   - It never touches a bead carrying the `human` label or an open bd gate.
@@ -86,18 +86,18 @@
 #   fort/scripts/fleet.sh --status     # print state and exit
 # Exit codes: 0 normal drain. 64 refused at preflight. 70 halted — on a red main,
 #   because the halt file appeared while the run was live, or because the loop
-#   STALLED (ForgeOs-dx34.9: N passes that changed no state; fleet.ended says
+#   STALLED (Proofdelve ForgeOs-dx34.9: N passes that changed no state; fleet.ended says
 #   which, in `reason` and `stalled`). 75 another fleet run holds the lock.
 #   130/143 stopped by SIGINT/SIGTERM.
 #
-# IT SURVIVES ITS TERMINAL (ForgeOs-dx34.3). SIGHUP is ignored, so closing the
+# IT SURVIVES ITS TERMINAL (Proofdelve ForgeOs-dx34.3). SIGHUP is ignored, so closing the
 # window, dropping the ssh session or sleeping the machine does not kill a
 # hand-launched run, and the narrative keeps arriving in
 #   $FLEET_STATE/logs/run-<run-id>.log
 # which the run names on stdout as its first line. One file per run; they are
 # small, and they are the only human-readable timeline this file produces.
 #
-# HOW TO STOP A RUNNING FLEET (ForgeOs-a2fx). Two reflexes work and they are the
+# HOW TO STOP A RUNNING FLEET (Proofdelve ForgeOs-a2fx). Two reflexes work and they are the
 # same drain-then-stop path: Ctrl-C or `kill -TERM <pid>`, and creating the halt
 # file $FLEET_STATE/HALT, which is now read BETWEEN PASSES as well as at
 # preflight. Both stop dispatching, refuse to read anything killed in flight as
@@ -120,7 +120,7 @@
 # SO: Ctrl-C at a terminal, `kill -TERM <pid>` otherwise, and the halt file
 # works in both. Never `kill -INT` on a detached run.
 #
-# AND THE TWO ARE NOT INTERCHANGEABLE INSIDE THE RUN EITHER (ForgeOs-ke5u).
+# AND THE TWO ARE NOT INTERCHANGEABLE INSIDE THE RUN EITHER (Proofdelve ForgeOs-ke5u).
 # Ctrl-C reaches every child, so whatever was in flight dies with it. TERM
 # reaches this process ALONE and bash defers the trap until the foreground
 # command returns, so THE THING IN FLIGHT FINISHES — a review under TERM records
@@ -133,13 +133,13 @@
 # idle window is a plain `sleep`. Ctrl-C reaches the whole process group, kills
 # the sleep, and is prompt. That asymmetry is accepted rather than engineered
 # around: a background `sleep` would inherit the run lock on fd 8 and outlive
-# the dispatcher holding it, which is exactly ForgeOs-l1ef.
+# the dispatcher holding it, which is exactly Proofdelve ForgeOs-l1ef.
 
 set -euo pipefail
 
 # >>> node_compile_cache: KEEP BYTE-IDENTICAL in fort/scripts/fleet.sh, fort/scripts/forge.sh, fort/scripts/nightly-verify.sh and scripts/verify-impl.sh (scripts/node-cache-harness.sh compares them)
 # NODE'S ON-DISK COMPILE CACHE IS OFF for every fleet, Forge, nightly and
-# verifier run (ForgeOs-jfqu4.8 with ForgeOs-lmgue and ForgeOs-x1n09, Regent
+# verifier run (Proofdelve ForgeOs-jfqu4.8 with Proofdelve ForgeOs-lmgue and Proofdelve ForgeOs-x1n09, Regent
 # docket 2026-10-22 item B, the Overseer's choice on 2026-10-23). typescript,
 # eslint, vite and vitest call module.enableCompileCache(); with no
 # NODE_COMPILE_CACHE that writes os.tmpdir()/node-compile-cache, keyed by file
@@ -152,10 +152,10 @@ set -euo pipefail
 # runs too.) The switch wins over a NODE_COMPILE_CACHE the parent set
 # (measured 2026-10-23, node v24.14.0: status DISABLED, nothing written).
 export NODE_DISABLE_COMPILE_CACHE=1
-echo "$(basename "$0"): Node compile cache disabled for this run (NODE_DISABLE_COMPILE_CACHE=1, ForgeOs-jfqu4.8)" >&2
+echo "$(basename "$0"): Node compile cache disabled for this run (NODE_DISABLE_COMPILE_CACHE=1, Proofdelve ForgeOs-jfqu4.8)" >&2
 # <<< node_compile_cache
 
-root="/home/justin/dev/ForgeOs"
+root="/home/justin/dev/fortkit"
 emit_bin="$root/fort/scripts/emit.sh"
 # The config lives in fort/scripts/ because that directory is kernel read-only
 # to every masked seat, so no seat can enable the fleet or raise its cap from
@@ -165,21 +165,21 @@ emit_bin="$root/fort/scripts/emit.sh"
 # Without that coupling the override would be a way around the kernel-read-only
 # switch, which is the whole point of putting the file there.
 conf="$root/fort/scripts/fleet.conf"
-state="${FLEET_STATE:-$HOME/.local/state/proofdelve-fleet}"
-# WHERE warden.sh LEAVES WHAT THIS FILE READS (ForgeOs-nv0j, Regent edict
+state="${FLEET_STATE:-$HOME/.local/state/manyhalls-fleet}"
+# WHERE warden.sh LEAVES WHAT THIS FILE READS (Proofdelve ForgeOs-nv0j, Regent edict
 # 2026-09-12). warden.sh writes <sfx>.log.result.json and <sfx>.log.record under
 # this root, and removes its scratch COPY beside them when the review ends; the
 # root moved off /tmp because thirty scratch copies filled the tmpfs quota and
 # took a Warden, the verifier and two Forges down in one second
-# (ForgeOs-7gag). THIS LINE IS SPELLED IDENTICALLY IN fort/scripts/warden.sh
+# (Proofdelve ForgeOs-7gag). THIS LINE IS SPELLED IDENTICALLY IN fort/scripts/warden.sh
 # and scripts/governor-harness.sh asserts the two are byte-equal: a root that
 # drifts here would make review_one() fail closed on a result file that exists
 # somewhere else, spend every rung, and page a person over a review that
 # recorded fine.
-warden_root="${XDG_DATA_HOME:-$HOME/.local/share}/proofdelve/warden"
-forge_actor="veyra"     # read from this fort's own forge.sh, not carried in
+warden_root="${XDG_DATA_HOME:-$HOME/.local/share}/manyhalls/warden"
+forge_actor="kethra"     # read from this fort's own forge.sh, not carried in
 fleet_actor="fleet"     # the mechanism is not a citizen and never signs as one
-# WHOSE MOVE IS THE ASSIGNEE (ForgeOs-29j3g; the Overseer approved the design on
+# WHOSE MOVE IS THE ASSIGNEE (Proofdelve ForgeOs-29j3g; the Overseer approved the design on
 # the bead on 2026-10-19 before any edit). A bead handed to the Overseer is
 # assigned to him and carries one "ASK:" line; a bead handed to the Mayor is
 # assigned to her seat. The Keep's board is exactly the open beads assigned to
@@ -188,10 +188,10 @@ fleet_actor="fleet"     # the mechanism is not a citizen and never signs as one
 # Functions, not variables, for the env_signature() reason: an extracting
 # harness loads functions and never this file's top level.
 overseer_assignee() { printf '%s' 'justin'; }
-mayor_assignee() { printf '%s' 'marrek'; }
-# THE WORKBENCH (ForgeOs-9srgz): Hollis Lathewarm, declared and seated
+mayor_assignee() { printf '%s' 'emrith'; }
+# THE WORKBENCH (Proofdelve ForgeOs-9srgz): the Workbench, declared and seated
 # 2026-11-09. A review-only bead's findings go back to him, never to a Forge.
-workbench_assignee() { printf '%s' 'hollis'; }
+workbench_assignee() { printf '%s' 'dunmar'; }
 
 once=0; dry=0; status_only=0; reapable_only=0; review_only=""
 while [ "$#" -gt 0 ]; do
@@ -199,8 +199,8 @@ while [ "$#" -gt 0 ]; do
     --once) once=1 ;;
     --dry-run) dry=1 ;;
     --status) status_only=1 ;;
-    --reapable) reapable_only=1 ;;   # print the reapable-worker count and exit (ForgeOs-dx34.18; the supervisor's question 4b)
-    --review-only)                    # queue a Workbench session branch for ONE review and exit (ForgeOs-9srgz)
+    --reapable) reapable_only=1 ;;   # print the reapable-worker count and exit (Proofdelve ForgeOs-dx34.18; the supervisor's question 4b)
+    --review-only)                    # queue a Workbench session branch for ONE review and exit (Proofdelve ForgeOs-9srgz)
       [ "$#" -ge 2 ] && [ -n "$2" ] || { echo "fleet.sh: --review-only needs a bead id" >&2; exit 64; }
       review_only="$2"; shift ;;
     -h|--help) awk '/^[^#]/{exit} {print}' "$0"; exit 0 ;;
@@ -211,11 +211,11 @@ done
 
 mkdir -p "$state/workers" "$state/logs"
 run_id="$(date +%Y%m%dT%H%M%S)"
-run_start_epoch="$(date +%s)"   # for the outcome record's duration (ForgeOs-s49w)
+run_start_epoch="$(date +%s)"   # for the outcome record's duration (Proofdelve ForgeOs-s49w)
 ceiling_log="$state/ceiling.log"
 halt_file="$state/HALT"
 launches=0
-landings=0   # merges this run landed; the supervisor's back-off reads it (ForgeOs-owt37 churn note)
+landings=0   # merges this run landed; the supervisor's back-off reads it (Proofdelve ForgeOs-owt37 churn note)
 
 # emit.sh resolves its target stream from the CURRENT WORKING DIRECTORY, so
 # every call is wrapped and cd'd. Calling it from elsewhere writes into whatever
@@ -224,7 +224,7 @@ landings=0   # merges this run landed; the supervisor's back-off reads it (Forge
 emit() { ( cd "$root" && "$emit_bin" "$@" ) || true; }
 
 # THE NARRATIVE GOES TO A DURABLE LOG AS WELL AS TO THE TERMINAL
-# (ForgeOs-dx34.3). Before this it went to stdout AND NOWHERE ELSE: the event
+# (Proofdelve ForgeOs-dx34.3). Before this it went to stdout AND NOWHERE ELSE: the event
 # stream had the structured record and $FLEET_STATE/logs had the per-bead logs,
 # but the human-readable timeline — dispatched, verifier GREEN, merged to main,
 # CLOSED — existed only in the terminal, and closing the terminal lost it.
@@ -242,8 +242,8 @@ say()  {
   printf '%s\n' "$line" >> "$narrative_log" 2>/dev/null || true
   printf '%s\n' "$line" 2>/dev/null || true
 }
-# DIAGNOSTICS FROM A FUNCTION WHOSE STDOUT IS A VALUE GO TO STDERR (ForgeOs-0d0i,
-# Tova's round-two blocking finding 1). say() writes to STDOUT, and live_forges()
+# DIAGNOSTICS FROM A FUNCTION WHOSE STDOUT IS A VALUE GO TO STDERR (Proofdelve ForgeOs-0d0i,
+# The Warden's round-two blocking finding 1). say() writes to STDOUT, and live_forges()
 # is consumed as `$(live_forges)` at two call sites that feed it straight into
 # arithmetic. A say() inside it appended its line to the number, which is an
 # arithmetic syntax error, which under `set -euo pipefail` kills the run — and
@@ -260,7 +260,7 @@ warn() {
 # joined list of filenames. A quote, backslash, tab or newline in one of those
 # would make the event unparseable — a run whose ending is unreadable by the
 # thing that reads endings. Sanitised at assignment rather than at emit time, so
-# there is one place to be right (Tova round two, finding 8).
+# there is one place to be right (the Warden round two, finding 8).
 set_end_reason() {  # $1 reason text
   local s="$1"
   s="${s//\\/ }"; s="${s//\"/ }"; s="${s//$'\n'/ }"; s="${s//$'\t'/ }"
@@ -268,13 +268,13 @@ set_end_reason() {  # $1 reason text
 }
 
 # HOW A RUN ENDS. Exactly one `fleet.ended` per run, emitted by the EXIT trap,
-# carrying WHY. ForgeOs-stpx: halt() used to emit its own `fleet.ended` and then
+# carrying WHY. Proofdelve ForgeOs-stpx: halt() used to emit its own `fleet.ended` and then
 # `exit 70`, which fires the trap, which emits a SECOND one — so a halted run
 # and a clean drain were indistinguishable in the stream unless a reader
 # happened to notice the duplicate. The reason lives in these two variables and
 # the trap reads them; nothing else emits fleet.ended.
 #
-# THE DEFAULT IS AN UNDETERMINED END, NOT "drained" (ForgeOs-6843, third
+# THE DEFAULT IS AN UNDETERMINED END, NOT "drained" (Proofdelve ForgeOs-6843, third
 # sighting). The first two fixes (0d0i, stpx) removed TRIGGERS that misrecorded
 # a drain; the default itself still said "drained", so ANY death on a path
 # nobody anticipated -- a set -e abort, an unhandled branch -- recorded a clean
@@ -285,13 +285,13 @@ set_end_reason() {  # $1 reason text
 # exactly "drained", now set explicitly where the drain is decided.
 end_reason="ended without a recorded reason (see the run's narrative log)"
 halted=false
-stalled=false   # true only when the run halted ITSELF on a stalled loop (ForgeOs-dx34.9)
+stalled=false   # true only when the run halted ITSELF on a stalled loop (Proofdelve ForgeOs-dx34.9)
 
 # ---------------------------------------------------------------------------
-# STOPPING (ForgeOs-a2fx). BEFORE THIS, A KILLED RUN RECORDED A CLEAN DRAIN.
+# STOPPING (Proofdelve ForgeOs-a2fx). BEFORE THIS, A KILLED RUN RECORDED A CLEAN DRAIN.
 # The only trap was EXIT, so Ctrl-C ran it with $end_reason still at its
 # default and the stream said `ended after N launches (drained)` for a run a
-# person had stopped. That is the ForgeOs-0d0i shape surviving in the signal
+# person had stopped. That is the Proofdelve ForgeOs-0d0i shape surviving in the signal
 # path, because 0d0i was fixed at the arithmetic that caused the crash rather
 # than at the trap that mis-described it. Standing order 12: the record is what
 # is at risk.
@@ -329,7 +329,7 @@ stop_requested=0    # set by a signal AND by the mid-run halt-file check
 exit_code=0
 
 signalled() { [ -n "$stop_signal" ]; }
-# THE HALT FILE IS CONSULTED PER CLAIM, NOT PER PASS (ForgeOs-fhak, problem 1).
+# THE HALT FILE IS CONSULTED PER CLAIM, NOT PER PASS (Proofdelve ForgeOs-fhak, problem 1).
 # Until 2026-09-18 only the between-passes block below read $halt_file, so a
 # run that spent a whole review pass under a freshly placed HALT then entered
 # dispatch_pass, CLAIMED a bead and launched a Forge, and only afterwards found
@@ -342,7 +342,7 @@ signalled() { [ -n "$stop_signal" ]; }
 # directly, so $halted excludes that case; this is for a file a PERSON created.
 halt_file_present() { [ "${halted:-false}" != true ] && [ -e "$halt_file" ]; }
 stopping()  { [ "$stop_requested" = 1 ] || halt_file_present; }
-# WHICH FORGES ARE RUNNING RIGHT NOW, MEASURED FROM THE LOCKS (ForgeOs-fhak,
+# WHICH FORGES ARE RUNNING RIGHT NOW, MEASURED FROM THE LOCKS (Proofdelve ForgeOs-fhak,
 # problem 2). The halt incident used to say "Nothing further was dispatched or
 # merged", which reports what this run DECIDED; a person who places a HALT to
 # freeze a deploy target reads it as "the fort is idle" while the Forge
@@ -385,8 +385,8 @@ on_signal() {  # $1 signal name
 trap 'on_signal INT'  INT
 trap 'on_signal TERM' TERM
 
-# SIGHUP IS IGNORED, AND IT IS THE ONE SIGNAL THAT IS NOT A STOP (ForgeOs-dx34.3
-# — how it composes with ForgeOs-a2fx, which the second of the two to land owes
+# SIGHUP IS IGNORED, AND IT IS THE ONE SIGNAL THAT IS NOT A STOP (Proofdelve ForgeOs-dx34.3
+# — how it composes with Proofdelve ForgeOs-a2fx, which the second of the two to land owes
 # the other). A fleet.sh started in a terminal used to die when that terminal
 # closed, the session dropped, or the machine slept: the exit trap ran with
 # end_reason still at its default, so the stream recorded a clean drain for a
@@ -407,11 +407,11 @@ trap '' HUP
 halt() {  # $1 reason, $2 kind: "halted" (default) or "stalled" (stall_check
           # only). STOP THE WORLD. Writes the halt file; every later run
           # refuses until a person removes it. Reserve it for states a person
-          # must look at, never for ordinary budget exhaustion (ForgeOs-feeq).
+          # must look at, never for ordinary budget exhaustion (Proofdelve ForgeOs-feeq).
           #
           # THE KIND IS THE END REASON'S PREFIX AND THE PAYLOAD'S stalled FLAG,
-          # AND IT IS SET HERE ON EVERY PATH (ForgeOs-dx34.9 acceptance 2,
-          # ForgeOs-6843). A stall has to be distinct in fleet.ended from a
+          # AND IT IS SET HERE ON EVERY PATH (Proofdelve ForgeOs-dx34.9 acceptance 2,
+          # Proofdelve ForgeOs-6843). A stall has to be distinct in fleet.ended from a
           # halt on a red main, and both from a drain; and end_reason's
           # default reads as a clean drain, so a stall that reached the trap
           # without setting it would record the one outcome this detector
@@ -424,7 +424,7 @@ halt() {  # $1 reason, $2 kind: "halted" (default) or "stalled" (stall_check
   say "HALT: $1"
   halted=true
   set_end_reason "$kind: $1"
-  governor_carry_reset "$kind"   # ForgeOs-xzg1: the run after a halt starts from FLEET_FORGE_START
+  governor_carry_reset "$kind"   # Proofdelve ForgeOs-xzg1: the run after a halt starts from FLEET_FORGE_START
   printf '%s\n%s\n' "$(date -Is)" "$1" > "$halt_file"
   emit incident "FLEET ${kind^^}: $1 — the run stopped and will not restart until $halt_file is removed by hand" \
     -a "$fleet_actor" -s fleet -p "{\"run\":\"$run_id\",\"launches\":$launches,\"stalled\":$stalled}"
@@ -448,7 +448,7 @@ bead_json() {  # $1 bead id
 # for the purpose: that JSON carries id, title, description, status, priority,
 # issue_type, owner, timestamps and await_type — AND NOTHING NAMING WHAT IT
 # BLOCKS. The blocked bead's id appears only inside the free-text description
-# ("Ad-hoc gate blocking ForgeOs-uc6z"). So the guard parsed nothing, returned
+# ("Ad-hoc gate blocking Proofdelve ForgeOs-uc6z"). So the guard parsed nothing, returned
 # an empty set, and an empty set is indistinguishable from "there are no
 # gates": it failed OPEN while reading exactly like a guard that worked. It
 # passed its own probe only because `bd ready` had already excluded the gated
@@ -487,7 +487,7 @@ preflight() {
   : "${FLEET_FORGE_START:?}" "${FLEET_FORGE_MIN:?}" "${FLEET_FORGE_MAX:?}"
   : "${FLEET_WARDEN_CONC:?}" "${FLEET_HARD_STOP:?}" "${FLEET_MAX_RETURNS:?}"
   : "${FLEET_POLL:?}" "${FLEET_FORGE_MODEL:?}"
-  # FLEET_WARDEN_MODEL was replaced by FLEET_WARDEN_LADDER (ForgeOs-57xc). It is
+  # FLEET_WARDEN_MODEL was replaced by FLEET_WARDEN_LADDER (Proofdelve ForgeOs-57xc). It is
   # required, not defaulted: a config that predates the ladder must FAIL LOUDLY
   # here rather than silently reviewing on whatever a default happened to be.
   : "${FLEET_WARDEN_LADDER:?fleet.conf must set FLEET_WARDEN_LADDER (it replaced FLEET_WARDEN_MODEL)}"
@@ -495,10 +495,10 @@ preflight() {
   # Required rather than defaulted, in this file's own pattern: a config that
   # predates the stall detector must say so at preflight rather than run on a
   # number nobody wrote down. Its meaning is at stall_check().
-  : "${FLEET_STALL_PASSES:?fleet.conf must set FLEET_STALL_PASSES (ForgeOs-dx34.9)}"
+  : "${FLEET_STALL_PASSES:?fleet.conf must set FLEET_STALL_PASSES (Proofdelve ForgeOs-dx34.9)}"
 
   # A HALT FILE THAT CARRIES NO REASON IS A DIFFERENT FACT FROM ONE THAT DOES,
-  # AND THIS REFUSAL OWES THE OPERATOR THE DIFFERENCE (ForgeOs-j3ga). halt()
+  # AND THIS REFUSAL OWES THE OPERATOR THE DIFFERENCE (Proofdelve ForgeOs-j3ga). halt()
   # writes a date and a reason, so a halt file THIS TOOL wrote explains itself.
   # `touch` — the spelling the startup line below recommends verbatim — writes
   # zero bytes, so the `sed` printed NOTHING and the next line told a person to
@@ -567,7 +567,7 @@ preflight() {
     || bd -C "$root" merge-slot create >/dev/null 2>&1 || true
   bd -C "$root" merge-slot check >/dev/null 2>&1 \
     || { echo "fleet.sh: REFUSED — no merge slot exists after trying to create one" >&2; exit 64; }
-  # ForgeOs-vikl asked for BOTH halves of this at preflight. ForgeOs-dx34.1
+  # Proofdelve ForgeOs-vikl asked for BOTH halves of this at preflight. Proofdelve ForgeOs-dx34.1
   # moved the DIRT half's decision to land(), which DEFERS rather than refusing,
   # because a long night is long enough for somebody to dirty the tree under it
   # and that is a third party's doing. The BRANCH half is refused above, and
@@ -576,10 +576,10 @@ preflight() {
   # THE DRY-RUN SPECIAL CASE FOR DIRT IS GONE, and its disappearance is the
   # point. It existed because preflight refused ON A DIRTY TREE, and the dry-run
   # path is the one this file offers for TESTING the guards — so it refused
-  # exactly when someone was trying to test them (Tova round two, finding 8).
+  # exactly when someone was trying to test them (the Warden round two, finding 8).
   # Dirt refuses on neither path now, so both say the same thing.
   #
-  # AND SINCE ForgeOs-geym THE BRANCH HALF IS EXEMPT FROM ITS REFUSAL UNDER
+  # AND SINCE Proofdelve ForgeOs-geym THE BRANCH HALF IS EXEMPT FROM ITS REFUSAL UNDER
   # --dry-run TOO, so the two halves are symmetric again. This paragraph said the
   # opposite for one day — "a wrong branch refuses on both, deliberately" — and
   # that sentence is what the bead was filed against: it made the mode offered
@@ -592,7 +592,7 @@ preflight() {
 }
 
 # ---------------------------------------------------------------------------
-# WHAT THE RUN IS LEAVING BEHIND (ForgeOs-a2fx, acceptance 3)
+# WHAT THE RUN IS LEAVING BEHIND (Proofdelve ForgeOs-a2fx, acceptance 3)
 # ---------------------------------------------------------------------------
 # An operator who stops a run should not have to reconstruct this from
 # $FLEET_STATE by hand. Printed on EVERY exit path and not only the interrupted
@@ -616,12 +616,12 @@ report_leftovers() {
 }
 
 # ---------------------------------------------------------------------------
-# governor (ForgeOs-9mfw.4)
+# governor (Proofdelve ForgeOs-9mfw.4)
 # ---------------------------------------------------------------------------
 forge_conc=0
 clean_streak=0
 
-# THE CEILING IS CARRIED ACROSS RUNS (ForgeOs-xzg1, Regent edict 2026-09-14,
+# THE CEILING IS CARRIED ACROSS RUNS (Proofdelve ForgeOs-xzg1, Regent edict 2026-09-14,
 # Overseer present). MEASURED before this change, over 49 runs in ceiling.log:
 # every run started at FLEET_FORGE_START=1, governor_up_maybe needs five clean
 # completions per step, and FLEET_HARD_STOP=18 is about nine beads at two
@@ -644,7 +644,7 @@ clean_streak=0
 # file exactly as the last ordinary end wrote it; an interrupted run has
 # measured nothing about the ceiling either way. So do --once and --dry-run
 # (a report is not a measurement) and the "post-merge verification could not
-# run" stop in land(), which stops the run without a halt file (Tova, review
+# run" stop in land(), which stops the run without a halt file (the Warden, review
 # of 025a52f, finding 4).
 #
 # WHO CAN WRITE IT (finding 3, threat model item 2): $FLEET_STATE is an rw
@@ -652,11 +652,11 @@ clean_streak=0
 # STARTING concurrency. Bounded by construction: clamped to [FLEET_FORGE_MIN,
 # FLEET_FORGE_MAX], the governor still steps down on back-pressure, and the
 # touch-set guard still serialises undeclared beads. The HALT file in the
-# same directory is the larger lever and is already recorded (ForgeOs-dx34.4).
+# same directory is the larger lever and is already recorded (Proofdelve ForgeOs-dx34.4).
 #
 # WHAT DOES NOT CHANGE: back-pressure still steps down IMMEDIATELY in
 # governor_down (the carried value is only the starting point); the drain
-# condition (ForgeOs-dx34.9/dx34.18) and live_forges() are untouched; and
+# condition (Proofdelve ForgeOs-dx34.9/dx34.18) and live_forges() are untouched; and
 # FLEET_WARDEN_CONC stays 1 -- it is the plan-budget guard and the real
 # ceiling, and its fix is a second review rung (fortkit-78o), not a knob.
 governor_carry_file() { printf '%s' "$state/ceiling.last"; }
@@ -680,7 +680,7 @@ governor_init() {
   say "governor: forge concurrency starts at $forge_conc ($src)"
 }
 # Called ONCE, at loop exit, when the run ended for one of the two ORDINARY
-# reasons (drained, budget spent). ForgeOs-lzvo: budget_stop() used to carry
+# reasons (drained, budget spent). Proofdelve ForgeOs-lzvo: budget_stop() used to carry
 # from inside the pass that spent the budget, so a governor_down later in that
 # same pass (a rate-limited Forge reaped after the review that hit the cap) was
 # never carried -- one step stale, self-correcting next run, and one call site
@@ -702,8 +702,8 @@ governor_carry_reset() {  # $1 why
 # parser: a false positive costs one step down and a step down costs throughput,
 # never correctness.
 #
-# EXCEPT ONE FALSE POSITIVE, WHICH COST MORE THAN THROUGHPUT (ForgeOs-g3n1,
-# incident ForgeOs-7gag, 2026-09-12 17:03). The marker list carried a bare
+# EXCEPT ONE FALSE POSITIVE, WHICH COST MORE THAN THROUGHPUT (Proofdelve ForgeOs-g3n1,
+# incident Proofdelve ForgeOs-7gag, 2026-09-12 17:03). The marker list carried a bare
 # 'quota exceeded', and 'Disk quota exceeded' is what EDQUOT prints -- so when
 # the host /tmp filled, five fleet.governor events said "plan back-pressure",
 # the governor stepped Forge concurrency down (useless against a full disk),
@@ -712,13 +712,13 @@ governor_carry_reset() {  # $1 why
 # is to STOP, not to slow down. Two signatures now, kept apart:
 #   looks_env_failure   the host itself is broken -> halt (a person must act)
 #   looks_rate_limited  the plan is throttling    -> step down (the run goes on)
-# The bare 'quota exceeded' is GONE from the plan regex (Tova, round one,
+# The bare 'quota exceeded' is GONE from the plan regex (the Warden, round one,
 # finding 4): the API spellings are 'insufficient_quota' and 'exceeded your
 # current quota', and a line matching the environmental signature is ALSO
 # excluded before the plan regex is tried, so the two cannot be read both ways.
 #
 # AND THE SIGNATURE MUST NEVER BE ASKED OF A LOG THAT MAY CARRY THE FORT'S OWN
-# WRITING ABOUT IT (Tova, round one, the blocking finding). $vout is the
+# WRITING ABOUT IT (the Warden, round one, the blocking finding). $vout is the
 # verifier's stdout, which prints every harness case label; $wlog carries the
 # last forty lines of a Warden's prose; forge.log is a whole codex transcript.
 # A case label, a review body or a session that so much as discussed this
@@ -739,14 +739,14 @@ governor_carry_reset() {  # $1 why
 env_signature() { printf '%s' 'disk quota exceeded|no space left on device'; }
 looks_env_failure() {  # $1 log file
   [ -s "$1" ] || return 1
-  # Same honest failure as looks_rate_limited below (Tova, round one, finding
+  # Same honest failure as looks_rate_limited below (the Warden, round one, finding
   # 2): if env_signature() is missing to an extractor, match NOTHING ('a^' can
   # never match) rather than everything -- an empty pattern would read every
   # log as environmental and the first one would halt the fort.
   local env; env="$(env_signature 2>/dev/null || printf 'a^')"
   grep -qiE "$env" "$1"
 }
-# 429 ONLY AS A STATUS CODE (ForgeOs-dx34.20). The marker list carried a bare
+# 429 ONLY AS A STATUS CODE (Proofdelve ForgeOs-dx34.20). The marker list carried a bare
 # '429', which matched inside Codex's microsecond timestamps: "16:47:19.094299Z"
 # and "18:28:23.542914Z" each contain the digits, and on 2026-10-20 the governor
 # stepped Forge concurrency 4 -> 3 -> 2 on those two lines alone. Any Codex log
@@ -766,7 +766,7 @@ looks_env_failure() {  # $1 log file
 # "rate.?limit" and the rest still match PROSE, and the Forge log is asked
 # after every session, so a transcript that discusses rate limits (a bead
 # editing this very function) still steps the governor down. That is the g3n1
-# class, not this one, and it is recorded on ForgeOs-dx34.20 as a residual.
+# class, not this one, and it is recorded on Proofdelve ForgeOs-dx34.20 as a residual.
 looks_rate_limited() {  # $1 log file
   [ -s "$1" ] || return 1
   # One awk pass rather than `grep -v | grep -q`: grep -q exits on its first
@@ -795,7 +795,7 @@ env_halt_if() {  # $1 log file, $2 what that log is, in prose
   looks_env_failure "$1" || return 0
   local line
   line="$(grep -iE -m1 "$(env_signature)" "$1" | cut -c1-160)"
-  halt "ENVIRONMENTAL FAILURE, not plan back-pressure: $2 contains '$line'. Every later launch fails the same way until the host is repaired (ForgeOs-g3n1; the 2026-09-12 instance was the /tmp user quota, ForgeOs-7gag). The bead keeps its claim and its worker resumes on the next run."
+  halt "ENVIRONMENTAL FAILURE, not plan back-pressure: $2 contains '$line'. Every later launch fails the same way until the host is repaired (Proofdelve ForgeOs-g3n1; the 2026-09-12 instance was the /tmp user quota, Proofdelve ForgeOs-7gag). The bead keeps its claim and its worker resumes on the next run."
 }
 
 governor_down() {  # $1 why
@@ -820,7 +820,7 @@ governor_up_maybe() {
   fi
 }
 
-# THE BUDGET IS TWO FUNCTIONS ON PURPOSE (ForgeOs-feeq, Tova's framing: "budget
+# THE BUDGET IS TWO FUNCTIONS ON PURPOSE (Proofdelve ForgeOs-feeq, the Warden's framing: "budget
 # spent, normal" and "stop the world" are different events and the old code
 # conflated them). Three defects lived in the single function this replaces:
 #
@@ -850,7 +850,7 @@ spend() {  # $1 what was launched. Records it. Returns nothing to branch on.
 budget_stop() {  # $1 where the budget ran out
   [ "$end_reason" = "budget spent" ] && return 0   # say it once
   set_end_reason "budget spent"
-  # the carry happens ONCE at loop exit (ForgeOs-lzvo), not here mid-pass
+  # the carry happens ONCE at loop exit (Proofdelve ForgeOs-lzvo), not here mid-pass
   say "budget spent: $FLEET_HARD_STOP seat launches in run $run_id ($1). The run ends here."
   say "  This is ORDINARY EXHAUSTION, not a halt. No halt file is written and the next run starts normally."
   emit fleet.capped "Fleet run $run_id reached its hard stop of $FLEET_HARD_STOP seat launches at $1 and ended normally; no halt file written" \
@@ -860,13 +860,13 @@ budget_stop() {  # $1 where the budget ran out
 # ---------------------------------------------------------------------------
 # bead state helpers
 # ---------------------------------------------------------------------------
-# PARSE THE LABELS, DO NOT GREP THE DOCUMENT (ForgeOs-stpx). This used to grep
+# PARSE THE LABELS, DO NOT GREP THE DOCUMENT (Proofdelve ForgeOs-stpx). This used to grep
 # the whole bd JSON for "fleet-return-N", which matches the string anywhere in
 # the record — a comment quoting a previous return, a title, a dependency's
 # text. It is the identical antipattern ecb1162 repaired for `assignee` one
 # screen below, left standing here.
 # EXACTLY ONE INTEGER ON EVERY PATH, INCLUDING THE ONE WHERE bd IS DOWN
-# (ForgeOs-0d0i, Tova's round-two blocking finding 1b). This was
+# (Proofdelve ForgeOs-0d0i, the Warden's round-two blocking finding 1b). This was
 # `bead_json | python3 ... 2>/dev/null || echo 0`, and on a bd failure BOTH legs
 # printed: the python read empty stdin and printed 0 and exited 0, then
 # `set -o pipefail` made the pipeline nonzero anyway so `|| echo 0` printed a
@@ -874,7 +874,7 @@ budget_stop() {  # $1 where the budget ran out
 # on "0\n0" is a syntax error — so the run died at exactly the moment
 # return_to_ready was invoked with bd unavailable, which is the one condition
 # every `|| true` in that function exists to survive, and the condition this
-# fort hit four times on 2026-09-04 ("storage is nil", ForgeOs-gepb).
+# fort hit four times on 2026-09-04 ("storage is nil", Proofdelve ForgeOs-gepb).
 # The output is now validated rather than hoped for: anything that is not a run
 # of digits becomes 0.
 returns_of() {  # $1 bead — the return counter lives in a label so it is visible
@@ -911,7 +911,7 @@ print(str(d.get("status") or "").strip().lower())
 ' 2>/dev/null || true
 }
 
-# THE EVIDENCE IS THE FAILING STEP, NOT THE LOG'S TAIL (ForgeOs-tgm5o, Regent
+# THE EVIDENCE IS THE FAILING STEP, NOT THE LOG'S TAIL (Proofdelve ForgeOs-tgm5o, Regent
 # docket 2026-10-22 item C). A RED host verify used to return the last 60 lines
 # of the verify log, and for dotnet-test those are Testcontainers create/
 # pg_isready/delete lines: measured three times on 2026-10-22 and twice more on
@@ -925,7 +925,7 @@ print(str(d.get("status") or "").strip().lower())
 # The pattern is two spaces then `Failed`, a dotted name and ` [`: the app's own
 # log carries "      Failed to load deal detail." on every run and must not
 # read as a failing test.
-# CAPPED LOG FOR A COMMENT (ForgeOs-2tz10, 2026-11-03). A verify log is ~20,000
+# CAPPED LOG FOR A COMMENT (Proofdelve ForgeOs-2tz10, 2026-11-03). A verify log is ~20,000
 # lines while the test host logs at Information, and posting it whole made bead
 # comments of up to 776,000 characters (413u8.10); past ~1 MB a bead's own Forge
 # prompt overflows. Post the first 20 and last 60 lines, each cut to 400
@@ -1008,7 +1008,7 @@ elif step_line:
     print("\n" + step_line)
     if kept and os.path.isfile(kept):
         tail = open(kept, errors="replace").read().splitlines()[-60:]
-        print(f"\nNo dotnet test failure block was found. Last {len(tail)} lines of that step\x27s kept log ({kept}):\n")
+        print(f"\nNo test failure block was found. Last {len(tail)} lines of that step\x27s kept log ({kept}):\n")
         print("\n".join(tail))
     else:
         tail = text[-60:]
@@ -1025,7 +1025,7 @@ else:
 return_to_ready() {  # $1 bead, $2 reason, $3 evidence file (may be empty)
   local bead="$1" reason="$2" evidence="${3:-}" n status
   # A BEAD THE MAYOR CLOSED WHILE ITS WORKER WAS SETTLING STAYS CLOSED
-  # (ForgeOs-x2lv, measured 2026-09-15 on b0vj.65.5: closed 23:15:27Z as a
+  # (Proofdelve ForgeOs-x2lv, measured 2026-09-15 on b0vj.65.5: closed 23:15:27Z as a
   # duplicate, REOPENED 23:19:31Z by this function's `--status open`, carrying
   # fleet-escalated and two return counters and the very criteria an approved
   # gate-2 migration had already reversed). The status is read FIRST and the
@@ -1043,7 +1043,7 @@ return_to_ready() {  # $1 bead, $2 reason, $3 evidence file (may be empty)
     return 0
   fi
   # A WORKBENCH BRANCH GOES BACK TO THE WORKBENCH, NEVER TO A FORGE
-  # (ForgeOs-9srgz, docket seat rule 7). Every path that would return a
+  # (Proofdelve ForgeOs-9srgz, docket seat rule 7). Every path that would return a
   # review-only bead -- a red host verify, REQUEST-CHANGES, a branch with no
   # product change -- lands here, so this is the one place the rule holds.
   if worker_review_only "$state/workers/${bead##*-}"; then
@@ -1060,7 +1060,7 @@ return_to_ready() {  # $1 bead, $2 reason, $3 evidence file (may be empty)
   # already guarded -- the tail runs only inside [ -n ] && [ -s ] -- so the only
   # way they take the run down is a file that exists, is non-empty and will not
   # read. Narrow, but these are RECOVERY paths, and dying in the code that exists
-  # to survive a failure is the same defect ForgeOs-j3kp was filed for.
+  # to survive a failure is the same defect Proofdelve ForgeOs-j3kp was filed for.
   #
   # HERE `|| true` IS CORRECT AND IN file_followup() IT IS NOT. The header and
   # the reason are already written by the time the tail runs, and THEY are the
@@ -1072,7 +1072,7 @@ return_to_ready() {  # $1 bead, $2 reason, $3 evidence file (may be empty)
   bd -C "$root" comment "$bead" --file "$state/logs/return-$bead-$n.txt" --actor "$fleet_actor" >/dev/null 2>&1 || true
   bd -C "$root" update "$bead" --add-label "fleet-return-$n" --actor "$fleet_actor" >/dev/null 2>&1 || true
   # THE EVENT REPORTS THE WRITE THAT HAPPENED, NOT THE ONE THAT WAS ATTEMPTED
-  # (ForgeOs-stpx). Every bd write here is `|| true`, deliberately, because a
+  # (Proofdelve ForgeOs-stpx). Every bd write here is `|| true`, deliberately, because a
   # tracker that will not answer must not take the run down — but the emit
   # underneath used to fire unconditionally, so the stream could record a state
   # change bd had refused. The file's header claims "there is no branch in this
@@ -1107,18 +1107,18 @@ return_to_ready() {  # $1 bead, $2 reason, $3 evidence file (may be empty)
   fi
 }
 
-# THE HAND-BACK TO THE WORKBENCH (ForgeOs-9srgz). No return counter: the
+# THE HAND-BACK TO THE WORKBENCH (Proofdelve ForgeOs-9srgz). No return counter: the
 # Workbench is an attended seat, not a ladder, and the next sitting decides. The
 # bead is reassigned to the Workbench with fleet-safe removed, so no Forge can
 # ever be dispatched on it; the evidence goes on the bead as a comment. As in
-# return_to_ready(), the event reports the write that happened (ForgeOs-stpx).
+# return_to_ready(), the event reports the write that happened (Proofdelve ForgeOs-stpx).
 workbench_hand_back() {  # $1 bead, $2 reason, $3 evidence file (may be empty)
   local bead="$1" reason="$2" evidence="${3:-}" f wrc=0
   f="$state/logs/handback-$bead-$(date +%Y%m%dT%H%M%S).txt"
   {
     printf 'FLEET HAND-BACK TO THE WORKBENCH (%s) -- %s\n\n' "$(workbench_assignee)" "$(date -Is)"
     printf '%s\n\n' "$reason"
-    printf 'This session branch was queued with fleet.sh --review-only. Its findings go back to the Workbench and never to a Forge (ForgeOs-9srgz): resume with fort/scripts/workbench.sh %s, fix, verify, and queue it again.\n' "$bead"
+    printf 'This session branch was queued with fleet.sh --review-only. Its findings go back to the Workbench and never to a Forge (Proofdelve ForgeOs-9srgz): resume with fort/scripts/workbench.sh %s, fix, verify, and queue it again.\n' "$bead"
     evidence_of "$evidence"
   } > "$f" || true
   bd -C "$root" comment "$bead" --file "$f" --actor "$fleet_actor" >/dev/null 2>&1 || true
@@ -1136,20 +1136,20 @@ workbench_hand_back() {  # $1 bead, $2 reason, $3 evidence file (may be empty)
 
 # THE OVERSEER'S QUEUE. A bead reaches here when the fleet has decided it must
 # stop touching it and a person must look — today only from an exhausted review
-# ladder (ForgeOs-57xc). It is NOT return_to_ready: nothing is re-dispatched,
+# ladder (Proofdelve ForgeOs-57xc). It is NOT return_to_ready: nothing is re-dispatched,
 # the return counter is not touched, and the work in the worktree stands.
 # TAKE A MERGED-BUT-UNFINISHED BEAD OUT OF THE FLEET, AND SAY WHETHER THAT
-# HAPPENED (ForgeOs-s2lx). Four sites in land() used to write these two labels
+# HAPPENED (Proofdelve ForgeOs-s2lx). Four sites in land() used to write these two labels
 # with `|| true` and then assert "fleet-safe removed, fleet-escalated applied" in
 # the worker state, the narrative and the incident's detail -- a record of the
-# write they attempted, not the write that happened (the ForgeOs-stpx class).
+# write they attempted, not the write that happened (the Proofdelve ForgeOs-stpx class).
 # Every one of those branches already hands the bead to a person and
 # dispatchable() refuses a non-open status regardless, so the CONSENT BOUNDARY
 # was never at stake; the RECORD was. Two outputs, neither on stdout
-# (ForgeOs-0d0i): label_rc is the bd exit, and label_note is the sentence the
+# (Proofdelve ForgeOs-0d0i): label_rc is the bd exit, and label_note is the sentence the
 # caller puts where it used to assert the labels.
 label_rc=0; label_note=""
-# ONE ASK LINE PER HAND-OFF TO THE OVERSEER (ForgeOs-29j3g). The verb is one of
+# ONE ASK LINE PER HAND-OFF TO THE OVERSEER (Proofdelve ForgeOs-29j3g). The verb is one of
 # sign | grant | decide | run host test | answer; the Keep shows the newest such
 # line as the reason a bead is on his board. Checked and never fatal: a lost ASK
 # line leaves the bead on his board with no reason, which queue-lint flags.
@@ -1173,7 +1173,7 @@ escalate_labels() {  # $1 bead
 page_overseer() {  # $1 bead, $2 reason, $3 evidence file (may be empty),
                    # $4 what stands in the worktree (optional; the default is the
                    # review-ladder case this function was written for, and
-                   # ForgeOs-lw8x's refresh refusal passes its own, because there
+                   # Proofdelve ForgeOs-lw8x's refresh refusal passes its own, because there
                    # nothing was ever built)
   local bead="$1" reason="$2" evidence="${3:-}" wrc=0
   local body="$state/logs/paged-$bead.txt"
@@ -1196,7 +1196,7 @@ page_overseer() {  # $1 bead, $2 reason, $3 evidence file (may be empty),
       -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"bd_exit\":$wrc}"
     return 0
   fi
-  # Paged beads stay his (the Overseer's ruling on ForgeOs-29j3g, 2026-10-19).
+  # Paged beads stay his (the Overseer's ruling on Proofdelve ForgeOs-29j3g, 2026-10-19).
   ask_overseer "$bead" answer "the fleet paged you and removed this bead from its queue: $(printf '%s' "$reason" | head -c 300 | tr '\n' ' ')" \
     || say "$bead: the ASK line could not be posted; it is assigned to $(overseer_assignee) without one"
   say "$bead: PAGED the Overseer — fleet-safe removed, assigned to $(overseer_assignee) with an ASK line. $reason"
@@ -1205,11 +1205,11 @@ page_overseer() {  # $1 bead, $2 reason, $3 evidence file (may be empty),
 }
 
 # ---------------------------------------------------------------------------
-# DISPATCH (ForgeOs-9mfw.2)
+# DISPATCH (Proofdelve ForgeOs-9mfw.2)
 # ---------------------------------------------------------------------------
-# WORKER LIFECYCLE — ONE OWNER (ForgeOs-w7u5)
+# WORKER LIFECYCLE — ONE OWNER (Proofdelve ForgeOs-w7u5)
 # ---------------------------------------------------------------------------
-# Tova Marrowassay, round three of the covenant-4.5 review of ForgeOs-9mfw:
+# The Warden, round three of the covenant-4.5 review of Proofdelve ForgeOs-9mfw:
 # "one function that answers 'is this worker finished, and what makes it
 # reapable again' rather than a fifth point repair."
 #
@@ -1224,7 +1224,7 @@ page_overseer() {  # $1 bead, $2 reason, $3 evidence file (may be empty),
 # AND THE ANSWER NAMES ITS CASE RATHER THAN RETURNING A BOOLEAN. Emrith
 # Cairnwright's addition, and it is the half that makes the morning read work:
 # a budget-parked unit and a stranded one are indistinguishable to a reader —
-# both are claimed, in_progress, built, with no verdict — so the check Tova
+# both are claimed, in_progress, built, with no verdict — so the check the Warden
 # prescribed for the first night ("a worker carrying exit and done whose bead
 # is still in_progress") describes a perfectly healthy parked unit just as
 # well. A lifecycle owner that cannot say which one it is holding has not taken
@@ -1236,11 +1236,11 @@ page_overseer() {  # $1 bead, $2 reason, $3 evidence file (may be empty),
 #                  verifies                        launched it and is gone
 #   parked-review  next run          needs-person  the fleet stopped touching
 #                  reviews                         it on purpose and said why
-#   deferred-merge next pass retries THE MERGE ALONE (ForgeOs-usz6). Not the
+#   deferred-merge next pass retries THE MERGE ALONE (Proofdelve ForgeOs-usz6). Not the
 #                  verifier, and not a second review launch: the resume point
 #                  is what makes that distinction expressible at all.
 #   parked-signed  next pass re-asks the three signed questions and resumes
-#                  the LANDING (ForgeOs-ohsy). Written only when a signed
+#                  the LANDING (Proofdelve ForgeOs-ohsy). Written only when a signed
 #                  landing's verifier is stopped by a signal. `finished` would
 #                  resume it at verify-then-review, which spends a Warden
 #                  launch on work the Overseer has already signed and, on a
@@ -1273,8 +1273,8 @@ worker_state() {  # $1 worker dir. Exactly ONE token on stdout, on every path.
   if [ -e "$d/done" ]; then echo settled; return 0; fi
   if [ -e "$d/exit" ]; then echo finished; return 0; fi
   pid="$(cat "$d/pid" 2>/dev/null || echo "")"
-  # A BARE PID IS TRUSTED, AND PID REUSE IS THE KNOWN RESIDUAL (ForgeOs-l1ef,
-  # Tova round two finding 8): after a wrap the number can belong to an
+  # A BARE PID IS TRUSTED, AND PID REUSE IS THE KNOWN RESIDUAL (Proofdelve ForgeOs-l1ef,
+  # The Warden round two finding 8): after a wrap the number can belong to an
   # unrelated process and a dead Forge counts as live indefinitely. That errs
   # toward dispatching FEWER Forges, which is the safe direction.
   if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then echo running; return 0; fi
@@ -1301,7 +1301,7 @@ worker_reason() {  # $1 worker dir. The why, or the empty string.
 }
 
 worker_live()         { case "$(worker_state "$1")" in running|launching) return 0 ;; *) return 1 ;; esac; }
-# ForgeOs-usz6 MOVED deferred-merge OUT OF THIS LIST. It was here because the
+# Proofdelve ForgeOs-usz6 MOVED deferred-merge OUT OF THIS LIST. It was here because the
 # promise "will retry next pass" was false and a person had to do the merge. It
 # is true now: a deferred worker is reapable, and what it resumes is the MERGE
 # ALONE.
@@ -1311,7 +1311,7 @@ worker_needs_person() { case "$(worker_state "$1")" in orphaned|needs-person) re
 # the question, answered in one place. worker_reapable() is the first half;
 # worker_resume_at() is the second, and it is what stops a resumed worker
 # re-running a verifier that was already green or spending a second review
-# launch on one bead (ForgeOs-usz6's stated reason for not being a one-liner).
+# launch on one bead (Proofdelve ForgeOs-usz6's stated reason for not being a one-liner).
 worker_reapable() { case "$(worker_state "$1")" in finished|parked-budget|parked-review|deferred-merge|parked-signed) return 0 ;; *) return 1 ;; esac; }
 worker_resume_at() {  # $1 worker dir. verify | review | land | -
   case "$(worker_state "$1")" in
@@ -1323,7 +1323,7 @@ worker_resume_at() {  # $1 worker dir. verify | review | land | -
   esac
 }
 
-# A REVIEW-ONLY WORKER (ForgeOs-9srgz). `fleet.sh --review-only <bead>` writes a
+# A REVIEW-ONLY WORKER (Proofdelve ForgeOs-9srgz). `fleet.sh --review-only <bead>` writes a
 # worker for a Workbench session branch that no Forge built: an `exit` of 0, so
 # the lifecycle reads it `finished` and it resumes at the VERIFIER like any
 # finished Forge (host verify, one Warden review, merge or escalate), plus this
@@ -1377,7 +1377,7 @@ workbench_live() {
 #
 #   the merge failed and was aborted           -> bead back in the queue
 #   REQUEST-CHANGES                            -> bead back in the queue
-#   the Forge exited nonzero                   -> bead back in the queue
+#   The Forge exited nonzero                   -> bead back in the queue
 #   no worktree after the Forge session        -> bead back in the queue
 #   the pre-review verifier was RED            -> bead back in the queue
 #   ESCALATE                                   -> open, on the Overseer's queue
@@ -1387,7 +1387,7 @@ workbench_live() {
 # FIVE OF THOSE PUT THE BEAD BACK IN THE QUEUE FOR A FRESH DISPATCH, AND A FRESH
 # DISPATCH REUSES THIS WORKTREE. forge.sh:41-43 is
 # `if [ ! -d "$wt" ]; then git worktree add "$wt" -b "bead/$suffix"; fi` (since
-# ForgeOs-lw8x a reused tree is merged current with main before the session, and
+# Proofdelve ForgeOs-lw8x a reused tree is merged current with main before the session, and
 # a merge that cannot be made exits 76, routed to a person in reap_pass) — so
 # removing the tree does not give the next dispatch a clean one, it gives it a
 # MISSING one while the branch bead/<sfx> still exists, and `worktree add -b`
@@ -1399,11 +1399,11 @@ workbench_live() {
 # outcomes into a permanently undispatchable bead.
 #
 # AND THE ONE THE DOCKET NAMES, which the state test alone DOES cover: a
-# deferred merge is `deferred-merge`, not `settled`, and ForgeOs-usz6's retry
+# deferred merge is `deferred-merge`, not `settled`, and Proofdelve ForgeOs-usz6's retry
 # READS FROM THAT WORKTREE — it re-attempts the merge alone, without re-running
 # the verifier and without spending a second review launch. Reaping between the
 # defer and the retry turns a recoverable park into a lost bead, which is the
-# exact failure ForgeOs-w7u5 and ForgeOs-usz6 were filed to end.
+# exact failure Proofdelve ForgeOs-w7u5 and Proofdelve ForgeOs-usz6 were filed to end.
 #
 # SO THE GUARD IS BOTH: this function REFUSES unless the worker is `settled`,
 # and it is called from ONE place — the branch in land() where the merge and the
@@ -1459,7 +1459,7 @@ worker_explain() {  # $1 worker dir
     deferred-merge) echo "$b: DEFERRED AT THE MERGE, HEALTHY — reviewed and approved, waiting for a landable tree. A later pass retries the merge alone; neither the verifier nor a review launch is spent again. No action. ${why}" ;;
     settled)        echo "$b: SETTLED — nothing further happens here. ${why}" ;;
     orphaned)
-      # THE FACTS, MEASURED, RATHER THAN AN ASSERTION (ForgeOs-ke5u, acceptance
+      # THE FACTS, MEASURED, RATHER THAN AN ASSERTION (Proofdelve ForgeOs-ke5u, acceptance
       # 4). This line used to read "no exit code and no live process", which is
       # true of ONE of the two ways a worker becomes orphaned and false of the
       # other: a worker left `in-hand` by a run that was signalled has an exit
@@ -1478,7 +1478,7 @@ worker_explain() {  # $1 worker dir
 }
 
 # LIVE MEANS A PROCESS IS ALIVE, NOT MERELY THAT TWO FILES ARE ABSENT
-# (ForgeOs-l1ef). This counted any worker directory lacking both `exit` and
+# (Proofdelve ForgeOs-l1ef). This counted any worker directory lacking both `exit` and
 # `done`, with no run scoping and no staleness check — so anything that stopped
 # a child before it could write `exit` (a reboot, a SIGKILL, the host going
 # down mid-night) left a directory that counted as a live Forge FOREVER, and
@@ -1493,8 +1493,8 @@ live_forges() {
     # warn(), NOT say(): this function's stdout is its return value, and one
     # diagnostic line on stdout is an arithmetic syntax error at both call
     # sites, which kills the run and lets the EXIT trap record a clean drain
-    # for a crash (ForgeOs-0d0i).
-    # ONCE PER PASS (ForgeOs-xu0mj). refill_slots() calls this at every step of
+    # for a crash (Proofdelve ForgeOs-0d0i).
+    # ONCE PER PASS (Proofdelve ForgeOs-xu0mj). refill_slots() calls this at every step of
     # the completion lane, so without the set a live NEEDS A PERSON would print
     # several times a pass instead of once. THE SET IS A FILE, NOT A VARIABLE:
     # every caller runs this as $(live_forges), a subshell, so a variable
@@ -1512,13 +1512,13 @@ live_forges() {
   echo "$n"
 }
 
-# HOW MANY WORKERS THE NEXT REAP PASS WOULD TAKE (ForgeOs-dx34.18). The
+# HOW MANY WORKERS THE NEXT REAP PASS WOULD TAKE (Proofdelve ForgeOs-dx34.18). The
 # drain check asks this beside live_forges(); it is NOT folded into
 # live_forges(), which is also the governor's slot count -- widening that would
 # change Forge concurrency, and a finished worker holds no seat. Same shape as
 # live_forges(): stdout is the return value, so nothing here may say() -- one
 # diagnostic line on stdout is an arithmetic error at the call site
-# (ForgeOs-0d0i).
+# (Proofdelve ForgeOs-0d0i).
 reapable_workers() {
   local n=0 d
   for d in "$state/workers"/*/; do
@@ -1551,21 +1551,21 @@ if status != "open":
 if "fleet-safe" not in labels:
     print("NO not labelled fleet-safe"); sys.exit(0)
 # This fort own convention for "waiting on the Overseer" is the human label
-# plus bd human (fort/seats/mayor.md, ForgeOs-eng3.1, 2026-08-29). It is NOT
+# plus bd human (fort/seats/mayor.md, Proofdelve ForgeOs-eng3.1, 2026-08-29). It is NOT
 # the capital gate-N labels, which are not law here and sit on two strays.
 # Guarding the wrong convention would guard nothing.
 if "human" in labels:
     print("NO carries the human label, so it is waiting on the Overseer"); sys.exit(0)
 if "fleet-escalated" in labels:
     print("NO escalated to the Mayor after repeated returns"); sys.exit(0)
-# THE MAYOR CLASSIFICATION IS POSITIVE, AND ITS ABSENCE REFUSES (ForgeOs-vee4w
+# THE MAYOR CLASSIFICATION IS POSITIVE, AND ITS ABSENCE REFUSES (Proofdelve ForgeOs-vee4w
 # criterion 6, the Overseer ruling of 2026-10-05). Every bead the fleet works
 # carries sign-to-land (it lands only on his signature) or lands-on-review (gate
 # 1 class A, or not gate 1 at all). Neither means nobody classified it, and
 # doubt is not resolved in the fleet favour: refused here, so no Forge is spent
 # on it, and held at land() as the belt. The two names are spelled again in
 # sign_label() and review_label(); the e2e harness scenario 61 holds them equal.
-# A SIGNED LANDING SKIPS IT (Tova, round two, finding 1): his recorded
+# A SIGNED LANDING SKIPS IT (the Warden, round two, finding 1): his recorded
 # approval of the exact change IS the gate this label stands in for, and beads
 # escalated before the marker existed carry neither label, so without the skip
 # his Approve on them would be refused as unclassified.
@@ -1580,7 +1580,7 @@ if n:
     if deps is None:
         print("NO %d blockers reported but none listed, so they cannot be checked" % n); sys.exit(0)
     # ONLY A blocks EDGE BLOCKS, AND THIS LOOP NOW READS THE EDGE TYPE
-    # (ForgeOs-czhb). It used to refuse on ANY open dependency, which re-filtered
+    # (Proofdelve ForgeOs-czhb). It used to refuse on ANY open dependency, which re-filtered
     # beads bd ready had correctly cleared: ~140 of 349 ready beads hold a
     # non-blocking edge to an open bead, which is very nearly the whole product
     # backlog, and every one of them was undispatchable. The branch had never
@@ -1604,7 +1604,7 @@ if n:
     # but its reason is fail-closed-on-the-unknown rather than the stated one.
     #
     # REFUSE UNLESS THE TYPE IS A KNOWN NON-BLOCKING NAME. Absent, empty or
-    # unrecognised REFUSES. ForgeOs-czhb criterion 4 asks for the opposite shape
+    # unrecognised REFUSES. Proofdelve ForgeOs-czhb criterion 4 asks for the opposite shape
     # and criterion 2 asks that "absent or unrecognised" refuse; both cannot be
     # had, and the recorded resolution on that bead is that "the SAFE DEFAULT is
     # refusal, not the shape of the list". A predicate keyed on the string
@@ -1646,7 +1646,7 @@ print("YES")
   esac
 }
 
-# ONE QUERY, ASKED BY BOTH THE DISPATCHER AND THE DRAIN CHECK (ForgeOs-czhb
+# ONE QUERY, ASKED BY BOTH THE DISPATCHER AND THE DRAIN CHECK (Proofdelve ForgeOs-czhb
 # acceptance 8). These were two separate bd calls with different flags and on
 # 2026-09-10 they disagreed: the drain check asked `bd ready`, got four beads
 # back and read that as work; dispatch_pass asked dispatchable() and refused all
@@ -1693,21 +1693,21 @@ any_dispatchable() {
 }
 
 # ---------------------------------------------------------------------------
-# STALL DETECTION (ForgeOs-dx34.9). THE LOOP CAN TELL A STALLED PASS FROM A
+# STALL DETECTION (Proofdelve ForgeOs-dx34.9). THE LOOP CAN TELL A STALLED PASS FROM A
 # WORKING ONE, AND IT DOES IT BY CONSTRUCTION RATHER THAN BY A CLOCK.
 # ---------------------------------------------------------------------------
 # THE WEDGE THIS ANSWERS: run 20260910T135709 spun for 16 minutes, emitting
 # nothing, and ended only because a person touched the halt file. Its cause
-# (ForgeOs-czhb, the drain check and the dispatch guard disagreeing about one
+# (Proofdelve ForgeOs-czhb, the drain check and the dispatch guard disagreeing about one
 # bead) is fixed; that nothing in this file could NOTICE it is what this section
 # fixes, because the next wedge will have a different cause -- and this file
 # already names one in any_dispatchable()'s own header: a bead dispatchable()
 # accepts whose worktree a launcher outside this run holds "keeps the run
 # polling rather than draining it". A tracker refusing every claim
-# (ForgeOs-dx34.2's unmeasured write contention) is another.
+# (Proofdelve ForgeOs-dx34.2's unmeasured write contention) is another.
 #
 # A TIME THRESHOLD IS REFUTED, NOT UNTRIED. Measured over 27 runs
-# (ForgeOs-dx34.4's design field; fort/memory/facts/fleet-silence-does-not-
+# (Proofdelve ForgeOs-dx34.4's design field; fort/memory/facts/fleet-silence-does-not-
 # indicate-a-wedge.md): the wedged run's longest fleet-event silence was 16.1
 # minutes, a CLEAN drain's was 14.2, and a clean drain with ZERO worker events
 # inside a 7-minute gap exists. Nothing an outside observer can measure
@@ -1719,7 +1719,7 @@ any_dispatchable() {
 # nothing -- so the next pass meets the same queue, the same guards and the
 # same answer. That is a stall by construction, with no threshold to fit.
 #
-# THE FOURTH HEALTHY OUTCOME, WHICH THE BEAD'S OWN PROSE OMITS. ForgeOs-dx34.9
+# THE FOURTH HEALTHY OUTCOME, WHICH THE BEAD'S OWN PROSE OMITS. Proofdelve ForgeOs-dx34.9
 # says "a healthy pass either dispatches, reaps, or finds the queue empty and
 # exits". There is a fourth: a pass that does nothing because a Forge is LIVE
 # and the queue is waiting behind it. That is every quiet minute of the
@@ -1750,10 +1750,10 @@ any_dispatchable() {
 # the launcher's preamble declared, and an unbound counter there would fail
 # three governor cases as though the LAUNCHER were wrong (2026-09-10).
 pass_dispatched=0; pass_reaped=0; pass_note=""
-pass_workbench_held=0   # ForgeOs-9srgz A5: candidates held by the live Workbench sitting's touch set this pass
-pass_held_unlanded=0   # ForgeOs-b9mj round three: candidates held behind a reapable, not-live holder this pass
+pass_workbench_held=0   # Proofdelve ForgeOs-9srgz A5: candidates held by the live Workbench sitting's touch set this pass
+pass_held_unlanded=0   # Proofdelve ForgeOs-b9mj round three: candidates held behind a reapable, not-live holder this pass
 stall_passes=0; stall_peak=0; waiting_said=0; held_said=0
-reapable_said=0   # ForgeOs-dx34.18: the drain check's own once-per-stretch sentence
+reapable_said=0   # Proofdelve ForgeOs-dx34.18: the drain check's own once-per-stretch sentence
 stall_check() {  # $1 live Forge count, $2 startable work: yes | no | unknown.
                  # Called once per pass, after both passes. Resets on any pass
                  # that did work; counts when nothing is live and work is
@@ -1769,7 +1769,7 @@ stall_check() {  # $1 live Forge count, $2 startable work: yes | no | unknown.
     # Said once per quiet stretch, not once per pass: a Forge session is tens of
     # minutes and the narrative log does not need a line every FLEET_POLL to
     # say the same thing. The sentence exists so a reader of a long-gap run can
-    # see WHY the counter did not move (ForgeOs-dx34.9 acceptance 4).
+    # see WHY the counter did not move (Proofdelve ForgeOs-dx34.9 acceptance 4).
     if [ "$waiting_said" != 1 ]; then
       say "waiting: nothing to reap or dispatch while $1 Forge(s) are live -- a quiet pass with a live worker is not a stall, and the stall counter ($stall_passes/$FLEET_STALL_PASSES) is not touched"
       waiting_said=1
@@ -1777,7 +1777,7 @@ stall_check() {  # $1 live Forge count, $2 startable work: yes | no | unknown.
     return 0
   fi
   if [ "${pass_mem_held:-0}" -gt 0 ]; then
-    # ForgeOs-asad6: refused for memory, which returns without anyone acting.
+    # Proofdelve ForgeOs-asad6: refused for memory, which returns without anyone acting.
     # Not counted; said once per quiet stretch, like the other waits.
     if [ "$held_said" != 1 ]; then
       say "waiting: startable work is held for memory (${pass_note:-see the dispatch line}); not a stall, and the stall counter ($stall_passes/$FLEET_STALL_PASSES) is not touched. Said once per quiet stretch."
@@ -1786,7 +1786,7 @@ stall_check() {  # $1 live Forge count, $2 startable work: yes | no | unknown.
     return 0
   fi
   if [ "${pass_workbench_held:-0}" -gt 0 ]; then
-    # ForgeOs-9srgz A5: candidates held by the live Workbench sitting's touch
+    # Proofdelve ForgeOs-9srgz A5: candidates held by the live Workbench sitting's touch
     # set, which clears without the fleet acting. Not counted; said once per
     # quiet stretch.
     if [ "$held_said" != 1 ]; then
@@ -1795,9 +1795,9 @@ stall_check() {  # $1 live Forge count, $2 startable work: yes | no | unknown.
     fi
     return 0
   fi
-  [ "$2" = yes ] || return 0   # nothing startable: the drain check decides (drain, or wait on a reapable worker -- ForgeOs-dx34.18); not a stall either way
+  [ "$2" = yes ] || return 0   # nothing startable: the drain check decides (drain, or wait on a reapable worker -- Proofdelve ForgeOs-dx34.18); not a stall either way
   # A CANDIDATE HELD BEHIND AN UNLANDED, NOT-LIVE HOLDER IS A WAITING PASS
-  # (ForgeOs-b9mj round three; the reasoning is on touch_conflict_with_live).
+  # (Proofdelve ForgeOs-b9mj round three; the reasoning is on touch_conflict_with_live).
   # The holder is reapable, so the next pass takes it: its merge lands or it
   # is paged, and either way the hold ends. Counting this pass would halt the
   # fleet on an ordinary parked merge. Requires a reapable worker to EXIST, so
@@ -1817,22 +1817,22 @@ stall_check() {  # $1 live Forge count, $2 startable work: yes | no | unknown.
 }
 
 # ---------------------------------------------------------------------------
-# TOUCH SETS AND THE CO-DISPATCH GUARD (ForgeOs-b9mj, Regent edict 2026-09-14,
+# TOUCH SETS AND THE CO-DISPATCH GUARD (Proofdelve ForgeOs-b9mj, Regent edict 2026-09-14,
 # Overseer present).
 # ---------------------------------------------------------------------------
 # TWO FORGES CANNOT CLOBBER EACH OTHER IN FLIGHT -- separate worktrees, separate
 # branches, mask-granted writes only to their own tree -- SO THEY COLLIDE AT THE
 # MERGE, and until this guard the collision was discovered AFTER the review
-# launch was spent. 2026-09-13 14:59: ForgeOs-o6ky.13 passed verify, took a
+# launch was spent. 2026-09-13 14:59: Proofdelve ForgeOs-o6ky.13 passed verify, took a
 # full Warden review (APPROVE-WITH-FINDINGS), and then 'merge into main failed
 # and was aborted'. The same night bead/jtvl.1 and bead/aqc6.2.6 both edited
-# tests/ForgeOS.Tests/MigrationTests.cs and the Mayor resolved it by union under
+# tests/Product.Tests/MigrationTests.cs and the Mayor resolved it by union under
 # a recorded one-time exception. The Mayor had been sequencing overlapping beads
 # by hand with blocks edges, which lives in one head and is checked by nothing.
 #
 # THE MECHANISM. A bead may declare what it edits as ONE line in its description:
 #
-#   Touches: web/src/App.tsx, src/ForgeOS.Infrastructure/Migrations/, docs/*
+#   Touches: web/src/App.tsx, src/Product.Infrastructure/Migrations/, docs/*
 #
 # Paths or globs, separated by commas or whitespace; the FIRST such line is the
 # declaration and later ones are ignored. Each entry is reduced to a PREFIX: a
@@ -1872,7 +1872,7 @@ stall_check() {  # $1 live Forge count, $2 startable work: yes | no | unknown.
 # refusals in dispatchable(), or any_dispatchable().
 #
 # WHAT IT DOES TO THE STALL DETECTOR, AND THE REGRESSION IT SHIPPED ONCE
-# (Tova Marrowassay, round two on ad911a7, the blocking finding). The first
+# (the Warden, round two on ad911a7, the blocking finding). The first
 # text here said the detector was untouched "because this guard never refuses
 # when no Forge is live". That was true while the predicate was worker_live
 # and became false the moment it widened to reapable workers: a DEFERRED MERGE
@@ -1892,7 +1892,7 @@ stall_check() {  # $1 live Forge count, $2 startable work: yes | no | unknown.
 # Functions, not variables, so scripts/governor-harness.sh's extraction carries
 # them with their callers (the env_signature() precedent: a top-level variable
 # is unbound there under set -u).
-touches_migrations() { printf '%s' 'src/ForgeOS.Infrastructure/Migrations/'; }
+touches_migrations() { printf '%s' '<no-migrations-in-this-fort>/'; }   # Manyhalls has no migrations directory; the collapse below never fires
 touches_everything() { printf '%s' '<everything>'; }   # a sentinel no path can spell
 
 touch_prefix() {  # $1 one declared path or glob -> its normalised prefix (may be empty)
@@ -1934,7 +1934,7 @@ for l in (d.get("description") or "").splitlines():
   [ "$any" = 1 ] || { touches_everything; echo; }
 }
 
-# THE DELIVERABLE DECLARATION (ForgeOs-nz3u). A bead whose deliverable is an
+# THE DELIVERABLE DECLARATION (Proofdelve ForgeOs-nz3u). A bead whose deliverable is an
 # ANSWER rather than a diff -- an investigation, a measurement, an audit, or
 # any bead whose premise turns out to be false and whose only honest output is
 # a report -- says so in its DESCRIPTION with a line `Deliverable: answer`,
@@ -1943,7 +1943,7 @@ for l in (d.get("description") or "").splitlines():
 # bead whose branch differs from main only under fort/handoffs/ proceeds to the
 # verifier and the review (the Warden is the acknowledger of an answer); an
 # undeclared one is returned exactly as before. Nothing else reads it. It does
-# not read acceptance criteria (nobody teaches fleet.sh English, ForgeOs-j3kp),
+# not read acceptance criteria (nobody teaches fleet.sh English, Proofdelve ForgeOs-j3kp),
 # it adds no verdict token, and it is not a bd status: a status is what the
 # fleet changes as work moves, a declaration is what the filer states about
 # what done means. Prints the declared word, lower-cased, or nothing.
@@ -1991,7 +1991,7 @@ touch_sets_intersect() {  # $1 file A, $2 file B -> 0 and the overlapping pair o
 # and the skip line. Same stdout discipline as live_forges(): this function's
 # stdout is its answer.
 #
-# "HOLDS AN UNLANDED BRANCH" AND NOT "IS LIVE" (Tova Marrowassay, covenant-4.5
+# "HOLDS AN UNLANDED BRANCH" AND NOT "IS LIVE" (the Warden, covenant-4.5
 # review of 40c3d6d, finding 1). The collision this guard prevents happens at
 # the MERGE, and a worker whose Forge has finished still holds an approved,
 # unmerged branch: finished, parked-budget, parked-review, parked-signed and
@@ -2006,7 +2006,7 @@ touch_sets_intersect() {  # $1 file A, $2 file B -> 0 and the overlapping pair o
 # against the first and both printed "would dispatch" where a real pass holds
 # one. Dry-dispatched sets are kept in $state/.touches-dry/ for the pass and
 # read here beside the workers; dispatch_pass clears that directory on entry.
-# THE WORKBENCH AS A HOLDER (ForgeOs-9srgz A5, the docket's original design,
+# THE WORKBENCH AS A HOLDER (Proofdelve ForgeOs-9srgz A5, the docket's original design,
 # which the Overseer restored at the sitting). While a sitting is live its set
 # is the session branch's diff from main (three dots: its own changes, not
 # main's movement since the cut) plus every uncommitted or untracked path in
@@ -2026,9 +2026,9 @@ workbench_touches_refresh() {
   wt="$(sed -n 's/^worktree=//p' "$state/workbench.live" 2>/dev/null | head -1)"
   [ -n "$wt" ] || wt="$root-worktrees/$sfx"
   tmp="$f.tmp.$$"
-  # READ WITHOUT TOUCHING THE SITTING (Tova, finding 1 on the docket review).
+  # READ WITHOUT TOUCHING THE SITTING (the Warden, finding 1 on the docket review).
   # A plain `git status` refreshes the index and writes it back under
-  # index.lock, so a poll landing in the same moment as Hollis's `git add` or
+  # index.lock, so a poll landing in the same moment as the Workbench's `git add` or
   # `git commit` fails his command with "index.lock: File exists" -- the fleet
   # disrupting the attended seat. GIT_OPTIONAL_LOCKS=0 is git-status(1)'s own
   # advice for background scripts, and scripts/stranded-sweep.sh already uses it.
@@ -2058,7 +2058,7 @@ workbench_touches_refresh() {
   sed '/^$/d' "$tmp.raw" | sort -u > "$tmp"; rm -f "$tmp.raw" "$tmp.diff" "$tmp.st"
   if [ "$ok" = 0 ]; then
     touches_everything > "$tmp"; printf '\n' >> "$tmp"
-    say "workbench: the live sitting on $bead has a touch set that cannot be read (bead/$sfx or $wt); holding EVERY candidate this pass (fails closed, ForgeOs-9srgz)"
+    say "workbench: the live sitting on $bead has a touch set that cannot be read (bead/$sfx or $wt); holding EVERY candidate this pass (fails closed, Proofdelve ForgeOs-9srgz)"
   fi
   if [ -s "$tmp" ]; then mv -f "$tmp" "$f"; printf '%s\n' "$bead" > "$f.bead"; else rm -f "$tmp"; fi
 }
@@ -2067,7 +2067,7 @@ touch_conflict_with_live() {  # $1 candidate touch-set file -> 0 and "<bead> on 
   local d obead pair
   for d in "$state/workers"/*/; do
     [ -d "$d" ] || continue
-    # IN-HAND HOLDS TOO (ForgeOs-uwjme): a refill runs while a worker is in the
+    # IN-HAND HOLDS TOO (Proofdelve ForgeOs-uwjme): a refill runs while a worker is in the
     # completion lane, and that worker's branch has not landed.
     if ! worker_live "$d" && ! worker_reapable "$d" && [ "$(worker_state "$d")" != in-hand ]; then continue; fi
     obead="$(cat "$d/bead" 2>/dev/null || basename "$d")"
@@ -2088,11 +2088,11 @@ touch_conflict_with_live() {  # $1 candidate touch-set file -> 0 and "<bead> on 
 }
 
 # ---------------------------------------------------------------------------
-# SIGNED LANDING (ForgeOs-ubgx). AN APPROVAL IS PINNED TO A CHANGE, NOT A BEAD.
+# SIGNED LANDING (Proofdelve ForgeOs-ubgx). AN APPROVAL IS PINNED TO A CHANGE, NOT A BEAD.
 # ---------------------------------------------------------------------------
 # WHAT THIS ANSWERS. A Warden ESCALATE puts a bead on the Overseer's queue with
 # the `human` label; his Approve on the Keep removes it and restores fleet-safe
-# (ForgeOs-bwfv). Until this block existed the fleet then treated the bead as
+# (Proofdelve ForgeOs-bwfv). Until this block existed the fleet then treated the bead as
 # NEW WORK: a Forge dispatched into the reused worktree, read his approval and
 # wrote a handoff, the verifier ran, a Warden was launched, she approved on his
 # signature, and it merged -- three launches on finished, signed work, measured
@@ -2114,8 +2114,8 @@ touch_conflict_with_live() {  # $1 candidate touch-set file -> 0 and "<bead> on 
 # the branch before every landing and moves the tip, so a SHA rule would never
 # fire. `git diff <merge-base main X> X | git patch-id --verbatim` is the same
 # for the approved sha and the current tip exactly when the branch carries the
-# same change against its base (verbatim, so whitespace counts; Tova 1.3). A refresh that CONFLICTS is already paged as a
-# person's merge (ForgeOs-36b9) and takes a landing-lap child, a new change and
+# same change against its base (verbatim, so whitespace counts; the Warden 1.3). A refresh that CONFLICTS is already paged as a
+# person's merge (Proofdelve ForgeOs-36b9) and takes a landing-lap child, a new change and
 # a new signature; a refresh that merges cleanly but changes the patch (main
 # touched the same lines) is likewise a different change and goes to review.
 #
@@ -2128,11 +2128,11 @@ touch_conflict_with_live() {  # $1 candidate touch-set file -> 0 and "<bead> on 
 #      carries an approvedSha -- the Keep records the branch tip at signing time
 #      (tools/keep/server.mjs, resolve-sha; docs/specs/keep-dashboard-v2.md);
 #      null (a Mayor-lane bead with no branch) is no, and a later Decline or
-#      Decide supersedes an earlier approve (Tova 1.4);
+#      Decide supersedes an earlier approve (the Warden 1.4);
 #   3. the patch-id of the approved sha against its merge base with main equals
 #      the patch-id of the branch tip against its merge base with main;
 #   4. where the ESCALATE arm recorded the tip the Warden reviewed, its patch-id
-#      equals the approved one too (Tova 1.2): what lands is what was reviewed
+#      equals the approved one too (the Warden 1.2): what lands is what was reviewed
 #      AND what was signed.
 # dispatchable() has already said yes before any of this is asked, so
 # `fleet-escalated`, `human`, a non-open status and an open blocker refuse
@@ -2162,7 +2162,7 @@ patch_id_of() {  # $1 commit-ish -> the verbatim, order-stable patch-id of its d
   local base
   base="$(git -C "$root" merge-base "$main_branch" "$1" 2>/dev/null)" || return 1
   [ -n "$base" ] || return 1
-  # --verbatim (Tova, 1.3 on the 2026-09-17 sitting): --stable strips
+  # --verbatim (the Warden, 1.3 on the 2026-09-17 sitting): --stable strips
   # whitespace from every hashed line, so a hand commit after the approval
   # that changed only whitespace inside added lines -- indentation in a YAML
   # or Python file, a quoting change in a script -- kept the id and landed on
@@ -2177,11 +2177,11 @@ latest_approved_sha() {  # $1 bead -> the approvedSha of the NEWEST sign event f
   # Selected on the category and target FIELDS, never grepped: a bead id quoted
   # inside another event's detail would match a grep (the 2026-09-09 rule).
   # THE NEWEST SIGN EVENT OF ANY KIND DECIDES, AND ONLY AN APPROVE COUNTS
-  # (Tova, 1.4): reading gate.approved alone would let an Approve followed by
+  # (the Warden, 1.4): reading gate.approved alone would let an Approve followed by
   # a Decline or a Decide on the same bead still land, because neither of
   # those removes fleet-safe. Unreachable through the Keep today (the bead
   # leaves needs-you when human goes) and closed here anyway.
-  # ONLY THE KEEP'S OWN EVENTS ARE SIGN EVENTS (ForgeOs-jib0; the Overseer's
+  # ONLY THE KEEP'S OWN EVENTS ARE SIGN EVENTS (Proofdelve ForgeOs-jib0; the Overseer's
   # ruling of 2026-11-14, built at the Regent sitting of 2026-11-16). The Keeps
   # emit all three categories as actor justin, seat overseer. The Mayor and the
   # Regent also emit decision.recorded and gate.approved under their OWN names,
@@ -2217,7 +2217,7 @@ sha = p.get("approvedSha") if isinstance(p, dict) else None
 print(sha if isinstance(sha, str) else "")
 ' "$1" 2>/dev/null
 }
-# THE KEEP'S OWN RECORD CORROBORATES THE STREAM (ForgeOs-ubgx.4, Regent edict
+# THE KEEP'S OWN RECORD CORROBORATES THE STREAM (Proofdelve ForgeOs-ubgx.4, Regent edict
 # 2026-10-06). The stream has no origin: emit.sh authenticates nothing and the
 # day files are seat-writable, so a gate.approved there is a claim anyone in a
 # seat could make. The Keeps write a `pin` line naming the approvedSha into
@@ -2225,8 +2225,8 @@ print(sha if isinstance(sha, str) else "")
 # lib/seat-sandbox.sh binds read-only in every seat mask of every fort. So a
 # landing needs the SAME sha in both places: the stream (newest sign event,
 # question 2 below) and a Keep record. Either Keep's desk counts, because both
-# are live: the Civ Keep (civ-keep/, lines carry fort "forgeos") and this fort's
-# own (proofdelve-keep/).
+# are live: the Civ Keep (civ-keep/, lines carry fort "fortkit") and this fort's
+# own (manyhalls-keep/).
 # THE DATED CUTOVER (the Overseer's choice, 2026-10-06). Signatures given before
 # the Keeps wrote pin lines have no sha in any record. Rather than trust stream
 # events by their timestamp -- which a seat writes, so a backdated forgery would
@@ -2238,7 +2238,7 @@ print(sha if isinstance(sha, str) else "")
 # harness can point it at a fixture; mask_env forwards no XDG_STATE_HOME into a
 # seat, and the unattended fleet runs from a host unit no seat can configure.
 keep_corroborates() {  # $1 bead, $2 sha -> exit 0 when the Keep's own audit says his NEWEST decision on this bead is approve at that sha
-  # THE NEWEST DECISION, READ FROM THE KEEP'S AUDIT (Tova, finding A2 on the
+  # THE NEWEST DECISION, READ FROM THE KEEP'S AUDIT (the Warden, finding A2 on the
   # 2026-10-06 sitting). The first version asked only "did a Keep ever pin this
   # sha for this bead", so a forged NEWER approve in the stream naming an old,
   # once-approved sha passed even after he had Declined in the Keep. The audit
@@ -2265,11 +2265,11 @@ intents, pins = [], []
 for path, needs_fort in ((civ, True), (own, False)):
     for e in lines(path):
         if e.get("bead") != bead: continue
-        if needs_fort and e.get("fort") != "forgeos": continue
+        if needs_fort and e.get("fort") != "fortkit": continue
         if "action" in e: intents.append(e)
         elif e.get("step") == "pin": pins.append(e)
 def snapshot_says():
-    return any(e.get("fort") == "forgeos" and e.get("bead") == bead and e.get("approvedSha") == sha for e in lines(legacy))
+    return any(e.get("fort") == "fortkit" and e.get("bead") == bead and e.get("approvedSha") == sha for e in lines(legacy))
 if not intents:
     sys.exit(0 if snapshot_says() else 1)
 newest = max(intents, key=lambda e: e.get("ts") or "")
@@ -2277,11 +2277,11 @@ if newest.get("action") != "approve": sys.exit(1)
 at = [p for p in pins if p.get("ts") == newest.get("ts")]
 if at: sys.exit(0 if any(p.get("approvedSha") == sha for p in at) else 1)
 sys.exit(0 if snapshot_says() else 1)
-' "$1" "$2" "$s/civ-keep/signatures.jsonl" "$s/proofdelve-keep/signatures.jsonl" "$s/civ-keep/legacy-approvals.jsonl" 2>/dev/null
+' "$1" "$2" "$s/civ-keep/signatures.jsonl" "$s/manyhalls-keep/signatures.jsonl" "$s/civ-keep/legacy-approvals.jsonl" 2>/dev/null
 }
-# THE QUESTIONS, ENUMERATED HERE AND COUNTED NOWHERE ELSE (ForgeOs-ubgx.3 item
+# THE QUESTIONS, ENUMERATED HERE AND COUNTED NOWHERE ELSE (Proofdelve ForgeOs-ubgx.3 item
 # 2.1). Three call sites said "the three questions" and there have been FOUR
-# since Tova's 1.2 added the reviewed tip; a count written into prose in four
+# since the Warden's 1.2 added the reviewed tip; a count written into prose in four
 # places is a count that goes stale in three of them, which is what happened.
 # The other sites now name this function instead of a number.
 #   1. does the worker's STORED VERDICT admit a landing at all
@@ -2304,7 +2304,7 @@ sys.exit(0 if snapshot_says() else 1)
 # Returns 2 for the ordinary case (no stored ESCALATE: not a signed bead at
 # all) so the caller can stay quiet about it, and 1 for a refusal worth a line:
 # an escalated bead the fleet looked at and would not land.
-# THE STORED-VERDICT PRE-FILTER, IN ONE PLACE (ForgeOs-czhb's rule applied to a
+# THE STORED-VERDICT PRE-FILTER, IN ONE PLACE (Proofdelve ForgeOs-czhb's rule applied to a
 # new pair of callers). signed_landing_ready() asks it of one worker, and
 # dispatch_pass asks it of every worker before it will spend a tracker query on
 # phase 1 at all. Two copies of this `case` would be two deciders that can
@@ -2319,7 +2319,7 @@ signed_landing_ready() {  # $1 bead, $2 sfx
   signed_sha=""; signed_patch=""; signed_tip=""; signed_why=""; signed_superseded_by=""
   stored="$(cat "$wdir/verdict" 2>/dev/null || echo "")"
   # OVERSEER-SIGNED IS ACCEPTED AS WELL AS ESCALATE, AND THE REASON IS
-  # land()'S MERGE-FAILED BRANCH (ForgeOs-ohsy, Tova's 1.5, the rarer half).
+  # land()'S MERGE-FAILED BRANCH (Proofdelve ForgeOs-ohsy, the Warden's 1.5, the rarer half).
   # land() writes the verdict token before anything can defer, so a signed
   # landing whose `git merge` failed and was aborted goes back to the queue
   # carrying OVERSEER-SIGNED -- the fleet's OWN token, which no Warden ever
@@ -2332,8 +2332,8 @@ signed_landing_ready() {  # $1 bead, $2 sfx
   sha="$(latest_approved_sha "$bead" || echo "")"
   case "$sha" in
     "SUPERSEDED "*)
-      signed_superseded_by="${sha#SUPERSEDED }"   # "<category> <ts>"; phase 1's Decline guard reads it (ForgeOs-0x25g)
-      # The reason names the superseding event (Tova 2.2): a reader sent to
+      signed_superseded_by="${sha#SUPERSEDED }"   # "<category> <ts>"; phase 1's Decline guard reads it (Proofdelve ForgeOs-0x25g)
+      # The reason names the superseding event (the Warden 2.2): a reader sent to
       # look for a missing approval would find one that exists and was
       # overtaken -- by a Decline, or by a decision.recorded a Mayor emitted as
       # a transcription, which the fleet does not read as consent either way.
@@ -2346,7 +2346,7 @@ signed_landing_ready() {  # $1 bead, $2 sfx
     signed_why="the approved sha $sha is not a commit in this repository"; return 1
   fi
   if ! keep_corroborates "$bead" "$sha"; then
-    signed_why="the stream carries a gate.approved for $bead naming $sha, but no Keep record in the Overseer store pins it as his NEWEST decision (civ-keep, proofdelve-keep, or the pre-cutover snapshot): an approval only the seat-writable stream knows about is not one (ForgeOs-ubgx.4)"; return 1
+    signed_why="the stream carries a gate.approved for $bead naming $sha, but no Keep record in the Overseer store pins it as his NEWEST decision (civ-keep, manyhalls-keep, or the pre-cutover snapshot): an approval only the seat-writable stream knows about is not one (Proofdelve ForgeOs-ubgx.4)"; return 1
   fi
   tip="$(git -C "$root" rev-parse --verify --quiet "bead/$sfx" 2>/dev/null)" || { signed_why="bead/$sfx does not exist"; return 1; }
   [ -d "$wt" ] || { signed_why="the worktree $wt is gone, so there is no tree to verify or land"; return 1; }
@@ -2357,11 +2357,11 @@ signed_landing_ready() {  # $1 bead, $2 sfx
   if [ "$pa" != "$pt" ]; then
     signed_why="the branch has CHANGED since the approval: approved $sha (patch-id $pa), tip $tip (patch-id $pt) -- the signature does not cover this tree"; return 1
   fi
-  # THE REVIEWED TIP, when the ESCALATE arm recorded one (Tova, 1.2). A worker
+  # THE REVIEWED TIP, when the ESCALATE arm recorded one (the Warden, 1.2). A worker
   # escalated before that line has no file and this question is not asked of
   # it; the verdict file it also lacks refuses it above anyway -- the fleet was
   # HALTED between fc935e10 (the verdict file) and fd3443ed (this one), so no
-  # worker can have one file and not the other. (ForgeOs-ubgx.3 item 2.5 asked
+  # worker can have one file and not the other. (Proofdelve ForgeOs-ubgx.3 item 2.5 asked
   # for the word "halted" here; e715ba56 had already added it. The two commits
   # are named now so the claim is checkable rather than merely stated.)
   local reviewed pr
@@ -2404,26 +2404,26 @@ print(d.get("assignee") or "")
     return 0
   fi
   # THE WARDEN'S EVIDENCE SURVIVES THIS RESET, AND IT IS NOT THIS LANDING'S TO
-  # DESTROY (ForgeOs-ohsy). `verdict` and `reviewed-sha` were written by the
+  # DESTROY (Proofdelve ForgeOs-ohsy). `verdict` and `reviewed-sha` were written by the
   # review that escalated this bead; the rm -rf below took both, so an
   # interrupted landing left a worker signed_landing_ready() could no longer
   # recognise and the bead went round again as an unreviewed one. Read before,
   # written back after, and absent stays absent -- a worker escalated before
   # the reviewed-sha line exists has no such file and must not gain an empty one.
-  # AND THE HELD WARDEN TOKEN AND HER RECORD (ForgeOs-vee4w): a bead the
+  # AND THE HELD WARDEN TOKEN AND HER RECORD (Proofdelve ForgeOs-vee4w): a bead the
   # signature hold stopped lands doing what she decided, which land() reads
   # from these two files. Same rule: absent stays absent.
-  # ROUND TWO (Tova's finding 5): the kept files are never removed at all,
+  # ROUND TWO (the Warden's finding 5): the kept files are never removed at all,
   # rather than removed and restored, so no signal can land between the two.
   # Everything else in the worker directory goes; absent stays absent.
-  # AND THE HOST-VERIFY RECORD (ForgeOs-gfuc1 A2): host_verify() below may
+  # AND THE HOST-VERIFY RECORD (Proofdelve ForgeOs-gfuc1 A2): host_verify() below may
   # reuse it when the refresh from main brought in docs alone; it re-checks
   # every condition itself, so keeping a stale record costs only a re-run.
   find "$wdir" -mindepth 1 -maxdepth 1 ! -name verdict ! -name reviewed-sha \
     ! -name warden-verdict ! -name warden-record ! -name verified.json -exec rm -rf {} + 2>/dev/null || true
   mkdir -p "$wdir"
   local keep_wv; keep_wv="$(cat "$wdir/warden-verdict" 2>/dev/null || echo "")"
-  # THE STORED VERDICT AS STORED (ForgeOs-a13g8): ESCALATE on the common path,
+  # THE STORED VERDICT AS STORED (Proofdelve ForgeOs-a13g8): ESCALATE on the common path,
   # OVERSEER-SIGNED when a signed landing's merge failed and it came round
   # again (ohsy). The verdict file is one of the kept ones, so it is read here
   # and announced as it is, never as a literal.
@@ -2434,8 +2434,8 @@ print(d.get("assignee") or "")
   printf '%s\n' "$sha" > "$wdir/approved-sha"
   worker_set_state "$wdir" in-hand "signed landing on the Overseer's approval of $sha (patch-id $pid), taken by run $run_id"
   pass_reaped=$((${pass_reaped:-0} + 1))   # a worker record was written and a bead claimed: real activity for the stall counter
-  say "$bead: SIGNED LANDING -- the Overseer approved $sha and bead/$sfx (tip ${tip:0:12}) carries the same change (patch-id ${pid:0:12}); no Forge is dispatched and no review launch is spent (ForgeOs-ubgx)"
-  emit fleet.signed "Fleet is landing $bead on the Overseer's recorded approval: gate.approved pins $sha and the branch tip $tip carries the same change (patch-id $pid), so no Forge is dispatched and no review launch is spent (ForgeOs-ubgx). The stored verdict is $stored_v${keep_wv:+ (the signature hold; the Warden returned $keep_wv)}; his signature is what authorises this merge." \
+  say "$bead: SIGNED LANDING -- the Overseer approved $sha and bead/$sfx (tip ${tip:0:12}) carries the same change (patch-id ${pid:0:12}); no Forge is dispatched and no review launch is spent (Proofdelve ForgeOs-ubgx)"
+  emit fleet.signed "Fleet is landing $bead on the Overseer's recorded approval: gate.approved pins $sha and the branch tip $tip carries the same change (patch-id $pid), so no Forge is dispatched and no review launch is spent (Proofdelve ForgeOs-ubgx). The stored verdict is $stored_v${keep_wv:+ (the signature hold; the Warden returned $keep_wv)}; his signature is what authorises this merge." \
     -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"approvedSha\":\"$sha\",\"tip\":\"$tip\",\"patchId\":\"$pid\",\"storedVerdict\":\"$stored_v\",\"wardenVerdict\":\"${keep_wv:-}\"}"
   prelanding_refresh "$bead" "$sfx" "$wt" "$wdir" refresh "the fleet actor"
   case "$prelanding_result" in
@@ -2451,7 +2451,7 @@ print(d.get("assignee") or "")
   # change and the Warden decides it, exactly as any unsigned branch.
   now_pid="$(patch_id_of "bead/$sfx" || echo "")"
   if [ "$now_pid" != "$pid" ]; then
-    say "$bead: the refresh from $main_branch CHANGED the patch (approved ${pid:0:12}, now ${now_pid:-none}); the approval of ${sha:0:12} no longer covers this tree -- ROUTING TO REVIEW, not to merge (ForgeOs-ubgx)"
+    say "$bead: the refresh from $main_branch CHANGED the patch (approved ${pid:0:12}, now ${now_pid:-none}); the approval of ${sha:0:12} no longer covers this tree -- ROUTING TO REVIEW, not to merge (Proofdelve ForgeOs-ubgx)"
     say "$bead: running the host verifier in $wt"
     if host_verify "$wt" "$vout" "$wdir"; then
       say "$bead: verifier GREEN -- sending to review"
@@ -2471,7 +2471,7 @@ print(d.get("assignee") or "")
     say "$bead: verifier GREEN -- landing on the Overseer's approval of ${sha:0:12}; no review launch is spent"
     land "$bead" "OVERSEER-SIGNED" ""
   elif signalled; then
-    # `parked-signed` AND NOT `finished` (ForgeOs-ohsy, Tova's 1.5). `finished`
+    # `parked-signed` AND NOT `finished` (Proofdelve ForgeOs-ohsy, the Warden's 1.5). `finished`
     # resumes at verify-then-review, so an operator's Ctrl-C on a signed
     # landing spent a Warden launch on the signed, UNCHANGED change -- which on
     # a gate-1 diff must ESCALATE again and costs the Overseer a second click.
@@ -2484,12 +2484,12 @@ print(d.get("assignee") or "")
   else
     worker_set_state "$wdir" needs-person "the SIGNED change (approved $sha, patch-id $pid) is RED in the host verifier after the refresh from $main_branch; the fleet will not land a red tree and will not re-implement a signed change"
     say "$bead: verifier RED on the SIGNED change -- not landed; PAGING a person (a Forge fix would be a different change and needs its own review and signature)"
-    page_overseer "$bead" "the Overseer approved $sha and bead/$sfx still carries exactly that change (patch-id $pid), but the host verifier is RED in $wt after the fleet refreshed it from $main_branch. The fleet will not land a red tree and will not dispatch a Forge over a signed change: any fix is a different change and needs its own review and signature (ForgeOs-ubgx). The verifier's own words are in the evidence below." "$vout" "The branch stands in its worktree unchanged apart from the refresh merge; nothing was merged and nothing was closed. The bead is claimed by the fleet actor."
+    page_overseer "$bead" "the Overseer approved $sha and bead/$sfx still carries exactly that change (patch-id $pid), but the host verifier is RED in $wt after the fleet refreshed it from $main_branch. The fleet will not land a red tree and will not dispatch a Forge over a signed change: any fix is a different change and needs its own review and signature (Proofdelve ForgeOs-ubgx). The verifier's own words are in the evidence below." "$vout" "The branch stands in its worktree unchanged apart from the refresh merge; nothing was merged and nothing was closed. The bead is claimed by the fleet actor."
   fi
   return 0
 }
 
-# REFILL THE FORGE SLOTS BETWEEN COMPLETION STEPS (ForgeOs-uwjme, Overseer's
+# REFILL THE FORGE SLOTS BETWEEN COMPLETION STEPS (Proofdelve ForgeOs-uwjme, Overseer's
 # choice at the 2026-10-15 Regent sitting: shape (a) plus (c)).
 #
 # THE DEFECT. reap_pass() takes every finished worker through the whole serial
@@ -2507,7 +2507,7 @@ print(d.get("assignee") or "")
 # hand (which is shape (c): carried workers after a restart no longer hold back
 # dispatch) and after each host verifier. So a freed slot refills within one step
 # instead of after the whole lane. NOT between a merge and its post-merge
-# verifier (Tova's finding 1, folded): a Forge cut there would build on a main
+# verifier (the Warden's finding 1, folded): a Forge cut there would build on a main
 # not yet verified; see the comment in land(). It is a no-op unless a slot is free, so the tracker is not read on a
 # booked pass.
 #
@@ -2523,7 +2523,7 @@ print(d.get("assignee") or "")
 # THE TOUCH-SET GUARD NOW HOLDS IN-HAND WORKERS (see touch_conflict_with_live).
 # Before this, nothing dispatched while a worker was in hand, so the guard never
 # had to ask; now a refill runs while one is, and its branch has not landed.
-# A MEMORY GATE ON FORGE DISPATCH (ForgeOs-asad6 step 2, Overseer's approval at
+# A MEMORY GATE ON FORGE DISPATCH (Proofdelve ForgeOs-asad6 step 2, Overseer's approval at
 # the 2026-10-15 Regent sitting; step 1, FLEET_FORGE_MAX 6 -> 4, was his own hand
 # at 328a7184).
 #
@@ -2533,7 +2533,7 @@ print(d.get("assignee") or "")
 # systemd-oomd killed the whole fleet unit four times on 2026-10-13/14, and on
 # 2026-10-15 06:14 seven Forges plus the verifier left ~4.2G available and swap
 # 8/8G full, saved only by the Mayor holding all 60 queued beads by hand.
-# ForgeOs-uwjme makes this overlap the NORMAL case -- Forges now build while the
+# Proofdelve ForgeOs-uwjme makes this overlap the NORMAL case -- Forges now build while the
 # lane's verifier runs -- which is why the two ship in one sitting.
 #
 # THE RULE. A launch is refused while
@@ -2562,13 +2562,13 @@ print(d.get("assignee") or "")
 #
 # FLEET_MEMINFO overrides /proc/meminfo FOR THE HARNESSES ONLY; nothing in this
 # fort sets it, and a run reads it from the supervisor's environment.
-# A NEEDS A PERSON RECORD WHOSE BEAD IS CLOSED IS ANSWERED (ForgeOs-xu0mj).
+# A NEEDS A PERSON RECORD WHOSE BEAD IS CLOSED IS ANSWERED (Proofdelve ForgeOs-xu0mj).
 #
 # THE DEFECT, measured. A worker the fleet marks needs-person keeps that state
 # until a person deletes the directory, and live_forges() warned about it on
 # every call. A person answers such a record by acting on the BEAD -- landing it
 # through a lap, fixing main, closing it -- and nothing carried that answer back
-# to the worker. So run 20261015T020202 warned 20 times about ForgeOs-76uob.3,
+# to the worker. So run 20261015T020202 warned 20 times about Proofdelve ForgeOs-76uob.3,
 # closed since 10-14, and the same for 2md9d.1.12 and 2md9d.2.24; on 2026-09-19 it
 # was eight records every pass, at least two of them closed days earlier. A
 # warning that fires forever is one nobody reads, and NEEDS A PERSON is how the
@@ -2597,8 +2597,8 @@ settle_answered_workers() {
     old="$(head -1 "$d/state" 2>/dev/null || true)"
     [ -n "$old" ] || old="$(worker_state "$d")|derived|no state file"
     printf '%s  superseded by run %s: bead closed\n' "$old" "$run_id" >> "$d/state-history"
-    worker_set_state "$d" settled "its bead $b is CLOSED, so the NEEDS A PERSON this record carried is answered; the old record is in state-history and nothing was removed (ForgeOs-xu0mj)"
-    say "$b: worker record SETTLED -- its bead is CLOSED, so the NEEDS A PERSON it carried is answered. The old record is kept in ${d}state-history; its worktree and branch were not touched (ForgeOs-xu0mj)."
+    worker_set_state "$d" settled "its bead $b is CLOSED, so the NEEDS A PERSON this record carried is answered; the old record is in state-history and nothing was removed (Proofdelve ForgeOs-xu0mj)"
+    say "$b: worker record SETTLED -- its bead is CLOSED, so the NEEDS A PERSON it carried is answered. The old record is kept in ${d}state-history; its worktree and branch were not touched (Proofdelve ForgeOs-xu0mj)."
   done
   return 0
 }
@@ -2625,7 +2625,7 @@ mem_gate_why() {  # silent 0 = launch; 1 and the reason on stdout = wait. Fails 
   young="$(young_forges)"
   need=$(( ${FLEET_MEM_FLOOR_MB:-8192} + ${FLEET_MEM_PER_BUILD_MB:-2560} * (young + 2) ))
   if [ "$avail" -lt "$need" ]; then
-    # ONCE PER PASS (Tova's finding 2): a refill at every step of the lane asks
+    # ONCE PER PASS (the Warden's finding 2): a refill at every step of the lane asks
     # again, and ceiling.log is the record the numbers are tuned from. This runs
     # in $( ), which can READ pass_mem_held but not set it; the caller sets it.
     [ "${pass_mem_held:-0}" = 1 ] || printf '%s  run=%s  MEMGATE refuse  avail=%sMiB  young=%s  need=%sMiB  (floor %s + %s x (young + launch + verifier))\n' \
@@ -2661,21 +2661,21 @@ refill_slots() {  # $1 where in the completion lane, in prose
   budget_left || return 0
   local live; live="$(live_forges)"
   [ "$live" -lt "$forge_conc" ] || return 0
-  say "refill: $((forge_conc - live)) Forge slot(s) free $1 -- dispatching between completion steps (ForgeOs-uwjme)"
+  say "refill: $((forge_conc - live)) Forge slot(s) free $1 -- dispatching between completion steps (Proofdelve ForgeOs-uwjme)"
   in_dispatch=1
   dispatch_pass refill
   in_dispatch=0
   return 0
 }
 
-dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- ForgeOs-uwjme; signed: phase 1 only, at the top of a pass -- ForgeOs-jfqu4.7]
+dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- Proofdelve ForgeOs-uwjme; signed: phase 1 only, at the top of a pass -- Proofdelve ForgeOs-jfqu4.7]
   local slots n bead sfx wt reason tset tclash held=0 mode="${1:-full}"
-  # ForgeOs-a2fx: a stopping run dispatches nothing further. Checked here as
+  # Proofdelve ForgeOs-a2fx: a stopping run dispatches nothing further. Checked here as
   # well as in the loop because reap_pass runs first and a signal can arrive
   # inside it.
   stopping && return 0
-  rm -rf "$state/.touches-dry"; rm -f "$state/.touches-candidate"   # pass-local (ForgeOs-b9mj); cleared on ENTRY, so an early return cannot leave them
-  rm -f "$state/.touches-workbench" "$state/.touches-workbench.bead"   # ForgeOs-9srgz: rebuilt by phase 2, never carried from an earlier pass
+  rm -rf "$state/.touches-dry"; rm -f "$state/.touches-candidate"   # pass-local (Proofdelve ForgeOs-b9mj); cleared on ENTRY, so an early return cannot leave them
+  rm -f "$state/.touches-workbench" "$state/.touches-workbench.bead"   # Proofdelve ForgeOs-9srgz: rebuilt by phase 2, never carried from an earlier pass
 
   # COULD PHASE 1 DO ANYTHING AT ALL? Asked on the FILESYSTEM, before any
   # tracker query, and it is the reason hoisting the signed question above the
@@ -2694,7 +2694,7 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
 
   local candidates="" have_candidates=0
   # The query and the reasoning behind it now live in ready_candidates(),
-  # because the drain check has to ask the identical question (ForgeOs-czhb
+  # because the drain check has to ask the identical question (Proofdelve ForgeOs-czhb
   # acceptance 8).
   if [ "$any_signed" = 1 ]; then
     if ! candidates="$(ready_candidates)"; then
@@ -2706,14 +2706,14 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
   fi
 
   # ==========================================================================
-  # PHASE 1 — SIGNED LANDINGS, ASKED AHEAD OF THE SLOT GATE (ForgeOs-1kak).
+  # PHASE 1 — SIGNED LANDINGS, ASKED AHEAD OF THE SLOT GATE (Proofdelve ForgeOs-1kak).
   # ==========================================================================
   # A SIGNED LANDING USES NO FORGE SLOT, SO IT MUST NOT WAIT FOR ONE. The slot
   # gate used to sit above everything: `slots <= 0` returned before any signed
   # question was asked, and `[ n -lt slots ] || break` could end the loop before
   # a signed bead was reached. At forge_conc 1-2 -- the ceiling this fleet
   # actually runs at -- a bead the Overseer had already signed sat behind live
-  # Forges needing nothing from them. Tova Marrowassay, finding 1.6: "worth its
+  # Forges needing nothing from them. The Warden, finding 1.6: "worth its
   # own loop ahead of the slot gate".
   #
   # THIS LOOP COSTS NOTHING ON AN ORDINARY BOARD, and the reason is the order
@@ -2723,7 +2723,7 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
   # printed. Only an escalated bead reaches dispatchable(), the launcher lock or
   # a landing.
   #
-  # THE PLACEMENT RELATIVE TO EVERYTHING ELSE IS UNCHANGED and Tova agreed with
+  # THE PLACEMENT RELATIVE TO EVERYTHING ELSE IS UNCHANGED and the Warden agreed with
   # it as shipped: still before the co-dispatch guard, whose subject is two
   # Forges writing overlapping code at once, and still before the budget, which
   # gates LAUNCHES and a landing spends none.
@@ -2731,7 +2731,7 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
   for bead in ${candidates:-}; do
     stopping && break
     if [ "$mode" = refill ]; then
-      # A REFILL LANDS NOTHING (ForgeOs-uwjme). It asks the same question
+      # A REFILL LANDS NOTHING (Proofdelve ForgeOs-uwjme). It asks the same question
       # any_signed asked above, per bead -- signed_landing_ready() returns 2
       # unless the worker's stored verdict is signable, so this is that branch
       # without the stream scan -- and marks the bead seen so phase 2 never
@@ -2742,7 +2742,7 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
       fi
       continue
     fi
-    # ONE ATTEMPT PER BEAD PER PASS (ForgeOs-jfqu4.7). Phase 1 now runs at the
+    # ONE ATTEMPT PER BEAD PER PASS (Proofdelve ForgeOs-jfqu4.7). Phase 1 now runs at the
     # top of the pass AND at its foot; a bead the top already answered (landed,
     # refused, or a merge that failed and returned it) is not tried again at the
     # foot, or a failing landing would spend two returns in one pass. It still
@@ -2752,9 +2752,9 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
     signed_rc2=0; signed_landing_ready "$bead" "$sfx" || signed_rc2=$?
     if [ "$signed_rc2" -eq 2 ]; then continue; fi
     if [ "$signed_rc2" -eq 1 ] && [ "${signed_superseded_by%% *}" = gate.declined ]; then
-      # DECLINED AFTER ESCALATE AND RE-RELEASED WITHOUT A LAP (ForgeOs-0x25g,
+      # DECLINED AFTER ESCALATE AND RE-RELEASED WITHOUT A LAP (Proofdelve ForgeOs-0x25g,
       # option (a), the Overseer's choice 2026-10-21). Measured on
-      # ForgeOs-2md9d.4.49.2 on 2026-10-20: he Declined, the bead was relabelled
+      # Proofdelve ForgeOs-2md9d.4.49.2 on 2026-10-20: he Declined, the bead was relabelled
       # fleet-safe, and this branch said "taking the ordinary path" every pass
       # for twenty minutes while nothing moved, because the Decline note is not
       # in the bead and the worker still holds the ESCALATE for this tip. A
@@ -2764,9 +2764,9 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
       # the bead goes to the Mayor (fleet-escalated, the escalate_labels()
       # route), and a comment says what to file. Nothing is dispatched or
       # landed, and the Overseer's Decline is never read as anything else.
-      say "$bead: DECLINED by the Overseer after ESCALATE and NOT landable on the signature ($signed_why) and re-released to the fleet without a lap -- NOT dispatching it; handed to the Mayor to file a lap with the Decline note as its brief (ForgeOs-0x25g)"
+      say "$bead: DECLINED by the Overseer after ESCALATE and NOT landable on the signature ($signed_why) and re-released to the fleet without a lap -- NOT dispatching it; handed to the Mayor to file a lap with the Decline note as its brief (Proofdelve ForgeOs-0x25g)"
       escalate_labels "$bead"
-      printf 'fort/scripts/fleet.sh refused to dispatch %s: its newest sign event is %s, after a Warden ESCALATE stored for this tip, and the bead was re-released to the fleet. A Decline asks for different work, so re-dispatching this bead gives a Forge nothing new and the fleet would loop on it (ForgeOs-0x25g, measured on ForgeOs-2md9d.4.49.2). File a LAP bead carrying the Decline note as its brief; do not relabel this one fleet-safe. Labels: %s.\n' \
+      printf 'fort/scripts/fleet.sh refused to dispatch %s: its newest sign event is %s, after a Warden ESCALATE stored for this tip, and the bead was re-released to the fleet. A Decline asks for different work, so re-dispatching this bead gives a Forge nothing new and the fleet would loop on it (Proofdelve ForgeOs-0x25g, measured on Proofdelve ForgeOs-2md9d.4.49.2). File a LAP bead carrying the Decline note as its brief; do not relabel this one fleet-safe. Labels: %s.\n' \
         "$bead" "$signed_superseded_by" "${label_note:-unknown}" > "$state/logs/declined-$bead.txt" 2>/dev/null || true
       bd -C "$root" comment "$bead" --file "$state/logs/declined-$bead.txt" --actor "$fleet_actor" >/dev/null 2>&1 \
         || warn "$bead: the Decline-guard comment could not be written to the tracker (labels: ${label_note:-unknown})"
@@ -2801,7 +2801,7 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
     signed_seen="$signed_seen$bead "
     signed_tried_this_pass="${signed_tried_this_pass:-} $bead"
   done
-  # SIGNED MODE ENDS HERE (ForgeOs-jfqu4.7). The loop calls it BEFORE reap_pass
+  # SIGNED MODE ENDS HERE (Proofdelve ForgeOs-jfqu4.7). The loop calls it BEFORE reap_pass
   # so a bead the Overseer has signed lands at the top of every pass instead of
   # waiting for the full pass at the foot of it, which only runs after the whole
   # completion lane (measured 2026-10-21: signed at 10:04, not landed by 11:2x).
@@ -2809,7 +2809,7 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
   # while the lane is working.
   if [ "$mode" = signed ]; then return 0; fi
 
-  # THE WORKBENCH'S LIVE TOUCH SET, ONCE PER DISPATCH PASS (ForgeOs-9srgz A5,
+  # THE WORKBENCH'S LIVE TOUCH SET, ONCE PER DISPATCH PASS (Proofdelve ForgeOs-9srgz A5,
   # the Overseer's corrected Q2: the fleet keeps running during a sitting). It
   # joins the co-dispatch guard below as one more holder, so a fleet bead whose
   # files overlap the sitting waits and every other bead dispatches. After phase
@@ -2819,15 +2819,15 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
   # ==========================================================================
   # PHASE 2 — FORGE DISPATCH, which is what actually needs a slot.
   # ==========================================================================
-  mem_stepdown_maybe   # ForgeOs-asad6: may lower forge_conc before the slots are counted
+  mem_stepdown_maybe   # Proofdelve ForgeOs-asad6: may lower forge_conc before the slots are counted
   local live; live="$(live_forges)"
   slots=$((forge_conc - live))
   if [ "$slots" -le 0 ]; then
     # The tracker query is not spent here, and on an ordinary fully-booked pass
     # it was never spent at all (the pre-question above answered no).
-    # Read only if this pass turns out to be a stall (ForgeOs-dx34.9); on an
+    # Read only if this pass turns out to be a stall (Proofdelve ForgeOs-dx34.9); on an
     # ordinary waiting pass it is overwritten next pass and never printed.
-    # KEPT RATHER THAN OVERWRITTEN since ForgeOs-1kak: phase 1 runs first now
+    # KEPT RATHER THAN OVERWRITTEN since Proofdelve ForgeOs-1kak: phase 1 runs first now
     # and a skip it recorded is the more specific answer to "what diverged".
     [ -n "${pass_note:-}" ] || pass_note="no free Forge slot (ceiling $forge_conc, $live live)"
     return 0
@@ -2845,7 +2845,7 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
   for bead in $candidates; do
     stopping && break
     [ "$n" -lt "$slots" ] || break
-    # ANSWERED IN PHASE 1 (ForgeOs-1kak): landed, refused by dispatchable(), or
+    # ANSWERED IN PHASE 1 (Proofdelve ForgeOs-1kak): landed, refused by dispatchable(), or
     # held by a live launcher. A bead phase 1 found signed-but-NOT-landable is
     # deliberately absent from this set and takes the ordinary path below.
     case "$signed_seen" in *" $bead "*) continue ;; esac
@@ -2858,7 +2858,7 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
     # guarding one worker per bead. Both are wanted.
     # THE THREE SKIPS BELOW HAPPEN AFTER dispatchable() SAID YES, so each is
     # the dispatcher and the drain check disagreeing about one bead -- the raw
-    # material of a stall (ForgeOs-dx34.9). pass_note keeps the first of them
+    # material of a stall (Proofdelve ForgeOs-dx34.9). pass_note keeps the first of them
     # so a stall halt can name it.
     if [ -e "$wt/.forge.lock" ] && ! flock -n "$wt/.forge.lock" true 2>/dev/null; then
       say "skip $bead: a live launcher already holds $wt"
@@ -2866,10 +2866,10 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
       continue
     fi
     # THE SIGNED QUESTION IS NOT ASKED HERE. It moved to phase 1, above the
-    # slot gate (ForgeOs-1kak), because a landing needs no slot; every bead
+    # slot gate (Proofdelve ForgeOs-1kak), because a landing needs no slot; every bead
     # reaching this line has already been asked and is not landable on a
     # signature.
-    # THE CO-DISPATCH GUARD (ForgeOs-b9mj; the reasoning is on touch_set_of()
+    # THE CO-DISPATCH GUARD (Proofdelve ForgeOs-b9mj; the reasoning is on touch_set_of()
     # above). Asked before the budget and the claim, so a refusal mutates
     # nothing. One skip line per pass for the first refusal and a count for the
     # rest: at concurrency 2 with a serial board every candidate is held on
@@ -2879,11 +2879,11 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
     if tclash="$(touch_conflict_with_live "$tset")"; then
       case "$tclash" in
         "WORKBENCH "*)
-          # ForgeOs-9srgz A5: held by the live Workbench sitting. Ends when the
+          # Proofdelve ForgeOs-9srgz A5: held by the live Workbench sitting. Ends when the
           # sitting's set stops overlapping or the sitting ends, never by the
           # fleet acting, so the stall detector reads it as waiting.
           pass_workbench_held=$((${pass_workbench_held:-0} + 1))
-          [ "$pass_workbench_held" -eq 1 ] && say "skip $bead: HELD -- its touch set overlaps the live Workbench sitting ${tclash#WORKBENCH }; it dispatches once the sitting's files no longer overlap or the sitting ends (ForgeOs-9srgz)"
+          [ "$pass_workbench_held" -eq 1 ] && say "skip $bead: HELD -- its touch set overlaps the live Workbench sitting ${tclash#WORKBENCH }; it dispatches once the sitting's files no longer overlap or the sitting ends (Proofdelve ForgeOs-9srgz)"
           [ -n "${pass_note:-}" ] || pass_note="$bead: overlaps the live Workbench sitting ${tclash#WORKBENCH }"
           continue ;;
       esac
@@ -2892,9 +2892,9 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
       # Forge live at pass start, every holder is reapable-and-not-live (or a
       # dry-run set of this pass), so this hold is a waiting pass for the stall
       # detector; with one live, stall_check returns before counting anyway
-      # (round three; Tova's round-three note 2 on the earlier wording).
+      # (round three; the Warden's round-three note 2 on the earlier wording).
       if [ "$live" -eq 0 ]; then pass_held_unlanded=$((${pass_held_unlanded:-0} + 1)); fi
-      [ "$held" -eq 1 ] && say "skip $bead: its touch set overlaps worker $tclash, whose branch has not landed -- waits for it to land or be reaped (ForgeOs-b9mj)"
+      [ "$held" -eq 1 ] && say "skip $bead: its touch set overlaps worker $tclash, whose branch has not landed -- waits for it to land or be reaped (Proofdelve ForgeOs-b9mj)"
       [ -n "${pass_note:-}" ] || pass_note="$bead: touch set overlaps worker $tclash"
       continue
     fi
@@ -2903,16 +2903,16 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
       say "DRY-RUN would dispatch $bead"; n=$((n + 1)); pass_dispatched=$((${pass_dispatched:-0} + 1)); continue
     fi
 
-    # BUDGET IS ASKED BEFORE ANYTHING IS MUTATED (ForgeOs-feeq). The old code
+    # BUDGET IS ASKED BEFORE ANYTHING IS MUTATED (Proofdelve ForgeOs-feeq). The old code
     # spent AFTER the claim below, so the bead that hit the cap was left claimed
     # and in_progress with no Forge behind it.
-    # THE MEMORY GATE (ForgeOs-asad6), after every refusal that mutates nothing
+    # THE MEMORY GATE (Proofdelve ForgeOs-asad6), after every refusal that mutates nothing
     # and before the claim, so a wait claims nothing. One wait ends the pass's
     # dispatching: memory is a host property, so every later candidate would be
     # refused for the same reason.
     local memwhy
     if ! memwhy="$(mem_gate_why)"; then
-      [ "${pass_mem_held:-0}" = 1 ] || say "dispatch waits: $memwhy -- $bead and the rest of the queue wait for memory (ForgeOs-asad6); said once per pass"
+      [ "${pass_mem_held:-0}" = 1 ] || say "dispatch waits: $memwhy -- $bead and the rest of the queue wait for memory (Proofdelve ForgeOs-asad6); said once per pass"
       pass_mem_held=1
       [ -n "${pass_note:-}" ] || pass_note="$memwhy"
       break
@@ -2929,7 +2929,7 @@ dispatch_pass() {  # [$1 refill: the Forge half only, from refill_slots() -- For
       continue
     fi
     # PARSE THE FIELD, DO NOT GREP THE DOCUMENT. Measured on the first real
-    # dispatch, 2026-09-02: "veyra" appeared in BOTH `assignee` AND an entry of
+    # dispatch, 2026-09-02: "kethra" appeared in BOTH `assignee` AND an entry of
     # `dependencies` on the same bead, so a whole-document grep would confirm a
     # claim that had gone to somebody else as long as any dependency happened to
     # be assigned to the Forge. It was right that time and could be wrong. Note
@@ -2957,19 +2957,19 @@ print(d.get("assignee") or "")
     printf '%s\n' "$bead" > "$wdir/bead"; date -Is > "$wdir/started"
     printf '%s\n' "$run_id" > "$wdir/run"
     # THE TOUCH SET IS CACHED HERE, ONCE, AND EVERY LATER PASS READS THE FILE
-    # (ForgeOs-b9mj): a live worker's set never costs a bd call.
+    # (Proofdelve ForgeOs-b9mj): a live worker's set never costs a bd call.
     cp -f "$tset" "$wdir/touches" 2>/dev/null || { touches_everything; echo; } > "$wdir/touches"
     # shellcheck disable=SC2016  # the single quotes are the point: this body
     # is the CHILD's script and its $1..$4 are the positional arguments passed
     # after the `_`, not this shell's variables. Expanding them here would
     # interpolate the launching shell's state into a detached process.
     # `echo $$ > "$3/pid"` IS THE CHILD'S OWN PID AND MUST BE WRITTEN BY THE
-    # CHILD (ForgeOs-l1ef). The parent's $! is nohup's, and setsid forks when it
+    # CHILD (Proofdelve ForgeOs-l1ef). The parent's $! is nohup's, and setsid forks when it
     # is already a process-group leader — which it is, being a background job —
     # so the parent-visible pid exits within milliseconds and would read as a
     # dead Forge on the very next pass. live_forges() covers the launch window
     # with a grace period instead of trusting a pid that has not appeared yet.
-    # A PENDING FIX-FORWARD LAP BRIEFS THE FORGE WITH ITS ITEMS (ForgeOs-6niaz
+    # A PENDING FIX-FORWARD LAP BRIEFS THE FORGE WITH ITS ITEMS (Proofdelve ForgeOs-6niaz
     # part B); empty otherwise, which forge.sh reads as an ordinary dispatch.
     local ffbrief=""
     if fix_forward_pending "$sfx"; then ffbrief="$(fix_forward_dir "$sfx")/brief"; fi
@@ -2982,7 +2982,7 @@ print(d.get("assignee") or "")
       FORGE_FIX_FORWARD_BRIEF="$5" "$1/fort/scripts/forge.sh" "$2" "$4" >"$3/forge.log" 2>&1
       echo $? > "$3/exit"
     ' _ "$root" "$bead" "$wdir" "$fmodel" "$ffbrief" >/dev/null 2>&1 8>&- &
-    # CLOSE THE RUN LOCK IN THE CHILD (ForgeOs-l1ef). fd 8 holds this run's
+    # CLOSE THE RUN LOCK IN THE CHILD (Proofdelve ForgeOs-l1ef). fd 8 holds this run's
     # flock and every `nohup setsid` child inherits it, so an orphaned Forge
     # outliving its dispatcher kept the lock held and the NEXT run refused with
     # exit 75 — a live fleet locked out by a process that was no longer a fleet.
@@ -2991,17 +2991,17 @@ print(d.get("assignee") or "")
       -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"model\":\"$fmodel\",\"modelRoute\":\"${forge_model_route:-default}\",\"worktree\":\"$wt\"}"
     n=$((n + 1)); pass_dispatched=$((${pass_dispatched:-0} + 1))
   done
-  [ "$held" -gt 1 ] && say "touch-set guard held $held candidate(s) this pass behind live Forges (ForgeOs-b9mj); first named above"
+  [ "$held" -gt 1 ] && say "touch-set guard held $held candidate(s) this pass behind live Forges (Proofdelve ForgeOs-b9mj); first named above"
   rm -rf "$state/.touches-dry"; rm -f "$state/.touches-candidate"   # and again on the way out; the entry rm covers the early returns
   return 0
 }
 
 # ---------------------------------------------------------------------------
-# PORTCULLIS (ForgeOs-9mfw.3)
+# PORTCULLIS (Proofdelve ForgeOs-9mfw.3)
 # ---------------------------------------------------------------------------
 
 # WHAT BRANCH IS $root ON, AND IS ANYTHING THE RECORD WILL CLAIM ABOUT IT FALSE
-# (ForgeOs-vikl). land() merged into whatever HEAD happened to be, while the
+# (Proofdelve ForgeOs-vikl). land() merged into whatever HEAD happened to be, while the
 # merge commit message and the merge event both said "into main"
 # unconditionally. The safety property survived either way — the post-merge
 # verifier runs in $root whatever branch it is on — so what was at risk is the
@@ -3016,7 +3016,7 @@ print(d.get("assignee") or "")
 #    absolute.
 #
 #    IT WAS NARROWED WITH THE DIRT HALF ON 2026-09-09 AND RESTORED THE SAME DAY,
-#    and the reason is worth more than the fix (ForgeOs-dx34.1 round two, Tova
+#    and the reason is worth more than the fix (Proofdelve ForgeOs-dx34.1 round two, the Warden
 #    Marrowassay's blocking finding 1). The safety argument for the narrowing —
 #    written on report_landability() below, and quoted there — established that
 #    a bead's worktree branches from a COMMIT and not from a working tree, so
@@ -3051,7 +3051,7 @@ print(d.get("assignee") or "")
 main_branch="main"
 fleet_record_paths='^(\.beads/|fort/events/)'
 # tree_branch RETURNS THREE THINGS AND NOT TWO, AND THE THIRD IS NOT DECORATION
-# (ForgeOs-dx34.1 round two, acceptance 5, which asked whether the collapse
+# (Proofdelve ForgeOs-dx34.1 round two, acceptance 5, which asked whether the collapse
 # mattered rather than leaving it unexamined). `git symbolic-ref --quiet HEAD`
 # exits 1 for exactly one reason — HEAD is not a symbolic ref, which is a
 # detached HEAD — and 128 for a git-level failure. MEASURED ON THIS HOST,
@@ -3083,7 +3083,7 @@ tree_dirty()  {
 }
 
 # WHY IT IS NOT LANDABLE, OR THE EMPTY STRING. One place computes the condition;
-# the two callers choose their own severity, which is the whole of ForgeOs-5m7a.
+# the two callers choose their own severity, which is the whole of Proofdelve ForgeOs-5m7a.
 landable_why() {
   local br dirty why=""
   br="$(tree_branch)"
@@ -3095,7 +3095,7 @@ landable_why() {
   printf '%s' "$why"
 }
 
-# THE BRANCH HALF: AN UNCONDITIONAL PREFLIGHT REFUSAL (ForgeOs-dx34.1 round two).
+# THE BRANCH HALF: AN UNCONDITIONAL PREFLIGHT REFUSAL (Proofdelve ForgeOs-dx34.1 round two).
 # It refuses and it never reports dirt — the two halves are separate functions
 # because they are separate in kind, which is the finding this restores.
 #
@@ -3105,7 +3105,7 @@ landable_why() {
 # forge.sh:42 cuts each bead's worktree with `git worktree add <wt> -b
 # bead/<sfx>` and NO ref, so every bead in the run is cut from whatever HEAD
 # names; the pre-review verifier scores that base and goes green on it; the
-# Warden is handed a range from main to bead/<sfx> (three-dot since ForgeOs-hifw,
+# Warden is handed a range from main to bead/<sfx> (three-dot since Proofdelve ForgeOs-hifw,
 # which does not help here: with main itself wrong, the merge base is wrong too)
 # carrying every foreign commit as well as the bead's; and land() would merge
 # and RECORD that foreign work under the bead's name. Nothing later in the run can undo a wrong base, and
@@ -3113,18 +3113,18 @@ landable_why() {
 # different treatment.
 #
 # WHY THIS AND NOT AN EXPLICIT BASE FOR THE CUT. Giving forge.sh:42 a named base
-# is right regardless and is filed as ForgeOs-7y62; it is NOT a substitute and
+# is right regardless and is filed as Proofdelve ForgeOs-7y62; it is NOT a substitute and
 # the two are not redundant. An explicit base makes a wrong-branch run BUILD
 # correctly; refusing to start is still the honest answer for a run whose
 # operator has lost track of the tree. 7y62 also lands in another file and needs
 # its own gate-6 pass, and landing both under one review would put two fixes
 # under one verdict whose outcomes cannot be told apart.
 #
-# --dry-run IS EXEMPT, AND IT REPORTS INSTEAD (ForgeOs-geym, the Overseer's
+# --dry-run IS EXEMPT, AND IT REPORTS INSTEAD (Proofdelve ForgeOs-geym, the Overseer's
 # ruling of 2026-09-09, made deliberately rather than inherited).
 #
 # THE SYMMETRY IS THE POINT, AND IT IS WRITTEN HERE SO THE NEXT PERSON NARROWING
-# EITHER HALF SEES WHAT THE OTHER DOES. ForgeOs-5m7a made exactly this correction
+# EITHER HALF SEES WHAT THE OTHER DOES. Proofdelve ForgeOs-5m7a made exactly this correction
 # for the DIRT half: "a dry run neither claims, launches, merges nor closes, and
 # it is the path this file offers for TESTING the guards, so refusing it on a
 # dirty tree made them untestable exactly when someone was testing them." The
@@ -3165,7 +3165,7 @@ assert_on_main_branch() {  # preflight. Refuses on a real run; reports under --d
     say "  closes nothing, so no worktree is cut from that base and there is nothing to poison."
     say "  This is the same treatment the dirt half gets, and for the same reason: --dry-run is"
     say "  the path this file offers for TESTING its guards, and a guard that refuses the"
-    say "  instrument built to exercise it cannot be exercised (ForgeOs-5m7a, ForgeOs-geym)."
+    say "  instrument built to exercise it cannot be exercised (Proofdelve ForgeOs-5m7a, Proofdelve ForgeOs-geym)."
     say "  READ EVERYTHING BELOW WITH THAT IN MIND: the queue this run reports would be cut"
     say "  from '$br' and a real run would never cut it. Run: git -C $root checkout $main_branch"
     return 0
@@ -3175,12 +3175,12 @@ assert_on_main_branch() {  # preflight. Refuses on a real run; reports under --d
   echo "  range that is not its own work, and landed under its own name. Unlike a dirty" >&2
   echo "  tree, which parks merges until it heals, this cannot be repaired after the fact." >&2
   echo "  Run: git -C $root checkout $main_branch" >&2
-  echo "  (--dry-run is exempt from this refusal and reports instead: ForgeOs-geym.)" >&2
+  echo "  (--dry-run is exempt from this refusal and reports instead: Proofdelve ForgeOs-geym.)" >&2
   exit 64
 }
 
 # LANDABILITY IS A MERGE-TIME CONDITION AND NO LONGER A RUN-START ONE
-# (ForgeOs-dx34.1, which is requirement 3 of the continuous-fleet spec). THIS
+# (Proofdelve ForgeOs-dx34.1, which is requirement 3 of the continuous-fleet spec). THIS
 # FUNCTION REPORTS AND NEVER REFUSES. Preflight used to exit 64 here, so a dirty
 # root meant the fleet did not start and a night of work simply did not happen.
 #
@@ -3203,7 +3203,7 @@ assert_on_main_branch() {  # preflight. Refuses on a real run; reports under --d
 # tree_dirty(), which ARE the condition being moved.
 #
 # THAT PARAGRAPH IS TRUE AND IT COVERS ONE OF THE TWO CONDITIONS. It shipped for
-# a day carrying the whole narrowing, and Tova Marrowassay's blocking finding is
+# a day carrying the whole narrowing, and the Warden's blocking finding is
 # that "it branches from HEAD" is the DEFENCE for uncommitted changes and the
 # DEFECT for a wrong branch: HEAD being a commit says nothing about WHICH commit.
 # The claim was never false and checking it only ever confirmed it, which is why
@@ -3220,12 +3220,12 @@ assert_on_main_branch() {  # preflight. Refuses on a real run; reports under --d
 # stretch, not the cap. That is not a defect and it must be VISIBLE, which is
 # what report_parked_merges() and --status are for.
 #
-# LAND() DEFERS, AND DOES NOT halt() (ForgeOs-5m7a, Tova round two, finding 5).
+# LAND() DEFERS, AND DOES NOT halt() (Proofdelve ForgeOs-5m7a, the Warden round two, finding 5).
 # The condition is caused by a third party: this fort's own facts ledger records
 # that concurrent sessions share this checkout and write to it, so one Mayor edit
 # at 03:00 cost a night, a manual recovery, and a bead left claimed after its
 # verdict was already recorded. Writing $FLEET_STATE/HALT for that is the
-# "a successful night disables the fleet" shape ForgeOs-feeq removed from the
+# "a successful night disables the fleet" shape Proofdelve ForgeOs-feeq removed from the
 # budget path. halt() stays reserved for states a person must look at.
 report_landability() {  # preflight. Says what it found; never exits.
   local why untracked
@@ -3251,7 +3251,7 @@ report_landability() {  # preflight. Says what it found; never exits.
 # HOW MANY MERGES ARE WAITING ON A LANDABLE TREE. Stdout is this function's
 # return value, so it NEVER logs: one stray diagnostic line here is an arithmetic
 # syntax error at the call site, which kills the run and lets the EXIT trap
-# record a clean drain for a crash (ForgeOs-0d0i, and live_forges() again in the
+# record a clean drain for a crash (Proofdelve ForgeOs-0d0i, and live_forges() again in the
 # 2026-09-04 sitting).
 parked_merges() {
   local n=0 d
@@ -3284,8 +3284,8 @@ report_parked_merges() {
 # asserting a result in prose. Docker is reachable here, so this is the FULL
 # suite including the MigrationTests no seat's sandbox can execute.
 #
-# THE POST-MERGE RUN REQUIRES DOCKER BY CONSTRUCTION (ForgeOs-pbkk, fix (b);
-# Tova Marrowassay's finding 5 on Sitting B). warden.sh's HOST VERIFY (ehre)
+# THE POST-MERGE RUN REQUIRES DOCKER BY CONSTRUCTION (Proofdelve ForgeOs-pbkk, fix (b);
+# The Warden's finding 5 on Sitting B). warden.sh's HOST VERIFY (ehre)
 # cites this file's post-merge verify.pass to the reviewer as docker:true and
 # tells her not to reproduce -- but the verifier's own Docker precheck only
 # WARNS when the socket is down and continues with the MigrationTests skipped,
@@ -3295,7 +3295,7 @@ report_parked_merges() {
 # log, and a halt. That is the stated cost, chosen over a false green: the
 # fleet stops on a Docker-down host after its first landing rather than
 # certifying MigrationTests it never ran. The pre-review runs stay unchanged:
-# the Warden reproduces those herself and nothing cites them as docker:true.
+# The Warden reproduces those herself and nothing cites them as docker:true.
 run_verifier() {  # $1 tree, $2 output file, [$3 require-docker], [$4 tier], [$5 result file]
   local -a venv=()
   if [ "${3:-}" = require-docker ]; then venv+=(VERIFY_REQUIRE_DOCKER=1); fi
@@ -3305,12 +3305,12 @@ run_verifier() {  # $1 tree, $2 output file, [$3 require-docker], [$4 tier], [$5
 }
 
 # ---------------------------------------------------------------------------
-# VERIFY ONCE (ForgeOs-s1reg; the Overseer approved the design, with the
+# VERIFY ONCE (Proofdelve ForgeOs-s1reg; the Overseer approved the design, with the
 # Regent's narrowing, on the bead on 2026-10-19 before any edit).
 #
 # MEASURED BASIS. The serial finishing line was ~25 min a bead: host verify
 # ~9.5, review ~2.5, post-merge verify ~10. prelanding_refresh() already merges
-# main into the branch before the host verify (ForgeOs-36b9), so when main has
+# main into the branch before the host verify (Proofdelve ForgeOs-36b9), so when main has
 # not moved by the merge, `git merge --no-ff` produces EXACTLY the tree the host
 # verifier scored and the post-merge run re-tests identical bytes. ~900 green
 # against ~9 red since September, several environmental, none a code defect a
@@ -3336,20 +3336,21 @@ run_verifier() {  # $1 tree, $2 output file, [$3 require-docker], [$4 tier], [$5
 # FLEET_NIGHTLY_MAX_AGE_H (36) means both of the above, see nightly_backstop_ok().
 #
 # THE TIER RULES. Any path not named below, and any doubt at all, is full.
-#   full, forced: scripts/verify-impl.sh; migrations, ForgeOsDbContext.cs,
-#     Entities.cs; anything on the auth/visibility surface (*auth*, *token*,
-#     CurrentUser, DealApplicationService, Program.cs, web/nginx*, App.tsx,
-#     api.ts -- over-wide on purpose: gate 1 is defined by what a change DOES);
-#     fort/ other than fort/handoffs/ (every branch carries its handoff there,
-#     which is why that one directory is docs and not constitution); .github/.
+#   full, forced: scripts/verify-impl.sh; the factory and the civilization's
+#     tooling (bin/, civ/, templates/, schema/, skills/: charter gate 1, what
+#     a change there DOES reaches every fort); fort/ other than fort/handoffs/
+#     (every branch carries its handoff there, which is why that one directory
+#     is docs and not constitution); .github/.
 #   docs:    docs/ and fort/handoffs/ only.
-#   web:     web/ (plus docs).   server: src/ and tests/ (plus docs).
-#   harness: scripts/ and tools/keep/ (plus docs).
-#   Two of web/server/harness at once is full.
+#   server:  src/ and test/ (plus docs): the TypeScript product.
+#   harness: scripts/ (plus docs).
+#   Both of server/harness at once is full. Manyhalls has no web tier: the
+#   word stays in the vocabulary scripts/verify-impl.sh accepts and nothing
+#   here produces it.
 verify_tier_of() {  # $1 worktree -> exactly one tier word on stdout, "full" on any doubt; never fails
   if [ "${FLEET_VERIFY_TIERS:-on}" = off ]; then printf 'full'; return 0; fi
   local paths p web=0 server=0 harness=0
-  # --no-renames (ForgeOs-s1reg finding 5): with rename detection on, a file
+  # --no-renames (Proofdelve ForgeOs-s1reg finding 5): with rename detection on, a file
   # moved OUT of a forced-full path (Migrations/, *Auth*) is listed only by its
   # new name and tiers by where it went. Without it git lists BOTH paths, so the
   # old one forces full. A refactor that moves many files is exactly that diff.
@@ -3358,12 +3359,10 @@ verify_tier_of() {  # $1 worktree -> exactly one tier word on stdout, "full" on 
   while IFS= read -r p; do
     case "$p" in
       scripts/verify-impl.sh) printf 'full'; return 0 ;;
-      src/ForgeOS.Infrastructure/Migrations/*|*ForgeOsDbContext.cs|*Entities.cs) printf 'full'; return 0 ;;
-      *[Aa]uth*|*[Tt]oken*|*CurrentUser*|*DealApplicationService*|*Program.cs|web/nginx*|web/src/App.tsx|web/src/api.ts) printf 'full'; return 0 ;;
+      bin/*|civ/*|templates/*|schema/*|skills/*) printf 'full'; return 0 ;;
       fort/handoffs/*|docs/*) ;;
-      web/*) web=1 ;;
-      src/*|tests/*) server=1 ;;
-      scripts/*|tools/keep/*) harness=1 ;;
+      src/*|test/*) server=1 ;;
+      scripts/*) harness=1 ;;
       *) printf 'full'; return 0 ;;
     esac
   done <<< "$paths"
@@ -3374,7 +3373,7 @@ verify_tier_of() {  # $1 worktree -> exactly one tier word on stdout, "full" on 
   esac
 }
 
-# THE NIGHTLY BACKSTOP, ENFORCED (ForgeOs-s1reg finding 3). Tiers skip steps and
+# THE NIGHTLY BACKSTOP, ENFORCED (Proofdelve ForgeOs-s1reg finding 3). Tiers skip steps and
 # a reused pass re-tests nothing; both are safe only because a full, Docker-
 # required verify of main runs every night (nightly-verify.sh). Until now that
 # was a sentence in this comment and a timer someone could disable. So: when
@@ -3433,7 +3432,7 @@ PYNIGHTLY
 # before review or before a signed landing; it records what was scored in the
 # worker directory, and removes any earlier record FIRST so a run that dies
 # leaves nothing a later reuse could mistake for this run's result.
-# A GREEN THE REFRESH DID NOT TOUCH IS REUSED, NOT RE-RUN (ForgeOs-gfuc1 A2,
+# A GREEN THE REFRESH DID NOT TOUCH IS REUSED, NOT RE-RUN (Proofdelve ForgeOs-gfuc1 A2,
 # Regent sitting 2026-11-13, Overseer present). Globals, never stdout (the
 # postmerge_verify() rule): refresh_reused_commit / refresh_reuse_why.
 #
@@ -3461,7 +3460,7 @@ PYNIGHTLY
 # "tree": warden.sh's HOST VERIFY and push-ready.sh match a run of a tip by
 # payload.tree, so this event can never be cited as a run of HEAD.
 # verified.json is left as the run wrote it, and the post-merge verify then
-# follows its own tree-equality rule (verified_reusable(), ForgeOs-s1reg):
+# follows its own tree-equality rule (verified_reusable(), Proofdelve ForgeOs-s1reg):
 #   - sameTree:false (a docs delta): the merged tree differs from the scored
 #     tree, so the post-merge verify RUNS, and the docs-reading lint steps
 #     (mcp-readme-parity, bead-citation-check, mcp-inventory-recount) meet the
@@ -3471,7 +3470,7 @@ PYNIGHTLY
 #     tree and the post-merge reuse fires too, so that landing runs NO verify.
 #     The bytes passed full tier with Docker at review time; the Overseer chose
 #     this at the sitting over keeping one run per signed landing (recorded on
-#     ForgeOs-gfuc1). The nightly full verify of main is the backstop.
+#     Proofdelve ForgeOs-gfuc1). The nightly full verify of main is the backstop.
 # AND THE GREEN MUST BE RECENT (the Overseer, at the sitting, on Warden
 # finding 1: "keep zero-run reuse, but only when the reused green is recent").
 # Measured by the record file's own modification time, which verify-impl.sh
@@ -3556,12 +3555,12 @@ PYREFRESH
 host_verify() {  # $1 worktree, $2 output file, $3 worker dir -> the verifier's exit status
   local tier; tier="$(verify_tier_of "$1")"
   if [ "$tier" != full ] && ! nightly_backstop_ok; then
-    say "  host verifier tier: full, not $tier: no nightly backstop -- $nightly_why (ForgeOs-s1reg finding 3)"
+    say "  host verifier tier: full, not $tier: no nightly backstop -- $nightly_why (Proofdelve ForgeOs-s1reg finding 3)"
     tier=full
   else
-    say "  host verifier tier: $tier (chosen from the diff; ForgeOs-s1reg)"
+    say "  host verifier tier: $tier (chosen from the diff; Proofdelve ForgeOs-s1reg)"
   fi
-  # ForgeOs-gfuc1 A2: decided BEFORE the old record is removed, because the old
+  # Proofdelve ForgeOs-gfuc1 A2: decided BEFORE the old record is removed, because the old
   # record is the evidence. A refusal is narrated so a morning reader sees why
   # the run happened; no refusal is silent.
   if refresh_reusable "$1" "$3" "$tier"; then
@@ -3576,13 +3575,13 @@ host_verify() {  # $1 worktree, $2 output file, $3 worker dir -> the verifier's 
     else
       hv_what="this tree differs from the one it scored only under docs/ and fort/handoffs/"
     fi
-    say "  host verifier REUSED: the green $tier run at ${refresh_reused_commit:0:12} stands for ${hv_head:0:12}; $hv_what (ForgeOs-gfuc1)"
-    emit verify.pass "Host verify REUSED for ${hv_bead:-a worker} at ${hv_head}: the green $tier run at ${refresh_reused_commit} stands, because $hv_what (ForgeOs-gfuc1); that run finished ${refresh_reuse_age_s}s ago, inside the ${refresh_reuse_limit_s}s limit. No verifier ran for this commit; the post-merge verify follows its own tree-equality rule (ForgeOs-s1reg)" \
+    say "  host verifier REUSED: the green $tier run at ${refresh_reused_commit:0:12} stands for ${hv_head:0:12}; $hv_what (Proofdelve ForgeOs-gfuc1)"
+    emit verify.pass "Host verify REUSED for ${hv_bead:-a worker} at ${hv_head}: the green $tier run at ${refresh_reused_commit} stands, because $hv_what (Proofdelve ForgeOs-gfuc1); that run finished ${refresh_reuse_age_s}s ago, inside the ${refresh_reuse_limit_s}s limit. No verifier ran for this commit; the post-merge verify follows its own tree-equality rule (Proofdelve ForgeOs-s1reg)" \
       -a "$fleet_actor" -s fleet -t "${hv_bead:-}" -p "{\"run\":\"$run_id\",\"commit\":\"$hv_head\",\"worktree\":\"$1\",\"ran\":false,\"reused\":true,\"refreshReuse\":true,\"sameTree\":$hv_same,\"verifiedAgeS\":${refresh_reuse_age_s:-null},\"ageLimitS\":${refresh_reuse_limit_s:-null},\"verifiedCommit\":\"$refresh_reused_commit\",\"verifiedTree\":\"$hv_vtree\",\"tier\":\"$tier\"}"
-    printf 'host verify REUSED: %s run at %s stands for %s (ForgeOs-gfuc1)\n' "$tier" "$refresh_reused_commit" "$hv_head" > "$2"
+    printf 'host verify REUSED: %s run at %s stands for %s (Proofdelve ForgeOs-gfuc1)\n' "$tier" "$refresh_reused_commit" "$hv_head" > "$2"
     return 0
   fi
-  if [ -s "$3/verified.json" ]; then say "  host verifier runs: $refresh_reuse_why (ForgeOs-gfuc1)"; fi
+  if [ -s "$3/verified.json" ]; then say "  host verifier runs: $refresh_reuse_why (Proofdelve ForgeOs-gfuc1)"; fi
   rm -f "$3/verified.json" 2>/dev/null || true
   run_verifier "$1" "$2" "" "$tier" "$3/verified.json"
 }
@@ -3595,7 +3594,7 @@ verified_reusable() {  # $1 worker dir, $2 merged sha -> 0 reuse, 1 run it (reus
   local f="$1/verified.json" mtree line
   reused_tree=""; reused_commit=""; reuse_why=""
   if [ "${FLEET_VERIFY_REUSE:-on}" = off ]; then reuse_why="FLEET_VERIFY_REUSE=off in fleet.conf"; return 1; fi
-  if ! nightly_backstop_ok; then reuse_why="no nightly backstop: $nightly_why (ForgeOs-s1reg finding 3)"; return 1; fi
+  if ! nightly_backstop_ok; then reuse_why="no nightly backstop: $nightly_why (Proofdelve ForgeOs-s1reg finding 3)"; return 1; fi
   if [ ! -s "$f" ]; then reuse_why="no host-verify result was recorded for this worker"; return 1; fi
   mtree="$(git -C "$root" rev-parse --verify --quiet "$2^{tree}" 2>/dev/null)" || mtree=""
   if [ -z "$mtree" ]; then reuse_why="the merged commit's tree could not be resolved"; return 1; fi
@@ -3638,8 +3637,8 @@ PYREUSE
 
 # ---------------------------------------------------------------------------
 # THE POST-MERGE VERIFICATION RUNS IN A FRESH WORKTREE AT THE MERGED COMMIT
-# (ForgeOs-dx34.1, option (d) — proposed by Emrith Cairnwright of Manyhalls,
-# measured by Marrek Splitstone before it was adopted).
+# (Proofdelve ForgeOs-dx34.1, option (d) — proposed by Emrith Cairnwright of Manyhalls,
+# measured by the Mayor before it was adopted).
 #
 # WHY THE ROOT IS THE WRONG PLACE TO RUN IT. This used to run in $root and
 # scored the working directory as it existed on disk, so "main is green after
@@ -3651,7 +3650,7 @@ PYREUSE
 # accident was a half-written spec stopping the fleet with the record blaming
 # the merged work. That is what made narrowing the landability check unsafe,
 # and it is what this closes: after this, nothing between the merge and the end
-# of the verification reads the root's working tree at all. It is ForgeOs-afdr
+# of the verification reads the root's working tree at all. It is Proofdelve ForgeOs-afdr
 # — the verifier scores the tree it lives in — applied one level up.
 #
 # MEASURED BEFORE ADOPTING IT, which was Emrith's own condition (recorded on the
@@ -3661,7 +3660,7 @@ PYREUSE
 # are shared, so a fresh worktree pays for recompilation only, never for
 # re-download. The real cost is DISK — about 245 MB of build artifacts per
 # merge, in a fort already carrying a measured 11 GB of unreaped worktrees
-# (ForgeOs-mpaw). Hence the removal rule below, which is not garnish: it is the
+# (Proofdelve ForgeOs-mpaw). Hence the removal rule below, which is not garnish: it is the
 # difference between a seven-second cost and a 1.5 GB/day one.
 #
 # THE RULE, AND IT IS FOUR OUTCOMES RATHER THAN TWO. "It ran and main is red"
@@ -3684,12 +3683,12 @@ PYREUSE
 #
 # IT REPORTS THROUGH GLOBALS AND NOT THROUGH STDOUT, deliberately. A helper
 # whose stdout is its return value can never log, and one stray diagnostic line
-# in one is what let a crashed run record a clean drain (ForgeOs-0d0i, and
+# in one is what let a crashed run record a clean drain (Proofdelve ForgeOs-0d0i, and
 # again on live_forges() in the 2026-09-04 sitting). Two facts have to come back
 # from here, so neither of them travels on stdout.
 # >>> verify_unrunnable: KEEP BYTE-IDENTICAL in fort/scripts/fleet.sh and fort/scripts/nightly-verify.sh (nightly-verify-harness.sh compares them)
-# UNRUNNABLE IS NOT RED (ForgeOs-s1reg finding 4, Tova's review of docket
-# ForgeOs-x7ojh). A nonzero exit from the verifier used to read as "main is
+# UNRUNNABLE IS NOT RED (Proofdelve ForgeOs-s1reg finding 4, the Warden's review of docket
+# Proofdelve ForgeOs-x7ojh). A nonzero exit from the verifier used to read as "main is
 # red" whatever produced it, so on 2026-10-16 the fleet sat ~9 h behind a halt
 # file that blamed the code for a harness that had REFUSED to run (exit 3).
 # Three shapes measure nothing, or almost nothing, about the code:
@@ -3700,8 +3699,8 @@ PYREUSE
 #     wrong tree). No "step FAILED" line exists in that output.
 #   * a step that exited 3, the harness convention for REFUSES: the
 #     instrument could not load what it tests. That is EITHER a broken
-#     instrument OR the code it extracts having changed shape (Tova's finding
-#     2 on docket ForgeOs-zw3q5), so the words below say "read the step log"
+#     instrument OR the code it extracts having changed shape (the Warden's finding
+#     2 on docket Proofdelve ForgeOs-zw3q5), so the words below say "read the step log"
 #     and never "not the code".
 # Everything else is a verdict. This classifies; it does not decide. The fleet
 # still halts on a refused post-merge run (the Overseer's call, 2026-10-20) and
@@ -3758,7 +3757,7 @@ postmerge_verify() {  # $1 bead, $2 merged sha, $3 output file
   fi
   postmerge_tree="$wt"
   local vrc=0
-  run_verifier "$wt" "$vout" require-docker || vrc=$?   # ForgeOs-pbkk: this green is cited as docker:true, so it must mean Docker
+  run_verifier "$wt" "$vout" require-docker || vrc=$?   # Proofdelve ForgeOs-pbkk: this green is cited as docker:true, so it must mean Docker
   if [ "$vrc" -eq 0 ]; then
     if git -C "$root" worktree remove --force "$wt" >/dev/null 2>&1; then postmerge_tree=""; fi
     postmerge_result=green; return 0
@@ -3773,7 +3772,7 @@ postmerge_verify() {  # $1 bead, $2 merged sha, $3 output file
   return 0
 }
 
-# ONE PLACE DEFERS A MERGE (ForgeOs-usz6). Before this, both defer branches said
+# ONE PLACE DEFERS A MERGE (Proofdelve ForgeOs-usz6). Before this, both defer branches said
 # some version of "will retry next pass" and NEITHER WAS RETRIED: reap_pass
 # skipped any worker carrying the old `done` marker, which was written near the
 # top of the reap iteration — before the verifier, before the review, and
@@ -3785,12 +3784,12 @@ postmerge_verify() {  # $1 bead, $2 merged sha, $3 output file
 # needs a retry that re-attempts land() WITHOUT re-running the verifier and
 # WITHOUT spending a second Warden launch, and re-reaping the worker naively
 # would do both — and spending a review launch twice on one bead is worse than
-# the defect. ForgeOs-w7u5's resume point is what makes that expressible: a
+# the defect. Proofdelve ForgeOs-w7u5's resume point is what makes that expressible: a
 # `deferred-merge` worker resumes at `land`, not at `verify`.
 #
 # WHAT IS PERSISTED, AND WHY IN THE WORKER DIRECTORY. The verdict, and a COPY
 # of the Warden record. The record's own home is $warden_root/<sfx>.log.record
-# (under ~/.local/share since ForgeOs-nv0j; /tmp before, which a reboot
+# (under ~/.local/share since Proofdelve ForgeOs-nv0j; /tmp before, which a reboot
 # removed), and the next review of any bead with the same suffix overwrites it; a retry that ran a day later would then file a
 # follow-up bead carrying somebody else's review, or none.
 #
@@ -3799,7 +3798,7 @@ postmerge_verify() {  # $1 bead, $2 merged sha, $3 output file
 # and fleet.conf is the Overseer's. The count and the reason are carried in the
 # worker's state instead, so `--status` and the leftovers report show a bead
 # that has deferred forty times without anyone having had to pick a number.
-# ForgeOs-dx34.15. A defer reason keyed for the seen-list: one line per
+# Proofdelve ForgeOs-dx34.15. A defer reason keyed for the seen-list: one line per
 # reason however many lines the reason has, and no reason text in the list to
 # be mistaken for a record. reason_seen() answers "has this worker deferred on
 # this reason at any earlier pass", which is a different question from "is it
@@ -3830,7 +3829,7 @@ defer_merge() {  # $1 worker dir, $2 bead, $3 verdict, $4 why
   if [ "$last" != "$why" ]; then
     printf '%s\n' "$why" > "$wdir/defer-reason" 2>/dev/null || true
     # EVERY DISTINCT REASON THIS WORKER HAS EVER DEFERRED ON, appended when it
-    # changes (ForgeOs-dx34.15). reap_pass reads the list to tell a reason that
+    # changes (Proofdelve ForgeOs-dx34.15). reap_pass reads the list to tell a reason that
     # is NEW from one that is merely different from last pass's.
     printf '%s\n' "$(reason_key "$why")" >> "$wdir/defer-reasons-seen" 2>/dev/null || true
     emit fleet.deferred "Fleet did not merge $bead ($why). Deferral $cnt. The review verdict $verdict stands, the bead is still claimed, and nothing was merged or closed. This is NOT a halt and NOT a stranding: a later pass retries the merge alone." \
@@ -3838,8 +3837,8 @@ defer_merge() {  # $1 worker dir, $2 bead, $3 verdict, $4 why
   fi
 }
 
-# THE VERDICT VOCABULARY, AS TWO NAMED PROPERTIES IN ONE PLACE (ForgeOs-j3kp
-# finding 1, as corrected by Tova Marrowassay 2026-09-10). Three tokens may be
+# THE VERDICT VOCABULARY, AS TWO NAMED PROPERTIES IN ONE PLACE (Proofdelve ForgeOs-j3kp
+# finding 1, as corrected by the Warden 2026-09-10). Three tokens may be
 # acted on and two of those file a follow-up, and until now each site spelled its
 # own list: the fresh-review dispatch knew three, the deferred-merge resume knew
 # two, and MERGE-PARENT-OPEN fell into the resume's catch-all and was escalated
@@ -3857,7 +3856,7 @@ defer_merge() {  # $1 worker dir, $2 bead, $3 verdict, $4 why
 # introduced by the fix for it. The two sites ask different questions, so they
 # get different functions.
 verdict_is_landable() {  # may the fleet act on this stored verdict at all?
-  # OVERSEER-SIGNED IS THE FLEET'S OWN TOKEN (ForgeOs-ubgx; the reasoning is on
+  # OVERSEER-SIGNED IS THE FLEET'S OWN TOKEN (Proofdelve ForgeOs-ubgx; the reasoning is on
   # signed_landing_ready() below). No Warden emits it. It is here so a signed
   # landing that DEFERS at the merge retries through reap_pass's land arm like
   # any other, and lands and closes like a plain APPROVE. It files no follow-up.
@@ -3867,7 +3866,7 @@ verdict_files_followup() {  # does this verdict need the stored Warden record?
   case "$1" in APPROVE-WITH-FINDINGS|MERGE-PARENT-OPEN) return 0 ;; *) return 1 ;; esac
 }
 
-# ONE PLACE FILES A FOLLOW-UP, FOR BOTH VERDICTS THAT PRODUCE ONE (ForgeOs-j3kp).
+# ONE PLACE FILES A FOLLOW-UP, FOR BOTH VERDICTS THAT PRODUCE ONE (Proofdelve ForgeOs-j3kp).
 # APPROVE-WITH-FINDINGS and MERGE-PARENT-OPEN differ in what happens to the
 # PARENT and not at all in how the findings are carried, so the carrying is one
 # function. Two copies of a bd-create-plus-check block would drift, and the
@@ -3876,16 +3875,16 @@ verdict_files_followup() {  # does this verdict need the stored Warden record?
 # scripts/fleet-e2e-harness.sh measures by running them.
 #
 # THE FINDINGS ARE NOT PARSED OUT OF THE VERDICT, AND THAT IS A REFUSAL RATHER
-# THAN A SHORTCUT. Tova states her findings in prose. Any mechanism that read the
+# THAN A SHORTCUT. The Warden states her findings in prose. Any mechanism that read the
 # review BODY for phrases — "should not be closed", "criterion N unmet" — would
 # work for the sentence she happened to write and fail on the next one, silently,
-# in the direction of merging and closing. That is ForgeOs-8zb7's pinned-spelling
+# in the direction of merging and closing. That is Proofdelve ForgeOs-8zb7's pinned-spelling
 # class raised to protocol level. Nobody teaches fleet.sh English: the token is
-# the interface, which is the whole reason ForgeOs-j3kp splits a token instead of
+# the interface, which is the whole reason Proofdelve ForgeOs-j3kp splits a token instead of
 # teaching this file to read.
 #
 # FINDING TIERS ARE NOT PROSE, AND THAT IS WHY READING THEM IS NOT THE REFUSAL
-# ABOVE (ForgeOs-6niaz part A, Regent sitting 2026-11-11, the Overseer
+# ABOVE (Proofdelve ForgeOs-6niaz part A, Regent sitting 2026-11-11, the Overseer
 # present; approval recorded on the bead). The Warden now puts her numbered
 # findings between a line 'FINDINGS:' and a line 'END FINDINGS', and opens each
 # non-blocking one with exactly one tag: [record] (no action), [polish] (tests,
@@ -3897,11 +3896,11 @@ verdict_files_followup() {  # does this verdict need the stored Warden record?
 #   - an item with no tag, or a tag this file does not know, counts as [bead];
 #   - no FINDINGS section, or one with no numbered item, is UNPARSED, and the
 #     caller files the whole-review triage bead exactly as before this change.
-# The measured need (ForgeOs-yi221, 11-10/11): about a third of findings were
+# The measured need (Proofdelve ForgeOs-yi221, 11-10/11): about a third of findings were
 # record-only and about half were one-to-three line beads, each a full fleet
 # lap on the one Warden slot.
 #
-# Outputs, none on stdout (ForgeOs-0d0i): tier_items/tier_bead/tier_polish/
+# Outputs, none on stdout (Proofdelve ForgeOs-0d0i): tier_items/tier_bead/tier_polish/
 # tier_record are counts; $2/bead.txt and $2/polish.txt carry the items'
 # text, each capped at 2000 characters. Returns 0 when parsed, 1 when not.
 tier_items=0; tier_bead=0; tier_polish=0; tier_record=0
@@ -3923,7 +3922,7 @@ tier_findings() {  # $1 record file, $2 output dir
     !inf && !done && t ~ /^FINDINGS:?$/ { inf = 1; next }
     inf && (t ~ /^ENDFINDINGS:?$/ || $0 ~ /^VERDICT-LINE:/) { flush(); inf = 0; done = 1; next }
     inf {
-      # AT THE LEFT MARGIN, AND FOLLOWED BY WHITESPACE (Tova, 6niaz review
+      # AT THE LEFT MARGIN, AND FOLLOWED BY WHITESPACE (the Warden, 6niaz review
       # finding 1): an indented numbered sub-list or a wrapped line that begins
       # "3.5 seconds" is part of the finding above it, never a new one.
       if ($0 ~ /^[*_]*[0-9]+[.)][*_]*([ \t]|$)/) {
@@ -3939,15 +3938,15 @@ tier_findings() {  # $1 record file, $2 output dir
   return 0
 }
 
-# Two return values, neither on stdout (ForgeOs-0d0i).
+# Two return values, neither on stdout (Proofdelve ForgeOs-0d0i).
 followup_bead=""     # the filed bead id, or empty when it could not be filed
 followup_body=""     # the path to the body, which the caller posts on failure
-followup_ids=""      # every bead filed (ForgeOs-6niaz: a [bead] follow-up and a polish-batch bead can both be filed)
+followup_ids=""      # every bead filed (Proofdelve ForgeOs-6niaz: a [bead] follow-up and a polish-batch bead can both be filed)
 followup_none=0      # 1 when a tiered review held only [record] findings, so nothing was owed a bead
 file_followup() {  # $1 bead, $2 verdict, $3 record file, $4 and $5 two lines of why, [$6 the outcome token: tiers apply to APPROVE-WITH-FINDINGS only]
   local bead="$1" verdict="$2" record="$3" why1="$4" why2="$5"
   followup_bead=""; followup_body="$state/logs/followup-$bead.txt"; followup_ids=""; followup_none=0
-  # TIERED FILING (ForgeOs-6niaz part A). APPROVE-WITH-FINDINGS only, by the
+  # TIERED FILING (Proofdelve ForgeOs-6niaz part A). APPROVE-WITH-FINDINGS only, by the
   # Overseer's ruling at the sitting (refinement a): MERGE-PARENT-OPEN keeps its
   # whole-review follow-up, because that bead is what carries the unmet
   # criterion, and a tag on a finding says nothing about a criterion.
@@ -3955,7 +3954,7 @@ file_followup() {  # $1 bead, $2 verdict, $3 record file, $4 and $5 two lines of
     file_followup_tiered "$bead" "$verdict" "$record" "" "$state/logs/tiers-$bead"
     return 0
   fi
-  # THE GROUP'S STATUS IS TESTED, AND SO IS WHAT IT WROTE (Tova Marrowassay,
+  # THE GROUP'S STATUS IS TESTED, AND SO IS WHAT IT WROTE (the Warden,
   # correction C2 to the sitting-three docket). Two failures live on this line
   # and only one of them was ever visible.
   #
@@ -3967,7 +3966,7 @@ file_followup() {  # $1 bead, $2 verdict, $3 record file, $4 and $5 two lines of
   # WHY `|| true` ALONE IS THE WRONG REMEDY AND IS WORSE THAN THE BUG: the header
   # printfs have already succeeded by the time `cat` fails, so the body exists
   # and is NON-EMPTY with the verbatim section missing. `bd create` then
-  # SUCCEEDS, followup_bead is set, the ForgeOs-bzyk merge-but-do-not-close
+  # SUCCEEDS, followup_bead is set, the Proofdelve ForgeOs-bzyk merge-but-do-not-close
   # branch is skipped, no incident is emitted, and the parent CLOSES on
   # APPROVE-WITH-FINDINGS WITH THE FINDINGS GONE. That is the review-dies-unread
   # failure this path exists to end, reached through an empty file rather than
@@ -4005,21 +4004,21 @@ file_followup() {  # $1 bead, $2 verdict, $3 record file, $4 and $5 two lines of
     say "$bead: the follow-up body could not be built from $record, so NO follow-up bead was filed"
   fi
   followup_ids="$followup_bead"
-  # RETURN 0, NEVER THE TEST (Tova Marrowassay, covenant-4.5 review of sitting
+  # RETURN 0, NEVER THE TEST (the Warden, covenant-4.5 review of sitting
   # one, blocking finding). This line used to be a non-emptiness TEST on the
   # follow-up id, so an unfiled follow-up made the function return 1 — and the
   # retired spelling is paraphrased rather than quoted here, because a literal
   # in a comment fails a zero-tolerance grep exactly like a live instruction.
   # Both callers invoke this function
   # BARE IN AN `if` BODY, where `set -euo pipefail` is unsuspended, so the run
-  # DIED on exactly the ForgeOs-bzyk path this function exists to survive: the
+  # DIED on exactly the Proofdelve ForgeOs-bzyk path this function exists to survive: the
   # merge had already landed, its record was never written, and the EXIT trap
   # then called it a clean drain. The callers read $followup_bead directly and
   # never needed a status; the function has no business signalling through one.
   return 0
 }
 
-# THE TIERED HALF OF file_followup() (ForgeOs-6niaz part A). Up to two beads:
+# THE TIERED HALF OF file_followup() (Proofdelve ForgeOs-6niaz part A). Up to two beads:
 # ONE follow-up for every [bead] item (untagged ones included), and ONE bead
 # labelled polish-batch, deliberately NOT fleet-safe, for every [polish] item,
 # so the Mayor's polish lane (a Workbench sitting, or a batch she cuts) picks
@@ -4037,7 +4036,7 @@ file_followup_tiered() {  # $1 bead, $2 verdict, $3 record, $4 one optional note
   {
     printf 'Filed automatically by fort/scripts/fleet.sh from the Warden%s tiered %s review of %s (run %s).\n' "'s" "$verdict" "$bead" "${run_id:-}"
     [ -n "$note" ] && printf '%s\n' "$note"
-    printf '\nThe Warden tiered her findings (ForgeOs-6niaz): %s [bead], %s [polish], %s [record].\n' "$tier_bead" "$tier_polish" "$tier_record"
+    printf '\nThe Warden tiered her findings (Proofdelve ForgeOs-6niaz): %s [bead], %s [polish], %s [record].\n' "$tier_bead" "$tier_polish" "$tier_record"
     printf 'Her verdict is posted whole on %s as her own comment; read it with: bd show %s --json --include-comments\n' "$bead" "$bead"
     printf 'Verdict line: %s\n' "$vline"
   } > "$followup_body" 2>/dev/null || ok=0
@@ -4097,12 +4096,12 @@ forge_model_for() {  # $1 bead -> prints one model; never fails
   printf '%s' "$FLEET_FORGE_MODEL"
 }
 
-# FIX-FORWARD: ONE BOUNDED LAP ON THE SAME BRANCH (ForgeOs-6niaz part B, Regent
+# FIX-FORWARD: ONE BOUNDED LAP ON THE SAME BRANCH (Proofdelve ForgeOs-6niaz part B, Regent
 # sitting 2026-11-11, the Overseer present; approval and the refinements are
 # recorded on the bead).
 #
 # THE TOKEN MEANS: the work is done and approvable, and the [polish] findings
-# the Warden listed are cheaper to fix in this branch now than as a follow-up
+# The Warden listed are cheaper to fix in this branch now than as a follow-up
 # bead later (11-10/11: follow-ups of one to three lines each cost a full fleet
 # lap on the one Warden slot, and spawned follow-ups of their own). So:
 #   1. the bead goes back to the queue with its branch and worktree intact, and
@@ -4179,14 +4178,14 @@ fix_forward() {  # $1 bead, $2 worktree, $3 record, $4 the tip the review was la
     fi
   fi
   if [ -n "$why" ]; then
-    say "$bead: FIX-FORWARD read as APPROVE-WITH-FINDINGS: $why (ForgeOs-6niaz)"
+    say "$bead: FIX-FORWARD read as APPROVE-WITH-FINDINGS: $why (Proofdelve ForgeOs-6niaz)"
     emit progress "Fleet read the FIX-FORWARD verdict on $bead as APPROVE-WITH-FINDINGS: $why. Its [polish] items go to a polish-batch bead." \
       -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"FIX-FORWARD\",\"read_as\":\"APPROVE-WITH-FINDINGS\"}"
     land "$bead" APPROVE-WITH-FINDINGS "$record" "$tip"
     return 0
   fi
-  # A BEAD CLOSED UNDER THE REVIEW STAYS CLOSED (Tova, 6niaz review finding 5;
-  # the ForgeOs-x2lv rule return_to_ready() already keeps): no lap, no write.
+  # A BEAD CLOSED UNDER THE REVIEW STAYS CLOSED (the Warden, 6niaz review finding 5;
+  # the Proofdelve ForgeOs-x2lv rule return_to_ready() already keeps): no lap, no write.
   if [ "$(bead_status "$bead")" = closed ]; then
     worker_set_state "$state/workers/$sfx" settled "FIX-FORWARD: the bead was closed before its lap could be queued; no write made, it stays closed"
     say "$bead: FIX-FORWARD, but the bead was closed before its lap could be queued -- no write made, it stays closed"
@@ -4221,7 +4220,7 @@ fix_forward() {  # $1 bead, $2 worktree, $3 record, $4 the tip the review was la
       cat "$d.items/polish.txt"
       printf 'Lap base (the tip she reviewed): %s\n' "$tip"
       printf 'After the lap: host verify, then a light re-check of only these items against the lap diff, then merge.\n'
-      printf 'This lap spends no return. A second FIX-FORWARD on this bead is read as APPROVE-WITH-FINDINGS (ForgeOs-6niaz).\n'
+      printf 'This lap spends no return. A second FIX-FORWARD on this bead is read as APPROVE-WITH-FINDINGS (Proofdelve ForgeOs-6niaz).\n'
     } > "$d/brief.tmp" 2>/dev/null || [ ! -s "$d/brief.tmp" ]; then
     rm -f "$d/brief.tmp"
     say "$bead: the FIX-FORWARD brief could not be written; read as APPROVE-WITH-FINDINGS instead"
@@ -4249,11 +4248,11 @@ fix_forward() {  # $1 bead, $2 worktree, $3 record, $4 the tip the review was la
 
 # ---------------------------------------------------------------------------
 # THE SIGNATURE HOLD IS A PROPERTY OF THE BEAD, NOT OF ONE VERDICT TOKEN
-# (ForgeOs-vee4w, Regent sitting 2026-10-05, Overseer present).
+# (Proofdelve ForgeOs-vee4w, Regent sitting 2026-10-05, Overseer present).
 #
 # Until this, the only thing that kept a gate-1 change from landing without the
 # Overseer was the Warden choosing ESCALATE. Four verdicts merge
-# (verdict_is_landable), and on 2026-09-22 ForgeOs-etmwb, gate 1 class B,
+# (verdict_is_landable), and on 2026-09-22 Proofdelve ForgeOs-etmwb, gate 1 class B,
 # merged unsigned on MERGE-PARENT-OPEN while the review PROSE said it needed his
 # signature. Prose is not a gate; the fleet reads the token.
 #
@@ -4264,7 +4263,7 @@ fix_forward() {  # $1 bead, $2 worktree, $3 record, $4 the tip the review was la
 # sign-to-land bead reaching land() on any Warden verdict is HELD: fleet-safe
 # off, human on, open and unclaimed, the verdict stored as ESCALATE, which is
 # exactly the state the ESCALATE arm leaves. His Approve on the Keep then pins
-# the tip and the ordinary signed landing (ForgeOs-ubgx) lands it. Only
+# the tip and the ordinary signed landing (Proofdelve ForgeOs-ubgx) lands it. Only
 # OVERSEER-SIGNED, the fleet's own token for his recorded approval, passes.
 #
 # The Warden's own token is kept beside it (warden-verdict, warden-record), so
@@ -4279,7 +4278,7 @@ fix_forward() {  # $1 bead, $2 worktree, $3 record, $4 the tip the review was la
 # the review body, for the reason file_followup() gives: nobody teaches this
 # file English.
 #
-# ROUND TWO (Tova's finding 1; the Overseer chose a positive marker): a label
+# ROUND TWO (the Warden's finding 1; the Overseer chose a positive marker): a label
 # that only says "hold" cannot tell class A from never classified, so one missed
 # label repeated etmwb exactly. Now the Mayor's classification is positive:
 # lands-on-review says the Warden's verdict may land it. A bead carrying NEITHER
@@ -4287,35 +4286,32 @@ fix_forward() {  # $1 bead, $2 worktree, $3 record, $4 the tip the review was la
 # sign-to-land, so his Approve can land it as any held bead.
 sign_label() { printf '%s' 'sign-to-land'; }
 # gated_range_why <sfx>: prints why bead/<sfx>'s range touches a gated surface,
-# or nothing (ForgeOs-6niaz belt 1). Conservative by construction: a path list
+# or nothing (Proofdelve ForgeOs-6niaz belt 1). Conservative by construction: a path list
 # can only widen what waits for the Overseer, never narrow it, and the gate is
 # still defined by what a change DOES, so the Warden's own ESCALATE stands too.
 # A diff that cannot be listed is reported as gated.
 gated_range_why() {  # $1 sfx
-  local paths p sym
+  local paths p
   if ! paths="$(git -C "$root" diff --name-only "$main_branch...bead/$1" 2>/dev/null)"; then
     printf 'the range main...bead/%s could not be listed' "$1"; return 0
   fi
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     case "$p" in
-      src/ForgeOS.Infrastructure/Migrations/*) printf '%s is a migration (gate 2)' "$p"; return 0 ;;
-      src/ForgeOS.Api/Program.cs|*/AgentTokens.cs|*/CurrentUser.cs|*/WorkOsAuthKit.cs|*/DealApplicationService.cs|web/nginx.conf.template|web/src/cookieSession.*)
-        printf '%s is gate-1 surface' "$p"; return 0 ;;
-      fort/charter.md|fort/seats/*|fort/profiles/*|fort/scripts/*|fort/systemd/*|fort/airlock/operations.json|.claude/*|scripts/deploy-azure-staging.sh|scripts/airlock-*|scripts/verify-impl.sh)
+      bin/*|civ/*|templates/*|schema/*|skills/*)
+        printf '%s is gate-1 surface (the factory and the civilization tooling)' "$p"; return 0 ;;
+      fort/charter.md|fort/seats/*|fort/profiles/*|fort/scripts/*|fort/systemd/*|fort/airlock/operations.json|.claude/*|scripts/airlock-*|scripts/verify-impl.sh)
         printf '%s is the fort constitution (gate 6)' "$p"; return 0 ;;
     esac
   done <<< "$paths"
-  sym="$(git -C "$root" diff "$main_branch...bead/$1" -- web/src 2>/dev/null | grep -E '^[-+]' | grep -oE 'CookieSessionGate|hasCookieSession|isSignedOutPath|[Aa]uthenticationRequired|useDevelopmentAuth|X-ForgeOS-UserId|currentUserId|setCurrentUser|refreshSession|/auth/' | sed -n '1p')" || sym=""
-  [ -n "$sym" ] && printf 'a web/src/ hunk touches the SPA auth surface (%s), gate-1 surface' "$sym"
   return 0
 }
 # stacked_held_why <sfx>: names another Workbench sitting HELD for the
 # Overseer's signature whose branch shares unlanded commits with bead/<sfx>, or
-# prints nothing (ForgeOs-6niaz belt 2). HELD means not closed and carrying
+# prints nothing (Proofdelve ForgeOs-6niaz belt 2). HELD means not closed and carrying
 # `human` OR sign-to-land: the ESCALATE route adds `human` and never
 # sign-to-land, so a sitting the Warden escalated -- the ordinary held sitting
-# -- carries only `human` (Tova, round two, finding 1). SHARED is asked of EVERY
+# -- carries only `human` (the Warden, round two, finding 1). SHARED is asked of EVERY
 # merge base (--all): once both branches have merged main in, as Workbench rule
 # 4 requires, git can report a criss-cross where the single base it prints is a
 # main commit while the held sitting's own commit is the other one (round two,
@@ -4327,7 +4323,7 @@ gated_range_why() {  # $1 sfx
 stacked_held_why() {  # $1 sfx
   local raw ids id osfx mb
   raw="$(bd -C "$root" list --label workbench --status open,in_progress,blocked,deferred --json --limit 0 2>/dev/null)" || return 2
-  # THE LABELS CONTRACT FAILS CLOSED (Tova, 6niaz round three, finding 5; the
+  # THE LABELS CONTRACT FAILS CLOSED (the Warden, 6niaz round three, finding 5; the
   # Overseer chose the fold at the sitting). "Held" is read from each row's
   # labels, so output that does not parse, or a row with no labels key, is a bd
   # that will not say: return 2 and the caller defers, never "nothing held".
@@ -4396,7 +4392,7 @@ hold_for_signature() {  # $1 bead, $2 the Warden verdict, $3 record file, $4 wor
   local bead="$1" wv="$2" record="$3" wdir="$4" rtip="${5:-}" why_held hrc=0 crc=0
   why_held="it carries $(sign_label)"
   [ "${6:-}" = unclassified ] && why_held="it is UNCLASSIFIED (neither $(sign_label) nor $(review_label))"
-  [ "${6:-}" = gated ] && why_held="it is a Workbench range that touches a gated path (${7:-unnamed}), so it waits for the Overseer's signature whatever the review token says (ForgeOs-6niaz belt 1)"
+  [ "${6:-}" = gated ] && why_held="it is a Workbench range that touches a gated path (${7:-unnamed}), so it waits for the Overseer's signature whatever the review token says (Proofdelve ForgeOs-6niaz belt 1)"
   bd -C "$root" update "$bead" --remove-label fleet-safe --add-label human \
      --status open --assignee "$(overseer_assignee)" --actor "$fleet_actor" >/dev/null 2>&1 || hrc=$?
   # AN UNCLASSIFIED BEAD IS CLASSIFIED ON THE WAY PAST, conservatively, so that
@@ -4425,12 +4421,12 @@ hold_for_signature() {  # $1 bead, $2 the Warden verdict, $3 record file, $4 wor
   ask_overseer "$bead" sign "the Warden returned $wv and $why_held; Approve on the Keep lands the reviewed change as a signed landing" \
     || say "$bead: the ASK line could not be posted; it is assigned to $(overseer_assignee) without one"
   worker_set_state "$wdir" settled "the Warden returned $wv and $why_held: HELD for the Overseer's signature, assigned to him with an ASK line, nothing merged"
-  say "$bead: $wv, and $why_held -- HELD for the Overseer's signature, NOT merged (ForgeOs-vee4w)"
+  say "$bead: $wv, and $why_held -- HELD for the Overseer's signature, NOT merged (Proofdelve ForgeOs-vee4w)"
   emit fleet.returned "$bead held for the Overseer's signature: $why_held and the Warden returned $wv, which does not land such a bead on its own. fleet-safe removed, assigned to $(overseer_assignee) with an ASK line (human kept as history); his Approve on the Keep lands it as a signed landing." \
     -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"ESCALATE\",\"wardenVerdict\":\"$wv\",\"hold\":\"$(sign_label)\",\"unclassified\":$([ "${6:-}" = unclassified ] && echo true || echo false)}"
 }
 
-# A SIGNATURE ON A STALE BRANCH IS WASTED (ForgeOs-8gmt4, Regent docket
+# A SIGNATURE ON A STALE BRANCH IS WASTED (Proofdelve ForgeOs-8gmt4, Regent docket
 # 2026-10-27 item C). A bead held for the Overseer's signature waits hours to
 # days, and main moves under it: on 10-26 three of four signatures could not
 # land, and on 10-27 2md9d.5.16.1, signed at 10:00, conflicted with a landing
@@ -4438,7 +4434,7 @@ hold_for_signature() {  # $1 bead, $2 the Warden verdict, $3 record file, $4 wor
 # So once per pass, every worker whose stored verdict a signed landing could
 # rest on (held for signature, or signed and not yet landed) is asked the same
 # `git merge-tree --write-tree` question prelanding_refresh() asks before a
-# landing (ForgeOs-36b9). When one stops merging cleanly it is handed to the
+# landing (Proofdelve ForgeOs-36b9). When one stops merging cleanly it is handed to the
 # Mayor BEFORE he spends a signature: mayor-review added, assigned to the Mayor
 # (so it leaves his board, which is `assignee = justin`), and one comment
 # naming the conflicting files. The fingerprint (branch tip plus files) is kept
@@ -4481,11 +4477,11 @@ stale_signature_check() {
       continue
     fi
     printf '%s\n' "$fp" > "$wdir/stale-merge" 2>/dev/null || true
-    printf 'fort/scripts/fleet.sh: %s no longer merges cleanly with %s. "git merge-tree --write-tree %s %s" reports conflicts on: %s. A signature on this tip would be wasted (ForgeOs-8gmt4), so it is handed to the Mayor (mayor-review, assigned to %s) to file a conflict lap BEFORE the Overseer signs. Nothing was merged.\n' \
+    printf 'fort/scripts/fleet.sh: %s no longer merges cleanly with %s. "git merge-tree --write-tree %s %s" reports conflicts on: %s. A signature on this tip would be wasted (Proofdelve ForgeOs-8gmt4), so it is handed to the Mayor (mayor-review, assigned to %s) to file a conflict lap BEFORE the Overseer signs. Nothing was merged.\n' \
       "$br" "$main_branch" "$main_branch" "$br" "${paths:-<unnamed>}" "$(mayor_assignee)" > "$state/logs/stale-signature-$bead.txt" 2>/dev/null || true
     bd -C "$root" comment "$bead" --file "$state/logs/stale-signature-$bead.txt" --actor "$fleet_actor" >/dev/null 2>&1 \
       || warn "$bead: the stale-signature comment could not be written (mayor-review was applied)"
-    say "$bead: held for signature, but $br NO LONGER MERGES with $main_branch (conflicts on ${paths:-<unnamed>}) -- handed to the Mayor for a conflict lap before a signature is spent (ForgeOs-8gmt4)"
+    say "$bead: held for signature, but $br NO LONGER MERGES with $main_branch (conflicts on ${paths:-<unnamed>}) -- handed to the Mayor for a conflict lap before a signature is spent (Proofdelve ForgeOs-8gmt4)"
     emit fleet.stale-signature "$bead held for the Overseer's signature no longer merges with $main_branch (conflicts on ${paths:-<unnamed>}); mayor-review added and assigned to $(mayor_assignee) so the lap is filed before a signature is spent" \
       -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"branch\":\"$br\",\"paths\":\"${paths//\"/}\"}"
   done
@@ -4497,33 +4493,33 @@ land() {  # $1 bead, $2 verdict token, $3 warden record file, [$4 the tip the re
   local vout="$state/logs/postmerge-$bead.txt"
   local wdir="$state/workers/$sfx"
 
-  # THE SIGNATURE HOLD (ForgeOs-vee4w; the reasoning is above sign_label()).
+  # THE SIGNATURE HOLD (Proofdelve ForgeOs-vee4w; the reasoning is above sign_label()).
   # FIRST, before the verdict is persisted, so a held bead's record says
   # ESCALATE and never the token that did not land it.
   if [ "$verdict" != "OVERSEER-SIGNED" ]; then
-    # THE WORKBENCH BELTS (ForgeOs-6niaz, the Overseer's ruling on Tova's
+    # THE WORKBENCH BELTS (Proofdelve ForgeOs-6niaz, the Overseer's ruling on the Warden's
     # finding 2 at the sitting). A session bead lands on review (part C), so
     # without these the Warden choosing ESCALATE is the ONLY thing holding gated
     # content in a session range: the exact reliance sign_label()'s comment
-    # records letting ForgeOs-etmwb land unsigned.
+    # records letting Proofdelve ForgeOs-etmwb land unsigned.
     if worker_review_only "$wdir"; then
       local gwhy="" swhy="" src=0
       # BELT 2 FIRST: a range that shares unlanded commits with another sitting
       # held for his signature does not land on an unsigned review; it pages.
       swhy="$(stacked_held_why "$sfx")" || src=$?
       if [ "$src" -ne 0 ]; then
-        # SAVED FIRST, as the vee4w deferral below saves them (Tova, 6niaz round
+        # SAVED FIRST, as the vee4w deferral below saves them (the Warden, 6niaz round
         # two, finding 3): the retry reads the stored verdict, and without it a
         # deferred bead is stranded as having no usable verdict.
         if [ -d "$wdir" ]; then
           printf '%s\n' "$verdict" > "$wdir/verdict" 2>/dev/null || true
           if [ -n "${4:-}" ]; then printf '%s\n' "$4" > "$wdir/reviewed-sha" 2>/dev/null || true; fi
         fi
-        defer_merge "$wdir" "$bead" "$verdict" "bd would not list the Workbench sittings held for the Overseer's signature, so whether this range carries one's commits is unknown (ForgeOs-6niaz)"
+        defer_merge "$wdir" "$bead" "$verdict" "bd would not list the Workbench sittings held for the Overseer's signature, so whether this range carries one's commits is unknown (Proofdelve ForgeOs-6niaz)"
         return 0
       fi
       if [ -n "$swhy" ]; then
-        page_overseer "$bead" "the Warden returned $verdict on this Workbench range, and it shares unlanded commits with $swhy, which is held for your signature. Landing this range would put those commits on main unsigned, so it is NOT merged (ForgeOs-6niaz belt 2). Sign or land that sitting first, then re-queue this one with fleet.sh --review-only $bead." "" \
+        page_overseer "$bead" "the Warden returned $verdict on this Workbench range, and it shares unlanded commits with $swhy, which is held for your signature. Landing this range would put those commits on main unsigned, so it is NOT merged (Proofdelve ForgeOs-6niaz belt 2). Sign or land that sitting first, then re-queue this one with fleet.sh --review-only $bead." "" \
           "Nothing was merged. The session branch stands as reviewed."
         return 0
       fi
@@ -4545,10 +4541,10 @@ land() {  # $1 bead, $2 verdict token, $3 warden record file, [$4 the tip the re
       1) ;;
       *) if [ -d "$wdir" ]; then
            printf '%s\n' "$verdict" > "$wdir/verdict" 2>/dev/null || true
-           # and the reviewed tip, so a resume into the hold keeps it (Tova, round two, finding 2)
+           # and the reviewed tip, so a resume into the hold keeps it (the Warden, round two, finding 2)
            if [ -n "${4:-}" ]; then printf '%s\n' "$4" > "$wdir/reviewed-sha" 2>/dev/null || true; fi
          fi
-         defer_merge "$wdir" "$bead" "$verdict" "bd would not say what labels the bead carries, so whether it needs the Overseer's signature ($(sign_label)) is unknown (ForgeOs-vee4w)"
+         defer_merge "$wdir" "$bead" "$verdict" "bd would not say what labels the bead carries, so whether it needs the Overseer's signature ($(sign_label)) is unknown (Proofdelve ForgeOs-vee4w)"
          return 0 ;;
     esac
   fi
@@ -4563,10 +4559,10 @@ land() {  # $1 bead, $2 verdict token, $3 warden record file, [$4 the tip the re
       APPROVE-WITH-FINDINGS|MERGE-PARENT-OPEN) outcome="$held"; record="$wdir/warden-record" ;;
     esac
   fi
-  # WHAT THE RECORDS SAY (ForgeOs-owt37, Tova's vee4w round-one finding 2, lower
+  # WHAT THE RECORDS SAY (Proofdelve ForgeOs-owt37, the Warden's vee4w round-one finding 2, lower
   # half). The merge message, close reason and fleet.signed already named the
   # held token (2869ad0d); the follow-up title, fleet.parent-open and bead.closed
-  # still said OVERSEER-SIGNED, so a reader of ForgeOs-5rc4g's title could not
+  # still said OVERSEER-SIGNED, so a reader of Proofdelve ForgeOs-5rc4g's title could not
   # tell what the Warden decided. shown is the Warden's token plus the route
   # when this is a held bead's signed landing, and the verdict otherwise -- an
   # ESCALATE-then-signed landing keeps saying OVERSEER-SIGNED, its true route.
@@ -4576,7 +4572,7 @@ land() {  # $1 bead, $2 verdict token, $3 warden record file, [$4 the tip the re
   # PERSISTED BEFORE THE FIRST THING THAT CAN DEFER, not after it.
   if [ -d "$wdir" ]; then
     printf '%s\n' "$verdict" > "$wdir/verdict" 2>/dev/null || true
-    # AND THE REVIEWED TIP (ForgeOs-vee4w round two, Tova's finding 4): a merge
+    # AND THE REVIEWED TIP (Proofdelve ForgeOs-vee4w round two, the Warden's finding 4): a merge
     # that defers and later resumes into the hold must still know what the
     # Warden was launched on, or the signed landing cannot compare it.
     if [ -n "${4:-}" ]; then printf '%s\n' "$4" > "$wdir/reviewed-sha" 2>/dev/null || true; fi
@@ -4585,18 +4581,18 @@ land() {  # $1 bead, $2 verdict token, $3 warden record file, [$4 the tip the re
     fi
   fi
 
-  # ForgeOs-vikl: establish WHERE we are about to land before landing, and then
+  # Proofdelve ForgeOs-vikl: establish WHERE we are about to land before landing, and then
   # name that branch in the message and the event rather than asserting "main"
   # unconditionally. A long night is long enough for someone to switch HEAD.
-  # ForgeOs-5m7a: DEFER, do not halt. Since ForgeOs-dx34.1 this is the ONLY
+  # Proofdelve ForgeOs-5m7a: DEFER, do not halt. Since Proofdelve ForgeOs-dx34.1 this is the ONLY
   # place landability can refuse anything at all — preflight reports it and
   # starts the run regardless. The reasoning is on report_landability().
-  # ForgeOs-a2fx. A merge is the least interruptible thing this file does and
+  # Proofdelve ForgeOs-a2fx. A merge is the least interruptible thing this file does and
   # the most expensive to half-do, so a stopping run does not start one. The
   # verdict stands and the bead keeps its claim, exactly as the landability
-  # defer below — which means ForgeOs-usz6's retry gap covers this path too.
+  # defer below — which means Proofdelve ForgeOs-usz6's retry gap covers this path too.
   if stopping; then
-    # ForgeOs-fhak: a halt FILE seen here has not set $end_reason yet (the
+    # Proofdelve ForgeOs-fhak: a halt FILE seen here has not set $end_reason yet (the
     # operator-halt record is written when the loop reaches its check), so name
     # the file rather than the default reason.
     if halt_file_present; then
@@ -4612,7 +4608,7 @@ land() {  # $1 bead, $2 verdict token, $3 warden record file, [$4 the tip the re
     return 0
   fi
   local into; into="$(tree_branch)"
-  # THE RECORD NAMES WHAT AUTHORISED THE MERGE (ForgeOs-ubgx). On a signed
+  # THE RECORD NAMES WHAT AUTHORISED THE MERGE (Proofdelve ForgeOs-ubgx). On a signed
   # landing no Warden said APPROVE; the stored verdict is ESCALATE and the
   # Overseer's recorded approval of a named sha is the basis, so the merge
   # message and the close reason say so rather than borrowing the review's
@@ -4621,16 +4617,16 @@ land() {  # $1 bead, $2 verdict token, $3 warden record file, [$4 the tip the re
 $verdict recorded with a bounded VERDICT-LINE." closed_on="on $verdict; host verifier green before review and again after merge"
   if [ "$verdict" = "OVERSEER-SIGNED" ]; then
     local approved_sha; approved_sha="$(cat "$wdir/approved-sha" 2>/dev/null || echo "unrecorded")"
-    # WHAT THE WARDEN ACTUALLY SAID (Tova's finding 2): a held bead's Warden
+    # WHAT THE WARDEN ACTUALLY SAID (the Warden's finding 2): a held bead's Warden
     # returned a merging token and the fleet stored ESCALATE for the hold. The
     # merge message and the close reason are permanent, so they say so.
     local said="Stored Warden verdict ESCALATE" said_lc="stored Warden verdict ESCALATE"
     if [ -n "${held:-}" ]; then
-      said="Warden verdict $held, HELD by the signature hold (ForgeOs-vee4w)"; said_lc="$said"
+      said="Warden verdict $held, HELD by the signature hold (Proofdelve ForgeOs-vee4w)"; said_lc="$said"
     fi
     basis="$said; landed on the Overseer's recorded approval
 of $approved_sha (gate.approved from the Keep), the branch carrying the same
-change by patch-id (ForgeOs-ubgx). Host verifier green in the worktree before
+change by patch-id (Proofdelve ForgeOs-ubgx). Host verifier green in the worktree before
 the merge; no second review launch was spent."
     closed_on="on OVERSEER-SIGNED: the Overseer's recorded approval of $approved_sha, $said_lc, the branch unchanged by patch-id; host verifier green before the merge and again after"
   fi
@@ -4638,7 +4634,7 @@ the merge; no second review launch was spent."
   if ! bd -C "$root" merge-slot acquire >/dev/null 2>&1; then
     # THE OLDEST OF THE THREE, AND THE ONE THE OTHERS WERE COPIED FROM. It has
     # said "will retry next pass" since the fleet was written, and until
-    # ForgeOs-usz6 nothing retried it.
+    # Proofdelve ForgeOs-usz6 nothing retried it.
     defer_merge "$wdir" "$bead" "$verdict" "the merge slot is held by someone else"
     return 0
   fi
@@ -4661,22 +4657,22 @@ not by a citizen." \
     -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"$verdict\",\"into\":\"$into\"}"
 
   # POST-MERGE VERIFIER, AND A RED MAIN HALTS THE RUN (Overseer amendment,
-  # 2026-09-02, recorded on ForgeOs-9mfw.3). There is a measured instance of
+  # 2026-09-02, recorded on Proofdelve ForgeOs-9mfw.3). There is a measured instance of
   # main going red after a merge that was green pre-merge in three separate
   # environments (fortkit-h5i: a test coupling to ambient git state). Three
   # workers cannot swarm-diagnose a red main, so this stops rather than logs.
   #
-  # IT RUNS IN A FRESH WORKTREE AT THE MERGED COMMIT (ForgeOs-dx34.1, option
+  # IT RUNS IN A FRESH WORKTREE AT THE MERGED COMMIT (Proofdelve ForgeOs-dx34.1, option
   # (d)) — see postmerge_verify() for the whole reasoning and the measurement.
   # The merged sha is resolved HERE, immediately after the merge, so the claim
   # the record makes names a commit and not a branch tip that may move.
   local sha; sha="$(git -C "$root" rev-parse HEAD 2>/dev/null || echo "")"
-  # NO REFILL HERE, DELIBERATELY (Tova's finding 1 on docket ForgeOs-9dqa6).
+  # NO REFILL HERE, DELIBERATELY (the Warden's finding 1 on docket Proofdelve ForgeOs-9dqa6).
   # A Forge dispatched between the merge and this verifier is cut from a main
   # nobody has verified yet; if the verifier goes red the run halts with that
   # Forge building on a red main. The refill after the host verifier and the one
-  # before the next worker is taken in hand cover the gap (ForgeOs-uwjme).
-  # VERIFY ONCE (ForgeOs-s1reg): the post-merge run is skipped only when the
+  # before the next worker is taken in hand cover the gap (Proofdelve ForgeOs-uwjme).
+  # VERIFY ONCE (Proofdelve ForgeOs-s1reg): the post-merge run is skipped only when the
   # merged tree IS the tree the host verifier passed, at full tier with Docker.
   if verified_reusable "$wdir" "$sha"; then
     postmerge_result=reused; postmerge_tree=""
@@ -4686,7 +4682,7 @@ not by a citizen." \
   fi
   case "$postmerge_result" in
     reused)
-      say "$bead: post-merge verify REUSED: $into's tree at ${sha:0:12} is byte-identical to the tree the host verifier passed at ${reused_commit:0:12} (full tier, Docker up); no second run (ForgeOs-s1reg)"
+      say "$bead: post-merge verify REUSED: $into's tree at ${sha:0:12} is byte-identical to the tree the host verifier passed at ${reused_commit:0:12} (full tier, Docker up); no second run (Proofdelve ForgeOs-s1reg)"
       emit verify.pass "Post-merge verify REUSED at $sha after landing $bead into $into: its tree ${reused_tree} is the tree the host verifier passed at ${reused_commit} (full tier, Docker up), so it was not run twice" \
         -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"commit\":\"$sha\",\"branch\":\"HEAD\",\"ran\":false,\"reused\":true,\"verifiedTree\":\"$reused_tree\",\"verifiedCommit\":\"$reused_commit\",\"tier\":\"full\",\"docker\":true}"
       ;;
@@ -4698,7 +4694,7 @@ not by a citizen." \
         -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"commit\":\"$sha\",\"ran\":true,\"worktree_kept\":false}"
       ;;
     red|refused)
-      # ONE HALT, TWO TRUTHS (ForgeOs-s1reg finding 4). A refused run halts
+      # ONE HALT, TWO TRUTHS (Proofdelve ForgeOs-s1reg finding 4). A refused run halts
       # too, by the Overseer's call on 2026-10-20: the supervisor would
       # otherwise start a run every ~2 min and land one more bead unverified
       # each time. What changes is the record: no verify.fail, because nothing
@@ -4718,10 +4714,10 @@ not by a citizen." \
     interrupted)
       # NOT A VERDICT ABOUT $into IN EITHER DIRECTION, so it neither halts nor
       # closes. What it does do is stop claiming the bead is fleet work, on the
-      # merged-but-not-closed precedent below (ForgeOs-bzyk): merged +
+      # merged-but-not-closed precedent below (Proofdelve ForgeOs-bzyk): merged +
       # in_progress + still fleet-safe is absent from every queue a person
       # reads.
-      escalate_labels "$bead"   # ForgeOs-s2lx: checked; the sentence below carries the truth
+      escalate_labels "$bead"   # Proofdelve ForgeOs-s2lx: checked; the sentence below carries the truth
       worker_set_state "$wdir" needs-person "MERGED into $into at $sha and the post-merge verification was STOPPED by SIG$stop_signal before it concluded, so $into is UNVERIFIED at that commit and the bead was NOT closed. $label_note${postmerge_tree:+; the worktree is KEPT at $postmerge_tree}"
       say "$bead: MERGED into $into, and its post-merge verification was STOPPED by SIG$stop_signal — that is not a red main. $into is UNVERIFIED at ${sha:0:12}, the bead is NOT closed, and no halt file was written. $label_note.${postmerge_tree:+ The worktree is KEPT at $postmerge_tree.}"
       emit incident "Fleet merged $bead into $into at $sha and its post-merge verification was stopped by SIG$stop_signal before it concluded. $into is UNVERIFIED at that commit; the bead was NOT closed. $label_note. This is NOT a red main and NO halt file was written." \
@@ -4740,7 +4736,7 @@ not by a citizen." \
       # in it would be stacked on an $into nothing has verified, and the fleet's
       # own promise is that it never continues past an unverified main.
       bd -C "$root" comment "$bead" --file <(capped_log "$vout") --actor "$fleet_actor" >/dev/null 2>&1 || true
-      escalate_labels "$bead"   # ForgeOs-s2lx: checked; the sentence below carries the truth
+      escalate_labels "$bead"   # Proofdelve ForgeOs-s2lx: checked; the sentence below carries the truth
       worker_set_state "$wdir" needs-person "MERGED into $into at $sha and the post-merge verification COULD NOT RUN at all, so $into is UNVERIFIED at that commit and the bead was NOT closed. $label_note. Evidence: $vout${postmerge_tree:+; residue at $postmerge_tree}"
       say "$bead: MERGED into $into, and the post-merge verification COULD NOT RUN — it was not red, it never happened. $into is UNVERIFIED at ${sha:0:12} and the bead is NOT closed. $label_note. Evidence: $vout"
       say "  This run stops here. No halt file is written, so the next run may start normally."
@@ -4758,8 +4754,8 @@ not by a citizen." \
   # those overnight with nobody told industrialises the fnjn class: fixes
   # landing as passengers, beads outliving their fixes. So one follow-up bead
   # per approval-with-findings, carrying the verdict VERBATIM. The findings are
-  # deliberately NOT parsed out of it: Tova states them in prose and a parser
-  # would do it badly. (ForgeOs-6niaz part A, 2026-11-11: the prose is still not
+  # deliberately NOT parsed out of it: the Warden states them in prose and a parser
+  # would do it badly. (Proofdelve ForgeOs-6niaz part A, 2026-11-11: the prose is still not
   # read. What is read is her TIER TAG on each numbered finding, a token in a
   # fixed position, and only on APPROVE-WITH-FINDINGS; see tier_findings().)
   if verdict_files_followup "$outcome"; then
@@ -4775,12 +4771,12 @@ not by a citizen." \
     fi
     local body="$followup_body"
     follow="$followup_ids"
-    # A REVIEW OF ONLY [record] FINDINGS OWES NO BEAD (ForgeOs-6niaz part A), so
+    # A REVIEW OF ONLY [record] FINDINGS OWES NO BEAD (Proofdelve ForgeOs-6niaz part A), so
     # an empty id list is not a failed filing there and must not take the loud
     # merged-but-not-closed branch below.
     if [ "$followup_none" != 1 ] && [ -z "$followup_bead" ]; then
       # MERGE BUT DO NOT CLOSE. The Overseer's condition, in terms.
-      # ForgeOs-bzyk: and take it OUT OF THE FLEET on the way past. Merged +
+      # Proofdelve ForgeOs-bzyk: and take it OUT OF THE FLEET on the way past. Merged +
       # in_progress + still fleet-safe + still assigned is a silent orphan: it
       # is absent from `bd ready`, so nobody sees it, and the label still says
       # the fleet owns it. It is NOT re-dispatchable (dispatchable() refuses any
@@ -4788,8 +4784,8 @@ not by a citizen." \
       # VISIBILITY defect rather than a token-burn loop — which is exactly why
       # it could sit unnoticed. `fleet-escalated` is the label dispatchable()
       # already refuses, and it is what the Mayor queries for.
-      escalate_labels "$bead"   # ForgeOs-s2lx: checked; the sentences below carry the truth
-      # THE SENTENCE DIFFERS BY VERDICT AND THE ACTION DOES NOT (ForgeOs-j3kp).
+      escalate_labels "$bead"   # Proofdelve ForgeOs-s2lx: checked; the sentences below carry the truth
+      # THE SENTENCE DIFFERS BY VERDICT AND THE ACTION DOES NOT (Proofdelve ForgeOs-j3kp).
       # On APPROVE-WITH-FINDINGS, not closing IS the failure. On
       # MERGE-PARENT-OPEN the parent was never going to close, and what failed is
       # only that the findings did not get their own bead — less severe, because
@@ -4803,7 +4799,7 @@ not by a citizen." \
       else
         lost="the follow-up triage bead could not be filed, so the parent was NOT closed"
       fi
-      # A PARTIAL FILING SAYS WHAT WAS FILED (Tova, 6niaz review finding 4): a
+      # A PARTIAL FILING SAYS WHAT WAS FILED (the Warden, 6niaz review finding 4): a
       # tiered review can file its [bead] follow-up and then fail the
       # polish-batch bead. The parent is still not closed, but the bead that WAS
       # filed gets its edge and is named, rather than orphaned under a sentence
@@ -4822,14 +4818,14 @@ not by a citizen." \
         -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"$verdict\",\"merged\":true,\"closed\":false,\"bd_exit\":$label_rc}"
       return 0
     fi
-    # ForgeOs-8zwv item 3: WITHOUT --actor the edge is attributed to the git
+    # Proofdelve ForgeOs-8zwv item 3: WITHOUT --actor the edge is attributed to the git
     # user, so `created_by: Justin Schneider` appears on a dependency no human
-    # made (measured on ForgeOs-dvqa). Every other bd write in this file names
+    # made (measured on Proofdelve ForgeOs-dvqa). Every other bd write in this file names
     # the mechanism; this one was missed.
     #
-    # THE EDGE IS WANTED AND ITS TYPE WAS THE DEFECT (Tova Marrowassay, finding
+    # THE EDGE IS WANTED AND ITS TYPE WAS THE DEFECT (the Warden, finding
     # 5 of the sitting-one review; the Overseer's decision, 2026-09-10, on
-    # ForgeOs-j3kp). `bd dep add` takes --type and DEFAULTS TO `blocks`, and
+    # Proofdelve ForgeOs-j3kp). `bd dep add` takes --type and DEFAULTS TO `blocks`, and
     # this line used to take that default by omission — so the follow-up
     # depended on its parent in the blocking sense. That was inert while every
     # follow-up sat beside a parent the fleet CLOSED, and MERGE-PARENT-OPEN
@@ -4855,10 +4851,10 @@ not by a citizen." \
     # MEASURED IN THIS TREE, 2026-09-10, because until today this database held
     # ZERO `discovered-from` edges and the type's non-blocking behaviour was
     # inferred from documentation rather than observed. A real edge was created
-    # (ForgeOs-6843 discovered-from ForgeOs-j3kp, a true relationship kept for
+    # (Proofdelve ForgeOs-6843 discovered-from Proofdelve ForgeOs-j3kp, a true relationship kept for
     # its own sake), the parent confirmed OPEN, and the dependent stayed in
     # `bd ready` — total unchanged at 347, and absent from `bd blocked`, whose
-    # nine entries include ForgeOs-aqc6.2.3 so that zero is a discrimination
+    # nine entries include Proofdelve ForgeOs-aqc6.2.3 so that zero is a discrimination
     # and not an empty command. Full note in
     # fort/memory/facts/bd-dependency-types-and-what-actually-blocks.md.
     #
@@ -4875,12 +4871,12 @@ not by a citizen." \
     # re-read. An explicit `if` rather than `[ test ] && cmd`, because this file
     # has been killed twice by set -e/set -u subtleties in one-liners that were
     # also safe by the letter.
-    # ONE EDGE AND ONE bead.filed PER FILED BEAD (ForgeOs-6niaz part A): a
+    # ONE EDGE AND ONE bead.filed PER FILED BEAD (Proofdelve ForgeOs-6niaz part A): a
     # tiered review can file a [bead] follow-up AND a polish-batch bead. Every
     # other path files exactly one, so for those this loop runs once and the
     # calls are the ones it always made.
     if [ "$followup_none" = 1 ]; then
-      say "$bead: NO follow-up filed: every finding in the review is tagged [record], so nothing is owed a bead (ForgeOs-6niaz)"
+      say "$bead: NO follow-up filed: every finding in the review is tagged [record], so nothing is owed a bead (Proofdelve ForgeOs-6niaz)"
     fi
     local fid
     for fid in $followup_ids; do
@@ -4897,16 +4893,16 @@ not by a citizen." \
 
   # ---------------------------------------------------------------------
   # MERGE-PARENT-OPEN: THE DIFF LANDS AND THE PARENT DOES NOT CLOSE
-  # (ForgeOs-j3kp). Everything above this line has already happened — the merge,
+  # (Proofdelve ForgeOs-j3kp). Everything above this line has already happened — the merge,
   # the post-merge verifier, the follow-up if there was one. What is different is
   # only the last step.
   # ---------------------------------------------------------------------
   # WHY THE TOKEN EXISTS. APPROVE-WITH-FINDINGS meant two things: (a) the work is
   # DONE, here is what is next, and (b) the work is NEARLY done, one criterion is
-  # unmet. On 2026-09-09 Tova meant (b), emitted (a), and said (b) in prose; this
-  # file closed ForgeOs-7b5x on the token, WHICH WAS THIS FILE BEHAVING CORRECTLY
+  # unmet. On 2026-09-09 the Warden meant (b), emitted (a), and said (b) in prose; this
+  # file closed Proofdelve ForgeOs-7b5x on the token, WHICH WAS THIS FILE BEHAVING CORRECTLY
   # — it cannot read prose and does not try. The vocabulary had no way to say
-  # what she meant. Same shape as ForgeOs-w7u5 one layer up: `done` meant two
+  # what she meant. Same shape as Proofdelve ForgeOs-w7u5 one layer up: `done` meant two
   # things and was split.
   #
   # THE INTERIM RULE THIS REPLACES, AND WHY IT COULD NOT STAY. From 2026-09-09 a
@@ -4919,7 +4915,7 @@ not by a citizen." \
   # THE PARENT'S STATE IS UNAMBIGUOUS AND IS SET RATHER THAN LEFT (j3kp
   # acceptance 3). Open, not claimed, and NOT re-eligible for the fleet: a bead
   # left open still carrying `fleet-safe` would be picked up again on the next
-  # pass, which is ForgeOs-p0a6's consent boundary in reverse. Removing
+  # pass, which is Proofdelve ForgeOs-p0a6's consent boundary in reverse. Removing
   # `fleet-safe` is what dispatchable() already refuses on, and it leaves the
   # bead in `bd ready` where the Mayor sees it — deliberately NOT
   # `fleet-escalated`, which this file uses for merges that went wrong. This one
@@ -4932,13 +4928,13 @@ not by a citizen." \
   # `worktree add -b` on a branch that already exists.
   if [ "$outcome" = "MERGE-PARENT-OPEN" ]; then
     # THE EVENT REPORTS THE WRITE THAT HAPPENED, NOT THE ONE THAT WAS ATTEMPTED
-    # (ForgeOs-stpx). This write is `|| true` deliberately — a tracker that will
+    # (Proofdelve ForgeOs-stpx). This write is `|| true` deliberately — a tracker that will
     # not answer must not take a run down after its merge has landed — and the
     # five reports below it fired UNCONDITIONALLY, so a refused write produced a
     # worker marked `settled`, a narrative saying the parent was left open and
     # unclaimed, and a `fleet.parent-open` event, none of which had happened.
     # This file STATES that rule 1100 lines above, at return_to_ready(), and
-    # then broke it four lines later. Tova Marrowassay found it in the
+    # then broke it four lines later. The Warden found it in the
     # sitting-one review and said why it is here rather than in a bead: "I would
     # rather it were fixed than filed."
     #
@@ -4948,12 +4944,12 @@ not by a citizen." \
     # state does not mention that a merge happened — the same silent gap one
     # layer over, which is the class this whole sitting is about.
     local prc=0
-    # EVERY PATH THAT STRIPS fleet-safe MUST NAME THE NEXT OWNER (ForgeOs-e2rbu).
+    # EVERY PATH THAT STRIPS fleet-safe MUST NAME THE NEXT OWNER (Proofdelve ForgeOs-e2rbu).
     # This one alone removed it and added nothing, so a MERGE-PARENT-OPEN bead
     # sat open, unassigned and in no queue any seat reads -- nine instances,
     # every one found by a person or a sweep. mayor-lane is the Mayor's own
     # pool and where a person routed all of them by hand. The earlier instance
-    # of the same rule is ForgeOs-ubgx.1: the Keep's Decline and Decide left a
+    # of the same rule is Proofdelve ForgeOs-ubgx.1: the Keep's Decline and Decide left a
     # bead routed to nobody until every exit from the queue named its owner.
     bd -C "$root" update "$bead" --remove-label fleet-safe --add-label mayor-lane --status open --assignee "" \
       --actor "$fleet_actor" >/dev/null 2>&1 || prc=$?
@@ -4989,9 +4985,9 @@ not by a citizen." \
     emit bead.closed "Fleet closed $bead on $shown${follow:+; findings carried to $follow}" \
       -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"$verdict\",\"outcome\":\"$outcome\",\"followup\":\"${follow:-}\",\"worktree\":\"$reap_result\"}"
   else
-    # ForgeOs-bzyk, second of the two merge-without-close paths. Same orphan,
+    # Proofdelve ForgeOs-bzyk, second of the two merge-without-close paths. Same orphan,
     # same one-line remedy: stop claiming it is fleet work.
-    escalate_labels "$bead"   # ForgeOs-s2lx: checked; the sentences below carry the truth
+    escalate_labels "$bead"   # Proofdelve ForgeOs-s2lx: checked; the sentences below carry the truth
     worker_set_state "$wdir" needs-person "MERGED on $verdict but the close FAILED. $label_note"
     say "$bead: merged but the close FAILED — $label_note"
     emit incident "Fleet merged $bead but could not close it. It is in_progress, so it is absent from bd ready. $label_note." \
@@ -5000,7 +4996,7 @@ not by a citizen." \
 }
 
 # A DEAD REVIEW IS A REVIEW FAILURE AND IS NEVER CHARGED TO THE FORGE
-# (ForgeOs-57xc). Every review failure used to go to return_to_ready, which
+# (Proofdelve ForgeOs-57xc). Every review failure used to go to return_to_ready, which
 # reopens the bead for a fresh FORGE dispatch — so at the measured 17.2%
 # no-verdict rate the likeliest overnight event was re-running IMPLEMENTATION
 # over work that was already verifier-green, and after FLEET_MAX_RETURNS the
@@ -5030,8 +5026,8 @@ review_one() {  # $1 bead, $2 worktree
   local rung wrc recorded verdict wlog attempt=0 tried="" reviewed_tip=""
 
   for rung in $FLEET_WARDEN_LADDER; do
-    # A STOPPING RUN SPENDS NO RUNG (ForgeOs-b26i; Tova's finding 5 on
-    # ForgeOs-dx34.1, latent while the ladder has one rung). The ke5u block
+    # A STOPPING RUN SPENDS NO RUNG (Proofdelve ForgeOs-b26i; the Warden's finding 5 on
+    # Proofdelve ForgeOs-dx34.1, latent while the ladder has one rung). The ke5u block
     # below honours a verdict that COMPLETED under SIGTERM and then falls
     # through to the ordinary handling; if that verdict's token will not parse,
     # the ordinary handling says `continue`, and with a second rung configured
@@ -5042,8 +5038,8 @@ review_one() {  # $1 bead, $2 worktree
     # Asked before the budget, because a rung not launched is not a rung spent.
     if stopping; then
       worker_set_state "$state/workers/$sfx" parked-review \
-        "the run is stopping ($(signalled && printf 'SIG%s' "$stop_signal" || printf 'halt file present')) before ladder rung $((attempt + 1)) on $rung; verifier-green already, so the next run resumes at the review and no rung was spent (ForgeOs-b26i)"
-      say "$bead: the run is stopping -- rung $((attempt + 1)) ($rung) is NOT launched; PARKED at its review for the next run (no rung spent, ForgeOs-b26i)"
+        "the run is stopping ($(signalled && printf 'SIG%s' "$stop_signal" || printf 'halt file present')) before ladder rung $((attempt + 1)) on $rung; verifier-green already, so the next run resumes at the review and no rung was spent (Proofdelve ForgeOs-b26i)"
+      say "$bead: the run is stopping -- rung $((attempt + 1)) ($rung) is NOT launched; PARKED at its review for the next run (no rung spent, Proofdelve ForgeOs-b26i)"
       return 0
     fi
     # The budget is asked before the launch, and a bead that cannot be reviewed
@@ -5052,7 +5048,7 @@ review_one() {  # $1 bead, $2 worktree
     # throw that away to buy nothing.
     if ! budget_left; then
       budget_stop "review of $bead"
-      # ForgeOs-5p00, and ForgeOs-w7u5 replaces its remedy with a better one.
+      # Proofdelve ForgeOs-5p00, and Proofdelve ForgeOs-w7u5 replaces its remedy with a better one.
       # "The next run reviews it" is only true if the next run can still SEE it.
       # The old fix deleted the `done` marker so the worker would be reaped
       # again from the top — which worked, and cost a second full verifier run,
@@ -5074,7 +5070,7 @@ review_one() {  # $1 bead, $2 worktree
       -a "$fleet_actor" -s fleet -t "$bead" \
       -p "{\"run\":\"$run_id\",\"model\":\"$rung\",\"rung\":$attempt}"
     # THE TIP SHE IS ABOUT TO REVIEW, CAPTURED BEFORE SHE LAUNCHES
-    # (ForgeOs-yz7w, Tova's 2.3). Her range is resolved by git when warden.sh
+    # (Proofdelve ForgeOs-yz7w, the Warden's 2.3). Her range is resolved by git when warden.sh
     # runs, so the branch she read is the branch as it stood AT THAT MOMENT.
     # The ESCALATE arm below used to re-resolve bead/$sfx after warden.sh had
     # returned AND after the bd write, which leaves a window -- small, and
@@ -5091,10 +5087,10 @@ review_one() {  # $1 bead, $2 worktree
     # one would be a different, false answer.
     reviewed_tip="$(git -C "$root" rev-parse --verify --quiet "bead/$sfx" 2>/dev/null || echo "")"
     set +e
-    # THREE DOTS (ForgeOs-hifw): the review range is main...bead/X, from the
+    # THREE DOTS (Proofdelve ForgeOs-hifw): the review range is main...bead/X, from the
     # merge base, so a sibling bead that landed first cannot render as a
     # deletion in the Warden's diff; the two-dot form compared the tips and did.
-    # THE LIGHT RE-CHECK AFTER A FIX-FORWARD LAP (ForgeOs-6niaz part B): the
+    # THE LIGHT RE-CHECK AFTER A FIX-FORWARD LAP (Proofdelve ForgeOs-6niaz part B): the
     # same launcher and ladder, briefed with the lap's base and its items.
     local ff_env=()
     if fix_forward_pending "$sfx"; then
@@ -5104,12 +5100,12 @@ review_one() {  # $1 bead, $2 worktree
     wrc=$?
     set -e
     # A BROKEN HOST IS CHECKED BEFORE THE GOVERNOR AND BEFORE THE LADDER
-    # (ForgeOs-g3n1). A Warden that died of EDQUOT recorded no verdict, and
+    # (Proofdelve ForgeOs-g3n1). A Warden that died of EDQUOT recorded no verdict, and
     # reading that as an availability failure spends the rung, then the next,
     # then pages a person over a review nobody could have finished. The worker
     # is parked at REVIEW first (verifier-green already; the next run resumes
-    # here, ForgeOs-w7u5's parked-review) so the halt leaves nothing orphaned.
-    # ASKED ONLY WHEN THE REVIEW PRODUCED NO RESULT FILE (Tova, round one): a
+    # here, Proofdelve ForgeOs-w7u5's parked-review) so the halt leaves nothing orphaned.
+    # ASKED ONLY WHEN THE REVIEW PRODUCED NO RESULT FILE (the Warden, round one): a
     # recorded verdict is a review that ran, whatever its prose says, and $wlog
     # carries forty lines of that prose. The session's own stderr
     # ($warden_root/<sfx>.log.err) is read too: 7gag's line was warden.sh's own,
@@ -5120,7 +5116,7 @@ review_one() {  # $1 bead, $2 worktree
     fi
     looks_rate_limited "$wlog" && governor_down "review log shows plan back-pressure"
 
-    # ForgeOs-a2fx, AS CORRECTED BY ForgeOs-ke5u — Tova Marrowassay's finding 1
+    # Proofdelve ForgeOs-a2fx, AS CORRECTED BY Proofdelve ForgeOs-ke5u — the Warden's finding 1
     # on the covenant-4.5 review of the sitting that wrote the original branch.
     #
     # THE TWO SIGNAL POSTURES ARE NOT THE SAME, AND THIS USED TO COLLAPSE THEM.
@@ -5139,7 +5135,7 @@ review_one() {  # $1 bead, $2 worktree
     #     it is the posture this file's own header tells operators to use.
     #
     # SO THE RESULT FILE IS READ FIRST AND INTERPRETED SECOND, in three outcomes
-    # rather than one (ForgeOs-8zb7): a verdict that exists, a result file that
+    # rather than one (Proofdelve ForgeOs-8zb7): a verdict that exists, a result file that
     # exists and will not parse, and no result file at all.
     #
     # EITHER WAY THE WORKER IS GIVEN A RESUME POINT. Returning while it is still
@@ -5184,13 +5180,13 @@ review_one() {  # $1 bead, $2 worktree
       say "$bead: rung $rung recorded NO verdict (warden.sh exit $wrc). An absent verdict is never an approval."
       continue
     fi
-    # MERGE-PARENT-OPEN GOES TO land() LIKE THE OTHER TWO (ForgeOs-j3kp): the
+    # MERGE-PARENT-OPEN GOES TO land() LIKE THE OTHER TWO (Proofdelve ForgeOs-j3kp): the
     # diff is merged, the post-merge verifier runs, a follow-up is filed. What
     # differs is the LAST step in land(), not the route to it. The set is named
     # once, in verdict_is_landable(), so this site and the deferred-merge resume
     # cannot disagree about it again.
     # A RECORDED VERDICT ENDS A PENDING FIX-FORWARD LAP, whatever it says
-    # (ForgeOs-6niaz part B): the re-check has happened. FIX-FORWARD itself is
+    # (Proofdelve ForgeOs-6niaz part B): the re-check has happened. FIX-FORWARD itself is
     # never landable as stored; fix_forward() queues the one lap or reads it
     # as APPROVE-WITH-FINDINGS, and says which.
     fix_forward_recheck_done "$sfx"
@@ -5218,7 +5214,7 @@ review_one() {  # $1 bead, $2 worktree
 
   if [ "${verdict:-}" != "ESCALATE" ]; then
     worker_set_state "$state/workers/$sfx" needs-person "the review ladder was exhausted with no recorded verdict; the work is verifier-green in its worktree and the Overseer was paged"
-    page_overseer "$bead" "the review ladder is exhausted after $attempt attempt(s) on: $tried. Every rung failed to record a verdict, so NO review has happened and an absent verdict is never an approval. This bead is verifier-green in $wt and was NOT returned to the Forge: re-running implementation over reviewed-green work would charge a review failure to the Forge (ForgeOs-57xc). Relaunch the review by hand, or add a rung to FLEET_WARDEN_LADDER." "${wlog:-}"
+    page_overseer "$bead" "the review ladder is exhausted after $attempt attempt(s) on: $tried. Every rung failed to record a verdict, so NO review has happened and an absent verdict is never an approval. This bead is verifier-green in $wt and was NOT returned to the Forge: re-running implementation over reviewed-green work would charge a review failure to the Forge (Proofdelve ForgeOs-57xc). Relaunch the review by hand, or add a rung to FLEET_WARDEN_LADDER." "${wlog:-}"
     return 0
   fi
   case "$verdict" in
@@ -5226,39 +5222,39 @@ review_one() {  # $1 bead, $2 worktree
       # ESCALATE in this fort means a human gate — auth surface, data-mutating
       # migrations, deal visibility, the constitution. That is the Overseer's
       # queue and this fort's signal for it is the `human` label.
-      # THE WRITE IS CHECKED, AND THE EVENT REPORTS WHAT HAPPENED (ForgeOs-s2lx,
-      # Tova Marrowassay's finding 5 on the sitting-three docket). This used to
+      # THE WRITE IS CHECKED, AND THE EVENT REPORTS WHAT HAPPENED (Proofdelve ForgeOs-s2lx,
+      # The Warden's finding 5 on the sitting-three docket). This used to
       # be `|| true` followed by an UNCONDITIONAL fleet.returned saying
       # "fleet-safe removed, human label applied": had the write been refused,
       # the durable record would have said the bead left the fleet when it had
       # not, and the Keep's needs-you column, which reads `human`, would never
-      # have shown it. Same shape as ForgeOs-stpx's parent-open repair, applied
+      # have shown it. Same shape as Proofdelve ForgeOs-stpx's parent-open repair, applied
       # to the one site whose EVENT asserted the label.
       local erc=0
       bd -C "$root" update "$bead" --remove-label fleet-safe --add-label human \
          --status open --assignee "$(overseer_assignee)" --actor "$fleet_actor" >/dev/null 2>&1 || erc=$?
-      # His board is the assignee (ForgeOs-29j3g); the ASK line says what for.
+      # His board is the assignee (Proofdelve ForgeOs-29j3g); the ASK line says what for.
       if [ "$erc" -eq 0 ]; then
         ask_overseer "$bead" sign "the Warden returned ESCALATE (a human gate); Approve on the Keep lands the reviewed change, Decline sends it to the Mayor" \
           || say "$bead: the ASK line could not be posted; it is assigned to $(overseer_assignee) without one"
       fi
       # THE VERDICT IS STORED IN THE WORKER RECORD, as land() stores a landable
-      # one (ForgeOs-ubgx): it is the first thing signed_landing_ready() asks
+      # one (Proofdelve ForgeOs-ubgx): it is the first thing signed_landing_ready() asks
       # before landing this bead on the Overseer's signature without a second
       # lap. An escalation that predates this line has no stored verdict and
       # takes today's full lap once, recording it on the way out.
       printf '%s\n' "ESCALATE" > "$state/workers/$sfx/verdict" 2>/dev/null || true
-      # A REAL ESCALATE SUPERSEDES ANY HELD TOKEN (ForgeOs-vee4w round two,
-      # Tova's finding 3): a held bead re-reviewed after a patch-changing
+      # A REAL ESCALATE SUPERSEDES ANY HELD TOKEN (Proofdelve ForgeOs-vee4w round two,
+      # The Warden's finding 3): a held bead re-reviewed after a patch-changing
       # refresh must not land later on the earlier review's token and record.
       rm -f "$state/workers/$sfx/warden-verdict" "$state/workers/$sfx/warden-record" 2>/dev/null || true
-      # AND THE TIP SHE REVIEWED (Tova, 1.2): the pin the Keep records is the
+      # AND THE TIP SHE REVIEWED (the Warden, 1.2): the pin the Keep records is the
       # tip at SIGNING, and between the escalation and the click a hand can
       # move the branch (the lw8x remedy is a hand merge of main into it). A
       # signed landing also requires the approved change to equal the REVIEWED
       # change by patch-id, so what lands is what was reviewed and what was
       # signed, not merely the latter.
-      # WRITTEN FROM THE VALUE CAPTURED BEFORE THE LAUNCH (ForgeOs-yz7w, Tova's
+      # WRITTEN FROM THE VALUE CAPTURED BEFORE THE LAUNCH (Proofdelve ForgeOs-yz7w, the Warden's
       # 2.3), not re-resolved here: this line runs after warden.sh returned and
       # after the bd write above, and the branch can move in between.
       if [ -n "$reviewed_tip" ]; then
@@ -5276,25 +5272,25 @@ review_one() {  # $1 bead, $2 worktree
         return 0
       fi
       # SETTLED RATHER THAN needs-person, DELIBERATELY. The bead is on the
-      # Overseer's board -- assigned to him with an ASK line since ForgeOs-29j3g,
+      # Overseer's board -- assigned to him with an ASK line since Proofdelve ForgeOs-29j3g,
       # the `human` label kept as history -- which is a place a person already
       # looks; it is not lost. needs-person is reserved for work that
       # is invisible unless this file says so.
       worker_set_state "$state/workers/$sfx" settled "ESCALATE: removed from the fleet and assigned to the Overseer ($(overseer_assignee)) with an ASK line"
       say "$bead: ESCALATE — removed from the fleet and put on the Overseer's queue"
-      emit fleet.returned "$bead escalated by review to the Overseer; fleet-safe removed, human label applied; assigned to $(overseer_assignee) with an ASK line (ForgeOs-29j3g)" \
+      emit fleet.returned "$bead escalated by review to the Overseer; fleet-safe removed, human label applied; assigned to $(overseer_assignee) with an ASK line (Proofdelve ForgeOs-29j3g)" \
         -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"ESCALATE\"}" ;;
   esac
 }
 
 # ---------------------------------------------------------------------------
-# LANDABILITY BEFORE THE REVIEW, REFRESH BEFORE THE VERIFY (ForgeOs-36b9,
+# LANDABILITY BEFORE THE REVIEW, REFRESH BEFORE THE VERIFY (Proofdelve ForgeOs-36b9,
 # Regent edict 2026-09-14, Overseer present).
 # ---------------------------------------------------------------------------
 # THE ORDER WAS Forge -> host verify -> Warden -> `git merge --no-ff` into main,
 # and a conflict with a main that had moved was discovered LAST, after the
 # scarce launch (FLEET_WARDEN_CONC=1) was spent. 2026-09-13 14:59:
-# ForgeOs-o6ky.13 was verified and reviewed on a branch that could not land.
+# Proofdelve ForgeOs-o6ky.13 was verified and reviewed on a branch that could not land.
 #
 # NOW, after the Forge and before the host verify:
 #   1. If main is already contained in bead/<sfx>, nothing to do (`current`).
@@ -5306,14 +5302,14 @@ review_one() {  # $1 bead, $2 worktree
 #      the bead's own worktree, so the tree that is verified and reviewed is
 #      the tree that will land, and the Warden's main...bead/<sfx> diff is the
 #      bead's own work and nothing else (which also retires the sibling-lands-
-#      first false-red shape, ForgeOs-hifw). The verify.run payload's commit
+#      first false-red shape, Proofdelve ForgeOs-hifw). The verify.run payload's commit
 #      is the POST-refresh sha for free: the merge commit exists before
 #      run_verifier() is called, and verify-impl.sh reads HEAD at run time.
 #
 # PAGED, NOT RETURNED, AND THE DEPARTURE FROM THE DOCKET'S LETTER IS
 # DELIBERATE. The docket said "return the bead". Traced through the files: a
 # returned bead is re-dispatched next pass, forge.sh reuses the worktree,
-# refresh_reused_worktree() (forge.sh, ForgeOs-lw8x) meets the SAME conflict,
+# refresh_reused_worktree() (forge.sh, Proofdelve ForgeOs-lw8x) meets the SAME conflict,
 # exits 76, and reap_pass pages a person -- after spending a return counter
 # tick, a launch from the hard stop, and a pass, and with a message that no
 # longer names the paths. "A conflict is a person's merge to make" is lw8x's
@@ -5337,19 +5333,19 @@ review_one() {  # $1 bead, $2 worktree
 # said loudly and the pass proceeds in the OLD order, which is no worse than
 # every run before this function existed.
 prelanding_result=""
-# $5 = "check" ASKS WITHOUT REFRESHING (Tova, review of 823074e, finding 3):
+# $5 = "check" ASKS WITHOUT REFRESHING (the Warden, review of 823074e, finding 3):
 # the parked-review resume was verified green on its own tip on an earlier
 # run, so a refresh there would invalidate that green -- but a merge-tree
 # check costs no launch, and main moving during the park could still spend
 # the scarce review on a branch that cannot land. In check mode a clean
 # answer is `unrefreshed` and the review proceeds on the tree that was
 # verified; a conflict is paged exactly as on the verify path.
-# WHO HOLDS THE CLAIM, for the pages below (Tova, 1.7 on the 2026-09-17
+# WHO HOLDS THE CLAIM, for the pages below (the Warden, 1.7 on the 2026-09-17
 # sitting): a dispatch claims for the Forge actor, a signed landing
 # (signed_landing()) for the fleet actor, and the page's closing sentence used
 # to say "the Forge actor" for both.
 # A PARAMETER, NOT A TOP-LEVEL VARIABLE SET AND RESET AROUND ONE CALL
-# (ForgeOs-ubgx.3 item 2.4, Tova's own suggestion). The first shape was
+# (Proofdelve ForgeOs-ubgx.3 item 2.4, the Warden's own suggestion). The first shape was
 # `prelanding_claimant=...` before the call and back to the default after it,
 # and it cost a round on the fold: the governor harness extracts this function
 # WITHOUT the top-level assignment and runs it under set -u, so a bare
@@ -5362,7 +5358,7 @@ prelanding_refresh() {  # $1 bead, $2 sfx, $3 worktree, $4 worker dir, [$5 check
   local bead="$1" sfx="$2" wt="$3" d="$4" mode="${5:-refresh}" br="bead/$2" out mrc before after paths cur errf
   local claimant="${6:-the Forge actor}"
   prelanding_result=""
-  # THE WORKTREE IS INSPECTED FIRST, ON EVERY PATH (ForgeOs-tvb2; Tova's finding
+  # THE WORKTREE IS INSPECTED FIRST, ON EVERY PATH (Proofdelve ForgeOs-tvb2; the Warden's finding
   # 4 on 823074e). These two refusals used to sit below the `current` and
   # `check` returns, so they guarded only the path that WRITES: a worktree
   # detached or mid-merge whose branch already contained main went to the
@@ -5383,16 +5379,16 @@ prelanding_refresh() {  # $1 bead, $2 sfx, $3 worktree, $4 worker dir, [$5 check
   fi
   if [ "$where" != "$br" ]; then
     prelanding_result=refused
-    worker_set_state "$d" needs-person "landing check refused: $wt is on '$where', not $br; a person must look before anything dispatches into it (ForgeOs-36b9, ForgeOs-tvb2)"
+    worker_set_state "$d" needs-person "landing check refused: $wt is on '$where', not $br; a person must look before anything dispatches into it (Proofdelve ForgeOs-36b9, Proofdelve ForgeOs-tvb2)"
     say "$bead: REFUSED to proceed with $wt -- HEAD is on '$where', not $br; PAGING a person"
-    page_overseer "$bead" "the fleet would not act on bead/$sfx $before_stage: the worktree $wt is on '$where', not $br, so the tree it would verify or review is not the branch that would land. Nothing was changed there. A person must look before anyone dispatches into it (ForgeOs-36b9, ForgeOs-tvb2)." "" "$stands_wt The bead is still claimed by $claimant."
+    page_overseer "$bead" "the fleet would not act on bead/$sfx $before_stage: the worktree $wt is on '$where', not $br, so the tree it would verify or review is not the branch that would land. Nothing was changed there. A person must look before anyone dispatches into it (Proofdelve ForgeOs-36b9, Proofdelve ForgeOs-tvb2)." "" "$stands_wt The bead is still claimed by $claimant."
     return 0
   fi
   if git -C "$wt" rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
     prelanding_result=refused
-    worker_set_state "$d" needs-person "landing check refused: a merge is already in progress in $wt (MERGE_HEAD present) and it is not the fleet's to conclude or abort (ForgeOs-36b9, ForgeOs-tvb2)"
+    worker_set_state "$d" needs-person "landing check refused: a merge is already in progress in $wt (MERGE_HEAD present) and it is not the fleet's to conclude or abort (Proofdelve ForgeOs-36b9, Proofdelve ForgeOs-tvb2)"
     say "$bead: REFUSED to proceed with $wt -- a merge is already in progress there (MERGE_HEAD present); PAGING a person"
-    page_overseer "$bead" "the fleet would not act on bead/$sfx $before_stage: a merge is already in progress in $wt (MERGE_HEAD present) and it is not the fleet's to conclude or abort. Nothing was touched. A person must resolve or abort it (ForgeOs-36b9, ForgeOs-tvb2)." "" "$stands_wt The bead is still claimed by $claimant."
+    page_overseer "$bead" "the fleet would not act on bead/$sfx $before_stage: a merge is already in progress in $wt (MERGE_HEAD present) and it is not the fleet's to conclude or abort. Nothing was touched. A person must resolve or abort it (Proofdelve ForgeOs-36b9, Proofdelve ForgeOs-tvb2)." "" "$stands_wt The bead is still claimed by $claimant."
     return 0
   fi
   if git -C "$root" merge-base --is-ancestor "$main_branch" "$br" 2>/dev/null; then
@@ -5413,7 +5409,7 @@ prelanding_refresh() {  # $1 bead, $2 sfx, $3 worktree, $4 worker dir, [$5 check
     paths="$(printf '%s\n' "$out" | sed -n '2,/^$/p' | sed '/^$/d' | tr '\n' ' ')"
     printf '%s\n' "$out" > "$state/logs/conflict-$bead.txt"; rm -f "$errf"
     prelanding_result=conflict
-    # WORDED PER MODE (Tova, round two, finding 2): a parked-review worker WAS
+    # WORDED PER MODE (the Warden, round two, finding 2): a parked-review worker WAS
     # verified green on an earlier run; saying "unverified" of it would be a
     # false record, understated in the safe direction but false.
     local done_so_far="not verified, not reviewed" stands="The Forge's work stands in its worktree UNVERIFIED and UNREVIEWED: nothing was spent on it and nothing was recorded against it." spent="the verifier or a review launch"
@@ -5421,9 +5417,9 @@ prelanding_refresh() {  # $1 bead, $2 sfx, $3 worktree, $4 worker dir, [$5 check
       done_so_far="verifier-green on an earlier run, NOT reviewed"; spent="a review launch"
       stands="The Forge's work stands in its worktree, VERIFIED GREEN on an earlier run and NOT REVIEWED: no review launch was spent on it and nothing was recorded against it."
     fi
-    worker_set_state "$d" needs-person "$br conflicts with $main_branch (which moved after the branch was cut) on: ${paths:-<unnamed>}; $done_so_far, nothing merged (ForgeOs-36b9)"
-    say "$bead: $br CONFLICTS with $main_branch on ${paths:-<unnamed>} -- found BEFORE spending $spent; PAGING a person (ForgeOs-36b9)"
-    page_overseer "$bead" "bead/$sfx cannot land: $main_branch moved after the branch was cut and \`git merge-tree --write-tree $main_branch bead/$sfx\` reports conflicts on: ${paths:-<unnamed>}. The fleet checked this BEFORE spending $spent (ForgeOs-36b9), and it merged nothing. Re-dispatching would meet the same conflict in forge.sh's refresh and page again (ForgeOs-lw8x). Merge $main_branch into bead/$sfx by hand and re-queue it, or remove the worktree AND the branch so the next dispatch cuts fresh. merge-tree's own output is in the evidence below." "$state/logs/conflict-$bead.txt" "$stands The bead is still claimed by $claimant."
+    worker_set_state "$d" needs-person "$br conflicts with $main_branch (which moved after the branch was cut) on: ${paths:-<unnamed>}; $done_so_far, nothing merged (Proofdelve ForgeOs-36b9)"
+    say "$bead: $br CONFLICTS with $main_branch on ${paths:-<unnamed>} -- found BEFORE spending $spent; PAGING a person (Proofdelve ForgeOs-36b9)"
+    page_overseer "$bead" "bead/$sfx cannot land: $main_branch moved after the branch was cut and \`git merge-tree --write-tree $main_branch bead/$sfx\` reports conflicts on: ${paths:-<unnamed>}. The fleet checked this BEFORE spending $spent (Proofdelve ForgeOs-36b9), and it merged nothing. Re-dispatching would meet the same conflict in forge.sh's refresh and page again (Proofdelve ForgeOs-lw8x). Merge $main_branch into bead/$sfx by hand and re-queue it, or remove the worktree AND the branch so the next dispatch cuts fresh. merge-tree's own output is in the evidence below." "$state/logs/conflict-$bead.txt" "$stands The bead is still claimed by $claimant."
     return 0
   fi
   if [ "$mrc" -ne 0 ]; then
@@ -5435,18 +5431,18 @@ prelanding_refresh() {  # $1 bead, $2 sfx, $3 worktree, $4 worker dir, [$5 check
   rm -f "$errf"
   if [ "$mode" = check ]; then
     prelanding_result=unrefreshed
-    say "$bead: $main_branch moved since the branch was cut and merges CLEANLY (merge-tree); not refreshed here because this tree was already verified green -- the review proceeds on it (ForgeOs-36b9)"
+    say "$bead: $main_branch moved since the branch was cut and merges CLEANLY (merge-tree); not refreshed here because this tree was already verified green -- the review proceeds on it (Proofdelve ForgeOs-36b9)"
     return 0
   fi
   # CLEAN. Merge main into the branch, in the bead's own worktree (HEAD and
-  # MERGE_HEAD were inspected at the top; ForgeOs-tvb2).
+  # MERGE_HEAD were inspected at the top; Proofdelve ForgeOs-tvb2).
   before="$(git -C "$wt" rev-parse HEAD)"
   mrc=0
-  out="$(git -C "$wt" merge --no-edit -m "$bead: refresh — merge $main_branch into $br before verify (ForgeOs-36b9, by fleet.sh)" "$main_branch" 2>&1)" || mrc=$?
+  out="$(git -C "$wt" merge --no-edit -m "$bead: refresh — merge $main_branch into $br before verify (Proofdelve ForgeOs-36b9, by fleet.sh)" "$main_branch" 2>&1)" || mrc=$?
   if [ "$mrc" -eq 0 ]; then
     after="$(git -C "$wt" rev-parse HEAD)"
     prelanding_result=refreshed
-    say "$bead: refreshed $wt from $main_branch: ${before:0:12} -> ${after:0:12}; the verifier and the review see the tree that will land (ForgeOs-36b9)"
+    say "$bead: refreshed $wt from $main_branch: ${before:0:12} -> ${after:0:12}; the verifier and the review see the tree that will land (Proofdelve ForgeOs-36b9)"
     return 0
   fi
   # merge-tree said clean and the real merge did not: an uncommitted tracked
@@ -5457,18 +5453,18 @@ prelanding_refresh() {  # $1 bead, $2 sfx, $3 worktree, $4 worker dir, [$5 check
   printf '%s\n' "$out" > "$state/logs/refresh-$bead.txt"
   prelanding_result=refused
   if [ "$(git -C "$wt" rev-parse HEAD 2>/dev/null)" != "$before" ] || git -C "$wt" rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
-    worker_set_state "$d" needs-person "refresh of $wt from $main_branch failed (git merge exit $mrc) AND THE BACK-OUT COULD NOT BE PROVEN: HEAD was ${before:0:12} and the tree may be mid-merge (ForgeOs-36b9)"
+    worker_set_state "$d" needs-person "refresh of $wt from $main_branch failed (git merge exit $mrc) AND THE BACK-OUT COULD NOT BE PROVEN: HEAD was ${before:0:12} and the tree may be mid-merge (Proofdelve ForgeOs-36b9)"
     say "$bead: refresh from $main_branch FAILED (exit $mrc) and the back-out could NOT be proven -- $wt may be mid-merge; PAGING a person"
-    page_overseer "$bead" "the fleet tried to refresh bead/$sfx from $main_branch before verifying it (merge-tree reported no conflict), \`git merge\` failed with exit $mrc, and the back-out could NOT be proven: HEAD was $before and $wt may be mid-merge. Do not dispatch into it until a person has looked (ForgeOs-36b9). git's own words are in the evidence below." "$state/logs/refresh-$bead.txt" "The worktree may be MID-MERGE. Nothing was verified or reviewed; the bead is still claimed by $claimant."
+    page_overseer "$bead" "the fleet tried to refresh bead/$sfx from $main_branch before verifying it (merge-tree reported no conflict), \`git merge\` failed with exit $mrc, and the back-out could NOT be proven: HEAD was $before and $wt may be mid-merge. Do not dispatch into it until a person has looked (Proofdelve ForgeOs-36b9). git's own words are in the evidence below." "$state/logs/refresh-$bead.txt" "The worktree may be MID-MERGE. Nothing was verified or reviewed; the bead is still claimed by $claimant."
     return 0
   fi
-  worker_set_state "$d" needs-person "refresh of $wt from $main_branch failed (git merge exit $mrc); the worktree is unchanged at ${before:0:12} and a person must make this merge (ForgeOs-36b9)"
+  worker_set_state "$d" needs-person "refresh of $wt from $main_branch failed (git merge exit $mrc); the worktree is unchanged at ${before:0:12} and a person must make this merge (Proofdelve ForgeOs-36b9)"
   say "$bead: refresh from $main_branch FAILED (exit $mrc) though merge-tree saw no conflict; $wt is UNCHANGED at ${before:0:12}; PAGING a person"
-  page_overseer "$bead" "the fleet tried to refresh bead/$sfx from $main_branch before verifying it: merge-tree reported no conflict but \`git merge\` in $wt failed with exit $mrc (an uncommitted tracked file the merge would overwrite is the usual shape). The worktree is UNCHANGED at $before. Make the merge by hand and re-queue it (ForgeOs-36b9). git's own words are in the evidence below." "$state/logs/refresh-$bead.txt" "The work stands in its worktree UNVERIFIED and UNREVIEWED; nothing was spent on it. The bead is still claimed by $claimant."
+  page_overseer "$bead" "the fleet tried to refresh bead/$sfx from $main_branch before verifying it: merge-tree reported no conflict but \`git merge\` in $wt failed with exit $mrc (an uncommitted tracked file the merge would overwrite is the usual shape). The worktree is UNCHANGED at $before. Make the merge by hand and re-queue it (Proofdelve ForgeOs-36b9). git's own words are in the evidence below." "$state/logs/refresh-$bead.txt" "The work stands in its worktree UNVERIFIED and UNREVIEWED; nothing was spent on it. The bead is still claimed by $claimant."
   return 0
 }
 
-# THE ORDER THE COMPLETION LANE TAKES WORKERS IN (ForgeOs-jfqu4.7).
+# THE ORDER THE COMPLETION LANE TAKES WORKERS IN (Proofdelve ForgeOs-jfqu4.7).
 # reap_pass used to walk "$state/workers"/*/ -- alphabetical by worker
 # directory name -- so a P1 deploy blocker named 2md9d.3.16 waited behind a P4
 # named 2md9d.1.36 because "1" sorts before "3" (measured 2026-10-16, and again
@@ -5476,7 +5472,7 @@ prelanding_refresh() {  # $1 bead, $2 sfx, $3 worktree, $4 worker dir, [$5 check
 #   0. A worker that resumes at `land` (deferred-merge) or `signed`
 #      (parked-signed). Either costs a merge, never a Forge launch or a review,
 #      and the Mayor measured a signed, verifier-green deferred merge waiting
-#      ~45 minutes behind two full verify-and-review slots (ForgeOs-8sd4n,
+#      ~45 minutes behind two full verify-and-review slots (Proofdelve ForgeOs-8sd4n,
 #      2026-10-21 12:2x). Oldest first. THIS IS A CHANGE TO TODAY'S RULE, made
 #      at the Overseer's ask on the docket: until now a deferred merge had no
 #      precedence at all and waited for its glob position.
@@ -5485,7 +5481,7 @@ prelanding_refresh() {  # $1 bead, $2 sfx, $3 worktree, $4 worker dir, [$5 check
 #      worker's exit file (the Forge's own end), else of its state file (when
 #      it was last set aside).
 # PRIORITY COMES FROM bd, in one `bd show ... --json` for every reapable bead,
-# asked again after each worker reap_pass takes (ForgeOs-4bzvk, below). If bd
+# asked again after each worker reap_pass takes (Proofdelve ForgeOs-4bzvk, below). If bd
 # cannot answer, the lane does NOT stop: every worker is ordered by finish time
 # alone and the pass says so once (a flag file the main loop clears at the top
 # of each pass: this runs inside $( ), so a variable could not remember it). A bead bd
@@ -5508,7 +5504,7 @@ reap_order() {
         [ -n "$bead" ] && prio_of["$bead"]="$prio"
       done <<< "$prio_out"
     elif [ ! -e "$state/.reap-order-warned" ]; then
-      say "reap order: bd could not report bead priorities this pass; taking finished workers in finish-time order instead (ForgeOs-jfqu4.7)"
+      say "reap order: bd could not report bead priorities this pass; taking finished workers in finish-time order instead (Proofdelve ForgeOs-jfqu4.7)"
       : > "$state/.reap-order-warned" 2>/dev/null || true
     fi
   fi
@@ -5518,7 +5514,7 @@ reap_order() {
     bead="$(cat "$d/bead" 2>/dev/null || echo "")"
     ft="$(stat -c %Y "$d/exit" 2>/dev/null || stat -c %Y "$d/state" 2>/dev/null || stat -c %Y "$d" 2>/dev/null || echo 0)"
     # TIERS: 0 a merge or a signed landing (no review to spend); 1 a
-    # Workbench review-only branch (ForgeOs-9srgz: "one Warden launch at the
+    # Workbench review-only branch (Proofdelve ForgeOs-9srgz: "one Warden launch at the
     # front of the reap order"); 2 every ordinary completion, by priority.
     case "$(worker_resume_at "$d")" in
       land|signed) tier=0; prio=0 ;;
@@ -5536,13 +5532,13 @@ reap_order() {
 # This loop no longer tests for files. It asks worker_reapable() whether to
 # take a worker and worker_resume_at() where to pick it up, so a worker parked
 # before its review is not verified a second time and does not spend a second
-# review launch — the objection that kept ForgeOs-usz6 from being a one-liner.
+# review launch — the objection that kept Proofdelve ForgeOs-usz6 from being a one-liner.
 reap_pass() {
   local d c sfx bead wt vout resume frc taken=" "
   local key full_taken=0 reap_cap="${FLEET_REAP_PER_PASS:-2}"
   case "$reap_cap" in ''|*[!0-9]*|0) reap_cap=2 ;; esac
-  # ORDERED, NOT GLOBBED (ForgeOs-jfqu4.7): see reap_order() above. AND
-  # RE-ASKED AFTER EVERY WORKER (ForgeOs-4bzvk, Regent docket 2026-10-22 item
+  # ORDERED, NOT GLOBBED (Proofdelve ForgeOs-jfqu4.7): see reap_order() above. AND
+  # RE-ASKED AFTER EVERY WORKER (Proofdelve ForgeOs-4bzvk, Regent docket 2026-10-22 item
   # D): the order was computed ONCE at the top of the pass and the snapshot
   # walked, 10-20 minutes per worker (verify and review), so a worker that
   # finished DURING the pass was not in it whatever its priority. Measured
@@ -5552,7 +5548,7 @@ reap_pass() {
   # reapable, and must not be retried in a loop), so a high-priority finisher
   # waits at most for the one completion in flight.
   #
-  # TAKEN IS KEYED BY THE LAUNCH, NOT THE DIRECTORY (ForgeOs-w5xkw, Regent
+  # TAKEN IS KEYED BY THE LAUNCH, NOT THE DIRECTORY (Proofdelve ForgeOs-w5xkw, Regent
   # docket 2026-10-27 item B). A bead returned and re-dispatched inside one pass
   # reuses its worker directory, so a directory key made its SECOND finish
   # invisible until the run ended (P0 mn9y3.4.1, skipped twice on 10-26). The
@@ -5560,7 +5556,7 @@ reap_pass() {
   # rewrites (rm -rf, then `date -Is > started`): a re-dispatch is a new entry.
   # A merge that defers keeps both, so it is still taken once per pass.
   #
-  # AND THE PASS IS BOUNDED (ForgeOs-bzr1z). Since 4bzvk the order is re-asked
+  # AND THE PASS IS BOUNDED (Proofdelve ForgeOs-bzr1z). Since 4bzvk the order is re-asked
   # after every worker, and refills keep Forges finishing, so in a busy run the
   # pass never ended: phase 1 (signed landings) runs only at the TOP of a pass
   # and a merge deferred inside the pass is in `taken`, so both starved for
@@ -5585,15 +5581,15 @@ reap_pass() {
       land|signed) ;;
       *)
         if [ "$full_taken" -ge "$reap_cap" ]; then
-          say "reap pass ends after $full_taken verify-or-review completion(s) (FLEET_REAP_PER_PASS=$reap_cap); $(basename "$d") and any others wait for the next pass, which lands signed beads first (ForgeOs-bzr1z)"
+          say "reap pass ends after $full_taken verify-or-review completion(s) (FLEET_REAP_PER_PASS=$reap_cap); $(basename "$d") and any others wait for the next pass, which lands signed beads first (Proofdelve ForgeOs-bzr1z)"
           break
         fi
         full_taken=$((full_taken + 1)) ;;
     esac
     taken="$taken$key "
     # A REAPABLE WORKER FOUND IS PROVISIONALLY A PASS THAT CHANGED STATE, AND
-    # THE ONE CASE THAT IS NOT IS BACKED OUT IN THE land ARM BELOW (ForgeOs-dx34.11,
-    # Tova's dx34.9 finding 2, shape (a)). A merge that defers FOREVER is reapable
+    # THE ONE CASE THAT IS NOT IS BACKED OUT IN THE land ARM BELOW (Proofdelve ForgeOs-dx34.11,
+    # The Warden's dx34.9 finding 2, shape (a)). A merge that defers FOREVER is reapable
     # on every pass, so counting reapable-found alone reset the stall counter each
     # pass and a parked merge spun until a person stopped it. Every reapable branch
     # here writes a NEW state token (settled, needs-person, parked-review, finished)
@@ -5625,20 +5621,20 @@ reap_pass() {
     wt="$root-worktrees/$sfx"
     resume="$(worker_resume_at "$d")"
 
-    # ASKED BEFORE THE WORKER IS TAKEN IN HAND, DELIBERATELY (ForgeOs-feeq).
+    # ASKED BEFORE THE WORKER IS TAKEN IN HAND, DELIBERATELY (Proofdelve ForgeOs-feeq).
     # Reaping is free but the review at the end of it is not, and a worker set
     # aside whose review never ran is a bead claimed, in_progress and absent
     # from every queue. The state written here is what makes that outcome
     # HEALTHY AND LEGIBLE rather than merely harmless: `parked-budget` says in
     # one word that the next run resumes it and no one need investigate.
-    # THE BUDGET GATES LAUNCHES, AND A DEFERRED MERGE SPENDS NONE (ForgeOs-usz6).
+    # THE BUDGET GATES LAUNCHES, AND A DEFERRED MERGE SPENDS NONE (Proofdelve ForgeOs-usz6).
     # Retrying a merge costs a git operation and a post-merge verifier run, not
     # a seat launch, and finishing a bead that is already reviewed and green is
     # the cheapest good outcome available to an exhausted run. Gating it on the
     # budget would re-create the stranding this bead exists to remove, at the
     # one moment it is most likely to happen.
     # A SIGNED RESUME IS EXEMPT FOR THE SAME REASON A DEFERRED MERGE IS
-    # (ForgeOs-ohsy): it dispatches no Forge and spends no review launch, so
+    # (Proofdelve ForgeOs-ohsy): it dispatches no Forge and spends no review launch, so
     # the thing the budget gates is not the thing it would stop. Gating it
     # would strand a bead the Overseer has already signed at the one moment it
     # is most likely to happen, which is this budget's own recorded mistake.
@@ -5649,7 +5645,7 @@ reap_pass() {
       break
     fi
 
-    # THE DRY-RUN GUARD IS NOW ABOVE EVERY MUTATION (ForgeOs-w7u5, sighting 5).
+    # THE DRY-RUN GUARD IS NOW ABOVE EVERY MUTATION (Proofdelve ForgeOs-w7u5, sighting 5).
     # The touch of the old marker used to sit NINE LINES ABOVE this guard (the
     # call is deliberately paraphrased here rather than quoted: a literal in a
     # comment fails a zero-tolerance grep exactly like a live instruction), so
@@ -5663,7 +5659,7 @@ reap_pass() {
       continue
     fi
 
-    refill_slots "before $bead is taken in hand"   # ForgeOs-uwjme (c)
+    refill_slots "before $bead is taken in hand"   # Proofdelve ForgeOs-uwjme (c)
     # ASKED AGAIN AFTER THE REFILL. The loop-top check above ran BEFORE the
     # refill, which reads the tracker and can take seconds; a stop that lands
     # inside it must not start a six-minute verifier on the way out. Measured
@@ -5680,21 +5676,21 @@ reap_pass() {
         else
           say "$bead: Forge exited $frc"
         fi
-        # THE HOST, BEFORE THE FORGE'S EXIT CODE IS INTERPRETED (ForgeOs-g3n1).
+        # THE HOST, BEFORE THE FORGE'S EXIT CODE IS INTERPRETED (Proofdelve ForgeOs-g3n1).
         # A Forge that exited 1 because the disk was full is not a Forge that
         # failed, and returning it spends the return counter on the host's
         # fault -- 7gag returned two beads twice each and escalated both. The
         # worker goes back to `finished` so the next run reaps it from the
         # verifier once the host is repaired; if the session really did leave
         # broken work, that verifier is what says so, once.
-        # ASKED ONLY OF A FORGE THAT EXITED NONZERO (Tova, round one): a
+        # ASKED ONLY OF A FORGE THAT EXITED NONZERO (the Warden, round one): a
         # successful session's transcript is model prose, and prose about the
         # signature is not the signature.
         if [ "$frc" -ne 0 ] && looks_env_failure "$d/forge.log"; then
           worker_set_state "$d" finished "the host failed under its Forge session (environmental, not the bead's); the next run verifies it"
           env_halt_if "$d/forge.log" "the Forge log for $bead ($d/forge.log)"
         fi
-        # 76 IS forge.sh REFUSING TO DISPATCH, NOT THE FORGE FAILING (ForgeOs-lw8x).
+        # 76 IS forge.sh REFUSING TO DISPATCH, NOT THE FORGE FAILING (Proofdelve ForgeOs-lw8x).
         # A re-dispatched bead's worktree still exists and forge.sh now brings it
         # current with main before anything builds in it; when that merge cannot
         # be made -- a conflict, a dirty tracked file it would overwrite, a HEAD
@@ -5708,11 +5704,11 @@ reap_pass() {
         # back-pressure nor a healthy completion.
         if [ "$frc" -eq 76 ]; then
           worker_set_state "$d" needs-person "forge.sh refused to bring the reused worktree $wt current with main before dispatch (exit 76); no Forge session ran"
-          say "$bead: forge.sh REFUSED to refresh its reused worktree $wt from main (exit 76) -- no session ran; PAGING a person (ForgeOs-lw8x)"
-          page_overseer "$bead" "forge.sh refused to bring the reused worktree $wt current with main before dispatching (exit 76), so NO Forge session ran and nothing was built or verified this pass. Re-dispatching repeats the refusal. Merge main into bead/$sfx by hand and re-queue it, or remove the worktree AND the branch so the next dispatch cuts fresh (ForgeOs-lw8x). The launcher's own words are in the evidence below." "$d/forge.log" "Nothing was built, verified or reviewed this pass: the refresh backed out and the worktree stands as it was. The bead is still claimed by the Forge actor; re-queue it by hand once the branch is current."
+          say "$bead: forge.sh REFUSED to refresh its reused worktree $wt from main (exit 76) -- no session ran; PAGING a person (Proofdelve ForgeOs-lw8x)"
+          page_overseer "$bead" "forge.sh refused to bring the reused worktree $wt current with main before dispatching (exit 76), so NO Forge session ran and nothing was built or verified this pass. Re-dispatching repeats the refusal. Merge main into bead/$sfx by hand and re-queue it, or remove the worktree AND the branch so the next dispatch cuts fresh (Proofdelve ForgeOs-lw8x). The launcher's own words are in the evidence below." "$d/forge.log" "Nothing was built, verified or reviewed this pass: the refresh backed out and the worktree stands as it was. The bead is still claimed by the Forge actor; re-queue it by hand once the branch is current."
           continue
         fi
-        # ForgeOs-4hzq (Tova review finding 2): EXIT 77 IS forge.sh REFUSING A
+        # Proofdelve ForgeOs-4hzq (the Warden review finding 2): EXIT 77 IS forge.sh REFUSING A
         # PROMPT OVER THE SIZE CEILING BEFORE bwrap -- no session ran, like 76.
         # It is deterministic: the prompt is rebuilt from the same bd show, so a
         # re-dispatch refuses identically. PAGE a person rather than return_to_ready
@@ -5720,8 +5716,8 @@ reap_pass() {
         # repeats and then escalate two passes later blaming the Forge.
         if [ "$frc" -eq 77 ]; then
           worker_set_state "$d" needs-person "forge.sh refused to dispatch $bead: its assembled prompt exceeded the size ceiling (exit 77); no Forge session ran"
-          say "$bead: forge.sh REFUSED -- prompt over the size ceiling (exit 77), no session ran; PAGING a person (ForgeOs-4hzq)"
-          page_overseer "$bead" "forge.sh refused to dispatch $bead because its assembled prompt exceeded the size ceiling (exit 77), so NO Forge session ran. Re-dispatching rebuilds the same oversized prompt and repeats the refusal. Shorten the bead (its bd show is the prompt body) -- e.g. re-file the latest round as a fresh short bead -- then re-queue it (ForgeOs-4hzq). The launcher's own words are in the evidence below." "$d/forge.log" "Nothing was built, verified or reviewed this pass: the launcher refused before any session started. The bead is still claimed by the Forge actor; shorten it and re-queue by hand."
+          say "$bead: forge.sh REFUSED -- prompt over the size ceiling (exit 77), no session ran; PAGING a person (Proofdelve ForgeOs-4hzq)"
+          page_overseer "$bead" "forge.sh refused to dispatch $bead because its assembled prompt exceeded the size ceiling (exit 77), so NO Forge session ran. Re-dispatching rebuilds the same oversized prompt and repeats the refusal. Shorten the bead (its bd show is the prompt body) -- e.g. re-file the latest round as a fresh short bead -- then re-queue it (Proofdelve ForgeOs-4hzq). The launcher's own words are in the evidence below." "$d/forge.log" "Nothing was built, verified or reviewed this pass: the launcher refused before any session started. The bead is still claimed by the Forge actor; shorten it and re-queue by hand."
           continue
         fi
         if looks_rate_limited "$d/forge.log"; then
@@ -5737,7 +5733,7 @@ reap_pass() {
           worker_set_state "$d" settled "no worktree after the Forge session; the bead was returned to the queue"
           return_to_ready "$bead" "no worktree at $wt after the Forge session" "$d/forge.log"; continue
         fi
-        # ForgeOs-4hzq(B-ii): A FORGE THAT COMMITTED NOTHING NEVER REACHES THE
+        # Proofdelve ForgeOs-4hzq(B-ii): A FORGE THAT COMMITTED NOTHING NEVER REACHES THE
         # VERIFIER. forge.sh now propagates the session exit code, so a run that
         # never started (E2BIG, exit 126) is caught by the frc check above; this
         # is the independent second guard for the other shape -- a Forge that
@@ -5751,11 +5747,11 @@ reap_pass() {
         if git -C "$root" rev-parse --verify --quiet "bead/$sfx" >/dev/null 2>&1 \
            && [ "$(git -C "$root" rev-list --count "main..bead/$sfx" 2>/dev/null || echo 0)" -eq 0 ]; then
           worker_set_state "$d" settled "the Forge exited 0 but committed nothing: bead/$sfx has no commits ahead of main; not verified, not reviewed"
-          say "$bead: the Forge committed nothing (bead/$sfx is at main) -- returned, never verified (ForgeOs-4hzq)"
+          say "$bead: the Forge committed nothing (bead/$sfx is at main) -- returned, never verified (Proofdelve ForgeOs-4hzq)"
           return_to_ready "$bead" "the Forge session exited 0 but committed nothing to bead/$sfx (0 commits ahead of main); it was NOT verified or sent to review" "$d/forge.log"
           continue
         fi
-        # ForgeOs-ss9d: A BRANCH WHOSE ONLY CHANGE IS UNDER fort/handoffs/ IS THE
+        # Proofdelve ForgeOs-ss9d: A BRANCH WHOSE ONLY CHANGE IS UNDER fort/handoffs/ IS THE
         # ZERO-COMMIT CASE ONE COMMIT WIDER. A Forge that STOPS with a blocked
         # handoff (the u65j.4 rule working) leaves the handoff uncommitted;
         # forge.sh's stamp step then commits it, so the branch is ONE commit
@@ -5770,7 +5766,7 @@ reap_pass() {
         # branch (it is the record of the stop) and the worktree stays (forge.sh
         # reuses it). Nothing is verified or reviewed. Landability (36b9) still
         # runs for every branch that reaches the line below.
-        # ForgeOs-nz3u: UNLESS THE BEAD DECLARED THAT ITS DELIVERABLE IS AN
+        # Proofdelve ForgeOs-nz3u: UNLESS THE BEAD DECLARED THAT ITS DELIVERABLE IS AN
         # ANSWER. vky8 (2026-09-15) measured exactly what it was asked, changed
         # no product code because none was asked for, and was returned twice
         # and escalated as abandoned; pkl9 and nf17 the next day were ordinary
@@ -5786,15 +5782,15 @@ reap_pass() {
         if git -C "$root" rev-parse --verify --quiet "bead/$sfx" >/dev/null 2>&1 \
            && [ -z "$(git -C "$root" diff --name-only "$main_branch...bead/$sfx" -- . ':!fort/handoffs' 2>/dev/null)" ]; then
           if [ "$(deliverable_of "$bead")" = answer ]; then
-            say "$bead: handoff-only branch and the bead declares 'Deliverable: answer' -- the handoff IS the deliverable; proceeding to verify and review (ForgeOs-nz3u)"
+            say "$bead: handoff-only branch and the bead declares 'Deliverable: answer' -- the handoff IS the deliverable; proceeding to verify and review (Proofdelve ForgeOs-nz3u)"
           else
             worker_set_state "$d" settled "the Forge exited 0 with no product change: every path bead/$sfx changes is under fort/handoffs/; not verified, not reviewed"
-            say "$bead: no product change -- bead/$sfx differs from main only under fort/handoffs/ (a stopped session's handoff, ForgeOs-ss9d); returned, never verified"
-            return_to_ready "$bead" "no product change: handoff only (bead/$sfx differs from main only under fort/handoffs/, the record of a session that stopped before implementing; a bead whose deliverable is an answer declares 'Deliverable: answer' in its description, ForgeOs-nz3u); it was NOT verified or sent to review" "$d/forge.log"
+            say "$bead: no product change -- bead/$sfx differs from main only under fort/handoffs/ (a stopped session's handoff, Proofdelve ForgeOs-ss9d); returned, never verified"
+            return_to_ready "$bead" "no product change: handoff only (bead/$sfx differs from main only under fort/handoffs/, the record of a session that stopped before implementing; a bead whose deliverable is an answer declares 'Deliverable: answer' in its description, Proofdelve ForgeOs-nz3u); it was NOT verified or sent to review" "$d/forge.log"
             continue
           fi
         fi
-        # LANDABILITY BEFORE THE REVIEW, REFRESH BEFORE THE VERIFY (ForgeOs-36b9;
+        # LANDABILITY BEFORE THE REVIEW, REFRESH BEFORE THE VERIFY (Proofdelve ForgeOs-36b9;
         # the reasoning is on prelanding_refresh() above). A conflict or a
         # refusal has already set the worker's state and paged a person; the
         # verifier and the review are never reached for it.
@@ -5817,10 +5813,10 @@ reap_pass() {
         say "$bead: running the host verifier in $wt"
         if host_verify "$wt" "$vout" "$d"; then
           say "$bead: verifier GREEN — sending to review"
-          refill_slots "after $bead's host verifier"   # ForgeOs-uwjme (a)
+          refill_slots "after $bead's host verifier"   # Proofdelve ForgeOs-uwjme (a)
           review_one "$bead" "$wt"
         elif signalled; then
-          # ForgeOs-a2fx. The verifier runs in this process group, so Ctrl-C
+          # Proofdelve ForgeOs-a2fx. The verifier runs in this process group, so Ctrl-C
           # kills it and it reports nonzero for a reason that has nothing to do
           # with the bead. Returning it here would charge an operator's
           # interrupt to the Forge and re-run implementation over work nobody
@@ -5831,7 +5827,7 @@ reap_pass() {
           break
         else
           # A RED verifier whose log names the host is the host's, not the
-          # bead's (ForgeOs-g3n1): 7gag's wb2e went RED at dotnet-build on
+          # bead's (Proofdelve ForgeOs-g3n1): 7gag's wb2e went RED at dotnet-build on
           # 'tee: Disk quota exceeded'. Back to `finished` so it verifies again
           # once the disk is repaired, then halt; never returned for it.
           if looks_env_failure "$vout"; then
@@ -5844,7 +5840,7 @@ reap_pass() {
         fi
         ;;
       land)
-        # ForgeOs-usz6. THE RETRY IS THE MERGE ALONE. Everything it needs was
+        # Proofdelve ForgeOs-usz6. THE RETRY IS THE MERGE ALONE. Everything it needs was
         # written down by land() before it deferred, and everything that could
         # make acting on it wrong is checked here rather than assumed.
         local lverdict="" lrecord="$d/warden-record"
@@ -5852,7 +5848,7 @@ reap_pass() {
         # THE SAME SET THE FRESH-REVIEW DISPATCH USES, read from one place. This
         # arm knew two of the three tokens, so the first MERGE-PARENT-OPEN to
         # meet a dirty tree, a held merge slot or a stopping run was called
-        # unusable BY NAME (ForgeOs-j3kp finding 1).
+        # unusable BY NAME (Proofdelve ForgeOs-j3kp finding 1).
         if ! verdict_is_landable "$lverdict"; then
           worker_set_state "$d" needs-person "deferred at the merge with no usable stored verdict ('$lverdict'); no mechanism may act on that"
           say "$bead: deferred at the merge with no usable stored verdict — NEEDS A PERSON"
@@ -5864,7 +5860,7 @@ reap_pass() {
         # on MERGE-PARENT-OPEN it is the only carrier of the findings. Teaching
         # the arm above the third token WITHOUT teaching this one would have sent
         # a deferred MERGE-PARENT-OPEN into a path only ever exercised for the
-        # two tokens it already knew, unmasking the ForgeOs-bzyk orphan by a
+        # two tokens it already knew, unmasking the Proofdelve ForgeOs-bzyk orphan by a
         # second route inside the fix for the first. Plain APPROVE is
         # deliberately NOT here: it files no follow-up, so it lands with or
         # without a record, and that is the case a single shared predicate
@@ -5890,22 +5886,22 @@ reap_pass() {
         fi
         say "$bead: RETRYING THE DEFERRED MERGE ALONE on the stored verdict $lverdict — the verifier is not re-run and no review launch is spent"
         land "$bead" "$lverdict" "$lrecord"
-        # ForgeOs-dx34.11 shape (a). If this worker entered the reap already
+        # Proofdelve ForgeOs-dx34.11 shape (a). If this worker entered the reap already
         # deferred-merge and land() left it STILL deferred-merge on a reason it
         # has ALREADY DEFERRED ON, no state changed this pass -- back out the
         # provisional count so the stall counter is not reset by a merge that is
         # going nowhere. Any other outcome (merged and settled, deferred on a
         # genuinely NEW reason, needs-person) is real activity and keeps its count.
         #
-        # "ALREADY DEFERRED ON" AND NOT "THE SAME AS LAST PASS" (ForgeOs-dx34.15,
-        # Tova's non-blocking finding 5 on dx34.11). The last-distinct-reason test
+        # "ALREADY DEFERRED ON" AND NOT "THE SAME AS LAST PASS" (Proofdelve ForgeOs-dx34.15,
+        # The Warden's non-blocking finding 5 on dx34.11). The last-distinct-reason test
         # let a reason that FLAPS -- A, B, A, B, as a landable_why file list does
         # when a build writes and removes an artifact under a dirty root -- count
         # as a state change on every pass, so the counter reset every pass and the
         # perpetually parked merge masked the stall exactly as before dx34.11. The
         # fingerprint is now the SET of reasons this worker has deferred on (the
         # seen-list defer_merge keeps), so a reason counts as progress the first
-        # time it is given and never again. This is NOT ForgeOs-usz6's rejected
+        # time it is given and never again. This is NOT Proofdelve ForgeOs-usz6's rejected
         # deferral threshold: no count of deferrals decides anything here, a
         # merge deferring on its tenth NEW reason still counts as activity, and
         # what the back-out withdraws is only the claim that a repeat is progress.
@@ -5920,7 +5916,7 @@ reap_pass() {
         fi
         ;;
       signed)
-        # ForgeOs-ohsy. THE RESUME RE-ASKS THE THREE QUESTIONS; IT DOES NOT
+        # Proofdelve ForgeOs-ohsy. THE RESUME RE-ASKS THE THREE QUESTIONS; IT DOES NOT
         # TRUST THE PARK. Between the signal and this pass the approval can be
         # superseded, the branch can move and main can move under it, so the
         # state token says only WHERE to pick this worker up and never that the
@@ -5955,7 +5951,7 @@ reap_pass() {
           say "$bead: parked for review but $wt is GONE — marked NEEDS A PERSON"
           continue
         fi
-        # LANDABILITY IS STILL ASKED, WITHOUT A REFRESH (ForgeOs-36b9, Tova's
+        # LANDABILITY IS STILL ASKED, WITHOUT A REFRESH (Proofdelve ForgeOs-36b9, the Warden's
         # finding 3 on 823074e): a conflict found here costs no launch and
         # pages; a clean answer leaves the verified tree exactly as it is.
         prelanding_refresh "$bead" "$sfx" "$wt" "$d" check
@@ -5984,7 +5980,7 @@ print_status() {
   [ -e "$halt_file" ] && { echo "HALTED:"; sed 's/^/  /' "$halt_file"; }
   local wbl
   if wbl="$(workbench_live)"; then
-    echo "WORKBENCH:   a sitting is live (bead pid: $wbl); fleet beads whose files overlap its live set are HELD, the rest dispatch (ForgeOs-9srgz)"
+    echo "WORKBENCH:   a sitting is live (bead pid: $wbl); fleet beads whose files overlap its live set are HELD, the rest dispatch (Proofdelve ForgeOs-9srgz)"
   fi
   # A LIVE RUN MAKES ONE OF THESE LABELS WRONG, AND SAYING SO BEATS GUESSING.
   # worker_state calls a worker in-hand from another run ORPHANED, which is
@@ -5995,7 +5991,7 @@ print_status() {
     echo "NOTE: a fleet run is LIVE right now. Any worker below shown as ORPHANED is"
     echo "      more likely to be IN HAND by that run; re-read this once it has ended."
   fi
-  # LANDABILITY AND THE PARKED COUNT, ABOVE THE WORKER TABLE (ForgeOs-dx34.1).
+  # LANDABILITY AND THE PARKED COUNT, ABOVE THE WORKER TABLE (Proofdelve ForgeOs-dx34.1).
   # A dirty tree no longer stops a run, so "why has nothing landed tonight" is a
   # question --status must answer in one line rather than leave to be inferred
   # from a column of `deferred-merge` tokens.
@@ -6032,8 +6028,8 @@ print_status() {
   tail -10 "$ceiling_log" 2>/dev/null | sed 's/^/  /'
 }
 
-# QUEUE A WORKBENCH SESSION BRANCH FOR ONE REVIEW (ForgeOs-9srgz).
-# Writes the worker record a Mayor used to write by hand (ForgeOs-0o16s,
+# QUEUE A WORKBENCH SESSION BRANCH FOR ONE REVIEW (Proofdelve ForgeOs-9srgz).
+# Writes the worker record a Mayor used to write by hand (Proofdelve ForgeOs-0o16s,
 # 2026-11-09) and exits; the live run, or the next one the supervisor starts on
 # its reapable count, takes it first. It launches nothing itself.
 # MASKS: runnable unmasked and from the Mayor's mask (she has always been able
@@ -6074,8 +6070,8 @@ review_only_enqueue() {  # $1 bead
   date -Is > "$d/started"
   printf '%s\n' "review-only" > "$d/run"
   printf 'queued=%s by=%s\n' "$(date -Is)" "${FORT_MASKED:-host}" > "$d/review-only"
-  # --no-renames: both names of a renamed file (Tova, finding 2 on the docket review).
-  # -z: raw paths, so a non-ASCII name is not written quoted (Tova, round two, finding 1).
+  # --no-renames: both names of a renamed file (the Warden, finding 2 on the docket review).
+  # -z: raw paths, so a non-ASCII name is not written quoted (the Warden, round two, finding 1).
   git -C "$root" diff --name-only --no-renames -z "$main_branch...bead/$sfx" 2>/dev/null | tr '\0' '\n' > "$d/touches" || true
   printf '0\n' > "$d/exit"
   emit fleet.handed "$bead queued for ONE review of its Workbench session branch (bead/$sfx, $ahead commit(s) ahead of $main_branch): host verify, one Warden launch at the front of the reap order, merge or escalate" \
@@ -6108,9 +6104,9 @@ if [ "$status_only" = 1 ] || [ "$reapable_only" = 1 ]; then
     echo "NOTE: $conf is not readable, so the launch-grace window below is a default." >&2
   fi
   : "${FLEET_LAUNCH_GRACE:=120}"
-  # --reapable IS THE SUPERVISOR'S QUESTION 4b (ForgeOs-dx34.18 criterion 5),
+  # --reapable IS THE SUPERVISOR'S QUESTION 4b (Proofdelve ForgeOs-dx34.18 criterion 5),
   # ANSWERED HERE SO THERE IS ONE DEFINITION OF "REAPABLE". The supervisor
-  # selects and this file decides (ForgeOs-czhb); a second reading of the state
+  # selects and this file decides (Proofdelve ForgeOs-czhb); a second reading of the state
   # token list in fleet-supervisor.sh would be the second decider czhb forbids.
   # One number, nothing else on stdout, exit 0.
   if [ "$reapable_only" = 1 ]; then reapable_workers; exit 0; fi
@@ -6118,7 +6114,7 @@ if [ "$status_only" = 1 ] || [ "$reapable_only" = 1 ]; then
 fi
 
 preflight
-# THE LOCK IS TAKEN BEFORE THE RUN IS ANNOUNCED (ForgeOs-l1ef). fleet.begun
+# THE LOCK IS TAKEN BEFORE THE RUN IS ANNOUNCED (Proofdelve ForgeOs-l1ef). fleet.begun
 # used to be emitted first, so an instance REFUSED by the lock still wrote a
 # `begun` into the stream with no `ended` behind it — the exact shape a reader
 # is taught to escalate as a run that died silently, produced by the guard
@@ -6133,40 +6129,40 @@ if ! flock -n 8; then
   echo "fleet.sh: REFUSED — another fleet run holds $state/fleet.lock" >&2
   exit 75
 fi
-# AFTER THE LOCK (ForgeOs-lzvo, Tova's finding 5 on 025a52f): governor_init
+# AFTER THE LOCK (Proofdelve ForgeOs-lzvo, the Warden's finding 5 on 025a52f): governor_init
 # writes this run's start line to ceiling.log, and tools/keep/lib/fleet.mjs
 # reads the LAST start line's run= as the current run. Called before the lock,
 # a refused instance wrote a start line for a run that never ran.
 governor_init
 
-# EXACTLY ONE fleet.ended PER RUN, AND IT SAYS WHY (ForgeOs-stpx). Installed
+# EXACTLY ONE fleet.ended PER RUN, AND IT SAYS WHY (Proofdelve ForgeOs-stpx). Installed
 # immediately after the lock and before fleet.begun, so the pair is balanced
 # from the first announcement onward. $end_reason DEFAULTS to an undetermined
-# string (ForgeOs-6843) and every named exit overwrites it: "drained" set at the
+# string (Proofdelve ForgeOs-6843) and every named exit overwrites it: "drained" set at the
 # drain check itself, "one pass complete (--once)" / "dry run: ..." at those
 # breaks, "budget spent" from budget_stop, "halted: ..." from halt(), or
-# "stalled: ..." from stall_check() through halt() (ForgeOs-dx34.9, which also
+# "stalled: ..." from stall_check() through halt() (Proofdelve ForgeOs-dx34.9, which also
 # adds the `stalled` flag so a reader need not parse the reason's prefix, and
 # `stall_peak`, so a run that absorbed near-misses all night leaves a durable
-# number where the supervisor reads -- events, not run logs; Tova, finding 5).
-# ForgeOs-a2fx: the distinction survives into the PAYLOAD and not only into the
+# number where the supervisor reads -- events, not run logs; the Warden, finding 5).
+# Proofdelve ForgeOs-a2fx: the distinction survives into the PAYLOAD and not only into the
 # prose, because the digest and every later reader parse the payload.
 trap 'emit fleet.ended "Fleet run $run_id ended after $launches launches ($end_reason)" -a "$fleet_actor" -s fleet -p "{\"run\":\"$run_id\",\"launches\":$launches,\"reason\":\"$end_reason\",\"halted\":$halted,\"stalled\":$stalled,\"stall_peak\":$stall_peak,\"interrupted\":$interrupted,\"signal\":\"$stop_signal\"}"' EXIT
 
 say "narrative log: $narrative_log — this run survives its terminal closing (SIGHUP is ignored), so that file is where it keeps talking. Ctrl-C or kill -TERM stops it; touching $halt_file stops it too."
 # `forge start $forge_conc`, not $FLEET_FORGE_START: governor_init has already
-# run and the ceiling may be carried from the previous run (ForgeOs-xzg1).
+# run and the ceiling may be carried from the previous run (Proofdelve ForgeOs-xzg1).
 emit fleet.begun "Fleet run $run_id begun (forge start $forge_conc, warden $FLEET_WARDEN_CONC, hard stop $FLEET_HARD_STOP)" \
   -a "$fleet_actor" -s fleet -p "{\"run\":\"$run_id\",\"dry_run\":$([ "$dry" = 1 ] && echo true || echo false)}"
 
-# THE MID-RUN HALT CHECK (ForgeOs-a2fx, third fact). $FLEET_STATE/HALT was
+# THE MID-RUN HALT CHECK (Proofdelve ForgeOs-a2fx, third fact). $FLEET_STATE/HALT was
 # read at preflight and written by halt(), and NOTHING EVER READ IT AGAIN —
 # so creating the halt file, which is the obvious operator reflex and the one
 # this file's own error text teaches, did nothing to a running fleet. It now
 # takes the same drain-then-stop path a signal takes. `$halted` is checked
 # first because halt() writes that file itself and exits directly; this
 # branch is for a file a PERSON created while the run was live.
-# It is a FUNCTION because ForgeOs-fhak made stopping() read the file too, so
+# It is a FUNCTION because Proofdelve ForgeOs-fhak made stopping() read the file too, so
 # the loop's `stopping && break` lines can end a run on the halt file BEFORE
 # this point; each of them calls it first, and the run under --once now also
 # reports a file that appeared during its one pass (it used to break before
@@ -6182,18 +6178,18 @@ operator_halt_stop() {
   # below carries operator_halt for exactly that.
   halted=true
   set_end_reason "stopped: the halt file appeared while the run was live"
-  governor_carry_reset "operator halt file"   # ForgeOs-xzg1
+  governor_carry_reset "operator halt file"   # Proofdelve ForgeOs-xzg1
   say "HALT FILE PRESENT: $halt_file appeared during run $run_id. Stopping between passes."
   say "  Nothing further is dispatched, verified, reviewed or merged BY THIS RUN, and every later run"
   say "  refuses at preflight until that file is removed by hand."
   # MEASURED AT EMIT TIME, FROM THE LOCKS, NOT FROM THIS RUN'S BOOKKEEPING
-  # (ForgeOs-fhak acceptance (a)). A Forge this run launched keeps running to
+  # (Proofdelve ForgeOs-fhak acceptance (a)). A Forge this run launched keeps running to
   # completion after the run ends; the sentence below names each one still
   # holding its launcher lock, or says that none is, and never asserts idleness
   # it did not measure.
   local_in_flight="$(forge_locks_held)"
   if [ -n "$local_in_flight" ]; then
-    # THE SPACE BEFORE THE DASH IS LOAD-BEARING AND IT WAS MISSING (ForgeOs-ip9z
+    # THE SPACE BEFORE THE DASH IS LOAD-BEARING AND IT WAS MISSING (Proofdelve ForgeOs-ip9z
     # finding 3). `tr` turns the newlines BETWEEN entries into spaces and there
     # is none after the last one, so the final bead id ran straight into the
     # dash: "E2E-hla-- the tree is NOT quiet". This string is DURABLE EVENT
@@ -6222,39 +6218,39 @@ tmp_check() {
 while :; do
   # Checked first as well as last: a signal can arrive during preflight, before
   # this loop is entered at all, and a run told to stop must not do one more
-  # pass on the way. A HALT FILE is a stop too (ForgeOs-fhak), and it owes the
+  # pass on the way. A HALT FILE is a stop too (Proofdelve ForgeOs-fhak), and it owes the
   # operator-halt record before the break.
   if halt_file_present; then operator_halt_stop; break; fi
   stopping && break
-  pass_dispatched=0; pass_reaped=0; pass_note=""; pass_held_unlanded=0   # ForgeOs-dx34.9, see stall_check()
-  pass_mem_held=0   # ForgeOs-asad6, see stall_check()
-  pass_workbench_held=0   # ForgeOs-9srgz, see stall_check()
-  signed_tried_this_pass=""   # ForgeOs-jfqu4.7, see dispatch_pass() phase 1
-  rm -f "$state/.np-warned"; settle_answered_workers   # ForgeOs-xu0mj: a new pass, so every live NEEDS A PERSON is said once again
-  rm -f "$state/.reap-order-warned"   # ForgeOs-4bzvk: reap_order's bd-down note, once per pass
-  # THE /tmp ALARM, BEFORE A FILL HALTS A VERIFY (ForgeOs-jfqu4.8 with
-  # ForgeOs-lmgue, Regent docket 2026-10-22 item B). The scratch reaper owns
+  pass_dispatched=0; pass_reaped=0; pass_note=""; pass_held_unlanded=0   # Proofdelve ForgeOs-dx34.9, see stall_check()
+  pass_mem_held=0   # Proofdelve ForgeOs-asad6, see stall_check()
+  pass_workbench_held=0   # Proofdelve ForgeOs-9srgz, see stall_check()
+  signed_tried_this_pass=""   # Proofdelve ForgeOs-jfqu4.7, see dispatch_pass() phase 1
+  rm -f "$state/.np-warned"; settle_answered_workers   # Proofdelve ForgeOs-xu0mj: a new pass, so every live NEEDS A PERSON is said once again
+  rm -f "$state/.reap-order-warned"   # Proofdelve ForgeOs-4bzvk: reap_order's bd-down note, once per pass
+  # THE /tmp ALARM, BEFORE A FILL HALTS A VERIFY (Proofdelve ForgeOs-jfqu4.8 with
+  # Proofdelve ForgeOs-lmgue, Regent docket 2026-10-22 item B). The scratch reaper owns
   # the measurement and the once-per-band-per-day incident; this asks it every
   # pass, since the hourly timer alone could miss a fill. It removes nothing,
   # and nothing it does can stop the run.
   tmp_check
   # SIGNED LANDINGS FIRST, then the completion lane, then the full pass
-  # (ForgeOs-jfqu4.7). On a board with no stored ESCALATE this is a handful of
+  # (Proofdelve ForgeOs-jfqu4.7). On a board with no stored ESCALATE this is a handful of
   # file reads and nothing else (dispatch_pass's any_signed pre-question).
   in_dispatch=1; dispatch_pass signed; in_dispatch=0
   stopping && break
-  stale_signature_check   # ForgeOs-8gmt4: once per pass, after phase 1 has landed what it can
+  stale_signature_check   # Proofdelve ForgeOs-8gmt4: once per pass, after phase 1 has landed what it can
   reap_pass
-  in_dispatch=1; dispatch_pass; in_dispatch=0   # the flag: refill_slots() inside a signed landing must not nest (ForgeOs-uwjme)
-  if halt_file_present; then operator_halt_stop; break; fi   # ForgeOs-fhak: the file seen mid-pass is reported here, under --once too
+  in_dispatch=1; dispatch_pass; in_dispatch=0   # the flag: refill_slots() inside a signed landing must not nest (Proofdelve ForgeOs-uwjme)
+  if halt_file_present; then operator_halt_stop; break; fi   # Proofdelve ForgeOs-fhak: the file seen mid-pass is reported here, under --once too
   stopping && break
-  # A SPENT BUDGET ENDS THE RUN, IT DOES NOT HALT IT (ForgeOs-feeq). No halt
+  # A SPENT BUDGET ENDS THE RUN, IT DOES NOT HALT IT (Proofdelve ForgeOs-feeq). No halt
   # file, no incident, and the next run starts normally.
   if [ "$end_reason" = "budget spent" ]; then
     say "run $run_id ends: the hard stop of $FLEET_HARD_STOP seat launches is spent"
     break
   fi
-  # --once AND --dry-run EACH EXIT AFTER ONE PASS (ForgeOs-dx34.12 finding 4).
+  # --once AND --dry-run EACH EXIT AFTER ONE PASS (Proofdelve ForgeOs-dx34.12 finding 4).
   # --dry-run without --once was the one spin the stall detector cannot see: the
   # dry branch counts the pass as dispatched, nothing is claimed, and
   # any_dispatchable() stays true forever, so a dry loop polled with no way to
@@ -6266,7 +6262,7 @@ while :; do
   if halt_file_present; then operator_halt_stop; break; fi
   report_parked_merges
   # NOTHING RUNNING AND NOTHING STARTABLE IS A DRAIN; A NON-EMPTY QUEUE IS NOT
-  # (ForgeOs-czhb acceptance 7). This used to ask `bd ready` and read a non-empty
+  # (Proofdelve ForgeOs-czhb acceptance 7). This used to ask `bd ready` and read a non-empty
   # answer as "there is work", while dispatch_pass asked dispatchable() and
   # refused every one of those same beads -- so a queue of only-refused beads
   # polled forever, holding the exclusive run lock, and the budget could not end
@@ -6277,7 +6273,7 @@ while :; do
   # sides now ask any_dispatchable().
   #
   # THE STALL CHECK SHARES THIS PASS'S ANSWERS RATHER THAN ASKING AGAIN
-  # (ForgeOs-dx34.9): live_forges() once, any_dispatchable() at most once, and
+  # (Proofdelve ForgeOs-dx34.9): live_forges() once, any_dispatchable() at most once, and
   # only when nothing is live -- a pass waiting on a Forge never consults the
   # queue, exactly as before. The two lines that follow are the ones the e2e
   # harness rewrites to build the NAIVE detector (no live-worker term) and show
@@ -6286,7 +6282,7 @@ while :; do
   if [ "$live" -eq 0 ]; then if any_dispatchable; then startable=yes; else startable=no; fi; fi
   stall_check "$live" "$startable"
   if [ "$startable" = no ]; then
-    # A REAPABLE WORKER IS WORK, AND THE DRAIN MUST SEE IT (ForgeOs-dx34.18).
+    # A REAPABLE WORKER IS WORK, AND THE DRAIN MUST SEE IT (Proofdelve ForgeOs-dx34.18).
     # OBSERVED 2026-09-11 23:36, run 20260911T222003, the first run at Forge
     # concurrency 2: 15k.6's Forge exited 0 at 23:34:53 while this loop was
     # inside one seven-minute reap pass on b0vj.53 (verifier, a synchronous
@@ -6295,7 +6291,7 @@ while :; do
     # any_dispatchable() said no (15k.6 is claimed, so bd ready does not list
     # it), and the run ended "drained" with 15k.6 finished and unreaped. Then
     # nothing started the run that would reap it, because the supervisor asks
-    # the same question. ForgeOs-w7u5 made that worker VISIBLE (it was named in
+    # the same question. Proofdelve ForgeOs-w7u5 made that worker VISIBLE (it was named in
     # the drain message); it did not make it COUNT. It counts here.
     #
     # THE FIX IS IN THE DRAIN CONDITION, NOT IN live_forges() OR any_dispatchable():
@@ -6323,7 +6319,7 @@ while :; do
         reapable_said=1
       fi
     else
-      set_end_reason "drained"   # ForgeOs-6843: the drain is decided HERE, so the reason is set HERE; the carry is at loop exit (ForgeOs-lzvo)
+      set_end_reason "drained"   # Proofdelve ForgeOs-6843: the drain is decided HERE, so the reason is set HERE; the carry is at loop exit (Proofdelve ForgeOs-lzvo)
       say "queue drained after $launches launches (stall counter peak $stall_peak/$FLEET_STALL_PASSES)"
       break
     fi
@@ -6333,8 +6329,8 @@ while :; do
   # head of this file for why the sleep stays in the foreground.
   sleep "$FLEET_POLL" || true
 done
-# THE CEILING IS CARRIED HERE, ONCE, FOR THE TWO ORDINARY ENDS (ForgeOs-xzg1,
-# moved by ForgeOs-lzvo). A halt has already removed the carry file and exited;
+# THE CEILING IS CARRIED HERE, ONCE, FOR THE TWO ORDINARY ENDS (Proofdelve ForgeOs-xzg1,
+# moved by Proofdelve ForgeOs-lzvo). A halt has already removed the carry file and exited;
 # a signal or the operator's halt file leaves the file as the last ordinary end
 # wrote it; --once and --dry-run are reports, not measurements.
 case "$end_reason" in
@@ -6342,9 +6338,9 @@ case "$end_reason" in
 esac
 
 report_leftovers
-# THE RUN'S OUTCOME, IN ONE FILE THE SUPERVISOR CAN READ (ForgeOs-s49w; Tova's
+# THE RUN'S OUTCOME, IN ONE FILE THE SUPERVISOR CAN READ (Proofdelve ForgeOs-s49w; the Warden's
 # round-one finding 3 on dx34.4). The supervisor SELECTS and this file DECIDES
-# (ForgeOs-czhb), so the supervisor may not carry a second dispatchable(); what
+# (Proofdelve ForgeOs-czhb), so the supervisor may not carry a second dispatchable(); what
 # it may do is read what the run it started came to. A run it started that
 # drained in seconds with zero launches did nothing, and starting another every
 # two minutes is three events per interval of nothing. $FLEET_AUTOSTART is the
@@ -6355,7 +6351,7 @@ report_leftovers
 # unit name. Not in the EXIT trap, deliberately: stop-harness evaluates that
 # trap string in a shell holding only the variables it reads, and the trap
 # stays exactly one emit.
-# landings (2026-10-06, the churn note on ForgeOs-owt37): the supervisor used to
+# landings (2026-10-06, the churn note on Proofdelve ForgeOs-owt37): the supervisor used to
 # tell "did nothing" from "landed something" by DURATION, and a zero-launch drain
 # on 2026-10-05 took 20-28 s against a 20 s cutoff, so ten runs started in a row.
 # A count is the property; a duration was a proxy for it.

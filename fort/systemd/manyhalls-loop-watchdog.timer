@@ -1,4 +1,4 @@
-# Proofdelve loop watchdog timer (ForgeOs-dycc9). Installed by hand into
+# Manyhalls loop watchdog timer (Proofdelve ForgeOs-dycc9). Installed by hand into
 # ~/.config/systemd/user/ under the Regent sitting of 2026-11-16.
 #
 # EVERY 15 MINUTES, ON THE WALL CLOCK. The shortest duration the script watches
@@ -7,10 +7,10 @@
 #
 # THE MAYOR ENABLES NOTHING HERE. The Overseer enables this timer after he has
 # seen one test alert (fort/scripts/loop-watchdog.sh --test-alert).
-# TO STOP IT: systemctl --user disable --now proofdelve-loop-watchdog.timer
+# TO STOP IT: systemctl --user disable --now manyhalls-loop-watchdog.timer
 
 [Unit]
-Description=Proofdelve loop watchdog, every 15 minutes
+Description=Manyhalls loop watchdog, every 15 minutes
 
 [Timer]
 OnCalendar=*:0/15

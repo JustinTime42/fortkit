@@ -108,7 +108,7 @@ if [ "$human_status" -eq 0 ]; then
   # A closed bead keeps its labels, correctly: closing must not silently mutate
   # metadata, and the label is the record that this bead once needed Justin. So
   # `bd human list` answers "which beads carry the label", which is not the
-  # question this section asks. Filter here rather than upstream (ForgeOs-eng3.8,
+  # question this section asks. Filter here rather than upstream (Proofdelve ForgeOs-eng3.8,
   # approved 2026-09-01). They are counted rather than dropped: a closed bead
   # still carrying the label is a label nobody removed, and hiding it silently
   # means nobody ever does.
@@ -271,12 +271,12 @@ elif [ "${#in_flight[@]}" -gt 0 ]; then
   done
 fi
 
-# LANDED BUT OPEN (ForgeOs-eng3.8.1, approved by Justin 2026-09-01).
+# LANDED BUT OPEN (Proofdelve ForgeOs-eng3.8.1, approved by Justin 2026-09-01).
 #
 # The label-hygiene line above catches a CLOSED bead that kept its label. This
 # catches the larger and quieter case: a bead whose work is already merged and
-# which nobody closed. Three instances on 2026-09-01 alone -- ForgeOs-b0vj.5,
-# ForgeOs-sk3c.21 and (on 08-31) ForgeOs-eng3.4. sk3c.21 is why this exists:
+# which nobody closed. Three instances on 2026-09-01 alone -- Proofdelve ForgeOs-b0vj.5,
+# Proofdelve ForgeOs-sk3c.21 and (on 08-31) Proofdelve ForgeOs-eng3.4. sk3c.21 is why this exists:
 # merged 2026-08-28 with gate 1 signed, it sat in the decision queue for four
 # days as an outstanding gate-1 auth review that had already happened, and
 # JUSTIN caught it from memory when no queue could. A digest that reports
@@ -285,7 +285,7 @@ fi
 #
 # REPORTS, NEVER CLOSES. A branch contained in main is strong evidence the work
 # landed and is NOT proof the bead is done: on the same evening, three readers
-# agreed ForgeOs-b0vj.10.1 was moot because the method it was filed against had
+# agreed Proofdelve ForgeOs-b0vj.10.1 was moot because the method it was filed against had
 # been deleted, and that bead's own text said one of its two findings was
 # regression cover for four other call sites. Surface candidates; let a person
 # close them with a reason.
@@ -346,7 +346,7 @@ if git -C "$main_root" rev-parse --verify --quiet origin/main >/dev/null; then
   fi
 fi
 
-# PERMISSION PROMPTS (ForgeOs-758): the prompt-telemetry hook appends one row per
+# PERMISSION PROMPTS (Proofdelve ForgeOs-758): the prompt-telemetry hook appends one row per
 # surviving permission prompt to fort/telemetry/prompts.jsonl. Reviewed once by
 # hand on 2026-09-17 (137 rows since 08-04, 21 since 09-01, no allowlist change
 # worth a gate-6 amendment: the survivors are compound shells and bd-comment

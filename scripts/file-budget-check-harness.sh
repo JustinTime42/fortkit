@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hermetic harness for the advisory file-budget check (ForgeOs-413u8.12, ForgeOs-413u8.17).
+# Hermetic harness for the advisory file-budget check (Proofdelve ForgeOs-413u8.12, Proofdelve ForgeOs-413u8.17).
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

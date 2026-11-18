@@ -30,7 +30,7 @@ fi
 
 # Cron can overlap after a slow network fetch. One watcher is sufficient, and
 # serializing it keeps the read-then-create deduplication check meaningful.
-lock_file="${TMPDIR:-/tmp}/forgeos-push-drift.lock"
+lock_file="${TMPDIR:-/tmp}/fortkit-push-drift.lock"
 exec 9>"$lock_file"
 if ! flock -n 9; then
   printf 'Push-drift watcher is already running; skipping overlapping invocation.\n'

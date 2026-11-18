@@ -7,13 +7,13 @@
 # 1. A fleet-safe bead with no `Touches:` line takes <everything> (fleet.sh:1429,
 #    deliberately conservative) and therefore blocks every other candidate while
 #    it runs. Ten such beads ran the fleet at concurrency 1 all afternoon with a
-#    ceiling of 6 and eight candidates waiting (ForgeOs-vky8 measured the guard
+#    ceiling of 6 and eight candidates waiting (Proofdelve ForgeOs-vky8 measured the guard
 #    itself as clean; the undeclared beads were the cause).
 # 2. A fleet-safe bead whose touch set names a path the FORGE CANNOT WRITE. The
 #    Forge dies on a read-only filesystem at whatever step needs it, having done
-#    the rest, and nothing explains why. ForgeOs-odew was filed this way.
+#    the rest, and nothing explains why. Proofdelve ForgeOs-odew was filed this way.
 #
-# 3. A fleet-safe bead WHOSE WORK IS ALREADY MERGED (ForgeOs-ursv, added
+# 3. A fleet-safe bead WHOSE WORK IS ALREADY MERGED (Proofdelve ForgeOs-ursv, added
 #    2026-09-15). A MERGE-PARENT-OPEN verdict merges the diff and deliberately
 #    leaves the parent open, because the reviewer found the diff sound and at
 #    least one acceptance criterion unmet. fleet.sh files a triage bead at the
@@ -21,7 +21,7 @@
 #    then INDISTINGUISHABLE FROM FRESH WORK: open, in `bd ready`, still carrying
 #    its original acceptance criteria, with nothing on it saying the diff is
 #    already on main. Measured the day this was written: the Mayor marked
-#    ForgeOs-7hxc fleet-safe four hours after it merged at 624a4ca, and the fleet
+#    Proofdelve ForgeOs-7hxc fleet-safe four hours after it merged at 624a4ca, and the fleet
 #    spent two Forge launches and two returns reporting "no product change:
 #    handoff only" before escalating. Five such parents were open at that moment.
 #    The id is matched EXACTLY against the parsed commit subject rather than by a
@@ -29,7 +29,7 @@
 #    and a loose match would report one bead on the other's merge commit.
 #
 # 4. A fleet-safe bead whose touch set names a path THAT DOES NOT EXIST
-#    (ForgeOs-ij4q, Warden finding 3, added 2026-09-15). ForgeOs-5648 declared
+#    (Proofdelve ForgeOs-ij4q, Warden finding 3, added 2026-09-15). Proofdelve ForgeOs-5648 declared
 #    web/src/test/format.test.ts; the real file is web/src/utils/format.test.ts
 #    and web/src/test/ does not exist at all. The Forge edited the right file, so
 #    this reads as a cosmetic slip -- and it is not. A touch set reserves the
@@ -48,24 +48,24 @@
 #    alone cannot prove intent. The checker quotes its matched sentence.
 #
 # 7. A fleet-safe bead with MORE THAN ONE `Touches:` line, or `Touches:` in the
-#    middle of a line (ForgeOs-29j3g item 8). fleet.sh's touch_set_of() reads
+#    middle of a line (Proofdelve ForgeOs-29j3g item 8). fleet.sh's touch_set_of() reads
 #    only the FIRST line that begins with it: ~12 beads filed on 2026-10-19 with
 #    one line per file were guarded on one file each, and a mid-line spelling is
 #    not read at all, so the bead silently takes <everything>.
 #
-# 8. A bead ON THE OVERSEER'S BOARD WITH NO ASK LINE (ForgeOs-29j3g). Since the
+# 8. A bead ON THE OVERSEER'S BOARD WITH NO ASK LINE (Proofdelve ForgeOs-29j3g). Since the
 #    cut-over his board is exactly the open beads assigned to justin, and every
 #    hand-off posts one comment line beginning "ASK:". A bead assigned to him
 #    with none shows on his board with no reason.
 #
-# 9. A DECLINED BEAD RE-RELEASED WITHOUT A LAP (ForgeOs-n1wbd, the lint half of
-#    ForgeOs-0x25g option a). The Overseer's newest decision on a fleet-safe bead
+# 9. A DECLINED BEAD RE-RELEASED WITHOUT A LAP (Proofdelve ForgeOs-n1wbd, the lint half of
+#    Proofdelve ForgeOs-0x25g option a). The Overseer's newest decision on a fleet-safe bead
 #    in the event stream is gate.declined and no open child (lap) exists. A
 #    Decline means "not this tip": re-releasing the bead makes the fleet try to
 #    land the declined work again (measured 2026-10-14 on 2md9d.1.12, and the
 #    loop 0x25g describes). A lap is a CHILD bead, matched by id prefix or a
 #    parent-child edge; laps carry no blocks edge (it deadlocks them, 10-21).
-# 10. A Touches: TOKEN THAT IS NOT A PATH (ForgeOs-n1wbd ADD). fleet.sh splits the
+# 10. A Touches: TOKEN THAT IS NOT A PATH (Proofdelve ForgeOs-n1wbd ADD). fleet.sh splits the
 #    line on spaces and commas, so "Foo.cs (new file)" reserves "(new" and
 #    "file)", and every bead naming them collides: seven beads serialised on
 #    2026-10-21. Any token with a character a repo path here never uses is
@@ -78,7 +78,7 @@ set -uo pipefail
 root="$(git -C "$(dirname "${BASH_SOURCE[0]}")/.." rev-parse --show-toplevel)" || exit 3
 
 # --backlog: THE MAYOR'S SITTING SLICE, and deliberately NOT part of the default
-# run (ForgeOs-mfyq, 2026-09-21). Everything above this line answers "may the
+# run (Proofdelve ForgeOs-mfyq, 2026-09-21). Everything above this line answers "may the
 # fleet dispatch right now?" and runs at session start and after every
 # fleet-safe filing, so it has to stay fast. These two answer "what has rotted
 # while we were not looking?", which is a question for a scheduled sitting and
@@ -88,7 +88,7 @@ root="$(git -C "$(dirname "${BASH_SOURCE[0]}")/.." rev-parse --show-toplevel)" |
 # It takes its own fresh `bd export` rather than reading the tracked
 # .beads/issues.jsonl. That file is a passive export refreshed by hand, and a
 # board one bead out of date gives a confidently wrong answer: measured
-# 2026-09-21, the committed export still showed ForgeOs-sk3c.2 open minutes
+# 2026-09-21, the committed export still showed Proofdelve ForgeOs-sk3c.2 open minutes
 # after it was closed, so the stale-parent check reported a bead that had
 # already been dealt with.
 if [ "${1:-}" = "--backlog" ]; then
@@ -118,8 +118,6 @@ fi
 # fort/memory/facts/cycle7-write-boundaries.md, charter "Prose gates" cycle 7.
 FORGE_RO=(
   "scripts/verify-impl.sh"
-  "scripts/deploy-azure-staging.sh"
-  "scripts/airlock-feedback-scan.sh"
   "fort/scripts/"
   "fort/profiles/"
   "fort/charter.md"
@@ -134,14 +132,14 @@ FORGE_RO=(
 # fleet-safe returned 6 while 14 carried the label (measured 2026-09-15): the
 # rest were in_progress or blocked, and a bad touch set on those is latent rather
 # than absent -- it bites when the bead becomes dispatchable. The first version of
-# this script asked `ready` and missed ForgeOs-cy60, a seat-file bead the Forge
+# this script asked `ready` and missed Proofdelve ForgeOs-cy60, a seat-file bead the Forge
 # cannot write, in the very next case after it was written.
 json="$(bd -C "$root" list --status all --label-any fleet-safe --limit 0 --json 2>/dev/null)" || exit 3
 [ -n "$json" ] || exit 3
 board_json="$(bd -C "$root" list --status all --limit 0 --json 2>/dev/null)" || exit 3
 [ -n "$board_json" ] || exit 3
 # shellcheck disable=SC2016 # The embedded Python is intentionally a literal.
-printf '%s\0%s' "$json" "$board_json" | FORGE_RO="${FORGE_RO[*]}" ROOT="$root" FLEET_STATE="${FLEET_STATE:-$HOME/.local/state/proofdelve-fleet}" python3 -c '
+printf '%s\0%s' "$json" "$board_json" | FORGE_RO="${FORGE_RO[*]}" ROOT="$root" FLEET_STATE="${FLEET_STATE:-$HOME/.local/state/manyhalls-fleet}" python3 -c '
 import json, math, os, re, subprocess, sys, tempfile
 raw = sys.stdin.buffer.read().split(b"\0")
 if len(raw) != 2 or not raw[0] or not raw[1] or raw[0] == b"null" or raw[1] == b"null":
@@ -178,7 +176,7 @@ try:
 except ValueError:
     print("queue-lint: invalid QUEUE_LINT_BD_TIMEOUT value: %s" % raw_bd_timeout)
     sys.exit(3)
-# WHAT "LIVE" MEANS ON THE REAL BOARD (Tova, eng3.15 round two; the fleet says so
+# WHAT "LIVE" MEANS ON THE REAL BOARD (the Warden, eng3.15 round two; the fleet says so
 # itself at fleet.sh:936-938). running / launching / orphaned are DERIVED from
 # the filesystem and never stored: dispatch writes bead, started, run, touches
 # and the child writes pid, with NO state file; the first stored token is
@@ -324,7 +322,7 @@ undeclared, inherited, unwritable, already, misspelt, stalled, both_labels, flee
 touches_multi, touches_midline, ask_missing, touches_nonpath = [], [], [], []
 for i in d:
     labels = set(i.get("labels") or [])
-    # ForgeOs-29j3g item 8: only the FIRST line beginning "Touches:" is read.
+    # Proofdelve ForgeOs-29j3g item 8: only the FIRST line beginning "Touches:" is read.
     desc_lines = (i.get("description") or "").splitlines()
     if sum(1 for line in desc_lines if line.strip().startswith("Touches:")) > 1:
         touches_multi.append(i["id"])
@@ -360,7 +358,7 @@ for i in d:
         #
         # A path that does not exist is NOT enough on its own: a bead that
         # creates a new file names one legitimately. The discriminator is the
-        # DIRECTORY. web/src/test/format.test.ts (ForgeOs-5648, measured
+        # DIRECTORY. web/src/test/format.test.ts (Proofdelve ForgeOs-5648, measured
         # 2026-09-15) had no web/src/test/ at all -- the real file was
         # web/src/utils/format.test.ts. A new file inside an existing directory
         # is ordinary and is deliberately not reported.
@@ -375,7 +373,7 @@ for i in d:
             if parent and not os.path.isdir(parent):
                 misspelt.append((i["id"], tok, os.path.relpath(parent, root)))
 
-# ForgeOs-29j3g: his board is the assignee; each bead on it needs an ASK line.
+# Proofdelve ForgeOs-29j3g: his board is the assignee; each bead on it needs an ASK line.
 # Asked only of beads assigned to him, so a clean board costs no comment query.
 for i in board:
     if (i.get("status") or "open") == "closed" or (i.get("assignee") or "") != "justin":
@@ -407,9 +405,9 @@ for i in open_beads:
         if isinstance(rows, dict): rows = rows.get("data", rows)
     except json.JSONDecodeError:
         print("queue-lint: invalid comments for %s" % i["id"]); sys.exit(3)
-    if rows and (rows[-1].get("author") or "") == "marrek":
+    if rows and (rows[-1].get("author") or "") == "emrith":
         stalled.append(i["id"])
-# ForgeOs-2ll5.1: a stale tracked export is indistinguishable from a fresh one
+# Proofdelve ForgeOs-2ll5.1: a stale tracked export is indistinguishable from a fresh one
 # at the point of reading. Compare its id set against the live open board; every
 # open bead absent from it is a finding. A fort without a tracked export has
 # nothing to compare (say so, no finding); an unreadable one is a refusal.
@@ -433,7 +431,7 @@ if os.path.exists(export_path):
     export_missing = [i["id"] for i in open_beads if i["id"] not in exported]
 else:
     export_note = "no tracked export at .beads/issues.jsonl; freshness not checked"
-# ForgeOs-n1wbd: the newest Overseer gate decision per bead, from the event
+# Proofdelve ForgeOs-n1wbd: the newest Overseer gate decision per bead, from the event
 # stream (actor justin, gate.approved / gate.declined; later lines win, files in
 # date order). A fort with no event directory has nothing to compare: no finding.
 declined_no_lap = []
@@ -466,28 +464,28 @@ if os.path.isdir(events_dir):
 rc = 0
 if declined_no_lap:
     rc = 1
-    print("DECLINED ESCALATE RE-RELEASED WITHOUT A LAP -- his newest decision is a Decline and no open lap exists; the fleet would try to land the declined tip. File a child lap and remove fleet-safe here (ForgeOs-n1wbd):")
+    print("DECLINED ESCALATE RE-RELEASED WITHOUT A LAP -- his newest decision is a Decline and no open lap exists; the fleet would try to land the declined tip. File a child lap and remove fleet-safe here (Proofdelve ForgeOs-n1wbd):")
     for b in declined_no_lap: print("  %s" % b)
 if touches_nonpath:
     rc = 1
-    print("TOUCHES TOKEN IS NOT A PATH -- fleet.sh reserves it as one, so beads sharing it collide; move notes like (new file) to their own line (ForgeOs-n1wbd):")
+    print("TOUCHES TOKEN IS NOT A PATH -- fleet.sh reserves it as one, so beads sharing it collide; move notes like (new file) to their own line (Proofdelve ForgeOs-n1wbd):")
     for b, tok in touches_nonpath: print("  %s declares %s" % (b, tok))
 if export_missing:
     rc = 1
-    print("EXPORT STALE -- %d open bead(s) absent from the tracked .beads/issues.jsonl (ForgeOs-2ll5.1). Refresh with scripts/bead-export.sh and commit it" % len(export_missing))
+    print("EXPORT STALE -- %d open bead(s) absent from the tracked .beads/issues.jsonl (Proofdelve ForgeOs-2ll5.1). Refresh with scripts/bead-export.sh and commit it" % len(export_missing))
     for b in export_missing[:8]: print("  %s" % b)
     if len(export_missing) > 8: print("  ... and %d more" % (len(export_missing) - 8))
 if touches_multi:
     rc = 1
-    print("TOUCHES ON MORE THAN ONE LINE -- fleet.sh reads only the first, so the rest reserve nothing (ForgeOs-29j3g). Put every path on ONE Touches: line:")
+    print("TOUCHES ON MORE THAN ONE LINE -- fleet.sh reads only the first, so the rest reserve nothing (Proofdelve ForgeOs-29j3g). Put every path on ONE Touches: line:")
     for b in touches_multi: print("  %s" % b)
 if touches_midline:
     rc = 1
-    print("TOUCHES MID-LINE -- fleet.sh reads only a line that BEGINS with Touches:, so this declares nothing (ForgeOs-29j3g):")
+    print("TOUCHES MID-LINE -- fleet.sh reads only a line that BEGINS with Touches:, so this declares nothing (Proofdelve ForgeOs-29j3g):")
     for b in touches_midline: print("  %s" % b)
 if ask_missing:
     rc = 1
-    print("ON HIS BOARD WITH NO ASK LINE -- assigned to justin, no comment line beginning \"ASK:\", so the Keep shows no reason (ForgeOs-29j3g):")
+    print("ON HIS BOARD WITH NO ASK LINE -- assigned to justin, no comment line beginning \"ASK:\", so the Keep shows no reason (Proofdelve ForgeOs-29j3g):")
     for b in ask_missing: print("  %s" % b)
 if undeclared:
     rc = 1
@@ -528,7 +526,7 @@ if fleet_escalated:
 if stalled:
     rc = 1
     print("STALLED DIALOGUE -- the Mayor answered but did not hand the turn back:")
-    for b in stalled: print("  %s has mayor-review, no human, no worker, and last comment by marrek" % b)
+    for b in stalled: print("  %s has mayor-review, no human, no worker, and last comment by emrith" % b)
 # LANDING CLASS -- fleet.sh refuses a fleet-safe bead without either class,
 # but that refusal is only a skip line in a fleet run. Keep the diagnosis here,
 # on the queue surface the Mayor reads after marking a bead fleet-safe. The
@@ -612,7 +610,7 @@ if stale_input:
     except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired) as e:
         print("STALE CRITERIA UNAVAILABLE -- %s" % e)
 report_unresolved_identifiers(board)
-# THE BACKLOG SITTING TRIGGER (ForgeOs-4dzt8, seat-file amendment approved
+# THE BACKLOG SITTING TRIGGER (Proofdelve ForgeOs-4dzt8, seat-file amendment approved
 # 2026-09-21). An obligation with no trigger is a wish -- this seat file says so
 # about the advisory channel, and ADV-0008 records the same failure at
 # civilization level: the queue nobody reads is the failure mode. So the nudge
@@ -696,9 +694,9 @@ core_rc=$?
 printf '%s' "$json" | ROOT="$root" python3 "$root/scripts/unattended-fleet/prose-blockers.py"
 prose_rc=$?
 
-# PROMPT SIZE (ForgeOs-2tz10, 2026-11-03). forge.sh hands the Forge `bd show <bead>`
+# PROMPT SIZE (Proofdelve ForgeOs-2tz10, 2026-11-03). forge.sh hands the Forge `bd show <bead>`
 # with every comment, and past 1,048,576 characters the session dies at turn/start
-# (input_too_large) while the fleet records only "exit 1": ForgeOs-9gmk3's thread
+# (input_too_large) while the fleet records only "exit 1": Proofdelve ForgeOs-9gmk3's thread
 # reached 1.8 MB from one pasted verify log. Flag any open fleet-safe bead whose
 # text passes a third of the limit, so the Mayor supersedes it before dispatch.
 # Raw text, because bd show's wrapping and indent render it about 1.5x larger
@@ -729,7 +727,7 @@ for line in open(board):
 # emits keep.stale when a refresh fails. This check stays as the tracker's own size
 # guard (queue-lint, bead-export and every `bd export` caller pay for the size):
 # warn at half the budget, fail at 85%. When it warns, run scripts/bead-archive.sh
-# --dry-run (ForgeOs-a8yqk) and report to the Overseer.
+# --dry-run (Proofdelve ForgeOs-a8yqk) and report to the Overseer.
 export_rc=0
 export_limit_mb="${QUEUE_LINT_EXPORT_LIMIT_MB:-256}"
 export_bytes="$(wc -c < "$size_board" 2>/dev/null || echo 0)"
@@ -741,7 +739,7 @@ fi
 rm -f "$size_board"
 size_rc=0
 if [ -n "$oversized" ]; then
-  echo "PROMPT SIZE -- open fleet-safe bead(s) past $prompt_limit characters of text; the Forge prompt (bd show, every comment) dies past 1048576. Supersede with a clean bead (ForgeOs-2tz10):"
+  echo "PROMPT SIZE -- open fleet-safe bead(s) past $prompt_limit characters of text; the Forge prompt (bd show, every comment) dies past 1048576. Supersede with a clean bead (Proofdelve ForgeOs-2tz10):"
   printf '%s\n' "$oversized"
   size_rc=1
 fi

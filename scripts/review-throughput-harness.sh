@@ -1,5 +1,5 @@
 #!/bin/bash
-# Harness for ForgeOs-6niaz, "review throughput" (Regent sitting 2026-11-11, the
+# Harness for Proofdelve ForgeOs-6niaz, "review throughput" (Regent sitting 2026-11-11, the
 # Overseer present; his approval is recorded on the bead). One section per part
 # of the docket (fort/drafts/review-throughput-docket.md):
 #   A  finding tiers: file_followup() files [bead] items, a polish-batch bead for
@@ -73,7 +73,7 @@ grep -q '^file_followup()' "$work/ff.sh" || { echo "HARNESS REFUSES: file_follow
 
 rec_tiered="$work/rec-tiered"
 cat > "$rec_tiered" <<'R'
-Warden review (Tova Marrowassay, opus): VERDICT: APPROVE-WITH-FINDINGS
+Warden review (the Warden, opus): VERDICT: APPROVE-WITH-FINDINGS
 FINDINGS:
 1. [bead] non-blocking: the retry path has no metric; worth its own bead.
 2. [polish] non-blocking: the test name says 404 where it asserts 403.
@@ -143,7 +143,7 @@ if [ "${out#*|}" = "|0" ]; then
 else no "A6: close gating" "out=$out"; fi
 
 # A9: an indented numbered sub-list and a wrapped line beginning "3.5" belong to
-# the finding above them (Tova, 6niaz review finding 1).
+# the finding above them (the Warden, 6niaz review finding 1).
 rec_nested="$work/rec-nested"
 cat > "$rec_nested" <<'R'
 Warden review (t): VERDICT: APPROVE-WITH-FINDINGS
@@ -161,7 +161,7 @@ if [ "$(creates)" = 1 ] && grep -q polish-batch "$work/bd.log" && grep -q '3.5 s
    && ! grep -q 'the first sub-point' "$work/bd.log"; then
   ok "A9: sub-points and a wrapped '3.5 seconds' stay inside their finding: one polish-batch bead carrying the whole item, nothing for the [record] finding"
 else no "A9: nested numbering" "creates=$(creates) out=$out log=$(cut -c1-300 "$work/bd.log" 2>/dev/null)"; fi
-# A10: a partial filing reports the bead that WAS filed (Tova, finding 4).
+# A10: a partial filing reports the bead that WAS filed (the Warden, finding 4).
 out="$(ff "$rec_tiered" APPROVE-WITH-FINDINGS polish-batch)"
 # shellcheck disable=SC2016  # the pattern names the launcher's own text, literally
 if [ "${out%%|*}" = T-fu1 ] && grep -q 'lost="\$lost (partially filed: \$followup_ids' "$fleet"; then
@@ -179,7 +179,7 @@ if grep -q '^    follow="\$followup_ids"$' "$fleet" \
 else no "A7: land() caller" "the tiered caller lines are not in $fleet"; fi
 
 # A8: the Warden is told the tiers and the FINDINGS section.
-if grep -q 'FINDING TIERS (ForgeOs-6niaz' "$warden" && grep -q "a line reading exactly 'FINDINGS:'" "$warden" \
+if grep -q 'FINDING TIERS (Proofdelve ForgeOs-6niaz' "$warden" && grep -q "a line reading exactly 'FINDINGS:'" "$warden" \
    && grep -q 'An untagged non-blocking finding is filed as \[bead\]' "$warden"; then
   ok "A8: warden.sh tells the Warden the three tags, the FINDINGS section and the untagged rule"
 else no "A8: warden prompt" "the tier paragraph is not in $warden"; fi
@@ -227,7 +227,7 @@ B
 chmod +x "$work/bin/bd"
 # ffw <record> <tip> [review-only] -> runs fix_forward; leaves $work/ffw.log (stub calls) and $work/bd.log
 ffw() {
-  rm -f "$work/ffw.log"; : > "$work/bd.log"; rm -rf "$work/state"; mkdir -p "$work/state/workers/par" "$work/state/logs"   # bd.log exists, so "no update" is a measurement (Tova, finding 6)
+  rm -f "$work/ffw.log"; : > "$work/bd.log"; rm -rf "$work/state"; mkdir -p "$work/state/workers/par" "$work/state/logs"   # bd.log exists, so "no update" is a measurement (the Warden, finding 6)
   [ "${3:-}" = review-only ] && : > "$work/state/workers/par/review-only"
   [ "${PRESET_BASE:-}" = 1 ] && { mkdir -p "$work/state/fix-forward/par"; echo old > "$work/state/fix-forward/par/base"; }
   PATH="$work/bin:$PATH" BD_LOG="$work/bd.log" bash -c '
@@ -245,7 +245,7 @@ ffw() {
 }
 rec_ff="$work/rec-ff"
 cat > "$rec_ff" <<'R'
-Warden review (Tova Marrowassay, opus): VERDICT: FIX-FORWARD
+Warden review (the Warden, opus): VERDICT: FIX-FORWARD
 FINDINGS:
 1. [polish] non-blocking: rename shouldReturn404 to shouldReturn403.
 2. [bead] non-blocking: add a metric to the retry path.
@@ -307,7 +307,7 @@ else no "B11: bd unknown" "calls=$(tr '\n' '|' < "$work/ffw.log" 2>/dev/null)"; 
 
 BD_STATUS=closed BD_LABELS='"lands-on-review"' ffw "$rec_ff" abc123
 if grep -q '^fix_forward()' "$work/ffw.sh" && ! grep -q '^update' "$work/bd.log" && ! grep -q '^land' "$work/ffw.log" 2>/dev/null && [ ! -e "$work/state/fix-forward/par/base" ]; then
-  ok "B14: a bead closed under the review is not reopened for a lap: no write, no lap (Tova, finding 5)"
+  ok "B14: a bead closed under the review is not reopened for a lap: no write, no lap (the Warden, finding 5)"
 else no "B14: closed bead" "bd=$(tr '\n' '|' < "$work/bd.log") calls=$(tr '\n' '|' < "$work/ffw.log" 2>/dev/null)"; fi
 
 # B12: the routing in review_one(), the dispatch brief and the re-check env,
@@ -398,28 +398,28 @@ if grep -q '^    base="\$(wb_choose_base "\$REPO" "\$from_main" "\$interactive")
 else no "D7: main() wiring" "the stacking call sites are not in $workbench"; fi
 
 # ---------------------------------------------------------------------------
-echo "F. THE WORKBENCH BELTS (fleet.sh; the Overseer's ruling on Tova's finding 2)"
+echo "F. THE WORKBENCH BELTS (fleet.sh; the Overseer's ruling on the Warden's finding 2)"
 extract "$fleet" sign_label gated_range_why stacked_held_why > "$work/belts.sh"
 # F1: the gate-1 alternation is the same in both launchers, so the fleet's belt
 # and the Warden's diff class cannot drift apart.
-g1f="$(grep -m1 'src/ForgeOS.Api/Program.cs|' "$work/belts.sh" | sed 's/^ *//')"
-g1w="$(grep -m1 'src/ForgeOS.Api/Program.cs|' "$warden" | sed 's/^ *//')"
+g1f="$(grep -m1 'src/Product.Api/Program.cs|' "$work/belts.sh" | sed 's/^ *//')"
+g1w="$(grep -m1 'src/Product.Api/Program.cs|' "$warden" | sed 's/^ *//')"
 if [ -n "$g1f" ] && [ "$g1f" = "$g1w" ]; then
   ok "F1: fleet.sh's gate-1 path list is byte-identical to warden.sh's diff-class list"
 else no "F1: gate-1 parity" "fleet='${g1f:0:80}' warden='${g1w:0:80}'"; fi
 # A fixture repo: main, and one branch per shape.
 gr="$work/grepo"; git init -q -b main "$gr"; git -C "$gr" config user.email h@h; git -C "$gr" config user.name H
-mkdir -p "$gr/web/src" "$gr/src/ForgeOS.Api" "$gr/fort/seats"; echo a > "$gr/web/src/a.ts"; git -C "$gr" add -A; git -C "$gr" commit -qm base
+mkdir -p "$gr/web/src" "$gr/src/Product.Api" "$gr/fort/seats"; echo a > "$gr/web/src/a.ts"; git -C "$gr" add -A; git -C "$gr" commit -qm base
 mkb() { # $1 branch, $2 base, $3 path, $4 content
   git -C "$gr" checkout -q -b "$1" "$2"; mkdir -p "$gr/$(dirname "$3")"; printf '%s\n' "$4" >> "$gr/$3"
   git -C "$gr" add -A; git -C "$gr" commit -qm "$1"; git -C "$gr" checkout -q main
 }
-mkb bead/g1 main src/ForgeOS.Api/Program.cs 'auth change'
+mkb bead/g1 main src/Product.Api/Program.cs 'auth change'
 mkb bead/g2 main fort/seats/x.md 'seat text'
 mkb bead/g3 main web/src/b.ts 'export const ok = 1;'
 mkb bead/g4 main web/src/c.ts 'await refreshSession();'
-mkb bead/g5 main src/ForgeOS.Infrastructure/Migrations/M1.cs 'migration'
-mkb bead/g6 main fort/systemd/proofdelve-airlock-runner.service 'unit'
+mkb bead/g5 main src/Product.Infrastructure/Migrations/M1.cs 'migration'
+mkb bead/g6 main fort/systemd/manyhalls-airlock-runner.service 'unit'
 mkb bead/g7 main scripts/verify-impl.sh 'verifier'
 grw() { bash -c 'root="$1"; main_branch=main; source "$2"; gated_range_why "$3"' _ "$gr" "$work/belts.sh" "$1" 2>/dev/null; }
 if grw g1 | grep -q 'gate-1 surface' && grw g2 | grep -q 'gate 6' && grw g4 | grep -q 'SPA auth surface (refreshSession)' \
@@ -430,7 +430,7 @@ else no "F2: gated_range_why" "g1='$(grw g1)' g2='$(grw g2)' g3='$(grw g3)' g4='
 # Belt 2. bead/h1 held by the ESCALATE route (human, never sign-to-land) and
 # bead/s1 cut from it; bead/s2 from main; bead/n1 an unheld sitting and bead/s4
 # cut from it; bead/h2 held and bead/s3 cut from it, then main moves and BOTH
-# merge main in (Workbench rule 4), which is the criss-cross of Tova's round-two
+# merge main in (Workbench rule 4), which is the criss-cross of the Warden's round-two
 # finding 2.
 mkb bead/h1 main web/src/h.ts 'held sitting'
 mkb bead/s1 bead/h1 web/src/s.ts 'stacked sitting'
@@ -515,7 +515,7 @@ echo "E. THE FORGE CITES THE STAMPED VERIFY (forge.sh)"
 # The rule must sit INSIDE the handoff instruction, which is what reaches every
 # non-smoke dispatch; a sentence anywhere else in the file reaches nobody.
 hi="$(grep '^  handoff_instruction="' "$forge")"
-# ForgeOs-gfuc1 (2026-11-13): the Forge no longer runs the gate, so "run it on
+# Proofdelve ForgeOs-gfuc1 (2026-11-13): the Forge no longer runs the gate, so "run it on
 # the committed tip" became "say NONE-SEEN, or cite a stream event"; the
 # property (never a self-run cited as the gate) is unchanged.
 if grep -q 'CITE THE STAMP, NOT A SELF-RUN' <<<"$hi" && grep -q 'say NONE-SEEN (you do not run it)' <<<"$hi" \

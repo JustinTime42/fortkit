@@ -1,5 +1,5 @@
 #!/bin/bash
-# node-cache-harness.sh -- ForgeOs-jfqu4.8 / ForgeOs-x1n09 (Regent docket
+# node-cache-harness.sh -- Proofdelve ForgeOs-jfqu4.8 / Proofdelve ForgeOs-x1n09 (Regent docket
 # 2026-10-22 item B): Node's on-disk compile cache is OFF in every fleet, Forge,
 # nightly and verifier run.
 #

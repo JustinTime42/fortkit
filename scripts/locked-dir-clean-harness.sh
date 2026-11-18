@@ -2,13 +2,13 @@
 # Hermetic fixtures for locked_dir_clean() in scripts/verify-impl.sh.
 #
 # WHY IT EXTRACTS RATHER THAN REIMPLEMENTS (the verdict-record-harness precedent,
-# ForgeOs-9mfw.5): it pulls the locked_dirs array and the function VERBATIM out of
+# Proofdelve ForgeOs-9mfw.5): it pulls the locked_dirs array and the function VERBATIM out of
 # the subject file and sources them, so it scores the code that will run rather
 # than a paraphrase that can drift. A harness holding its own copy of the logic
 # passes forever while the subject rots.
 #
-# WHY IT EXISTS AT ALL (ForgeOs-9vx7, ForgeOs-8zb7). locked_dir_clean has guarded
-# fort/scripts since ForgeOs-x0ki with NO executed control of any kind, and its own
+# WHY IT EXISTS AT ALL (Proofdelve ForgeOs-9vx7, Proofdelve ForgeOs-8zb7). locked_dir_clean has guarded
+# fort/scripts since Proofdelve ForgeOs-x0ki with NO executed control of any kind, and its own
 # comment records what that cost: the first version ran `git ls-files` unguarded, so
 # outside a git tree the substitution failed, $stray came back empty, and the step
 # reported GREEN with a bare `fatal: not a git repository` in the middle of a passing
@@ -34,7 +34,7 @@ inc="$work/locked_dir_clean.inc"
 
 # Extract from `locked_dirs=(` through the line before the run_step that calls it.
 # Both anchors must be present exactly once or we refuse: a silent partial
-# extraction is how a vacuous harness is born (ForgeOs-675g).
+# extraction is how a vacuous harness is born (Proofdelve ForgeOs-675g).
 python3 - "$subject" "$inc" <<'PY' || { echo "HARNESS REFUSES: could not extract locked_dir_clean from the subject" >&2; exit 3; }
 import sys
 src = open(sys.argv[1]).read()
@@ -124,7 +124,7 @@ rm -rf "$missing_dir"
 check "a guarded directory absent from the tree is not a failure" 0 ""
 mkdir -p "$missing_dir"
 
-# ForgeOs-7gs: a probe that cannot run must SAY so rather than pass. This is the
+# Proofdelve ForgeOs-7gs: a probe that cannot run must SAY so rather than pass. This is the
 # case that shipped broken and was found by reading instead of by a gate.
 outside="$work/not-a-repo"; mkdir -p "$outside/${locked_dirs[0]}"; cd "$outside" || exit 3
 out="$(locked_dir_clean 2>&1)"; rc=$?

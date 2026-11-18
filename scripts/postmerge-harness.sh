@@ -1,5 +1,5 @@
 #!/bin/bash
-# Harness for fleet.sh's POST-MERGE VERIFICATION (ForgeOs-dx34.1, option (d)).
+# Harness for fleet.sh's POST-MERGE VERIFICATION (Proofdelve ForgeOs-dx34.1, option (d)).
 # Tests the SHIPPED postmerge_verify(), extracted from the real launcher, against
 # real git worktrees and a stub verifier. Refuses on an incomplete extraction.
 #
@@ -7,11 +7,11 @@
 # the post-merge verifier scores THE MERGED COMMIT and not the shared checkout,
 # and the only way to show that is to put content in the root that differs from
 # the content in the commit and see which one the verifier was handed. That is
-# ForgeOs-dx34.1's acceptance criterion 4 (the negative control) and criterion 5
+# Proofdelve ForgeOs-dx34.1's acceptance criterion 4 (the negative control) and criterion 5
 # (that the fix did not buy immunity by making the gate blind), and cases 6 and
 # 7 below are those two, executed, in that order.
 #
-# THE THREE-OUTCOME RULE (ForgeOs-8zb7). "It ran and main is red" and "it never
+# THE THREE-OUTCOME RULE (Proofdelve ForgeOs-8zb7). "It ran and main is red" and "it never
 # ran" have opposite remedies, so every unrunnable case here also asserts that
 # the verifier WAS NOT CALLED — the stub records its own invocations, and an
 # unrunnable outcome that had silently run the verifier would pass on the token
@@ -40,7 +40,7 @@ no(){ echo "  FAIL  $1 -- $2"; fail=$((fail+1)); }
 #        above is what is executed. THE PROPERTY IS "one halt, in the red arm",
 #        not any particular wording (fortkit-or2.8: a control that pins a
 #        spelling goes red for the next correct change).
-# WHY THESE CHECKS DO NOT USE `grep -q` ON A PIPE (ForgeOs-g0ev, 2026-09-10).
+# WHY THESE CHECKS DO NOT USE `grep -q` ON A PIPE (Proofdelve ForgeOs-g0ev, 2026-09-10).
 # MEASURED: 92 failures in 300 runs of the case-0 check below, every one with
 # pipeline status 141 (SIGPIPE), awk exit 0, a complete 24513-byte block, and
 # the pattern PRESENT (grep on the same bytes from a file matched every time).
@@ -57,20 +57,20 @@ no(){ echo "  FAIL  $1 -- $2"; fail=$((fail+1)); }
 # 2026-09-10 that named a documentation-only merge as the cause.
 land_block=$(awk '/^land\(\)[[:space:]]*\{/{f=1} f{print} /^\}$/{if(f) exit}' "$launcher")
 halts=$(printf '%s' "$land_block" | grep -cE '^\s+halt ')
-# HOISTED, NOT INLINE (ForgeOs-g0ev). Each grep runs ONCE, above the branch,
+# HOISTED, NOT INLINE (Proofdelve ForgeOs-g0ev). Each grep runs ONCE, above the branch,
 # and the branches test a plain variable. That satisfies SC2143 honestly
 # rather than by silencing it, and keeps the property that matters: no -q,
 # so grep reads all input and can never SIGPIPE the writer mid-flush.
 pv_hit=$(printf '%s' "$land_block" | grep 'postmerge_verify ')
 # THE THIRD SITE, MISSED BY 53c50a6 AND FOUND BY THE SAMPLE IT ASKED FOR
-# (ForgeOs-g0ev, 2026-09-11: 1 red in 150 runs, output kept this time). The
+# (Proofdelve ForgeOs-g0ev, 2026-09-11: 1 red in 150 runs, output kept this time). The
 # red-arm check below was `printf | awk '{print;exit}' | grep -q halt`: awk's
 # `exit` on the first halt after `red)` closes the pipe while printf is still
 # flushing the same 24KB block, 141, pipefail, the elif reads false, and the
 # else reports "not in the red arm" with evidence showing it IS there. Rarer
 # than case 0 because awk reads to the red arm before it can exit. No exit,
 # no -q: awk reads all input, the variable is tested.
-# The arm is `red|refused)` since ForgeOs-s1reg finding 4: a refused post-merge
+# The arm is `red|refused)` since Proofdelve ForgeOs-s1reg finding 4: a refused post-merge
 # run halts too, through the SAME single halt call, with different words.
 red_halt=$(printf '%s' "$land_block" | awk '/^    (red|red\|refused)\)/{f=1} f&&/^\s+halt /{print}')
 if [ -z "$land_block" ]; then
@@ -91,14 +91,14 @@ awk '/^run_verifier\(\)[[:space:]]*\{/{f=1} /^postmerge_result=/{print; next} /^
   "$launcher" > "$work/pm.sh"
 n=$(wc -l < "$work/pm.sh")
 # REFUSE ON AN INCOMPLETE EXTRACTION, NAMING EACH SYMBOL. A harness that scores
-# a pass on a function it did not load is the ForgeOs-8zb7 class C failure: it
+# a pass on a function it did not load is the Proofdelve ForgeOs-8zb7 class C failure: it
 # reports its own breakage as a defect in the subject. landable-harness.sh paid
 # for this once already — a missing symbol made its vacuity control pass.
 for sym in 'run_verifier()' 'postmerge_verify()' 'postmerge_result=' 'postmerge_tree='; do
   grep -qF "$sym" "$work/pm.sh" || { echo "HARNESS REFUSES: $sym not extracted from $launcher" >&2; exit 3; }
 done
 [ "$n" -ge 20 ] || { echo "HARNESS REFUSES: extracted $n lines" >&2; exit 3; }
-# CONDITIONAL GATE (ForgeOs-s1reg finding 4): required only when the extracted
+# CONDITIONAL GATE (Proofdelve ForgeOs-s1reg finding 4): required only when the extracted
 # code CALLS it, so this harness still runs, and fails, against an older file.
 if grep -qE '(^|[^[:alnum:]_])verify_unrunnable ' "$work/pm.sh" && ! grep -q '^verify_unrunnable()' "$work/pm.sh"; then
   echo "HARNESS REFUSES: postmerge_verify() calls verify_unrunnable() and it was not extracted" >&2; exit 3
@@ -152,7 +152,7 @@ if [ "${out%%|*}" = green ] && [ "$(calls_for "$r/calls")" -eq 1 ]; then
 else no "clean commit not green" "[$out] calls=$(calls_for "$r/calls")"; fi
 
 # --- 2  GREEN REMOVES ITS WORKTREE. ~245 MB per merge otherwise, in a fort with
-#        a measured 11 GB worktree problem (ForgeOs-mpaw).
+#        a measured 11 GB worktree problem (Proofdelve ForgeOs-mpaw).
 if [ "${out#*|}" = "" ] && [ "$(trees_for "$r")" -eq "$before" ]; then
   ok "GREEN removes the worktree: no path is kept and the worktree count is back to $before"
 else no "green kept a worktree" "tree=[${out#*|}] count $(trees_for "$r") vs $before"; fi
@@ -183,7 +183,7 @@ if [ "${out%%|*}" = interrupted ]; then
   ok "a failing verifier UNDER A SIGNAL is 'interrupted', never 'red'"; else no "signal read as red" "[$out]"; fi
 
 # ---------------------------------------------------------------------------
-# 6 and 7 ARE ForgeOs-dx34.1'S TWO ACCEPTANCE CONTROLS, and they are a pair.
+# 6 and 7 ARE Proofdelve ForgeOs-dx34.1'S TWO ACCEPTANCE CONTROLS, and they are a pair.
 # Neither one alone can tell "the window is closed" from "the gate stopped
 # looking", which is the entire reason criterion 5 exists.
 
@@ -255,7 +255,7 @@ mkstub() { # $1 name, $2 a line the stub prints on stderr ("" none), $3 exit cod
   printf '%s' "$r"
 }
 for spec in "dockerdown|verify: step 'docker-precheck' FAILED (exit 1). Its full output is kept at /tmp/x|1|refused" \
-            "wrongtree|verify: REFUSING TO RUN — WRONG TREE (ForgeOs-afdr). NOTHING WAS VERIFIED.|78|refused" \
+            "wrongtree|verify: REFUSING TO RUN — WRONG TREE (Proofdelve ForgeOs-afdr). NOTHING WAS VERIFIED.|78|refused" \
             "harnessrefuses|verify: step 'forge-refresh-harness' FAILED (exit 3). Its full output is kept at /tmp/x|3|refused" \
             "realred|verify: step 'dotnet-test' FAILED (exit 1). Its full output is kept at /tmp/x|1|red"; do
   IFS='|' read -r name line code want <<< "$spec"

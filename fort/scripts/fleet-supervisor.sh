@@ -1,10 +1,10 @@
 #!/bin/bash
-# Proofdelve fleet supervisor — starts a fleet run when work appears, and is a
-# no-op otherwise. ForgeOs-dx34.4 (spec section 4, layer 3). Regent edict of
+# Manyhalls fleet supervisor — starts a fleet run when work appears, and is a
+# no-op otherwise. Proofdelve ForgeOs-dx34.4 (spec section 4, layer 3). Regent edict of
 # 2026-09-10, Overseer present throughout; gate 6.
 #
 # WHAT THIS IS. A host-level process fired on a short interval by
-# fort/systemd/proofdelve-fleet-supervisor.timer. On each firing it asks four
+# fort/systemd/manyhalls-fleet-supervisor.timer. On each firing it asks four
 # questions in order and exits on the first that settles it:
 #
 #   1. Is the halt file present?          -> exit 0, no output, touch nothing.
@@ -16,15 +16,15 @@
 #   4b. Does fleet.sh report a REAPABLE       -> no: exit 0, no output, no event.
 #       worker (`fleet.sh --reapable`)?
 #   4c. Did the LAST run this file started do  -> no, and the back-off has not
-#       anything (ForgeOs-s49w)?                  expired: exit 0, counted, silent.
+#       anything (Proofdelve ForgeOs-s49w)?                  expired: exit 0, counted, silent.
 #   4d. Does the PATH resolve the run's tools? -> no: exit 64, one stderr line (eedj).
 #   5. Otherwise START A RUN, as its own systemd transient unit, and exit.
 #
-# 4c IS THE BACK-OFF (ForgeOs-s49w; Tova's round-one finding 3). A bead that
+# 4c IS THE BACK-OFF (Proofdelve ForgeOs-s49w; the Warden's round-one finding 3). A bead that
 # passes question 4's query and that fleet.sh's dispatchable() refuses starts a
 # run that drains at once -- fleet.autostart + fleet.begun + fleet.ended every
 # interval, 2,160 events a day of nothing, until the bead is fixed. This file
-# still decides NOTHING about beads (ForgeOs-czhb: no second dispatchable());
+# still decides NOTHING about beads (Proofdelve ForgeOs-czhb: no second dispatchable());
 # it reads the OUTCOME of the run it last started, which fleet.sh writes to
 # $FLEET_STATE/last-run.outcome on its ordinary exit path: run, autostart (the
 # unit name this file passed as FLEET_AUTOSTART), launches, reason,
@@ -35,7 +35,7 @@
 # event saying until when, then silence, counted in $FLEET_STATE/supervisor.backoff
 # (key=value: last_autostart_unit, backoff_n, backoff_until, skips). A run
 # that launched anything, or lasted, or that a person started, clears it.
-# WHEN A WINDOW ENDS, ONE RUN STARTS (ForgeOs-enred): the outcome on record is
+# WHEN A WINDOW ENDS, ONE RUN STARTS (Proofdelve ForgeOs-enred): the outcome on record is
 # then the one already judged, so the firing starts a PROBE run carrying the
 # step count, and the next firing judges the PROBE's outcome. Before this, it
 # re-judged the same stale record and backed off again, forever.
@@ -43,7 +43,7 @@
 # outcome record (halt() exits directly), so a halted last run reads as the
 # previous run's unit and never matches ours.
 #
-# 4b IS ForgeOs-dx34.18's SUPERVISOR HALF. A run that ends with a worker
+# 4b IS Proofdelve ForgeOs-dx34.18's SUPERVISOR HALF. A run that ends with a worker
 # finished-but-unreaped (15k.6, 2026-09-11: its Forge exited inside another
 # bead's seven-minute reap pass) leaves a bead that is CLAIMED, so it is not in
 # `bd ready`, so question 4 alone never starts the run that would reap it; the
@@ -51,7 +51,7 @@
 # or a hard stop leaves behind. The count comes from fleet.sh itself (`--reapable`,
 # which runs before preflight like --status) so that "reapable" has ONE
 # definition -- this file re-reads no state token list, for the same reason it
-# carries no second copy of dispatchable() (ForgeOs-czhb). A query that fails is
+# carries no second copy of dispatchable() (Proofdelve ForgeOs-czhb). A query that fails is
 # a refusal, not zero: exit 64 and a stderr line, like bd not answering.
 #
 # IT IS NOT A NIGHTLY TIMER. A nightly timer reintroduces the batch boundary
@@ -60,12 +60,12 @@
 #
 # IT DOES NOT SOLVE CONCURRENCY, AND IT MUST NOT TRY. fleet.sh takes an
 # exclusive flock on $FLEET_STATE/fleet.lock immediately before announcing a run
-# and exits 75 when it is held (ForgeOs-l1ef). This file only PROBES that lock,
+# and exits 75 when it is held (Proofdelve ForgeOs-l1ef). This file only PROBES that lock,
 # with the same `flock -n 9 9>>` spelling print_status() uses, and never
 # changes how fleet.sh takes it. The lock file is ZERO BYTES by design: it
 # carries no pid and nothing can be learned from reading it.
 #
-# THE KILL SWITCH IS READ HERE TOO (Tova, round-one finding 2). FLEET_ENABLED
+# THE KILL SWITCH IS READ HERE TOO (the Warden, round-one finding 2). FLEET_ENABLED
 # lives in fort/scripts/fleet.conf, kernel read-only to every seat, and it is
 # the one launch control no seat can flip. fleet.sh refuses on it at preflight
 # -- AFTER this file would have emitted fleet.autostart and started a unit --
@@ -75,11 +75,11 @@
 # decider about beads; it is the same switch, read the same way (sourced, and
 # tested against the literal 1 exactly as fleet.sh:410 tests it).
 #
-# THE SUPERVISOR SELECTS; fleet.sh DECIDES (ForgeOs-czhb). Question 4 is the
+# THE SUPERVISOR SELECTS; fleet.sh DECIDES (Proofdelve ForgeOs-czhb). Question 4 is the
 # exact query fleet.sh's ready_candidates() runs, `bd ready --limit 0 --label
 # fleet-safe`, and NOTHING MORE: no label exclusions, no dependency reading, no
 # second copy of dispatchable(). Two deciders diverged once and wedged a run
-# (ForgeOs-czhb); this file will not be the second. The cost is stated: a bead
+# (Proofdelve ForgeOs-czhb); this file will not be the second. The cost is stated: a bead
 # that passes the query and that dispatchable() refuses starts a run that
 # drains at once, one fleet.begun/fleet.ended pair per interval, until the
 # bead is fixed. That is visible in the stream and the fix is on the bead.
@@ -102,10 +102,10 @@
 # only increments cannot tell a wedge from a busy night; the reset is what
 # makes the record mean anything. The supervisor itself DECIDES NOTHING from
 # the streak, pages nobody, and has NO TIME THRESHOLD: every threshold available
-# from outside a run was measured over 27 runs and refuted (ForgeOs-dx34.4's
+# from outside a run was measured over 27 runs and refuted (Proofdelve ForgeOs-dx34.4's
 # design field — 16.1 minutes wedged against 14.2 minutes healthy). Wedge
 # detection lives INSIDE fleet.sh, where the state that discriminates is
-# (ForgeOs-dx34.9), and a stall WRITES THE HALT FILE — which is why question 1
+# (Proofdelve ForgeOs-dx34.9), and a stall WRITES THE HALT FILE — which is why question 1
 # covers it: a stalled fleet is never restarted into the same wedge.
 #
 # THE HALT FILE IS NEVER READ PAST, CLEARED OR BYPASSED HERE, and question 1
@@ -116,13 +116,13 @@
 # child of this process, for two reasons. The oneshot service firing this file
 # must exit at once, or the timer would never fire DURING a run and the streak
 # could never count; and a run in its own unit has its own journal
-# (`journalctl --user -u proofdelve-fleet-run-<id>`) and its own stop handle
-# (`systemctl --user stop proofdelve-fleet-run-<id>`, which sends SIGTERM to
+# (`journalctl --user -u manyhalls-fleet-run-<id>`) and its own stop handle
+# (`systemctl --user stop manyhalls-fleet-run-<id>`, which sends SIGTERM to
 # fleet.sh ALONE under KillMode=process — the drain-then-stop path, leaving the
 # detached Forges exactly as a hand-launched run does). The user manager's
 # environment is not a login shell's, so PATH is passed explicitly: THIS
 # process's own PATH, which the service unit sets, forwarded unchanged and
-# checked for the run's tools first (ForgeOs-eedj). FLEET_STATE is passed too (Tova, dx34.18
+# checked for the run's tools first (Proofdelve ForgeOs-eedj). FLEET_STATE is passed too (the Warden, dx34.18
 # finding 6): this file decides on $state -- the halt file, the lock and now
 # the reapable count -- so the run it starts must resolve the same directory,
 # or an operator override would have the supervisor read one state dir and
@@ -131,7 +131,7 @@
 # IT REFUSES FROM A MASKED SEAT, AND THE REFUSAL IS THE ONLY THING THAT STOPS
 # IT. fleet.sh refuses under FORT_MASKED and so does this file, before reading
 # anything. Measured on 2026-09-10 inside a real Mayor mask (the Regent's
-# handoff for ForgeOs-dx34.4): with the marker set, exit 64 and nothing
+# handoff for Proofdelve ForgeOs-dx34.4): with the marker set, exit 64 and nothing
 # touched. With the marker STRIPPED, this file ran to completion inside the
 # mask -- $HOME/.local/state is an rw grant in seat-sandbox.sh, so the streak
 # was written, and `systemd-run --user` succeeded because the session bus is
@@ -151,22 +151,22 @@
 #   be started — one line on stderr, which the journal keeps.
 #
 # Environment: FLEET_STATE overrides the state directory (harness use; the
-#   real one is ~/.local/state/proofdelve-fleet). The launch command is
+#   real one is ~/.local/state/manyhalls-fleet). The launch command is
 #   `systemd-run` on PATH, so a harness stubs THAT rather than this file
 #   carrying an override that could act (the FLEET_CONF lesson in fleet.sh).
 
 set -euo pipefail
 
-root="/home/justin/dev/ForgeOs"
+root="/home/justin/dev/fortkit"
 fleet="$root/fort/scripts/fleet.sh"
-state="${FLEET_STATE:-$HOME/.local/state/proofdelve-fleet}"
+state="${FLEET_STATE:-$HOME/.local/state/manyhalls-fleet}"
 halt_file="$state/HALT"
 lock_file="$state/fleet.lock"
 streak_file="$state/supervisor.streak"
 backoff_file="$state/supervisor.backoff"
 outcome_file="$state/last-run.outcome"
 backoff_idle_s="${FLEET_BACKOFF_IDLE_S:-20}"
-# ONE SOURCE OF TRUTH FOR THE TOOLCHAIN PATH (ForgeOs-eedj; Tova's round-one
+# ONE SOURCE OF TRUTH FOR THE TOOLCHAIN PATH (Proofdelve ForgeOs-eedj; the Warden's round-one
 # finding 5). This file used to carry its own copy of the PATH the service unit
 # sets, with a comment saying the two matched and nothing asserting it: a node
 # upgrade would have silently removed codex from supervisor-started runs while
@@ -177,7 +177,7 @@ backoff_idle_s="${FLEET_BACKOFF_IDLE_S:-20}"
 # names the tool and the PATH, in the journal, at exit 64.
 fleet_path="$PATH"
 # claude AND dotnet ARE ON THIS LIST BECAUSE A RUN NEEDS ITS WARDEN AND ITS
-# VERIFIER (ForgeOs-ip9z finding 6). The comment above says "the tools a run
+# VERIFIER (Proofdelve ForgeOs-ip9z finding 6). The comment above says "the tools a run
 # needs" and the list held only the ones the DISPATCHER calls: warden.sh
 # launches `claude` and scripts/verify-impl.sh runs `dotnet`, so a PATH that
 # resolves every name here could still produce a review that never starts and
@@ -185,8 +185,8 @@ fleet_path="$PATH"
 # refusal exists to turn into one legible line. Both resolve on the unit's own
 # Environment=PATH, measured on this host 2026-09-22:
 #   claude  /home/justin/.local/bin/claude          (~/.local/bin, on the unit PATH)
-#   dotnet  /usr/bin/dotnet                         (/usr/bin, on the unit PATH)
-fleet_tools="bd codex node git jq flock python3 claude dotnet"
+#   npm     resolved on the unit PATH beside node
+fleet_tools="bd codex node npm git jq flock python3 claude"
 
 if [ -n "${FORT_MASKED:-}" ]; then
   echo "fleet-supervisor.sh: REFUSED — this is a masked seat session (FORT_MASKED=${FORT_MASKED})." >&2
@@ -229,7 +229,7 @@ streak_write() {  # stdin -> the record, atomically
 # file for append (never truncating it) and holds the lock for the duration
 # of `true`, which is microseconds. It is the ONLY thing this file learns from
 # the lock file.
-# READ-ONLY, SHARED, AND WITH A DISTINCT CONFLICT CODE (ForgeOs-ip9z finding
+# READ-ONLY, SHARED, AND WITH A DISTINCT CONFLICT CODE (Proofdelve ForgeOs-ip9z finding
 # 8). The old probe was `flock -n 9 2>/dev/null 9>>"$lock_file"`, and `9>>`
 # needs WRITE permission on the lock file: whenever the redirection failed --
 # a read-only state directory, a lock file a seat cannot write -- the `if` was
@@ -297,7 +297,7 @@ fi
 
 # 3. Is the fleet enabled? The config is sourced in a subshell exactly as
 # fleet.sh sources it, so the spelling that disables one disables the other.
-# AN UNREADABLE CONFIG IS AN OUTAGE, NOT "NOTHING TO DO" (ForgeOs-81p9; Tova's
+# AN UNREADABLE CONFIG IS AN OUTAGE, NOT "NOTHING TO DO" (Proofdelve ForgeOs-81p9; the Warden's
 # round-two finding 2). This used to fold [ -r $conf ] failing into the same
 # silent exit 0 as FLEET_ENABLED=0, while fleet.sh refuses the same case
 # loudly at 64 and question 4 below argues that an outage must show in the
@@ -331,7 +331,7 @@ print(len(d) if isinstance(d, list) else 0)
 ' 2>/dev/null)" || { echo "fleet-supervisor.sh: REFUSED — bd's answer could not be parsed; not starting a run." >&2; exit 64; }
 # 4b. Any leftovers? Asked only when nothing is ready, so the common path costs
 # nothing extra; asked of fleet.sh, never of the state directory directly.
-reapable=null   # JSON null until the question is actually asked (Tova, finding 5): a start on ready beads never asks it
+reapable=null   # JSON null until the question is actually asked (the Warden, finding 5): a start on ready beads never asks it
 if [ "$n" -eq 0 ]; then
   if ! reapable="$(FLEET_STATE="$state" "$fleet" --reapable 2>/dev/null)" || ! [ "$reapable" -ge 0 ] 2>/dev/null; then
     echo "fleet-supervisor.sh: REFUSED — fleet.sh --reapable did not answer with a count; not starting a run." >&2
@@ -340,10 +340,10 @@ if [ "$n" -eq 0 ]; then
   [ "$reapable" -gt 0 ] || exit 0
 fi
 why="$n fleet-safe bead(s) were ready"
-[ "$n" -eq 0 ] && why="no bead was ready but $reapable reapable worker(s) await verify/review/merge (ForgeOs-dx34.18)"
+[ "$n" -eq 0 ] && why="no bead was ready but $reapable reapable worker(s) await verify/review/merge (Proofdelve ForgeOs-dx34.18)"
 n_ready_json_count="$n"   # the back-off's payload reads this; the back-off arithmetic below reuses $n
 
-# 4c. THE BACK-OFF (ForgeOs-s49w; the reasoning is in the header). Asked only
+# 4c. THE BACK-OFF (Proofdelve ForgeOs-s49w; the reasoning is in the header). Asked only
 # when there is work, so quiet firings never read these files.
 kv() {  # $1 file, $2 key -> value or empty; never fails (a missing file under set -e -o pipefail would otherwise end the firing at exit 2)
   [ -f "$1" ] || { echo ""; return 0; }
@@ -362,7 +362,7 @@ if [ -n "$bo_until" ] && [ "$(date -d "$bo_until" +%s 2>/dev/null || echo 0)" -g
   backoff_write "$bo_unit" "$bo_n" "$bo_until" "$((bo_skips + 1))"
   exit 0
 fi
-# THE PROBE (ForgeOs-enred). A window that has EXPIRED, with no run started
+# THE PROBE (Proofdelve ForgeOs-enred). A window that has EXPIRED, with no run started
 # since, means the outcome on record is the one this file already judged:
 # starting a run clears backoff_until (backoff_write below), so a non-empty,
 # past until can only mean nothing has run since the back-off was decided.
@@ -378,11 +378,11 @@ probe=no
 lr_unit="$(kv "$outcome_file" autostart)"; lr_launches="$(kv "$outcome_file" launches)"; lr_reason="$(kv "$outcome_file" reason)"; lr_dur="$(kv "$outcome_file" duration_s)"
 lr_landings="$(kv "$outcome_file" landings)"
 # DID NOTHING = zero launches AND zero landings, when fleet.sh records landings
-# (2026-10-06, the churn note on ForgeOs-owt37). Duration was the proxy for
+# (2026-10-06, the churn note on Proofdelve ForgeOs-owt37). Duration was the proxy for
 # "landed something" and it failed in the field: on 2026-10-05 the zero-launch
 # drains took 20-28 s against the 20 s cutoff, so this file started ten runs in
 # a row that dispatched nothing while dispatchable() refused every candidate as
-# unclassified. A run's length drifts as the fort grows (the ForgeOs-9x3vj
+# unclassified. A run's length drifts as the fort grows (the Proofdelve ForgeOs-9x3vj
 # lesson); a count does not. An outcome record without the field -- written by
 # a fleet.sh older than this change -- keeps the duration test, unchanged.
 did_nothing=no
@@ -394,7 +394,7 @@ fi
 if [ "$probe" = no ] && [ -n "$bo_unit" ] && [ "$lr_unit" = "$bo_unit" ] && [ "${lr_launches:-1}" = 0 ] && [ "$lr_reason" = drained ] \
    && [ "$did_nothing" = yes ]; then
   # our last run did nothing: back off, doubling from 4 minutes, capped at 60
-  # THE SHIFT IS GUARDED, NOT ITS RESULT (ForgeOs-ip9z finding 7). This read
+  # THE SHIFT IS GUARDED, NOT ITS RESULT (Proofdelve ForgeOs-ip9z finding 7). This read
   # `mins=$((4 << (n - 1))); [ "$mins" -gt 60 ] && mins=60`, which performs the
   # shift and only then caps: at n >= 62 it overflows signed 64-bit
   # (4 << 61 = -9223372036854775808, 4 << 62 = 0), the negative or zero value
@@ -414,7 +414,7 @@ if [ "$probe" = no ] && [ -n "$bo_unit" ] && [ "$lr_unit" = "$bo_unit" ] && [ "$
   backoff_write "$bo_unit" "$n" "$until" 0
   echo "fleet-supervisor.sh: BACKING OFF ($n): the last run this supervisor started ($bo_unit) drained in ${lr_dur}s with 0 launches and ${lr_landings:-unrecorded} landings -- $why, and fleet.sh dispatched none of it. No run until $until." >&2
   ( cd "$root" && "$root/fort/scripts/emit.sh" fleet.backoff \
-      "Fleet supervisor backing off (step $n, until $until): its last run $bo_unit drained in ${lr_dur}s with 0 launches although $why -- fleet.sh refused every candidate (ForgeOs-s49w)" \
+      "Fleet supervisor backing off (step $n, until $until): its last run $bo_unit drained in ${lr_dur}s with 0 launches although $why -- fleet.sh refused every candidate (Proofdelve ForgeOs-s49w)" \
       -a fleet -s fleet -p "{\"unit\":\"$bo_unit\",\"backoff_n\":$n,\"until\":\"$until\",\"candidates\":$n_ready_json_count,\"reapable\":$reapable}" ) || true
   exit 0
 fi
@@ -424,7 +424,7 @@ fi
 if [ "$probe" = no ] && [ "$bo_n" != 0 ]; then backoff_write "$bo_unit" 0 "" 0; fi
 
 # 4d. Does the PATH this run will inherit resolve every tool it needs?
-# (ForgeOs-eedj). Asked only once a run is about to start, so quiet firings
+# (Proofdelve ForgeOs-eedj). Asked only once a run is about to start, so quiet firings
 # cost nothing; refused loudly, because "codex not found" at dispatch time
 # looks like a Forge failure and is a PATH one.
 missing=""
@@ -441,9 +441,9 @@ fi
 # failed unit. KillMode=process: a stop reaches fleet.sh alone (its TERM trap
 # drains and exits 143) and never the detached Forges. TimeoutStopSec is long
 # because bash defers the TERM trap until the foreground command returns, and
-# a Warden review in flight finishes first (ForgeOs-ke5u) — a SIGKILL at 90s
+# a Warden review in flight finishes first (Proofdelve ForgeOs-ke5u) — a SIGKILL at 90s
 # would skip the EXIT trap and lose fleet.ended, the false-record class.
-unit="proofdelve-fleet-run-$(date +%Y%m%dT%H%M%S)"
+unit="manyhalls-fleet-run-$(date +%Y%m%dT%H%M%S)"
 if ! systemd-run --user --quiet --collect --unit "$unit" \
     -p KillMode=process -p TimeoutStopSec=45min \
     --setenv "PATH=$fleet_path" --setenv "FLEET_STATE=$state" --setenv "FLEET_AUTOSTART=$unit" --working-directory "$root" \
@@ -452,10 +452,10 @@ if ! systemd-run --user --quiet --collect --unit "$unit" \
   exit 64
 fi
 if [ "$probe" = yes ]; then
-  why="$why; this run is the PROBE after back-off step $bo_n ended (ForgeOs-enred)"
-  backoff_write "$unit" "$bo_n" "" 0   # the probe to judge next time, the step count carried (ForgeOs-enred)
+  why="$why; this run is the PROBE after back-off step $bo_n ended (Proofdelve ForgeOs-enred)"
+  backoff_write "$unit" "$bo_n" "" 0   # the probe to judge next time, the step count carried (Proofdelve ForgeOs-enred)
 else
-  backoff_write "$unit" 0 "" 0   # the run to judge next time (ForgeOs-s49w); any prior back-off is over
+  backoff_write "$unit" 0 "" 0   # the run to judge next time (Proofdelve ForgeOs-s49w); any prior back-off is over
 fi
 echo "fleet-supervisor.sh: started $unit ($why). journalctl --user -u $unit" >&2
 # The run announces fleet.begun itself once it holds the lock; that line cannot

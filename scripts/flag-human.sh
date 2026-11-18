@@ -2,7 +2,7 @@
 # Record the raise before adding the label: a visible human label must never
 # exist without its durable decision.raised event.
 #
-# WHOSE MOVE IS THE ASSIGNEE (ForgeOs-29j3g, from 2026-10-19). His board is the
+# WHOSE MOVE IS THE ASSIGNEE (Proofdelve ForgeOs-29j3g, from 2026-10-19). His board is the
 # open beads assigned to justin, each with one comment line beginning "ASK:".
 # So a hand-back now posts the ASK line FIRST and then, in the same single
 # update that flips the labels, assigns the bead to him: a bead never reaches
@@ -34,7 +34,7 @@ esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 emitter="$main_root/fort/scripts/emit.sh"
 
-"$emitter" decision.raised "$why" -a "${FORT_ACTOR:-marrek}" -s "${FORT_SEAT:-mayor}" -t "$bead_id" || exit 3
+"$emitter" decision.raised "$why" -a "${FORT_ACTOR:-emrith}" -s "${FORT_SEAT:-mayor}" -t "$bead_id" || exit 3
 ask_file="$(mktemp)" || exit 3
 trap 'rm -f "$ask_file"' EXIT
 printf 'ASK: %s -- %s\n' "$verb" "$why" > "$ask_file"

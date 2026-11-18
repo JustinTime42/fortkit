@@ -1,5 +1,5 @@
 #!/bin/bash
-# Harness for fleet.sh's budget governor (ForgeOs-9mfw.4). Tests the SHIPPED
+# Harness for fleet.sh's budget governor (Proofdelve ForgeOs-9mfw.4). Tests the SHIPPED
 # functions, extracted from the real launcher, against crafted logs. Refuses on
 # an empty extraction.
 set -uo pipefail
@@ -13,7 +13,7 @@ work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 awk '/^looks_rate_limited\(\)[[:space:]]*\{/{f=1} /^looks_env_failure\(\)[[:space:]]*\{/{f=1} /^env_halt_if\(\)[[:space:]]*\{/{f=1} /^governor_init\(\)[[:space:]]*\{/{f=1} /^governor_down\(\)[[:space:]]*\{/{f=1} /^governor_up_maybe\(\)[[:space:]]*\{/{f=1} /^spend\(\)[[:space:]]*\{/{f=1} /^budget_left\(\)[[:space:]]*\{/{f=1} /^budget_stop\(\)[[:space:]]*\{/{f=1} /^set_end_reason\(\)[[:space:]]*\{/{f=1} /^live_forges\(\)[[:space:]]*\{/{f=1} /^reapable_workers\(\)[[:space:]]*\{/{f=1} /^returns_of\(\)[[:space:]]*\{/{f=1} /^worker_state\(\)[[:space:]]*\{/{f=1} /^worker_set_state\(\)[[:space:]]*\{/{f=1} /^worker_reason\(\)[[:space:]]*\{/{f=1} /^worker_explain\(\)[[:space:]]*\{/{f=1} /^worker_resume_at\(\)[[:space:]]*\{/{f=1} /^worker_reap_worktree\(\)[[:space:]]*\{/{f=1} /^defer_merge\(\)[[:space:]]*\{/{f=1} /^reap_pass\(\)[[:space:]]*\{/{f=1} /^reap_order\(\)[[:space:]]*\{/{f=1} /^verdict_is_landable\(\)[[:space:]]*\{/{f=1} /^verdict_files_followup\(\)[[:space:]]*\{/{f=1} /^page_overseer\(\)[[:space:]]*\{/{f=1} /^reason_key\(\)[[:space:]]*\{/{f=1} /^reason_seen\(\)[[:space:]]*\{/{f=1} /^touch_prefix\(\)[[:space:]]*\{/{f=1} /^touch_set_of\(\)[[:space:]]*\{/{f=1} /^deliverable_of\(\)[[:space:]]*\{/{f=1} /^touch_sets_intersect\(\)[[:space:]]*\{/{f=1} /^touch_conflict_with_live\(\)[[:space:]]*\{/{f=1} /^governor_carry_out\(\)[[:space:]]*\{/{f=1} /^governor_carry_reset\(\)[[:space:]]*\{/{f=1} /^prelanding_refresh\(\)[[:space:]]*\{/{f=1} /^stall_check\(\)[[:space:]]*\{/{f=1} /^return_to_ready\(\)[[:space:]]*\{/{f=1} /^bead_status\(\)[[:space:]]*\{/{f=1} /^refill_slots\(\)[[:space:]]*\{/{f=1} /^mem_mb\(\)[[:space:]]*\{/{f=1} /^young_forges\(\)[[:space:]]*\{/{f=1} /^mem_gate_why\(\)[[:space:]]*\{/{f=1} /^mem_stepdown_maybe\(\)[[:space:]]*\{/{f=1} /^host_verify\(\)[[:space:]]*\{/{f=1} /^ask_overseer\(\)[[:space:]]*\{/{f=1} /^overseer_assignee\(\)/{print; next} /^mayor_assignee\(\)/{print; next} /^verify_tier_of\(\)[[:space:]]*\{/{f=1} /^nightly_backstop_ok\(\)[[:space:]]*\{/{f=1} /^stale_signature_check\(\)[[:space:]]*\{/{f=1} /^stored_verdict_is_signable\(\)[[:space:]]*\{/{f=1} /^nightly_why=/{print; next} f{print} /^\}$/{f=0}' \
   "$launcher" > "$work/gov.sh"
 # The lifecycle predicates are one-liners and do not end at a bare `}`; take
-# them whole by line. Absent from a pre-ForgeOs-w7u5 launcher, which is the
+# them whole by line. Absent from a pre-Proofdelve ForgeOs-w7u5 launcher, which is the
 # point: the cases below then FAIL rather than the harness refusing, because
 # this instrument still has to be usable against either file.
 grep -E '^(worker_(live|reapable|needs_person)|env_signature|touches_(migrations|everything)|governor_carry_file)\(\)[[:space:]]*\{' "$launcher" >> "$work/gov.sh" 2>/dev/null || true
@@ -25,7 +25,7 @@ n=$(wc -l < "$work/gov.sh")
 # was simply absent, bash said `command not found` on stderr, the arm FELL
 # THROUGH to its needs-person branch, and three cases failed as though the
 # LAUNCHER were wrong. Under a runner without `set -e` a missing callee can fall
-# through to a branch that PASSES just as easily, which is the ForgeOs-8zb7
+# through to a branch that PASSES just as easily, which is the Proofdelve ForgeOs-8zb7
 # class A shape: a control reporting success while measuring nothing.
 #
 # TWO LISTS, AND THE SECOND ONE IS CONDITIONAL ON PURPOSE. The first names what
@@ -45,29 +45,29 @@ done
 # Called-but-not-defined is always a defect; not-called-at-all is just an older
 # launcher. Add a new callee here when you add a caller, in the same commit.
 # page_overseer joined 2026-09-11: reap_pass() calls it on forge.sh's exit 76
-# (ForgeOs-lw8x), and a harness that extracts the caller without the callee
+# (Proofdelve ForgeOs-lw8x), and a harness that extracts the caller without the callee
 # falls through to a branch that can PASS (the 2026-09-10 sighting).
 # reason_key/reason_seen joined the same day: defer_merge() and reap_pass()
 # call them for the dx34.15 seen-list fingerprint.
-# looks_env_failure / env_halt_if / env_signature joined 2026-09-12 (ForgeOs-g3n1):
+# looks_env_failure / env_halt_if / env_signature joined 2026-09-12 (Proofdelve ForgeOs-g3n1):
 # reap_pass() consults the environmental signature before the governor does.
-# touch_* and touches_* joined 2026-09-14 (ForgeOs-b9mj): touch_set_of() and
+# touch_* and touches_* joined 2026-09-14 (Proofdelve ForgeOs-b9mj): touch_set_of() and
 # touch_sets_intersect() read the two sentinel one-liners.
 # refill_slots and the memory gate (mem_mb, young_forges, mem_gate_why,
-# mem_stepdown_maybe) joined 2026-10-15 (ForgeOs-uwjme, ForgeOs-asad6): reap_pass()
+# mem_stepdown_maybe) joined 2026-10-15 (Proofdelve ForgeOs-uwjme, Proofdelve ForgeOs-asad6): reap_pass()
 # calls refill_slots() at its step boundaries, which calls live_forges() and
 # dispatch_pass(); dispatch_pass() is NOT extracted, so every runner that reaches
 # a refill stubs it or stubs refill_slots() itself.
 # ask_overseer, overseer_assignee and mayor_assignee joined 2026-10-19
-# (ForgeOs-29j3g): page_overseer() and return_to_ready() assign the bead.
+# (Proofdelve ForgeOs-29j3g): page_overseer() and return_to_ready() assign the bead.
 # nightly_backstop_ok joined 2026-10-20 (s1reg finding 3): host_verify() asks it
 # whether a nightly ran; a fixture root with no events reads stale -> tier full.
-# host_verify and verify_tier_of joined 2026-10-19 (ForgeOs-s1reg): reap_pass()
+# host_verify and verify_tier_of joined 2026-10-19 (Proofdelve ForgeOs-s1reg): reap_pass()
 # verifies a branch through host_verify(), which picks the tier from the diff;
 # without them every verify arm dies "command not found" and reads as RED.
-# reap_order joined 2026-10-21 (ForgeOs-jfqu4.7): reap_pass() takes its worker
+# reap_order joined 2026-10-21 (Proofdelve ForgeOs-jfqu4.7): reap_pass() takes its worker
 # list from it, so an extraction without it would reap nothing at all.
-# deliverable_of joined 2026-09-18 (ForgeOs-nz3u): reap_pass() consults it at the
+# deliverable_of joined 2026-09-18 (Proofdelve ForgeOs-nz3u): reap_pass() consults it at the
 # ss9d handoff-only guard; an extraction without it makes every declared bead
 # read as undeclared and RETURN, which is the pre-nz3u behaviour exactly.
 for sym in verdict_is_landable verdict_files_followup page_overseer reason_key reason_seen \
@@ -93,7 +93,7 @@ printf 'restore ok\nbuild ok\n260 passed\n' > "$work/clean.log"
 printf 'thinking...\nAPI error: 429 Too Many Requests\nretrying\n'   > "$work/rl429.log"
 printf 'You have hit your usage limit; resets at 12pm\n'             > "$work/rlusage.log"
 printf 'Error: server overloaded, try again\n'                       > "$work/rlover.log"
-# ForgeOs-g3n1 fixtures. disk.log is the 7gag text verbatim; mixed.log has BOTH
+# Proofdelve ForgeOs-g3n1 fixtures. disk.log is the 7gag text verbatim; mixed.log has BOTH
 # a host line and a separate plan line, so each detector must see its own.
 printf 'tee: /tmp/verify-fail-dotnet-build-835161.log: Disk quota exceeded\nMSB3883: Unexpected exception\n' > "$work/disk.log"
 printf 'write error: No space left on device\n'                          > "$work/nospace.log"
@@ -104,7 +104,7 @@ harness() { # $@ = shell body
     run_id=T; FLEET_HARD_STOP=3; FLEET_FORGE_MIN=1; FLEET_FORGE_MAX=6; FLEET_FORGE_START=3; FLEET_WARDEN_CONC=1
     ceiling_log='$work/ceiling.log'; launches=0; fleet_actor=fleet
     end_reason=drained; halted=false; halt_file='$work/HALT'
-    # TOP-LEVEL GLOBALS fleet.sh sets before its loop (ForgeOs-uwjme). A runner
+    # TOP-LEVEL GLOBALS fleet.sh sets before its loop (Proofdelve ForgeOs-uwjme). A runner
     # that reaches reap_pass without stubbing refill_slots() reaches the real
     # one, and forge_conc=0 means no free slot, so that refill is a no-op and
     # never needs the unextracted dispatch_pass(). governor_init() overwrites it.
@@ -113,7 +113,7 @@ harness() { # $@ = shell body
     emit(){ :; }
     # say() AND warn() ARE REAL HERE, EACH ON THE STREAM ITS CONTRACT NAMES.
     # A say(){ :; } stub is exactly why this harness could not catch
-    # ForgeOs-0d0i: it silenced the very write that broke the caller.
+    # Proofdelve ForgeOs-0d0i: it silenced the very write that broke the caller.
     say(){ printf 'SAY %s\n' \"\$*\"; }
     warn(){ printf 'WARN %s\n' \"\$*\" >&2; }
     $(cat "$work/gov.sh")
@@ -128,7 +128,7 @@ done
 if harness "looks_rate_limited '$work/clean.log' && echo HIT" | grep -q HIT; then
   no "vacuity control: clean log must not trip detection" "clean log reported as rate-limited"
 else ok "vacuity control: clean log does not trip detection"; fi
-# 4h-4o 429 ONLY AS A STATUS CODE (ForgeOs-dx34.20). The two log lines that
+# 4h-4o 429 ONLY AS A STATUS CODE (Proofdelve ForgeOs-dx34.20). The two log lines that
 # stepped the governor 4 -> 3 -> 2 on 2026-10-20 are fixtures verbatim; neither
 # session was throttled, and the digits 429 sit inside the microseconds. A uuid
 # and a hex hash carry letters on both sides of the digits, so a digit fence
@@ -160,7 +160,7 @@ if ! cmp -s "$work/gov.sh" "$work/gov-bare429.sh"; then
   else no "RED: bare-429 variant" "the restored bare 429 did not match the timestamp ($out)"; fi
 else no "RED: bare-429 variant" "could not be generated (sed matched nothing)"; fi
 
-# 4b-4g THE TWO SIGNATURES ARE KEPT APART (ForgeOs-g3n1, incident ForgeOs-7gag).
+# 4b-4g THE TWO SIGNATURES ARE KEPT APART (Proofdelve ForgeOs-g3n1, incident Proofdelve ForgeOs-7gag).
 # 'Disk quota exceeded' is EDQUOT, not a plan message; pre-fix the plan regex's
 # bare 'quota exceeded' matched it and the governor stepped down five times for a
 # full disk. RED against the shipped file: 4b fails there.
@@ -170,7 +170,7 @@ else ok "g3n1: the EDQUOT line alone does NOT read as plan back-pressure"; fi
 if have looks_env_failure; then
   if harness "looks_env_failure '$work/disk.log' && echo HIT" | grep -q HIT; then ok "g3n1: the EDQUOT line IS an environmental failure"; else no "g3n1: env detector misses EDQUOT" "no hit"; fi
   if harness "looks_env_failure '$work/nospace.log' && echo HIT" | grep -q HIT; then ok "g3n1: the ENOSPC line IS an environmental failure"; else no "g3n1: env detector misses ENOSPC" "no hit"; fi
-  # THE LABELS OF THIS FILE MUST NEVER SPELL THE SIGNATURE (Tova Marrowassay,
+  # THE LABELS OF THIS FILE MUST NEVER SPELL THE SIGNATURE (the Warden,
   # g3n1 round one, the blocking finding): run_step prints every case label
   # into verify.sh's stdout, run_verifier() captures that into $vout, and the
   # fleet asks looks_env_failure of $vout when the verifier is RED -- so three
@@ -192,7 +192,7 @@ if have looks_env_failure; then
   out=$(harness "looks_rate_limited '$work/mixed.log' && echo RL; looks_env_failure '$work/mixed.log' && echo ENV")
   if grep -q RL <<<"$out" && grep -q ENV <<<"$out"; then ok "g3n1: a log with a host line AND a separate 429 line trips BOTH detectors, each on its own line"; else no "g3n1: mixed log" "$out"; fi
 else
-  no "g3n1: looks_env_failure exists" "this fleet.sh has no environmental signature (ForgeOs-g3n1)"
+  no "g3n1: looks_env_failure exists" "this fleet.sh has no environmental signature (Proofdelve ForgeOs-g3n1)"
 fi
 
 # 5 a step down is a MEASURED step down
@@ -207,7 +207,7 @@ out=$(harness "governor_init; governor_down x; clean_streak=0
   governor_up_maybe; echo AT5=\$forge_conc")
 if grep -q 'AT4=2' <<<"$out" && grep -q 'AT5=3' <<<"$out"; then
   ok "steps up only on the 5th clean completion"; else no "step up" "$out"; fi
-# 8 THE CAP IS N LAUNCHES, NOT N-1 (ForgeOs-feeq, Regent edict 2026-09-04).
+# 8 THE CAP IS N LAUNCHES, NOT N-1 (Proofdelve ForgeOs-feeq, Regent edict 2026-09-04).
 # This case previously asserted `spend c` returning 1 at FLEET_HARD_STOP=3 --
 # it encoded the off-by-one as intended behaviour, because spend() incremented
 # and THEN tested `launches < FLEET_HARD_STOP`, so the Nth launch reported
@@ -246,7 +246,7 @@ if [ -s "$work/ceiling.log" ] && grep -q 'DOWN 3 -> 2' "$work/ceiling.log"; then
   ok "sustained-ceiling log records the adjustment"; else no "ceiling log" "$(cat "$work/ceiling.log" 2>/dev/null | head -3)"; fi
 
 # ---------------------------------------------------------------------------
-# 10-14  ForgeOs-0d0i: A HELPER WHOSE STDOUT IS A VALUE MUST PRINT ONLY THAT
+# 10-14  Proofdelve ForgeOs-0d0i: A HELPER WHOSE STDOUT IS A VALUE MUST PRINT ONLY THAT
 # VALUE. Both live_forges call sites feed it straight into arithmetic --
 # slots=$((forge_conc - $(live_forges))) and [ "$(live_forges)" -eq 0 ] -- so one
 # diagnostic line on stdout is an arithmetic syntax error, which under
@@ -255,14 +255,14 @@ if [ -s "$work/ceiling.log" ] && grep -q 'DOWN 3 -> 2' "$work/ceiling.log"; then
 # The old say(){ :; } stub is precisely why they could not exist before: it
 # silenced the write that broke the caller.
 mkdir -p "$work/state/workers/stale"
-printf 'ForgeOs-stale\n' > "$work/state/workers/stale/bead"
+printf 'fortkit-stale\n' > "$work/state/workers/stale/bead"
 touch -d '2 hours ago' "$work/state/workers/stale/started"  # no pid/exit/done, past grace
 
 # 10 VACUITY CONTROL for 11: the stale-worker branch must actually be REACHED.
 # Without this, a live_forges that returned "0" without ever entering that
 # branch would score a clean pass on case 11 and prove nothing.
 # The ASSERTION IS THE PROPERTY, NOT THE WORDING: it must say something, on
-# STDERR, naming the worker. ForgeOs-w7u5 moved the wording from live_forges'
+# STDERR, naming the worker. Proofdelve ForgeOs-w7u5 moved the wording from live_forges'
 # own sentence ("a Forge that died hard") to worker_explain's ("ORPHANED"), and
 # a control that pinned the old string would have gone red for the fix.
 if harness "live_forges >/dev/null" 2>&1 >/dev/null | grep -q 'stale'; then
@@ -283,23 +283,23 @@ if harness 'n=$(live_forges); echo SUM=$((5 - n))' 2>/dev/null | grep -q 'SUM=5'
 else no "arithmetic on the captured value fails" "$(harness 'n=$(live_forges); echo SUM=$((5 - n))' 2>&1 | tail -2)"; fi
 
 # shellcheck disable=SC2016  # same reason: the body is evaluated by harness().
-# 13 ForgeOs-0d0i(b): returns_of prints exactly ONE integer when bd will not
+# 13 Proofdelve ForgeOs-0d0i(b): returns_of prints exactly ONE integer when bd will not
 # answer -- the condition every || true in return_to_ready exists to survive,
 # and the one this fort hit four times on 2026-09-04 ("storage is nil").
-out=$(harness 'bead_json(){ return 1; }; FLEET_MAX_RETURNS=2; returns_of ForgeOs-x' 2>/dev/null)
+out=$(harness 'bead_json(){ return 1; }; FLEET_MAX_RETURNS=2; returns_of fortkit-x' 2>/dev/null)
 if [ "$out" = "0" ]; then
   ok "returns_of prints exactly one integer when bd is unavailable"
 else no "returns_of prints more than one value with bd down" "captured: $(printf '%s' "$out" | tr '\n' '|')"; fi
 
 # 14 and its consumer's arithmetic survives that path.
 # shellcheck disable=SC2016  # same reason: the body is evaluated by harness().
-if harness 'bead_json(){ return 1; }; FLEET_MAX_RETURNS=2; n=$(returns_of ForgeOs-x); n=$((n + 1)); echo N=$n' 2>/dev/null | grep -q 'N=1'; then
+if harness 'bead_json(){ return 1; }; FLEET_MAX_RETURNS=2; n=$(returns_of fortkit-x); n=$((n + 1)); echo N=$n' 2>/dev/null | grep -q 'N=1'; then
   ok "return_to_ready's n=\$((n + 1)) works with bd down"
-else no "return_to_ready dies with bd down" "$(harness 'bead_json(){ return 1; }; FLEET_MAX_RETURNS=2; n=$(returns_of ForgeOs-x); n=$((n + 1)); echo N=$n' 2>&1 | tail -2)"; fi
+else no "return_to_ready dies with bd down" "$(harness 'bead_json(){ return 1; }; FLEET_MAX_RETURNS=2; n=$(returns_of fortkit-x); n=$((n + 1)); echo N=$n' 2>&1 | tail -2)"; fi
 
 
 # ---------------------------------------------------------------------------
-# 15-24  ForgeOs-w7u5: THE WORKER LIFECYCLE HAS ONE OWNER, AND IT NAMES ITS
+# 15-24  Proofdelve ForgeOs-w7u5: THE WORKER LIFECYCLE HAS ONE OWNER, AND IT NAMES ITS
 # CASE INSTEAD OF RETURNING A BOOLEAN.
 #
 # All five recorded sightings of the finished-but-not-landed class are cases
@@ -307,7 +307,7 @@ else no "return_to_ready dies with bd down" "$(harness 'bead_json(){ return 1; }
 # succeeding, so against a pre-w7u5 fleet.sh they FAIL — a harness that merely
 # refused would leave this instrument's other twenty cases unusable, and a
 # harness that passed against both files would have tested nothing at all
-# (ForgeOs-5m7a round two, the landable-harness vacuity lesson).
+# (Proofdelve ForgeOs-5m7a round two, the landable-harness vacuity lesson).
 # ---------------------------------------------------------------------------
 # $1 case name, $2 shell body, $3.. FIXED STRINGS the output must all contain.
 # Fixed strings and one per line, not one multi-line regex: `grep -E` has no
@@ -316,7 +316,7 @@ else no "return_to_ready dies with bd down" "$(harness 'bead_json(){ return 1; }
 lc() {
   local name="$1" body="$2"; shift 2
   if ! have worker_state; then
-    no "$name" "this fleet.sh has no lifecycle owner: worker_state does not exist (ForgeOs-w7u5)"
+    no "$name" "this fleet.sh has no lifecycle owner: worker_state does not exist (Proofdelve ForgeOs-w7u5)"
     return
   fi
   local out want miss=""
@@ -326,9 +326,9 @@ lc() {
   done
   if [ -z "$miss" ]; then ok "$name"; else no "$name" "$miss || got: $(printf '%s' "$out" | tr '\n' '|' | cut -c1-200)"; fi
 }
-mk() { mkdir -p "$work/state/workers/$1"; printf 'ForgeOs-%s\n' "$1" > "$work/state/workers/$1/bead"; }
+mk() { mkdir -p "$work/state/workers/$1"; printf 'fortkit-%s\n' "$1" > "$work/state/workers/$1/bead"; }
 
-# 15 SIGHTINGS 1 AND 2 (ForgeOs-bzyk, the two merge-without-close paths). A
+# 15 SIGHTINGS 1 AND 2 (Proofdelve ForgeOs-bzyk, the two merge-without-close paths). A
 # bead merged and not closed must be a state a person is told about, and must
 # NOT be reapable — re-reaping it would re-verify and re-review already merged
 # work.
@@ -342,7 +342,7 @@ lc "sighting 1+2 (bzyk): merged-but-not-closed is needs-person, not reapable, an
     worker_explain "$state/workers/bzyk"' \
    STATE=needs-person NOT-REAPABLE PERSON 'MERGED but NOT CLOSED'
 
-# 16 SIGHTING 3 (ForgeOs-5p00, review_one's budget branch). The old remedy
+# 16 SIGHTING 3 (Proofdelve ForgeOs-5p00, review_one's budget branch). The old remedy
 # deleted the `done` marker so the worker was reaped FROM THE TOP, which cost a
 # second full verifier run. The resume point is the fix: reapable, at `review`.
 mk p500
@@ -353,7 +353,7 @@ lc "sighting 3 (5p00): a review-budget park is reapable AND resumes at the revie
     echo "RESUME=$(worker_resume_at "$state/workers/p500")"' \
    REAPABLE RESUME=review
 
-# 17 SIGHTING 4 (ForgeOs-usz6, the deferred merge). THIS IS THE CASE THAT
+# 17 SIGHTING 4 (Proofdelve ForgeOs-usz6, the deferred merge). THIS IS THE CASE THAT
 # FLIPPED when usz6 landed, and its previous form is why: it asserted that a
 # deferred merge was announced to a PERSON, because nothing retried it. It is
 # now reapable and healthy, and the executable cases 25-29 below prove that the
@@ -373,7 +373,7 @@ lc "sighting 4 (usz6): a deferred merge is REAPABLE, resumes at land, and needs 
 # EXECUTES THE SHIPPED reap_pass and fails against the pre-w7u5 file by
 # observing the marker it leaves.
 mkdir -p "$work/state/workers/dryrun"
-printf 'ForgeOs-dryrun\n' > "$work/state/workers/dryrun/bead"
+printf 'fortkit-dryrun\n' > "$work/state/workers/dryrun/bead"
 printf '0\n'              > "$work/state/workers/dryrun/exit"
 # shellcheck disable=SC2016  # single quotes are the point: the body below is interpolated into a `bash -c` string by harness(), so it must reach that shell UNEXPANDED.
 dryout="$(harness 'dry=1; root=/nonexistent; run_id=DRY
@@ -464,7 +464,7 @@ lc "a reason containing | does not corrupt the state token or the run id" \
 
 
 # ---------------------------------------------------------------------------
-# 25-31  ForgeOs-usz6: A DEFERRED MERGE IS RETRIED, AND THE RETRY IS THE MERGE
+# 25-31  Proofdelve ForgeOs-usz6: A DEFERRED MERGE IS RETRIED, AND THE RETRY IS THE MERGE
 # ALONE. These cases EXECUTE the shipped reap_pass against fixtures and a real
 # throwaway git repository, and they observe what it calls. Against a pre-usz6
 # launcher a deferred worker is not reapable at all, so land() is never called
@@ -472,7 +472,7 @@ lc "a reason containing | does not corrupt the state token or the run id" \
 # ---------------------------------------------------------------------------
 repo="$work/repo"
 g() { git -C "$repo" -c user.email=h@h -c user.name=h "$@"; }
-# A REAL WORKTREE FOR A WORKER FIXTURE (ForgeOs-tvb2). prelanding_refresh()
+# A REAL WORKTREE FOR A WORKER FIXTURE (Proofdelve ForgeOs-tvb2). prelanding_refresh()
 # inspects the worktree's HEAD on every path now, so a finished worker whose
 # tree is a bare directory (or absent) is REFUSED rather than verified; fixtures
 # that want the verify arm need a worktree on bead/<sfx> with one commit of its
@@ -486,7 +486,7 @@ mkwt() { # $1 sfx
 git init -q -b main "$repo" 2>/dev/null
 g commit -q --allow-empty -m base
 # bead/def: a real unlanded branch, one commit ahead of main -- and the commit
-# carries a PRODUCT file, since ForgeOs-ss9d: an empty commit is "no product
+# carries a PRODUCT file, since Proofdelve ForgeOs-ss9d: an empty commit is "no product
 # change" to the reap guard and would be returned, so the 4hzq vacuity case
 # below (a real branch is still verified) needs real work on the branch.
 g branch bead/def
@@ -497,7 +497,7 @@ g branch bead/merged
 g checkout -q bead/merged; g commit -q --allow-empty -m handwork; g checkout -q main
 g merge -q --no-ff -m "landed by hand" bead/merged
 # The reap loop tests for the bead's worktree directory, so the fixtures that
-# take the verify path need one to exist. Since ForgeOs-36b9 the verify path
+# take the verify path need one to exist. Since Proofdelve ForgeOs-36b9 the verify path
 # REFRESHES the branch from main inside its worktree first, so `def` -- whose
 # base main has moved past (the hand-landed merge above) -- has to be a REAL
 # worktree on its branch, not an empty directory; the others stay directories.
@@ -507,9 +507,9 @@ g worktree add -q "$repo-worktrees/def" bead/def 2>/dev/null || mkdir -p "$repo-
 # reap() runs the SHIPPED reap_pass with everything it could call stubbed to
 # ANNOUNCE ITSELF, so a case can assert what was and was not invoked. The stubs
 # print rather than fall silent: a `:` stub is why the governor harness could
-# not see ForgeOs-0d0i.
+# not see Proofdelve ForgeOs-0d0i.
 reap() { # $1 extra setup
-  # main_branch joined 2026-09-14: prelanding_refresh() (ForgeOs-36b9) reads it
+  # main_branch joined 2026-09-14: prelanding_refresh() (Proofdelve ForgeOs-36b9) reads it
   # from reap_pass's verify arm, and it is a top-level variable in fleet.sh.
   harness "root='$repo'; run_id=R1; dry=0; main_branch=main
     stopping(){ return 1; }; signalled(){ return 1; }
@@ -520,13 +520,13 @@ reap() { # $1 extra setup
     return_to_ready(){ echo \"RETURNED \$1\"; }
     land(){ echo \"LAND bead=\$1 verdict=\$2 record=\$3\"; }
     budget_left(){ return 0; }
-    refill_slots(){ echo \"REFILL \$1\"; }   # ForgeOs-uwjme: announced, not run (a real refill needs dispatch_pass)
+    refill_slots(){ echo \"REFILL \$1\"; }   # Proofdelve ForgeOs-uwjme: announced, not run (a real refill needs dispatch_pass)
     $1
     reap_pass" 2>&1
 }
 mkdefer() { # $1 dir suffix, $2 branch suffix, $3 verdict, $4 write a record?
   rm -rf "$work/state/workers/$1"; mkdir -p "$work/state/workers/$1"
-  printf 'ForgeOs-%s\n' "$1" > "$work/state/workers/$1/bead"
+  printf 'fortkit-%s\n' "$1" > "$work/state/workers/$1/bead"
   printf '0\n' > "$work/state/workers/$1/exit"
   printf '%s\n' "$3" > "$work/state/workers/$1/verdict"
   [ "$4" = yes ] && printf 'VERDICT-LINE: %s: fine\n' "$3" > "$work/state/workers/$1/warden-record"
@@ -534,7 +534,7 @@ mkdefer() { # $1 dir suffix, $2 branch suffix, $3 verdict, $4 write a record?
 }
 
 if ! have defer_merge; then
-  no "usz6: a deferred merge is retried" "this fleet.sh has no defer_merge: nothing retries a deferred merge (ForgeOs-usz6)"
+  no "usz6: a deferred merge is retried" "this fleet.sh has no defer_merge: nothing retries a deferred merge (Proofdelve ForgeOs-usz6)"
   no "usz6: the retry re-runs neither the verifier nor the review" "same"
   no "usz6: a deferred merge with no stored verdict is escalated, not landed" "same"
   no "usz6: APPROVE-WITH-FINDINGS with no stored record is escalated, not landed" "same"
@@ -546,19 +546,19 @@ else
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers"
   mkdefer def def APPROVE-WITH-FINDINGS yes
   out="$(reap '')"
-  if grep -q 'LAND bead=ForgeOs-def verdict=APPROVE-WITH-FINDINGS' <<<"$out"; then
+  if grep -q 'LAND bead=fortkit-def verdict=APPROVE-WITH-FINDINGS' <<<"$out"; then
     ok "usz6: a deferred merge is retried, on its STORED verdict"
   else no "usz6: a deferred merge is retried" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-220)"; fi
   if ! grep -q 'VERIFIER-RAN' <<<"$out" && ! grep -q 'REVIEW-LAUNCHED' <<<"$out"; then
     ok "usz6: the retry re-runs neither the verifier nor the review"
   else no "usz6: the retry re-runs the verifier or spends a second review launch" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-220)"; fi
-  # 26a ForgeOs-g3n1: A FORGE LOG NAMING THE HOST HALTS, DOES NOT STEP DOWN,
+  # 26a Proofdelve ForgeOs-g3n1: A FORGE LOG NAMING THE HOST HALTS, DOES NOT STEP DOWN,
   # DOES NOT RETURN, AND LEAVES THE WORKER RESUMABLE. The 7gag shape: a1w5's
   # Forge exited 1 on 'Disk quota exceeded'; pre-fix the governor stepped down
   # and the bead was returned (twice, then escalated). Real detectors here, a
   # halt() stub that announces itself and exits 70 as the real one does.
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/envf"
-  printf 'ForgeOs-envf\n' > "$work/state/workers/envf/bead"; printf '1\n' > "$work/state/workers/envf/exit"
+  printf 'fortkit-envf\n' > "$work/state/workers/envf/bead"; printf '1\n' > "$work/state/workers/envf/exit"
   printf 'seat-sandbox.sh: line 498: printf: write error: Disk quota exceeded\n' > "$work/state/workers/envf/forge.log"
   out="$(harness "root='$repo'; run_id=R1; dry=0; main_branch=main
     stopping(){ return 1; }; signalled(){ return 1; }
@@ -572,9 +572,9 @@ else
      && ! grep -q 'GOV-DOWN' <<<"$out" && ! grep -q 'RETURNED' <<<"$out"; then
     ok "g3n1: a Forge log naming the host HALTS (environmental), steps nothing down, returns nothing, worker back to finished"
   else no "g3n1: forge-log environmental halt" "$(printf '%s' "$out" | sed -E 's/disk quota exceeded|no space left on device/<the signature>/Ig' | tr '\n' '|' | cut -c1-300)"; fi
-  # 26a-scope (Tova, g3n1 round one): a Forge that exited 0 whose transcript merely
+  # 26a-scope (the Warden, g3n1 round one): a Forge that exited 0 whose transcript merely
   # MENTIONS the signature is prose, not a failure: verified, never halted.
-  mkwt envf   # the verify arm needs the bead's REAL worktree on bead/envf (ForgeOs-tvb2; a bare directory is refused since the inspection was hoisted)
+  mkwt envf   # the verify arm needs the bead's REAL worktree on bead/envf (Proofdelve ForgeOs-tvb2; a bare directory is refused since the inspection was hoisted)
   printf 'I read the fleet.sh change: it halts on Disk quota exceeded. Done.\n' > "$work/state/workers/envf/forge.log"; printf '0\n' > "$work/state/workers/envf/exit"
   printf 'finished|R0|x\n' > "$work/state/workers/envf/state"
   out="$(harness "root='$repo'; run_id=R1; dry=0; main_branch=main
@@ -599,47 +599,47 @@ else
     run_verifier(){ echo VERIFIER-RAN; return 0; }; review_one(){ echo REVIEW-LAUNCHED; }
     return_to_ready(){ echo \"RETURNED \$1\"; }; land(){ echo LAND; }
     reap_pass" 2>&1)"
-  if grep -q 'GOV-DOWN' <<<"$out" && grep -q 'RETURNED ForgeOs-envf' <<<"$out" && ! grep -q 'HALT-CALLED' <<<"$out"; then
+  if grep -q 'GOV-DOWN' <<<"$out" && grep -q 'RETURNED fortkit-envf' <<<"$out" && ! grep -q 'HALT-CALLED' <<<"$out"; then
     ok "g3n1 control: a Forge log with a real 429 still steps down and is returned, never halted"
   else no "g3n1 control: plan path" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
 
   # 26b VACUITY CONTROL: reap_pass must still run the verifier for a worker
   # that is merely FINISHED, or case 26 passes for a reap_pass that does nothing.
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers"
-  mkdir -p "$work/state/workers/fresh"; mkwt fresh   # ForgeOs-tvb2: a real worktree on bead/fresh, or the hoisted inspection refuses it
-  printf 'ForgeOs-fresh\n' > "$work/state/workers/fresh/bead"; printf '0\n' > "$work/state/workers/fresh/exit"
+  mkdir -p "$work/state/workers/fresh"; mkwt fresh   # Proofdelve ForgeOs-tvb2: a real worktree on bead/fresh, or the hoisted inspection refuses it
+  printf 'fortkit-fresh\n' > "$work/state/workers/fresh/bead"; printf '0\n' > "$work/state/workers/fresh/exit"
   out="$(reap '')"
   if grep -q 'VERIFIER-RAN' <<<"$out"; then
     ok "vacuity control: a merely-finished worker IS still verified"
   else no "vacuity control: reap_pass verifies nothing at all" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-200)"; fi
 
-  # 26c ForgeOs-lw8x. forge.sh EXIT 76 IS A REFUSAL TO DISPATCH, NOT A FORGE
+  # 26c Proofdelve ForgeOs-lw8x. forge.sh EXIT 76 IS A REFUSAL TO DISPATCH, NOT A FORGE
   # FAILURE: the reused worktree could not be brought current with main and no
   # session ran. It is PAGED (a person's merge), never RETURNED (a return
   # re-dispatches into the same refusal), never verified, and the worker is
   # left needs-person with the reason naming the worktree.
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers"
   mkdir -p "$work/state/workers/fresh"
-  printf 'ForgeOs-fresh\n' > "$work/state/workers/fresh/bead"; printf '76\n' > "$work/state/workers/fresh/exit"
+  printf 'fortkit-fresh\n' > "$work/state/workers/fresh/bead"; printf '76\n' > "$work/state/workers/fresh/exit"
   printf -- '--- forge.sh: REFUSED to refresh (fixture log)\n' > "$work/state/workers/fresh/forge.log"
   # shellcheck disable=SC2016  # single quotes are the point: the stub reaches harness() UNEXPANDED and its $1/$4 are the callee's arguments
   out="$(reap 'page_overseer(){ echo "PAGED $1 :: $4"; }')"
-  if grep -q '^PAGED ForgeOs-fresh :: Nothing was built' <<<"$out" \
+  if grep -q '^PAGED fortkit-fresh :: Nothing was built' <<<"$out" \
      && ! grep -q 'RETURNED' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" \
      && [ "$(cut -d'|' -f1 "$work/state/workers/fresh/state")" = needs-person ] \
      && grep -q "reused worktree $repo-worktrees/fresh" "$work/state/workers/fresh/state"; then
     ok "lw8x: forge.sh exit 76 is PAGED with its own standing sentence, not returned, not verified, worker needs-person naming the worktree"
   else no "lw8x: exit 76 is not routed to a person" "state=$(cat "$work/state/workers/fresh/state" 2>/dev/null) out=$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
-  # 26c-77 ForgeOs-4hzq (Tova finding 2). forge.sh EXIT 77 IS THE PROMPT-CEILING
+  # 26c-77 Proofdelve ForgeOs-4hzq (the Warden finding 2). forge.sh EXIT 77 IS THE PROMPT-CEILING
   # REFUSAL: no session ran and a re-dispatch rebuilds the same oversized prompt,
   # so it is PAGED like 76, never RETURNED. Discrimination from a real Forge
   # failure is 26d below (any other nonzero is returned).
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/fresh"
-  printf 'ForgeOs-fresh\n' > "$work/state/workers/fresh/bead"; printf '77\n' > "$work/state/workers/fresh/exit"
+  printf 'fortkit-fresh\n' > "$work/state/workers/fresh/bead"; printf '77\n' > "$work/state/workers/fresh/exit"
   printf -- '--- forge.sh: REFUSED -- prompt over the size ceiling (fixture log)\n' > "$work/state/workers/fresh/forge.log"
   # shellcheck disable=SC2016  # single quotes are the point: the stub reaches harness() UNEXPANDED
   out="$(reap 'page_overseer(){ echo "PAGED $1 :: $4"; }')"
-  if grep -q '^PAGED ForgeOs-fresh :: Nothing was built' <<<"$out" \
+  if grep -q '^PAGED fortkit-fresh :: Nothing was built' <<<"$out" \
      && ! grep -q 'RETURNED' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" \
      && [ "$(cut -d'|' -f1 "$work/state/workers/fresh/state")" = needs-person ] \
      && grep -q 'size ceiling' "$work/state/workers/fresh/state"; then
@@ -649,10 +649,10 @@ else
   # so the 76 branch is catching exactly one code and not "nonzero".
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers"
   mkdir -p "$work/state/workers/fresh"
-  printf 'ForgeOs-fresh\n' > "$work/state/workers/fresh/bead"; printf '1\n' > "$work/state/workers/fresh/exit"
+  printf 'fortkit-fresh\n' > "$work/state/workers/fresh/bead"; printf '1\n' > "$work/state/workers/fresh/exit"
   # shellcheck disable=SC2016  # single quotes are the point: the stub reaches harness() UNEXPANDED and its $1/$4 are the callee's arguments
   out="$(reap 'page_overseer(){ echo "PAGED $1"; }')"
-  if grep -q 'RETURNED ForgeOs-fresh' <<<"$out" && ! grep -q 'PAGED' <<<"$out" \
+  if grep -q 'RETURNED fortkit-fresh' <<<"$out" && ! grep -q 'PAGED' <<<"$out" \
      && [ "$(cut -d'|' -f1 "$work/state/workers/fresh/state")" = settled ]; then
     ok "lw8x control: a Forge exit of 1 is still RETURNED and settled -- the page fires on 76 alone"
   else no "lw8x control: exit 1 no longer returns" "state=$(cat "$work/state/workers/fresh/state" 2>/dev/null) out=$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
@@ -694,11 +694,11 @@ else
     run_verifier(){ echo VERIFIER-RAN; return 0; }; review_one(){ echo REVIEW-LAUNCHED; }
     return_to_ready(){ echo RETURNED; }; land(){ echo \"LAND bead=\$1\"; }
     reap_pass" 2>&1)"
-  if grep -q 'LAND bead=ForgeOs-def' <<<"$out" && ! grep -q 'BUDGET-STOP' <<<"$out"; then
+  if grep -q 'LAND bead=fortkit-def' <<<"$out" && ! grep -q 'BUDGET-STOP' <<<"$out"; then
     ok "usz6: an exhausted budget does not block a retry that spends no launch"
   else no "usz6: the budget blocks the deferred merge, re-creating the stranding" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-200)"; fi
 
-  # 30b-30f ForgeOs-dx34.11 / dx34.15: THE BACK-OUT OF THE PROVISIONAL REAP
+  # 30b-30f Proofdelve ForgeOs-dx34.11 / dx34.15: THE BACK-OUT OF THE PROVISIONAL REAP
   # COUNT, AT UNIT LEVEL. reap_pass counts a reapable worker as a pass that
   # changed state, then withdraws that count when a deferred merge re-defers on
   # a reason it has ALREADY given -- so a perpetually parked merge cannot reset
@@ -749,16 +749,16 @@ $kB"
   # every deferral. A stream that repeats one fact every poll is one nobody
   # reads (fortkit-or2.8); a count that stops rising is one nobody can act on.
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/dm"
-  printf 'ForgeOs-dm\n' > "$work/state/workers/dm/bead"
+  printf 'fortkit-dm\n' > "$work/state/workers/dm/bead"
   # shellcheck disable=SC2016  # single quotes are the point: the body below is interpolated into a `bash -c` string by harness(), so it must reach that shell UNEXPANDED.
   # The shared harness() stubs emit to a no-op; this case is ABOUT what reaches
   # the stream, so it puts a real one back. (The first draft did not, scored
   # zero emits, and read as a defect in defer_merge.)
   out="$(harness 'run_id=R1
     emit(){ printf "EMIT %s\n" "$*"; }
-    defer_merge "$state/workers/dm" ForgeOs-dm APPROVE "tree dirty"
-    defer_merge "$state/workers/dm" ForgeOs-dm APPROVE "tree dirty"
-    defer_merge "$state/workers/dm" ForgeOs-dm APPROVE "merge slot busy"
+    defer_merge "$state/workers/dm" fortkit-dm APPROVE "tree dirty"
+    defer_merge "$state/workers/dm" fortkit-dm APPROVE "tree dirty"
+    defer_merge "$state/workers/dm" fortkit-dm APPROVE "merge slot busy"
     echo "COUNT=$(cat "$state/workers/dm/defers")"' 2>&1)"
   if [ "$(printf '%s' "$out" | grep -c 'EMIT fleet.deferred')" = 2 ] \
      && grep -q 'COUNT=3' <<<"$out"; then
@@ -814,13 +814,13 @@ r32="$(mkwtrepo reap32 aaa)"; mk aaa
 # shellcheck disable=SC2016  # single quotes are the point: the body is interpolated into a `bash -c` string by harness() and must reach it UNEXPANDED.
 reapcase "reap: a SETTLED worker's worktree is removed, and git no longer lists it"    'root="'"$r32"'"
     worker_set_state "$state/workers/aaa" settled "merged and closed"
-    worker_reap_worktree "$state/workers/aaa" ForgeOs-aaa
+    worker_reap_worktree "$state/workers/aaa" fortkit-aaa
     echo "RESULT=$reap_result"
     [ -e "$root-worktrees/aaa" ] && echo DIR-STILL-THERE || echo DIR-GONE
     git -C "$root" worktree list | grep -q -- "-worktrees/aaa" && echo GIT-STILL-LISTS || echo GIT-CLEAN'    RESULT=reaped DIR-GONE GIT-CLEAN
 
 # 33 REFUSED — THE CONSTRAINT, AT UNIT LEVEL. A deferred merge is exactly the
-# worker whose worktree ForgeOs-usz6's retry reads from, and it is `reapable`
+# worker whose worktree Proofdelve ForgeOs-usz6's retry reads from, and it is `reapable`
 # but NOT `settled`. IDENTICAL FIXTURE TO CASE 32, one field different: that
 # pairing is what makes 32 evidence of discrimination rather than evidence that
 # the function removes whatever it is handed.
@@ -828,7 +828,7 @@ r33="$(mkwtrepo reap33 bbb)"; mk bbb
 # shellcheck disable=SC2016  # single quotes are the point: the body is interpolated into a `bash -c` string by harness() and must reach it UNEXPANDED.
 reapcase "reap: a DEFERRED-MERGE worker keeps its worktree and the removal REFUSES"    'root="'"$r33"'"
     worker_set_state "$state/workers/bbb" deferred-merge "root not landable"
-    worker_reap_worktree "$state/workers/bbb" ForgeOs-bbb
+    worker_reap_worktree "$state/workers/bbb" fortkit-bbb
     echo "RESULT=$reap_result"
     [ -e "$root-worktrees/bbb" ] && echo DIR-STILL-THERE || echo DIR-GONE'    RESULT=refused DIR-STILL-THERE
 
@@ -839,7 +839,7 @@ r34="$(mkwtrepo reap34 ccc)"; mk ccc
 # shellcheck disable=SC2016  # single quotes are the point: the body is interpolated into a `bash -c` string by harness() and must reach it UNEXPANDED.
 reapcase "reap: a NEEDS-PERSON worker keeps its worktree — that tree is the evidence"    'root="'"$r34"'"
     worker_set_state "$state/workers/ccc" needs-person "the close FAILED"
-    worker_reap_worktree "$state/workers/ccc" ForgeOs-ccc
+    worker_reap_worktree "$state/workers/ccc" fortkit-ccc
     echo "RESULT=$reap_result"
     [ -e "$root-worktrees/ccc" ] && echo DIR-STILL-THERE || echo DIR-GONE'    RESULT=refused DIR-STILL-THERE
 
@@ -849,7 +849,7 @@ git -C "$r35" worktree remove --force "$r35-worktrees/ddd" >/dev/null 2>&1
 # shellcheck disable=SC2016  # single quotes are the point: the body is interpolated into a `bash -c` string by harness() and must reach it UNEXPANDED.
 reapcase "reap: no worktree to remove reports ABSENT, which is neither a success nor a failure"    'root="'"$r35"'"
     worker_set_state "$state/workers/ddd" settled "merged and closed"
-    worker_reap_worktree "$state/workers/ddd" ForgeOs-ddd
+    worker_reap_worktree "$state/workers/ddd" fortkit-ddd
     echo "RESULT=$reap_result"'    RESULT=absent
 
 # 36 FAILED — THE ONE ACCEPTANCE 6 IS ABOUT. The path exists and is NOT a
@@ -863,12 +863,12 @@ mkdir -p "$r36-worktrees/eee"; echo residue > "$r36-worktrees/eee/f"
 # shellcheck disable=SC2016  # single quotes are the point: the body is interpolated into a `bash -c` string by harness() and must reach it UNEXPANDED.
 reapcase "reap: a removal that FAILS says failed, is not confused with refused, and says the tree is still there"    'root="'"$r36"'"
     worker_set_state "$state/workers/eee" settled "merged and closed"
-    worker_reap_worktree "$state/workers/eee" ForgeOs-eee
+    worker_reap_worktree "$state/workers/eee" fortkit-eee
     echo "RESULT=$reap_result"
     [ -e "$root-worktrees/eee" ] && echo DIR-STILL-THERE || echo DIR-GONE'    RESULT=failed DIR-STILL-THERE 'IS STILL THERE'
 
 # 36b-c reapable_workers() COUNTS WHAT THE NEXT REAP PASS WOULD TAKE, AND
-# live_forges() DOES NOT MOVE (ForgeOs-dx34.18). A finished worker and a
+# live_forges() DOES NOT MOVE (Proofdelve ForgeOs-dx34.18). A finished worker and a
 # deferred merge count; a settled one, a running one and a needs-person one do
 # not; and the governor's slot count still sees only the running one.
 if have reapable_workers; then
@@ -886,10 +886,10 @@ if have reapable_workers; then
   out=$(harness "echo REAP=\$(reapable_workers)" 2>/dev/null)
   if grep -q 'REAP=0' <<<"$out"; then ok "dx34.18 vacuity: an empty workers directory counts 0"; else no "dx34.18 vacuity" "$out"; fi
 else
-  no "dx34.18: reapable_workers exists" "this fleet.sh has no reapable_workers(): the drain check cannot see a finished worker (ForgeOs-dx34.18)"
+  no "dx34.18: reapable_workers exists" "this fleet.sh has no reapable_workers(): the drain check cannot see a finished worker (Proofdelve ForgeOs-dx34.18)"
 fi
 
-# 37 THE WARDEN SCRATCH ROOT IS ONE SPELLING IN TWO FILES (ForgeOs-nv0j).
+# 37 THE WARDEN SCRATCH ROOT IS ONE SPELLING IN TWO FILES (Proofdelve ForgeOs-nv0j).
 # fleet.sh reads <sfx>.log.result.json and <sfx>.log.record from $warden_root;
 # warden.sh writes them there. Neither sources the other, so the two assignment
 # lines are held byte-equal HERE: a root changed in one file and not the other
@@ -909,7 +909,7 @@ else
 fi
 
 
-# ForgeOs-4hzq(B-ii): THE ZERO-COMMIT BRANCH GUARD. A Forge that exits 0 having
+# Proofdelve ForgeOs-4hzq(B-ii): THE ZERO-COMMIT BRANCH GUARD. A Forge that exits 0 having
 # committed nothing leaves bead/<sfx> at main; verifying it scores MAIN (green,
 # meaningless) and hands the Warden an empty diff -- exactly what kbt4.4 did on
 # 2026-09-14 01:41. reap_pass must RETURN it, never verify it. Against a pre-4hzq
@@ -920,20 +920,20 @@ fi
 g branch bead/zero 2>/dev/null   # at main: 0 commits ahead
 mkdir -p "$repo-worktrees/zero"
 rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/zero"
-printf 'ForgeOs-zero\n' > "$work/state/workers/zero/bead"; printf '0\n' > "$work/state/workers/zero/exit"
+printf 'fortkit-zero\n' > "$work/state/workers/zero/bead"; printf '0\n' > "$work/state/workers/zero/exit"
 out="$(reap '')"
-if grep -q 'RETURNED ForgeOs-zero' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out"; then
+if grep -q 'RETURNED fortkit-zero' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out"; then
   ok "4hzq(B-ii): a Forge that exited 0 with 0 commits ahead of main is RETURNED, never verified"
 else no "4hzq(B-ii): a zero-commit branch reached the verifier" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-240)"; fi
 # vacuity: bead/def is one commit ahead (created in the fixture setup) -> verified as normal
 rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/def"
-printf 'ForgeOs-def\n' > "$work/state/workers/def/bead"; printf '0\n' > "$work/state/workers/def/exit"
+printf 'fortkit-def\n' > "$work/state/workers/def/bead"; printf '0\n' > "$work/state/workers/def/exit"
 out="$(reap '')"
 if grep -q 'VERIFIER-RAN' <<<"$out"; then
   ok "4hzq(B-ii) vacuity: a branch WITH commits ahead of main is still verified (the guard does not swallow real work)"
 else no "4hzq(B-ii) vacuity: a real branch was not verified" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-240)"; fi
 
-# ForgeOs-ss9d: THE HANDOFF-ONLY BRANCH. A Forge that stops with a blocked
+# Proofdelve ForgeOs-ss9d: THE HANDOFF-ONLY BRANCH. A Forge that stops with a blocked
 # handoff leaves it uncommitted; forge.sh's stamp step commits it, and the
 # branch is one commit ahead of main with NOTHING outside fort/handoffs/ -- the
 # 4hzq shape one commit wider (w4fm.4.1, 2026-09-14 12:32: a verify and a Warden
@@ -950,22 +950,22 @@ mkhand() { # $1 sfx, then paths to write on the branch (each gets content = its 
 mkhand hoo fort/handoffs/forge-2026-09-14-hoo.md
 mkhand hps fort/handoffs/forge-2026-09-14-hps.md src/hps.cs
 rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/hoo"
-printf 'ForgeOs-hoo\n' > "$work/state/workers/hoo/bead"; printf '0\n' > "$work/state/workers/hoo/exit"
+printf 'fortkit-hoo\n' > "$work/state/workers/hoo/bead"; printf '0\n' > "$work/state/workers/hoo/exit"
 out="$(reap '')"
-if grep -q 'RETURNED ForgeOs-hoo' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" && ! grep -q 'REVIEW-LAUNCHED' <<<"$out" \
+if grep -q 'RETURNED fortkit-hoo' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" && ! grep -q 'REVIEW-LAUNCHED' <<<"$out" \
    && grep -q 'no product change' <<<"$out" \
    && git -C "$repo" rev-parse --verify --quiet bead/hoo >/dev/null && [ -d "$repo-worktrees/hoo" ] \
    && [ "$(git -C "$repo" rev-list --count main..bead/hoo)" -eq 1 ]; then
   ok "ss9d: a branch whose only commit is the launcher's handoff stamp is RETURNED before the verifier with reason 'no product change'; branch, commit and worktree kept"
 else no "ss9d: a handoff-only branch reached the verifier (or lost its record)" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300) commits=$(git -C "$repo" rev-list --count main..bead/hoo 2>/dev/null) wt=$([ -d "$repo-worktrees/hoo" ] && echo kept || echo GONE)"; fi
 rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/hps"
-printf 'ForgeOs-hps\n' > "$work/state/workers/hps/bead"; printf '0\n' > "$work/state/workers/hps/exit"
+printf 'fortkit-hps\n' > "$work/state/workers/hps/bead"; printf '0\n' > "$work/state/workers/hps/exit"
 out="$(reap '')"
 if grep -q 'VERIFIER-RAN' <<<"$out" && ! grep -q 'RETURNED' <<<"$out"; then
   ok "ss9d vacuity: a branch with a handoff commit AND a src/ change is verified as before (the guard reads product paths, not commit counts)"
 else no "ss9d vacuity: a branch with real work beside its handoff was not verified" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
 
-# ForgeOs-nz3u: THE DECLARED DELIVERABLE. The ss9d case above IS criterion 3's
+# Proofdelve ForgeOs-nz3u: THE DECLARED DELIVERABLE. The ss9d case above IS criterion 3's
 # undeclared half (a handoff-only branch with no declaration is RETURNED);
 # these are the declared half and its two edges. bead_json is stubbed to hand
 # back a description carrying `Deliverable: answer`, which is the only field
@@ -982,14 +982,14 @@ if have deliverable_of; then
   declared='bead_json(){ printf "%s" "{\"id\":\"$1\",\"description\":\"OBSERVED: fixture.\\nDeliverable: answer\"}"; }'
   # (a) declared + handoff-only -> VERIFIED, not returned (criterion 2)
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/hoo"
-  printf 'ForgeOs-hoo\n' > "$work/state/workers/hoo/bead"; printf '0\n' > "$work/state/workers/hoo/exit"
+  printf 'fortkit-hoo\n' > "$work/state/workers/hoo/bead"; printf '0\n' > "$work/state/workers/hoo/exit"
   out="$(reap "$declared")"
   if grep -q 'VERIFIER-RAN' <<<"$out" && ! grep -q 'RETURNED' <<<"$out" && grep -q 'Deliverable: answer' <<<"$out"; then
     ok "nz3u: the SAME handoff-only branch (hoo) with 'Deliverable: answer' declared is VERIFIED and not returned, and the pass says why (side by side with the ss9d case above, criterion 3)"
   else no "nz3u: a declared handoff-only branch was returned or not verified" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
   # (b) declared + product change -> the ordinary path (never reaches the guard)
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/hps"
-  printf 'ForgeOs-hps\n' > "$work/state/workers/hps/bead"; printf '0\n' > "$work/state/workers/hps/exit"
+  printf 'fortkit-hps\n' > "$work/state/workers/hps/bead"; printf '0\n' > "$work/state/workers/hps/exit"
   out="$(reap "$declared")"
   if grep -q 'VERIFIER-RAN' <<<"$out" && ! grep -q 'RETURNED' <<<"$out" && ! grep -q 'Deliverable: answer' <<<"$out"; then
     ok "nz3u: a declared bead whose Forge ALSO changed src/ takes the ordinary path (verified, and the declaration is never consulted)"
@@ -997,16 +997,16 @@ if have deliverable_of; then
   # (c) declared + ZERO commits -> still returned by the 4hzq guard (no handoff is not an answer)
   g branch bead/abc main 2>/dev/null; mkdir -p "$repo-worktrees/abc"   # at main: 0 commits ahead, the 4hzq shape
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/abc"
-  printf 'ForgeOs-abc\n' > "$work/state/workers/abc/bead"; printf '0\n' > "$work/state/workers/abc/exit"
+  printf 'fortkit-abc\n' > "$work/state/workers/abc/bead"; printf '0\n' > "$work/state/workers/abc/exit"
   out="$(reap "$declared")"
-  if grep -q 'RETURNED ForgeOs-abc' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" && grep -q 'committed nothing' <<<"$out"; then
+  if grep -q 'RETURNED fortkit-abc' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" && grep -q 'committed nothing' <<<"$out"; then
     ok "nz3u: a declared bead whose Forge committed NOTHING is still returned by the 4hzq guard (an absent handoff is not an answer)"
   else no "nz3u: the zero-commit guard let a declared bead through" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
 else
-  no "nz3u: deliverable_of exists" "this fleet.sh has no deliverable declaration (ForgeOs-nz3u): a handoff-only answer is returned whatever the bead says"
+  no "nz3u: deliverable_of exists" "this fleet.sh has no deliverable declaration (Proofdelve ForgeOs-nz3u): a handoff-only answer is returned whatever the bead says"
 fi
 
-# ForgeOs-b9mj: TOUCH SETS AND THE CO-DISPATCH GUARD, at the predicate level.
+# Proofdelve ForgeOs-b9mj: TOUCH SETS AND THE CO-DISPATCH GUARD, at the predicate level.
 # The end-to-end half (two beads, one pass, concurrency 2) is scenario 42 of
 # scripts/fleet-e2e-harness.sh; these cases pin the parsing and the intersection
 # rule so a later "tidy" of either goes red here first. bead_json is stubbed to
@@ -1021,11 +1021,11 @@ if have touch_set_of; then
   if [ "$(tset 'no line here')" = "<everything>" ] && [ "$(tset 'Touches: *')" = "<everything>" ] && [ "$(tset 'Touches:   ')" = "<everything>" ]; then
     ok "b9mj: no Touches line, a bare '*', and an empty line each read as EVERYTHING (the conservative set)"
   else no "b9mj: the everything cases" "[$(tset 'no line here')] [$(tset 'Touches: *')] [$(tset 'Touches:   ')]"; fi
-  if [ "$(tset 'Touches: src/ForgeOS.Infrastructure/Migrations/2026_x.cs, src/ForgeOS.Infrastructure/Migrations/ForgeOsDbContextModelSnapshot.cs' | sort -u | tr '\n' ' ')" = "src/ForgeOS.Infrastructure/Migrations/ " ]; then
+  if [ "$(tset 'Touches: src/Product.Infrastructure/Migrations/2026_x.cs, src/Product.Infrastructure/Migrations/ProductDbContextModelSnapshot.cs' | sort -u | tr '\n' ' ')" = "src/Product.Infrastructure/Migrations/ " ]; then
     ok "b9mj: any path under Migrations/ is widened to the whole directory (every migration rewrites the snapshot there)"
-  else no "b9mj: migration widening" "$(tset 'Touches: src/ForgeOS.Infrastructure/Migrations/2026_x.cs')"; fi
+  else no "b9mj: migration widening" "$(tset 'Touches: src/Product.Infrastructure/Migrations/2026_x.cs')"; fi
   # the intersection rule, on files
-  printf 'web/src/App.tsx\ndocs/\n' > "$work/tA"; printf 'web/src/\n' > "$work/tB"; printf 'src/ForgeOS.Api/\ntests/\n' > "$work/tC"; printf '<everything>\n' > "$work/tE"; : > "$work/tEmpty"
+  printf 'web/src/App.tsx\ndocs/\n' > "$work/tA"; printf 'web/src/\n' > "$work/tB"; printf 'src/Product.Api/\ntests/\n' > "$work/tC"; printf '<everything>\n' > "$work/tE"; : > "$work/tEmpty"
   isect() { harness "touch_sets_intersect '$work/$1' '$work/$2' || echo NO"; }
   if [ "$(isect tA tB)" = "web/src/App.tsx ~ web/src/" ] && [ "$(isect tB tA)" = "web/src/ ~ web/src/App.tsx" ]; then
     ok "b9mj: prefix intersection holds in BOTH directions and names the overlapping pair, first set's prefix first"
@@ -1038,13 +1038,13 @@ if have touch_set_of; then
   else no "b9mj: sentinel / absent-file handling" "[$(isect tA tE)] [$(isect tE tC)] [$(isect tC tEmpty)] [$(isect tC /nonexistent)]"; fi
   # against live workers: only LIVE ones are consulted
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/liv" "$work/state/workers/old"
-  printf 'ForgeOs-liv\n' > "$work/state/workers/liv/bead"; printf 'web/src/\n' > "$work/state/workers/liv/touches"; printf '%s\n' "$$" > "$work/state/workers/liv/pid"; date -Is > "$work/state/workers/liv/started"
-  printf 'ForgeOs-old\n' > "$work/state/workers/old/bead"; printf 'docs/\n' > "$work/state/workers/old/touches"; printf 'settled|R0|done\n' > "$work/state/workers/old/state"
+  printf 'fortkit-liv\n' > "$work/state/workers/liv/bead"; printf 'web/src/\n' > "$work/state/workers/liv/touches"; printf '%s\n' "$$" > "$work/state/workers/liv/pid"; date -Is > "$work/state/workers/liv/started"
+  printf 'fortkit-old\n' > "$work/state/workers/old/bead"; printf 'docs/\n' > "$work/state/workers/old/touches"; printf 'settled|R0|done\n' > "$work/state/workers/old/state"
   out="$(harness "touch_conflict_with_live '$work/tA' || echo NO")"
-  if [ "$out" = "ForgeOs-liv on web/src/App.tsx ~ web/src/" ]; then
+  if [ "$out" = "fortkit-liv on web/src/App.tsx ~ web/src/" ]; then
     ok "b9mj: a candidate is checked against LIVE workers' cached sets and the answer names the worker and the pair"
   else no "b9mj: conflict with a live worker" "[$out]"; fi
-  # FINDING 2 (Tova, review of 40c3d6d): the first cut of this case passed tC,
+  # FINDING 2 (the Warden, review of 40c3d6d): the first cut of this case passed tC,
   # which shares no prefix with the settled worker's docs/, so it returned NO
   # whether or not settled workers were consulted. tD overlaps docs/ and NOT
   # the live worker's web/src/, and the mutation control below flips the same
@@ -1059,27 +1059,27 @@ if have touch_set_of; then
   # the merge, and a deferred merge is exactly a branch waiting to collide.
   printf 'deferred-merge|R0|tree not landable\n' > "$work/state/workers/old/state"
   out="$(harness "touch_conflict_with_live '$work/tD' || echo NO")"
-  if [ "$out" = "ForgeOs-old on docs/ ~ docs/" ]; then
-    ok "b9mj: the SAME worker flipped to deferred-merge now blocks the candidate (mutation control for the case above; Tova finding 1)"
+  if [ "$out" = "fortkit-old on docs/ ~ docs/" ]; then
+    ok "b9mj: the SAME worker flipped to deferred-merge now blocks the candidate (mutation control for the case above; the Warden finding 1)"
   else no "b9mj: a deferred-merge worker did not hold its touch set" "[$out]"; fi
   rm -f "$work/state/workers/old/state"; printf '0\n' > "$work/state/workers/old/exit"   # finished: exit file, no state, no live pid
   out="$(harness "touch_conflict_with_live '$work/tD' || echo NO")"
-  if [ "$out" = "ForgeOs-old on docs/ ~ docs/" ]; then
+  if [ "$out" = "fortkit-old on docs/ ~ docs/" ]; then
     ok "b9mj: a FINISHED (unreaped) worker holds its touch set too"
   else no "b9mj: a finished worker did not hold its touch set" "[$out]"; fi
   rm -f "$work/state/workers/old/exit"; printf 'settled|R0|done\n' > "$work/state/workers/old/state"
   # FINDING 3: dry-dispatched sets of the same pass are consulted
-  mkdir -p "$work/state/.touches-dry"; printf 'docs/\n' > "$work/state/.touches-dry/ForgeOs-dry"
+  mkdir -p "$work/state/.touches-dry"; printf 'docs/\n' > "$work/state/.touches-dry/fortkit-dry"
   out="$(harness "touch_conflict_with_live '$work/tD' || echo NO")"
-  if [ "$out" = "ForgeOs-dry (dry-run, this pass) on docs/ ~ docs/" ]; then
-    ok "b9mj: a set recorded by a dry-run dispatch earlier in the pass blocks a later dry candidate (Tova finding 3)"
+  if [ "$out" = "fortkit-dry (dry-run, this pass) on docs/ ~ docs/" ]; then
+    ok "b9mj: a set recorded by a dry-run dispatch earlier in the pass blocks a later dry candidate (the Warden finding 3)"
   else no "b9mj: dry-run pass-local sets are not consulted" "[$out]"; fi
   rm -rf "$work/state/.touches-dry"
 else
-  no "b9mj: touch_set_of exists" "this fleet.sh has no touch-set guard (ForgeOs-b9mj)"
+  no "b9mj: touch_set_of exists" "this fleet.sh has no touch-set guard (Proofdelve ForgeOs-b9mj)"
 fi
 
-# ForgeOs-xzg1: THE CEILING IS CARRIED ACROSS RUNS. governor_init reads
+# Proofdelve ForgeOs-xzg1: THE CEILING IS CARRIED ACROSS RUNS. governor_init reads
 # $state/ceiling.last (written by the two ordinary ends, removed by every halt
 # path) and starts from it, clamped. The harness fixes START=3, MIN=1, MAX=6.
 # The e2e half (a real drain writes it, a real halt removes it) is scenario 43
@@ -1118,14 +1118,14 @@ if have governor_carry_out; then
   else no "xzg1: reset" "$(printf '%s' "$out" | tr '\n' '|') exists=$([ -e "$work/state/ceiling.last" ] && echo yes || echo no)"; fi
   rm -f "$work/state/ceiling.last"
   out="$(carry "governor_init; forge_conc=4; launches=3; budget_stop 'x'; echo END=\$end_reason")"
-  # ForgeOs-lzvo INVERTED this case: budget_stop used to carry mid-pass (the
+  # Proofdelve ForgeOs-lzvo INVERTED this case: budget_stop used to carry mid-pass (the
   # xzg1 shape), leaving a later governor_down in the same pass uncarried. The
   # carry is now ONE call at loop exit (fleet-e2e scenario 51 measures that it
   # is the pass's LAST value); budget_stop only sets the reason.
   if [ ! -e "$work/state/ceiling.last" ] && grep -q 'END=budget spent' <<<"$out"; then
     ok "lzvo: budget_stop sets the reason and does NOT write the carry file -- the carry is one call at loop exit, so a later step in the same pass is not lost"
   else no "lzvo: budget_stop still carries mid-pass" "$(printf '%s' "$out" | tr '\n' '|') file=[$(cat "$work/state/ceiling.last" 2>/dev/null)]"; fi
-  # ForgeOs-lzvo (Tova's finding 5): governor_init runs AFTER the run lock, so a lock-refused instance writes no start line to ceiling.log
+  # Proofdelve ForgeOs-lzvo (the Warden's finding 5): governor_init runs AFTER the run lock, so a lock-refused instance writes no start line to ceiling.log
   gi="$(grep -n '^governor_init$' "$launcher" | head -1 | cut -d: -f1)"; fl="$(grep -n '^if ! flock -n 8; then$' "$launcher" | head -1 | cut -d: -f1)"
   if [ -n "$gi" ] && [ -n "$fl" ] && [ "$gi" -gt "$fl" ]; then
     ok "lzvo: governor_init (line $gi) is called after the run lock is taken (line $fl), so a refused instance writes no start line"
@@ -1138,17 +1138,17 @@ if have governor_carry_out; then
   else no "xzg1: governor_down after a carried start" "$(printf '%s' "$out" | tr '\n' '|')"; fi
   rm -f "$work/state/ceiling.last"
 else
-  no "xzg1: governor_carry_out exists" "this fleet.sh does not carry the ceiling across runs (ForgeOs-xzg1)"
+  no "xzg1: governor_carry_out exists" "this fleet.sh does not carry the ceiling across runs (Proofdelve ForgeOs-xzg1)"
 fi
 
-# ForgeOs-36b9: LANDABILITY BEFORE THE REVIEW, REFRESH BEFORE THE VERIFY. Real
+# Proofdelve ForgeOs-36b9: LANDABILITY BEFORE THE REVIEW, REFRESH BEFORE THE VERIFY. Real
 # branches and real worktrees in the fixture repo; run_verifier is stubbed to
 # print the HEAD it was handed, so "verified at the refreshed tip" is a sha
 # comparison and not a claim. page_overseer is stubbed to print its reason.
 if have prelanding_refresh; then
   pre() { # $1 worker suffix -> reap output with the verifier and the pager announcing themselves
     rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/$1"
-    printf 'ForgeOs-%s\n' "$1" > "$work/state/workers/$1/bead"; printf '0\n' > "$work/state/workers/$1/exit"
+    printf 'fortkit-%s\n' "$1" > "$work/state/workers/$1/bead"; printf '0\n' > "$work/state/workers/$1/exit"
     # shellcheck disable=SC2016  # the single-quoted $state and $1 expand in the inner harness shell, on purpose
     reap 'state="'"$work"'/state"; mkdir -p "$state/logs"
       run_verifier(){ echo "VERIFIER-RAN at $(git -C "$1" rev-parse HEAD)"; return 0; }
@@ -1168,42 +1168,42 @@ if have prelanding_refresh; then
   # 36b9-1 CLEAN: refreshed, and the verifier ran at a tip that CONTAINS main
   out="$(pre pcl)"; tip="$(git -C "$repo-worktrees/pcl" rev-parse HEAD)"
   if grep -q 'refreshed .*pcl from main' <<<"$out" && grep -q "VERIFIER-RAN at $tip" <<<"$out" \
-     && git -C "$repo" merge-base --is-ancestor "$mainsha" "bead/pcl" && grep -q 'REVIEW-LAUNCHED ForgeOs-pcl' <<<"$out"; then
+     && git -C "$repo" merge-base --is-ancestor "$mainsha" "bead/pcl" && grep -q 'REVIEW-LAUNCHED fortkit-pcl' <<<"$out"; then
     ok "36b9: a clean branch behind a moved main is REFRESHED in its worktree, verified AT THE REFRESHED TIP (which contains main), and then reviewed"
   else no "36b9: clean refresh" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300) tip=$tip contains-main=$(git -C "$repo" merge-base --is-ancestor "$mainsha" bead/pcl && echo yes || echo no)"; fi
   # 36b9-2 CONFLICT: paged with the path, nothing verified, nothing reviewed, tree untouched
   before="$(git -C "$repo-worktrees/pcf" rev-parse HEAD)"; out="$(pre pcf)"
-  if grep -q 'CONFLICTS with main on g ' <<<"$out" && grep -q 'PAGED ForgeOs-pcf :: .*conflicts on: g ' <<<"$out" \
+  if grep -q 'CONFLICTS with main on g ' <<<"$out" && grep -q 'PAGED fortkit-pcf :: .*conflicts on: g ' <<<"$out" \
      && ! grep -q 'VERIFIER-RAN' <<<"$out" && ! grep -q 'REVIEW-LAUNCHED' <<<"$out" \
      && [ "$(git -C "$repo-worktrees/pcf" rev-parse HEAD)" = "$before" ] && ! git -C "$repo-worktrees/pcf" rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 \
-     && [ "$(head -1 "$work/state/workers/pcf/state" | cut -d'|' -f1)" = needs-person ] && [ -s "$work/state/logs/conflict-ForgeOs-pcf.txt" ]; then
+     && [ "$(head -1 "$work/state/workers/pcf/state" | cut -d'|' -f1)" = needs-person ] && [ -s "$work/state/logs/conflict-fortkit-pcf.txt" ]; then
     ok "36b9: a branch that CONFLICTS with a moved main is PAGED before the verifier and the review, naming the path; the worktree is untouched and merge-tree's output is the evidence"
   else no "36b9: conflict" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-400) state=$(head -1 "$work/state/workers/pcf/state" 2>/dev/null)"; fi
   # 36b9-3 REFUSED: a merge already in progress is not ours
   git -C "$repo-worktrees/pmh" merge --no-commit --no-ff -q main >/dev/null 2>&1 || true
   git -C "$repo-worktrees/pmh" rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 || no "36b9-3 fixture: the --no-commit merge left no MERGE_HEAD" "fixture defect, not the subject's"
   out="$(pre pmh)"
-  if grep -q 'PAGED ForgeOs-pmh :: .*MERGE_HEAD present' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" \
+  if grep -q 'PAGED fortkit-pmh :: .*MERGE_HEAD present' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" \
      && git -C "$repo-worktrees/pmh" rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
     ok "36b9: a worktree with a merge already in progress is REFUSED and paged; the fleet neither concludes nor aborts a merge it did not start"
   else no "36b9: MERGE_HEAD refusal" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300) merge_head=$(git -C "$repo-worktrees/pmh" rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 && echo present || echo absent)"; fi
   # 36b9-4 REFUSED: HEAD is not on the bead's branch
   git -C "$repo-worktrees/pwb" checkout -q --detach >/dev/null 2>&1
   out="$(pre pwb)"
-  if grep -q "PAGED ForgeOs-pwb :: .*is on 'a detached HEAD', not bead/pwb" <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out"; then
+  if grep -q "PAGED fortkit-pwb :: .*is on 'a detached HEAD', not bead/pwb" <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out"; then
     ok "36b9: a worktree whose HEAD is off its branch is REFUSED and paged, untouched"
   else no "36b9: off-branch refusal" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
-  # ForgeOs-ubgx.3 item 2.4: THE CLAIMANT TRAVELS WITH THE CALL. It was a
+  # Proofdelve ForgeOs-ubgx.3 item 2.4: THE CLAIMANT TRAVELS WITH THE CALL. It was a
   # top-level variable set before one call site and reset after it, and the
   # page's closing sentence is the only thing that reads it. The pwb fixture
   # above is already refused-and-paged, so it reaches that sentence; $4 is
   # where it lands.
   clm() { # $1 sfx, $2 = extra args after the worker dir ("" = omit them)
     rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/$1"
-    printf 'ForgeOs-%s\n' "$1" > "$work/state/workers/$1/bead"
+    printf 'fortkit-%s\n' "$1" > "$work/state/workers/$1/bead"
     harness "root='$repo'; main_branch=main
       page_overseer(){ printf 'CLOSING %s\n' \"\$4\"; }
-      prelanding_refresh ForgeOs-$1 $1 '$repo-worktrees/$1' '$work/state/workers/$1' ${2:-}" 2>&1
+      prelanding_refresh fortkit-$1 $1 '$repo-worktrees/$1' '$work/state/workers/$1' ${2:-}" 2>&1
   }
   out="$(clm pwb '')"
   if grep -q 'claimed by the Forge actor' <<<"$out"; then
@@ -1226,7 +1226,7 @@ if have prelanding_refresh; then
   if grep -q "VERIFIER-RAN at $tip" <<<"$out" && ! grep -q 'refreshed' <<<"$out" && [ "$(git -C "$repo-worktrees/pcu" rev-parse HEAD)" = "$tip" ]; then
     ok "36b9 MUST NOT CHANGE: a branch already containing main is verified at its own tip with no refresh commit"
   else no "36b9: current branch" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
-  # 36b9-7 PARKED-REVIEW RESUME (Tova finding 3 on 823074e): the landability
+  # 36b9-7 PARKED-REVIEW RESUME (the Warden finding 3 on 823074e): the landability
   # check runs WITHOUT a refresh -- a conflict pages before the review launch;
   # a clean-but-behind branch is reviewed on the tree that was verified, tip
   # unchanged. prv: conflicts (edits g, main edited g); pru: clean (edits f).
@@ -1234,23 +1234,23 @@ if have prelanding_refresh; then
   printf 'main moved again\n' > "$repo/g"; g commit -qam "main edits g again"
   prr() { # $1 sfx -> reap output for a parked-review worker
     rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/$1"
-    printf 'ForgeOs-%s\n' "$1" > "$work/state/workers/$1/bead"; printf '0\n' > "$work/state/workers/$1/exit"
+    printf 'fortkit-%s\n' "$1" > "$work/state/workers/$1/bead"; printf '0\n' > "$work/state/workers/$1/exit"
     printf 'parked-review|R0|budget\n' > "$work/state/workers/$1/state"
     # shellcheck disable=SC2016  # as above
     reap 'state="'"$work"'/state"; mkdir -p "$state/logs"; run_verifier(){ echo VERIFIER-RAN; return 0; }; page_overseer(){ echo "PAGED $1 :: $2"; }'
   }
   before="$(git -C "$repo-worktrees/prv" rev-parse HEAD)"; out="$(prr prv)"
-  if grep -q 'PAGED ForgeOs-prv :: .*conflicts on: g ' <<<"$out" && ! grep -q 'REVIEW-LAUNCHED' <<<"$out" \
+  if grep -q 'PAGED fortkit-prv :: .*conflicts on: g ' <<<"$out" && ! grep -q 'REVIEW-LAUNCHED' <<<"$out" \
      && ! grep -q 'VERIFIER-RAN' <<<"$out" && [ "$(git -C "$repo-worktrees/prv" rev-parse HEAD)" = "$before" ]; then
-    ok "36b9: a PARKED-REVIEW worker whose branch now conflicts with main is PAGED before the review launch, untouched (check-only; Tova finding 3)"
+    ok "36b9: a PARKED-REVIEW worker whose branch now conflicts with main is PAGED before the review launch, untouched (check-only; the Warden finding 3)"
   else no "36b9: parked-review conflict" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
   tip="$(git -C "$repo-worktrees/pru" rev-parse HEAD)"; out="$(prr pru)"
-  if grep -q 'REVIEW-LAUNCHED ForgeOs-pru' <<<"$out" && grep -q 'not refreshed here' <<<"$out" \
+  if grep -q 'REVIEW-LAUNCHED fortkit-pru' <<<"$out" && grep -q 'not refreshed here' <<<"$out" \
      && ! grep -q 'VERIFIER-RAN' <<<"$out" && [ "$(git -C "$repo-worktrees/pru" rev-parse HEAD)" = "$tip" ]; then
     ok "36b9: a PARKED-REVIEW worker behind a moved main that merges cleanly is reviewed on the tree that was verified -- no refresh commit, no second verify"
   else no "36b9: parked-review clean" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
   # 36b9-6 UNCHECKED: merge-tree cannot answer, so the pass says so and proceeds
-  # in the OLD order. REFIXTURED under ForgeOs-tvb2: the old fixture was a worker
+  # in the OLD order. REFIXTURED under Proofdelve ForgeOs-tvb2: the old fixture was a worker
   # with NO worktree and NO branch ("fresh", the 26b shape), which reached
   # merge-tree only because the worktree was inspected after it; with the
   # inspection hoisted that shape is a REFUSAL (36b9-9 below), which is the
@@ -1260,14 +1260,14 @@ if have prelanding_refresh; then
   mkbr pun f
   printf 'main moves past pun\n' > "$repo/g"; g commit -qam "main moves past pun"   # so pun is BEHIND main and the `current` short-circuit does not skip merge-tree
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/pun"
-  printf 'ForgeOs-pun\n' > "$work/state/workers/pun/bead"; printf '0\n' > "$work/state/workers/pun/exit"
+  printf 'fortkit-pun\n' > "$work/state/workers/pun/bead"; printf '0\n' > "$work/state/workers/pun/exit"
   # shellcheck disable=SC2016  # as above
   # merge-tree alone is made to fail (a git wrapper in the harness shell): overriding main_branch would trip the ss9d/4hzq diff checks upstream of prelanding
   out="$(reap 'state="'"$work"'/state"; mkdir -p "$state/logs"; git(){ if [ "${3:-}" = merge-tree ]; then echo "merge-tree: fixture refuses to answer" >&2; return 128; fi; command git "$@"; }; run_verifier(){ echo VERIFIER-RAN; return 0; }; page_overseer(){ echo "PAGED $1"; }')"
   if grep -q 'landability could not be checked before review' <<<"$out" && grep -q 'VERIFIER-RAN' <<<"$out" && ! grep -q 'PAGED' <<<"$out"; then
     ok "36b9: when merge-tree cannot answer (a wrapper refuses the call) the pass says so and proceeds in the OLD order rather than paging a false conflict"
   else no "36b9: unchecked path" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
-  # ---- ForgeOs-tvb2: THE WORKTREE IS INSPECTED ON EVERY PATH, not only the one
+  # ---- Proofdelve ForgeOs-tvb2: THE WORKTREE IS INSPECTED ON EVERY PATH, not only the one
   # that writes. Against a pre-tvb2 launcher 36b9-8, -9 and -10 all FAIL: the
   # detached tree and the non-worktree directory go to the verifier (or the
   # review) as if they were bead/X -- the positive control.
@@ -1276,7 +1276,7 @@ if have prelanding_refresh; then
   printf 'pdt\n' > "$repo-worktrees/pdt/f"; git -C "$repo-worktrees/pdt" -c user.email=h@h -c user.name=h commit -qam "pdt edits f"
   git -C "$repo-worktrees/pdt" checkout -q --detach >/dev/null 2>&1
   out="$(pre pdt)"
-  if grep -q "PAGED ForgeOs-pdt :: .*is on 'a detached HEAD', not bead/pdt" <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" \
+  if grep -q "PAGED fortkit-pdt :: .*is on 'a detached HEAD', not bead/pdt" <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" \
      && [ "$(head -1 "$work/state/workers/pdt/state" | cut -d'|' -f1)" = needs-person ]; then
     ok "tvb2: a DETACHED worktree whose branch already contains main is REFUSED and paged before the verifier (the current short-circuit no longer skips the inspection)"
   else no "tvb2: detached-but-current went to the verifier" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
@@ -1284,7 +1284,7 @@ if have prelanding_refresh; then
   mkwt pnd; g worktree remove --force "$repo-worktrees/pnd" >/dev/null 2>&1   # the branch keeps its commit; the directory becomes a plain one
   mkdir -p "$repo-worktrees/pnd"; printf 'not a worktree\n' > "$repo-worktrees/pnd/f"
   out="$(pre pnd)"
-  if grep -q "PAGED ForgeOs-pnd :: .*is on 'not a git worktree at all', not bead/pnd" <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out"; then
+  if grep -q "PAGED fortkit-pnd :: .*is on 'not a git worktree at all', not bead/pnd" <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out"; then
     ok "tvb2: a directory that is not a git worktree is REFUSED and paged, never verified as bead/X (the bead's design question: refuse, not fall through)"
   else no "tvb2: a non-worktree directory fell through" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
   # 36b9-10: check mode (a parked-review worker) with a detached HEAD is REFUSED, wording says the tree was verified green earlier and not reviewed
@@ -1292,14 +1292,14 @@ if have prelanding_refresh; then
   printf 'prd\n' > "$repo-worktrees/prd/f"; git -C "$repo-worktrees/prd" -c user.email=h@h -c user.name=h commit -qam "prd edits f"
   git -C "$repo-worktrees/prd" checkout -q --detach >/dev/null 2>&1
   out="$(prr prd)"
-  if grep -q "PAGED ForgeOs-prd :: .*before reviewing it.*is on 'a detached HEAD', not bead/prd" <<<"$out" && ! grep -q 'REVIEW-LAUNCHED' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out"; then
+  if grep -q "PAGED fortkit-prd :: .*before reviewing it.*is on 'a detached HEAD', not bead/prd" <<<"$out" && ! grep -q 'REVIEW-LAUNCHED' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out"; then
     ok "tvb2: a PARKED-REVIEW worker on a detached HEAD is REFUSED before the review launch, and the page says 'before reviewing it' (mode-aware wording; the stub pager prints only the message)"
   else no "tvb2: detached parked-review went to review" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-400)"; fi
 else
-  no "36b9: prelanding_refresh exists" "this fleet.sh checks landability only at the merge, after the review launch is spent (ForgeOs-36b9)"
+  no "36b9: prelanding_refresh exists" "this fleet.sh checks landability only at the merge, after the review launch is spent (Proofdelve ForgeOs-36b9)"
 fi
 
-# ForgeOs-b9mj ROUND THREE (Tova's blocking finding on ad911a7): a candidate
+# Proofdelve ForgeOs-b9mj ROUND THREE (the Warden's blocking finding on ad911a7): a candidate
 # held behind a REAPABLE, NOT-LIVE holder is a waiting pass, and the stall
 # detector leaves its counter alone -- but only while a reapable worker
 # actually exists, so the flag alone cannot switch the detector off.
@@ -1310,7 +1310,7 @@ if have stall_check && grep -q 'pass_held_unlanded' "$work/gov.sh"; then
       $1"
   }
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/dm"
-  printf 'ForgeOs-dm\n' > "$work/state/workers/dm/bead"; printf 'deferred-merge|R0|tree not landable\n' > "$work/state/workers/dm/state"
+  printf 'fortkit-dm\n' > "$work/state/workers/dm/bead"; printf 'deferred-merge|R0|tree not landable\n' > "$work/state/workers/dm/state"
   out="$(sc "pass_held_unlanded=1; stall_check 0 yes; stall_check 0 yes; stall_check 0 yes; stall_check 0 yes; echo PASSES=\$stall_passes")"
   if grep -q 'PASSES=0' <<<"$out" && ! grep -q 'HALT-CALLED' <<<"$out" \
      && [ "$(printf '%s' "$out" | grep -c 'held behind a worker whose branch has not landed')" -eq 1 ]; then
@@ -1323,17 +1323,17 @@ if have stall_check && grep -q 'pass_held_unlanded' "$work/gov.sh"; then
     ok "b9mj r3 CONTROL: the held flag with no reapable worker in existence does NOT silence the detector -- three passes halt as before"
   else no "b9mj r3: the flag alone silenced the stall detector" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
   # CONTROL: no flag, a reapable worker, startable work -> counts (dx34.9 unchanged)
-  mkdir -p "$work/state/workers/dm"; printf 'ForgeOs-dm\n' > "$work/state/workers/dm/bead"; printf 'deferred-merge|R0|x\n' > "$work/state/workers/dm/state"
+  mkdir -p "$work/state/workers/dm"; printf 'fortkit-dm\n' > "$work/state/workers/dm/bead"; printf 'deferred-merge|R0|x\n' > "$work/state/workers/dm/state"
   out="$(sc "stall_check 0 yes; stall_check 0 yes; stall_check 0 yes; echo PASSES=\$stall_passes")"
   if grep -q 'HALT-CALLED: 3 consecutive passes' <<<"$out"; then
     ok "b9mj r3 MUST NOT CHANGE: with nothing held, a reapable worker beside startable work still counts and halts on the third pass (dx34.9)"
   else no "b9mj r3: dx34.9's own case changed" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
 else
-  no "b9mj r3: stall_check knows pass_held_unlanded" "this fleet.sh halts the fleet on a candidate held behind a parked merge (Tova, round two on ad911a7)"
+  no "b9mj r3: stall_check knows pass_held_unlanded" "this fleet.sh halts the fleet on a candidate held behind a parked merge (the Warden, round two on ad911a7)"
 fi
 
 echo; 
-# ---- ForgeOs-x2lv: a bead the Mayor closed while its worker was settling
+# ---- Proofdelve ForgeOs-x2lv: a bead the Mayor closed while its worker was settling
 # STAYS closed through the return pass. return_to_ready() is driven with a
 # stub `bd` that records every write and a bead_json() stub that answers with
 # a chosen status. Against a pre-x2lv launcher bead_status() is absent and the
@@ -1351,12 +1351,12 @@ chmod +x "$work/bin/bd"
 x2lv_run() {  # $1 status of the bead, $2 FLEET_MAX_RETURNS, $3 existing return count -> prints SAY/EMIT lines; BD_LOG holds the writes
   : > "$work/bdlog"
   BD_LOG="$work/bdlog" PATH="$work/bin:$PATH" harness "root='$work'; FLEET_MAX_RETURNS=$2
-    bead_json(){ printf '{\"id\":\"ForgeOs-x\",\"status\":\"$1\",\"labels\":[\"fleet-safe\"$( [ "$3" -gt 0 ] && printf ',\"fleet-return-%s\"' "$3" )]}'; }
+    bead_json(){ printf '{\"id\":\"fortkit-x\",\"status\":\"$1\",\"labels\":[\"fleet-safe\"$( [ "$3" -gt 0 ] && printf ',\"fleet-return-%s\"' "$3" )]}'; }
     emit(){ printf 'EMIT %s | %s\n' \"\$1\" \"\$2\"; }
-    return_to_ready ForgeOs-x 'harness reason' ''" 2>&1
+    return_to_ready fortkit-x 'harness reason' ''" 2>&1
 }
 out=$(x2lv_run closed 2 1)
-if ! grep -q 'BD ' "$work/bdlog" && grep -q '^EMIT fleet.returned | ForgeOs-x was closed before its return pass' <<<"$out"; then
+if ! grep -q 'BD ' "$work/bdlog" && grep -q '^EMIT fleet.returned | fortkit-x was closed before its return pass' <<<"$out"; then
   ok "x2lv-1: a CLOSED bead at its 2nd return (the escalation lap): NO bd write of any kind, and fleet.returned says it was closed and stayed closed"
 else no "x2lv-1 closed bead escalation lap" "writes=$(tr '\n' '|' < "$work/bdlog") out=$(printf '%s' "$out" | tr '\n' '|')"; fi
 out=$(x2lv_run closed 2 0)
@@ -1364,11 +1364,11 @@ if ! grep -q 'BD ' "$work/bdlog" && grep -q 'was closed before its return pass' 
   ok "x2lv-2: a CLOSED bead at its 1st return: no write, no counter label, no comment; the skip is on the stream"
 else no "x2lv-2 closed bead first return" "writes=$(tr '\n' '|' < "$work/bdlog")"; fi
 out=$(x2lv_run open 2 1)
-if grep -q 'update ForgeOs-x --remove-label fleet-safe --add-label fleet-escalated --status open' "$work/bdlog" && grep -q 'update ForgeOs-x --add-label fleet-return-2' "$work/bdlog" && grep -q '^EMIT fleet.returned | ForgeOs-x returned 2 times and is escalated' <<<"$out"; then
+if grep -q 'update fortkit-x --remove-label fleet-safe --add-label fleet-escalated --status open' "$work/bdlog" && grep -q 'update fortkit-x --add-label fleet-return-2' "$work/bdlog" && grep -q '^EMIT fleet.returned | fortkit-x returned 2 times and is escalated' <<<"$out"; then
   ok "x2lv-3: an OPEN bead at its 2nd return still escalates: fleet-safe removed, fleet-escalated and fleet-return-2 applied, fleet.returned says escalated (criterion 2: not silent)"
 else no "x2lv-3 open bead still escalates" "writes=$(tr '\n' '|' < "$work/bdlog") out=$(printf '%s' "$out" | tr '\n' '|')"; fi
 out=$(x2lv_run in_progress 2 0)
-if grep -q 'update ForgeOs-x --status open --assignee ' "$work/bdlog" && grep -q 'update ForgeOs-x --add-label fleet-return-1' "$work/bdlog" && grep -q 'returned to ready (1 of 2)' <<<"$out"; then
+if grep -q 'update fortkit-x --status open --assignee ' "$work/bdlog" && grep -q 'update fortkit-x --add-label fleet-return-1' "$work/bdlog" && grep -q 'returned to ready (1 of 2)' <<<"$out"; then
   ok "x2lv-4: an in_progress bead at its 1st return is returned to ready exactly as before"
 else no "x2lv-4 open bead first return unchanged" "writes=$(tr '\n' '|' < "$work/bdlog") out=$(printf '%s' "$out" | tr '\n' '|')"; fi
 out=$(x2lv_run '' 2 1)
@@ -1377,12 +1377,12 @@ if grep -q 'fleet-escalated' "$work/bdlog"; then
 else no "x2lv-5 unknown status proceeds" "writes=$(tr '\n' '|' < "$work/bdlog")"; fi
 
 # --------------------------------------------------------------------------
-# ForgeOs-uwjme: refill_slots() and where reap_pass() calls it. And
-# ForgeOs-asad6 step 2: the memory gate's arithmetic, against crafted meminfo.
+# Proofdelve ForgeOs-uwjme: refill_slots() and where reap_pass() calls it. And
+# Proofdelve ForgeOs-asad6 step 2: the memory gate's arithmetic, against crafted meminfo.
 # Both absent from a pre-2026-10-15 launcher, where every case below FAILS
 # rather than refusing, so this instrument stays usable against either file.
 if ! have refill_slots; then
-  no "uwjme: refill_slots exists" "this fleet.sh has no refill_slots: dispatch waits for the whole completion lane (ForgeOs-uwjme)"
+  no "uwjme: refill_slots exists" "this fleet.sh has no refill_slots: dispatch waits for the whole completion lane (Proofdelve ForgeOs-uwjme)"
   no "uwjme: reap_pass refills before taking a worker in hand and after its verifier" "same"
 else
   rf() { # $1 setup -> output of one refill_slots call with dispatch_pass announcing itself
@@ -1410,16 +1410,16 @@ else
   else ok "uwjme: refill_slots tolerates in_dispatch unset (set -u safe)"; fi
   # THE CALL ORDER, executed through the shipped reap_pass with refill stubbed.
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/rfa"; mkwt rfa   # the same shape as 26b's merely-finished worker
-  printf 'ForgeOs-rfa\n' > "$work/state/workers/rfa/bead"; printf '0\n' > "$work/state/workers/rfa/exit"
+  printf 'fortkit-rfa\n' > "$work/state/workers/rfa/bead"; printf '0\n' > "$work/state/workers/rfa/exit"
   out="$(reap '')"   # reap() itself announces every refill
-  seq_="$(grep -oE '^(REFILL before ForgeOs-rfa is taken in hand|VERIFIER-RAN|REFILL after ForgeOs-rfa.s host verifier|REVIEW-LAUNCHED ForgeOs-rfa)' <<<"$out" | tr '\n' '>')"
-  if [ "$seq_" = "REFILL before ForgeOs-rfa is taken in hand>VERIFIER-RAN>REFILL after ForgeOs-rfa's host verifier>REVIEW-LAUNCHED ForgeOs-rfa>" ]; then
+  seq_="$(grep -oE '^(REFILL before fortkit-rfa is taken in hand|VERIFIER-RAN|REFILL after fortkit-rfa.s host verifier|REVIEW-LAUNCHED fortkit-rfa)' <<<"$out" | tr '\n' '>')"
+  if [ "$seq_" = "REFILL before fortkit-rfa is taken in hand>VERIFIER-RAN>REFILL after fortkit-rfa's host verifier>REVIEW-LAUNCHED fortkit-rfa>" ]; then
     ok "uwjme: reap_pass refills before the worker is taken in hand, runs the verifier, refills again, then reviews"
   else no "uwjme: reap_pass refill order" "seq=[$seq_] $(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"; fi
 fi
 
 if ! have mem_gate_why; then
-  no "asad6: mem_gate_why exists" "this fleet.sh has no memory gate (ForgeOs-asad6 step 2)"
+  no "asad6: mem_gate_why exists" "this fleet.sh has no memory gate (Proofdelve ForgeOs-asad6 step 2)"
 else
   mi() { printf 'MemTotal: 32673396 kB\nMemAvailable: %s kB\nSwapTotal: %s kB\nSwapFree: %s kB\n' "$1" "${2:-8388604}" "${3:-8388604}" > "$work/meminfo"; }
   mg() { # $1 setup -> "rc=N|why"
@@ -1465,11 +1465,11 @@ else
   else no "asad6: step-down throttle" "$(tr '\n' '|' <<<"$i")"; fi
 fi
 
-# ForgeOs-xu0mj: a live NEEDS A PERSON is warned ONCE PER PASS, however many
+# Proofdelve ForgeOs-xu0mj: a live NEEDS A PERSON is warned ONCE PER PASS, however many
 # times the pass counts its slots (refill_slots() counts at every step of the
 # completion lane). np_warned is the pass's set; the loop resets it each pass.
 rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/npw"
-printf 'ForgeOs-npw\n' > "$work/state/workers/npw/bead"; printf 'needs-person|OLD|a real conflict\n' > "$work/state/workers/npw/state"
+printf 'fortkit-npw\n' > "$work/state/workers/npw/bead"; printf 'needs-person|OLD|a real conflict\n' > "$work/state/workers/npw/state"
 # CALLED THE WAY EVERY PRODUCTION CALLER CALLS IT, as $(live_forges): a
 # subshell. The first version of this case called it bare, so a set kept in a
 # shell variable passed here and was lost in production, where it warned twice
@@ -1477,16 +1477,16 @@ printf 'ForgeOs-npw\n' > "$work/state/workers/npw/bead"; printf 'needs-person|OL
 # A new pass is the loop's own reset, the removal of the pass's set file.
 rm -f "$work/state/.np-warned"
 # shellcheck disable=SC2016  # single quotes are the point: the body reaches harness() UNEXPANDED
-w2="$(harness 'a=$(live_forges); b=$(live_forges)' 2>&1 >/dev/null | grep -c 'ForgeOs-npw: NEEDS A PERSON')"
+w2="$(harness 'a=$(live_forges); b=$(live_forges)' 2>&1 >/dev/null | grep -c 'fortkit-npw: NEEDS A PERSON')"
 rm -f "$work/state/.np-warned"
 # shellcheck disable=SC2016  # the same
-w3="$(harness 'a=$(live_forges); rm -f "$state/.np-warned"; b=$(live_forges)' 2>&1 >/dev/null | grep -c 'ForgeOs-npw: NEEDS A PERSON')"
+w3="$(harness 'a=$(live_forges); rm -f "$state/.np-warned"; b=$(live_forges)' 2>&1 >/dev/null | grep -c 'fortkit-npw: NEEDS A PERSON')"
 rm -f "$work/state/.np-warned"
 if [ "$w2" -eq 1 ] && [ "$w3" -eq 2 ]; then
   ok "xu0mj: two slot counts in one pass warn about a live NEEDS A PERSON once; a new pass warns again (2 counts -> $w2, reset between -> $w3)"
 else no "xu0mj: once-per-pass warning" "same pass -> $w2 (want 1), across passes -> $w3 (want 2)"; fi
 
-# FOLD of Tova's review of docket ForgeOs-9dqa6 (2026-10-15).
+# FOLD of the Warden's review of docket Proofdelve ForgeOs-9dqa6 (2026-10-15).
 # Finding 1: no refill between a merge and its post-merge verifier. Read from the
 # SHIPPED land(): between the merge command and the postmerge_verify call, no
 # live (non-comment) line calls refill_slots. A Forge cut there builds on a main
@@ -1513,17 +1513,17 @@ fi
 # before a worker is taken in hand must stop the reap there, not after a verifier.
 if have refill_slots; then
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers/stp"; mkwt stp
-  printf 'ForgeOs-stp\n' > "$work/state/workers/stp/bead"; printf '0\n' > "$work/state/workers/stp/exit"
+  printf 'fortkit-stp\n' > "$work/state/workers/stp/bead"; printf '0\n' > "$work/state/workers/stp/exit"
   # shellcheck disable=SC2016  # single quotes are the point: the body reaches harness() UNEXPANDED
   out="$(reap 'stop_now=0; refill_slots(){ echo "REFILL $1"; stop_now=1; }; stopping(){ [ "$stop_now" = 1 ]; }')"
-  if grep -q '^REFILL before ForgeOs-stp' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" \
+  if grep -q '^REFILL before fortkit-stp' <<<"$out" && ! grep -q 'VERIFIER-RAN' <<<"$out" \
      && [ "$(head -1 "$work/state/workers/stp/state" 2>/dev/null | cut -d'|' -f1)" != in-hand ]; then
     ok "9dqa6 fold 3: a stop that arrives during the refill ends the reap before the worker is taken in hand -- no verifier starts while draining"
   else no "9dqa6 fold 3: a stop during the refill still starts the verifier" "$(printf '%s' "$out" | tr '\n' '|' | cut -c1-240)"; fi
 fi
 
 # ---------------------------------------------------------------------------
-# ForgeOs-jfqu4.7: THE COMPLETION LANE'S ORDER. Each case builds worker
+# Proofdelve ForgeOs-jfqu4.7: THE COMPLETION LANE'S ORDER. Each case builds worker
 # directories whose names sort the OPPOSITE way to the order wanted, so glob
 # order cannot pass by accident. bd is a shell function in the runner body, so
 # the real tracker is never asked. The reap_pass-level case reads the order off
@@ -1532,16 +1532,16 @@ fi
 # Each RED arm is a variant of the extraction generated here and run through
 # the same case, so the inversion is executed, not described.
 # ---------------------------------------------------------------------------
-jq_order_bd='bd(){ case " $* " in *" show "*) printf "[{\"id\":\"ForgeOs-aaa\",\"priority\":4},{\"id\":\"ForgeOs-mmm\",\"priority\":2},{\"id\":\"ForgeOs-zzz\",\"priority\":1},{\"id\":\"ForgeOs-ppp\",\"priority\":2},{\"id\":\"ForgeOs-qqq\",\"priority\":2},{\"id\":\"ForgeOs-ddd\",\"priority\":4}]\n" ;; *) return 1 ;; esac; }'
+jq_order_bd='bd(){ case " $* " in *" show "*) printf "[{\"id\":\"fortkit-aaa\",\"priority\":4},{\"id\":\"fortkit-mmm\",\"priority\":2},{\"id\":\"fortkit-zzz\",\"priority\":1},{\"id\":\"fortkit-ppp\",\"priority\":2},{\"id\":\"fortkit-qqq\",\"priority\":2},{\"id\":\"fortkit-ddd\",\"priority\":4}]\n" ;; *) return 1 ;; esac; }'
 mkfin() { # $1 sfx, $2 exit mtime (touch -d)
   mkdir -p "$work/state/workers/$1"
-  printf 'ForgeOs-%s\n' "$1" > "$work/state/workers/$1/bead"
+  printf 'fortkit-%s\n' "$1" > "$work/state/workers/$1/bead"
   printf '0\n' > "$work/state/workers/$1/exit"; touch -d "$2" "$work/state/workers/$1/exit"
 }
 order_of() { # $1 gov file, $2 extra body -> the bead suffixes reap_order prints, space-separated
   local gf="$1"
   # Each call is a fresh pass: the main loop clears reap_order's once-per-pass
-  # bd-down flag at the top of a pass (ForgeOs-4bzvk), and earlier reap() cases
+  # bd-down flag at the top of a pass (Proofdelve ForgeOs-4bzvk), and earlier reap() cases
   # in this file leave it behind in the shared fixture state.
   rm -f "$work/state/.reap-order-warned"
   bash -c "set -uo pipefail
@@ -1565,15 +1565,15 @@ else
   sed 's/      say "reap order: bd could not report bead priorities this pass;.*/      return 1/' "$work/gov.sh" > "$gv_fatal"
   # RED 4: no fast lane -- land and signed resumes take an ordinary tier.
   # shellcheck disable=SC2016  # a sed PATTERN: the $ names the launcher's own text, literally
-  # The ordinary tier is 2 since ForgeOs-9srgz (tier 1 is a Workbench
+  # The ordinary tier is 2 since Proofdelve ForgeOs-9srgz (tier 1 is a Workbench
   # review-only branch, at the front of the ordinary completions); the lane is
   # removed by putting merges and signed landings at the ORDINARY tier.
   sed 's/      land|signed) tier=0; prio=0 ;;/      land|signed) tier=2; prio="${prio_of[$bead]:-99}" ;;/' "$work/gov.sh" > "$gv_nolane"
-  # RED 5: reap_pass walks the glob again (since ForgeOs-4bzvk the order is
+  # RED 5: reap_pass walks the glob again (since Proofdelve ForgeOs-4bzvk the order is
   # re-asked inside the loop, so the glob replaces that question).
   # shellcheck disable=SC2016  # a sed PATTERN: the $ names the launcher's own text, literally
   sed 's|^    for c in \$(reap_order); do$|    for c in "$state/workers"/*/; do|' "$work/gov.sh" > "$gv_glob"
-  # RED 6 (ForgeOs-4bzvk): the order asked ONCE at the top of the pass and the
+  # RED 6 (Proofdelve ForgeOs-4bzvk): the order asked ONCE at the top of the pass and the
   # snapshot walked, which is the shape before 4bzvk, rebuilt from today's loop.
   # shellcheck disable=SC2016  # sed PATTERNS: the $ names the launcher's own text, literally
   sed -e '/^  local d c sfx bead wt vout resume frc taken=" "$/a\  local snap; snap="$(reap_order)"' \
@@ -1602,7 +1602,7 @@ else
   mkfin aaa '2026-10-21 08:00'
   mkfin ddd '2026-10-21 09:00'; printf 'deferred-merge|OLD|deferral 1\n' > "$work/state/workers/ddd/state"; touch -d '2026-10-21 09:00' "$work/state/workers/ddd/state"
   mkfin zzz '2026-10-21 09:30'; printf 'parked-signed|OLD|stopped by a signal\n' > "$work/state/workers/zzz/state"
-  bd_aaa_p1='bd(){ case " $* " in *" show "*) printf "[{\"id\":\"ForgeOs-aaa\",\"priority\":0},{\"id\":\"ForgeOs-ddd\",\"priority\":4},{\"id\":\"ForgeOs-zzz\",\"priority\":4}]\n" ;; *) return 1 ;; esac; }'
+  bd_aaa_p1='bd(){ case " $* " in *" show "*) printf "[{\"id\":\"fortkit-aaa\",\"priority\":0},{\"id\":\"fortkit-ddd\",\"priority\":4},{\"id\":\"fortkit-zzz\",\"priority\":4}]\n" ;; *) return 1 ;; esac; }'
   got="$(order_of "$work/gov.sh" "$bd_aaa_p1")"
   if [ "$got" = "ddd zzz aaa" ]; then ok "jfqu4.7: a deferred merge and a parked signed landing (both P4) go ahead of a finished P0"; else no "jfqu4.7: the merge lane goes first" "got '$got'"; fi
   got="$(order_of "$gv_nolane" "$bd_aaa_p1")"
@@ -1618,9 +1618,9 @@ else
   rm -rf "$work/state/workers"; mkdir -p "$work/state/workers"
   for s in aaa mmm zzz; do mkwt "$s"; done
   mkfin aaa '2026-10-21 10:00'; mkfin mmm '2026-10-21 10:10'; mkfin zzz '2026-10-21 10:20'
-  lane_of() { grep -o '^REFILL before ForgeOs-[a-z]* is taken in hand' | sed 's/REFILL before ForgeOs-//; s/ is taken in hand//' | tr '\n' ' ' | sed 's/ $//'; }
+  lane_of() { grep -o '^REFILL before fortkit-[a-z]* is taken in hand' | sed 's/REFILL before fortkit-//; s/ is taken in hand//' | tr '\n' ' ' | sed 's/ $//'; }
   # FLEET_REAP_PER_PASS=9: these cases are about ORDER across three workers;
-  # the per-pass cap (ForgeOs-bzr1z, default 2) has its own cases below.
+  # the per-pass cap (Proofdelve ForgeOs-bzr1z, default 2) has its own cases below.
   got="$(reap "$jq_order_bd
     FLEET_REAP_PER_PASS=9" | lane_of)"
   if [ "$got" = "zzz mmm aaa" ]; then ok "jfqu4.7: reap_pass takes finished workers in reap_order (P1 zzz first, P4 aaa last)"; else no "jfqu4.7: reap_pass follows reap_order" "got '$got'"; fi
@@ -1630,7 +1630,7 @@ else
   got="$(cp "$work/gov.sh" "$work/gov.keep"; cp "$gv_glob" "$work/gov.sh"; reap "$jq_order_bd
     FLEET_REAP_PER_PASS=9" | lane_of; cp "$work/gov.keep" "$work/gov.sh")"
   if [ "$got" = "aaa mmm zzz" ]; then ok "jfqu4.7 RED: reap_pass reverted to the glob takes aaa (P4) first"; else no "jfqu4.7 RED: glob reap_pass" "got '$got'"; fi
-  # F. ForgeOs-4bzvk: A P0 THAT BECOMES REAPABLE AFTER THE PASS STARTS IS TAKEN
+  # F. Proofdelve ForgeOs-4bzvk: A P0 THAT BECOMES REAPABLE AFTER THE PASS STARTS IS TAKEN
   # NEXT. aaa (P4) and mmm (P2) are finished at the top of the pass; zzz (P1, the
   # most urgent here) is still RUNNING (a live pid, no exit file) and finishes
   # while the first worker is being taken in hand -- the refill_slots stub writes
@@ -1640,7 +1640,7 @@ else
     rm -rf "$work/state/workers"; mkdir -p "$work/state/workers"
     for s in aaa mmm zzz; do mkwt "$s"; done
     mkfin aaa '2026-10-21 10:00'; mkfin mmm '2026-10-21 10:10'
-    mkdir -p "$work/state/workers/zzz"; printf 'ForgeOs-zzz\n' > "$work/state/workers/zzz/bead"; printf '%s\n' "$$" > "$work/state/workers/zzz/pid"
+    mkdir -p "$work/state/workers/zzz"; printf 'fortkit-zzz\n' > "$work/state/workers/zzz/bead"; printf '%s\n' "$$" > "$work/state/workers/zzz/pid"
   }
   finish_zzz="refill_slots(){ echo \"REFILL \$1\"; [ -e '$work/state/workers/zzz/exit' ] || printf '0\\n' > '$work/state/workers/zzz/exit'; }"
   mk4bzvk
@@ -1661,10 +1661,10 @@ else
   # this case instead of hanging the verifier.
   rm -f "$work/land.count"
   got="$(reap "$jq_order_bd
-    land(){ echo \"LAND bead=\$1\"; n=\$(cat '$work/land.count' 2>/dev/null || echo 0); echo \$((n + 1)) > '$work/land.count'; [ \"\$n\" -lt 3 ] || exit 9; }" | grep -c '^LAND bead=ForgeOs-ddd')"
+    land(){ echo \"LAND bead=\$1\"; n=\$(cat '$work/land.count' 2>/dev/null || echo 0); echo \$((n + 1)) > '$work/land.count'; [ \"\$n\" -lt 3 ] || exit 9; }" | grep -c '^LAND bead=fortkit-ddd')"
   if [ "$got" = 1 ]; then ok "4bzvk: a worker that stays reapable after its turn (a deferred merge) is taken once per pass, not again"; else no "4bzvk: a reapable-again worker looped" "LAND printed $got times"; fi
 
-  # G. ForgeOs-w5xkw: A BEAD RE-DISPATCHED INSIDE ONE PASS IS REAPED AGAIN IN
+  # G. Proofdelve ForgeOs-w5xkw: A BEAD RE-DISPATCHED INSIDE ONE PASS IS REAPED AGAIN IN
   # THAT PASS. zzz (P1) is taken first; while aaa is being taken in hand, zzz is
   # returned and re-dispatched into the SAME worker directory (rm -rf, a new
   # started stamp) and its Forge finishes. Keyed by the launch, the second
@@ -1679,7 +1679,7 @@ else
     mkfin aaa '2026-10-21 10:00'; mkfin zzz '2026-10-21 10:10'
     printf '2026-10-21T10:00:00-08:00\n' > "$work/state/workers/zzz/started"
   }
-  redispatch_zzz="refill_slots(){ echo \"REFILL \$1\"; case \"\$1\" in *ForgeOs-aaa*) [ -e '$work/redispatched' ] || { : > '$work/redispatched'; rm -rf '$work/state/workers/zzz'; mkdir -p '$work/state/workers/zzz'; printf 'ForgeOs-zzz\n' > '$work/state/workers/zzz/bead'; printf '2026-10-21T10:30:00-08:00\n' > '$work/state/workers/zzz/started'; printf '0\n' > '$work/state/workers/zzz/exit'; } ;; esac; }"
+  redispatch_zzz="refill_slots(){ echo \"REFILL \$1\"; case \"\$1\" in *fortkit-aaa*) [ -e '$work/redispatched' ] || { : > '$work/redispatched'; rm -rf '$work/state/workers/zzz'; mkdir -p '$work/state/workers/zzz'; printf 'fortkit-zzz\n' > '$work/state/workers/zzz/bead'; printf '2026-10-21T10:30:00-08:00\n' > '$work/state/workers/zzz/started'; printf '0\n' > '$work/state/workers/zzz/exit'; } ;; esac; }"
   # shellcheck disable=SC2016  # the literal launcher spelling is what is searched for
   if ! grep -q 'key="\$c@' "$work/gov.sh"; then
     no "w5xkw: a re-dispatched worker is reaped again within the pass" "this fleet.sh keys taken by directory alone (no started stamp in the key)"
@@ -1701,9 +1701,9 @@ else
     fi
   fi
 
-  # H. ForgeOs-bzr1z: THE PASS IS BOUNDED. aaa, mmm, zzz finished; every
+  # H. Proofdelve ForgeOs-bzr1z: THE PASS IS BOUNDED. aaa, mmm, zzz finished; every
   # refill finishes ANOTHER Forge (s1..s5), the shape of a busy run fed by
-  # ForgeOs-uwjme. With the cap at its default (2) the pass takes zzz and mmm
+  # Proofdelve ForgeOs-uwjme. With the cap at its default (2) the pass takes zzz and mmm
   # and ends, saying so, so the next pass reaches phase 1 (signed landings).
   # RED: the cap removed, the stream keeps the pass going.
   gv_nocap="$work/gov-nocap.sh"
@@ -1714,8 +1714,8 @@ else
     for s in aaa mmm zzz; do mkwt "$s"; done
     mkfin aaa '2026-10-21 10:00'; mkfin mmm '2026-10-21 10:10'; mkfin zzz '2026-10-21 10:20'
   }
-  stream="refill_slots(){ echo \"REFILL \$1\"; n=\$(cat '$work/stream.n' 2>/dev/null || echo 0); [ \"\$n\" -lt 5 ] || return 0; n=\$((n + 1)); echo \$n > '$work/stream.n'; mkdir -p '$work/state/workers/s'\$n; printf 'ForgeOs-s%s\n' \$n > '$work/state/workers/s'\$n/bead; printf '0\n' > '$work/state/workers/s'\$n/exit; }"
-  lane_any() { grep -o '^REFILL before ForgeOs-[a-z0-9]* is taken in hand' | sed 's/REFILL before ForgeOs-//; s/ is taken in hand//' | tr '\n' ' ' | sed 's/ $//'; }
+  stream="refill_slots(){ echo \"REFILL \$1\"; n=\$(cat '$work/stream.n' 2>/dev/null || echo 0); [ \"\$n\" -lt 5 ] || return 0; n=\$((n + 1)); echo \$n > '$work/stream.n'; mkdir -p '$work/state/workers/s'\$n; printf 'fortkit-s%s\n' \$n > '$work/state/workers/s'\$n/bead; printf '0\n' > '$work/state/workers/s'\$n/exit; }"
+  lane_any() { grep -o '^REFILL before fortkit-[a-z0-9]* is taken in hand' | sed 's/REFILL before fortkit-//; s/ is taken in hand//' | tr '\n' ' ' | sed 's/ $//'; }
   if ! grep -q 'reap_cap' "$work/gov.sh"; then
     mkstream; got="$(reap "$jq_order_bd
       $stream" | lane_any)"
@@ -1740,11 +1740,11 @@ else
     gv_t0="$work/gov-t0counted.sh"
     sed 's/^      land|signed) ;;$/      land_never_matches) ;;/' "$work/gov.sh" > "$gv_t0"
     mkwt ddd
-    defer_ddd="refill_slots(){ echo \"REFILL \$1\"; case \"\$1\" in *ForgeOs-mmm*) mkdir -p '$work/state/workers/ddd'; printf 'ForgeOs-ddd\n' > '$work/state/workers/ddd/bead'; printf '0\n' > '$work/state/workers/ddd/exit'; printf 'APPROVE\n' > '$work/state/workers/ddd/verdict'; printf 'deferred-merge|OLDRUN|deferral 1\n' > '$work/state/workers/ddd/state' ;; esac; }
+    defer_ddd="refill_slots(){ echo \"REFILL \$1\"; case \"\$1\" in *fortkit-mmm*) mkdir -p '$work/state/workers/ddd'; printf 'fortkit-ddd\n' > '$work/state/workers/ddd/bead'; printf '0\n' > '$work/state/workers/ddd/exit'; printf 'APPROVE\n' > '$work/state/workers/ddd/verdict'; printf 'deferred-merge|OLDRUN|deferral 1\n' > '$work/state/workers/ddd/state' ;; esac; }
       land(){ echo \"LAND bead=\$1\"; }"
     mkstream; out="$(reap "$jq_order_bd
       $defer_ddd")"; got="$(lane_of <<<"$out")"
-    if [ "$got" = "zzz mmm ddd" ] && grep -q '^LAND bead=ForgeOs-ddd' <<<"$out"; then
+    if [ "$got" = "zzz mmm ddd" ] && grep -q '^LAND bead=fortkit-ddd' <<<"$out"; then
       ok "bzr1z: a merge that becomes reapable after the cap is reached is still taken in the same pass (zzz mmm ddd, LAND ddd); aaa waits"
     else no "bzr1z: tier 0 is not capped" "lane '$got'"; fi
     if cmp -s "$gv_t0" "$work/gov.sh"; then no "bzr1z tier-0 RED" "the variant could not be generated (sed matched nothing)"
@@ -1757,7 +1757,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# I. ForgeOs-8gmt4 (Regent docket 2026-10-27 item C): A HELD BEAD WHOSE BRANCH
+# I. Proofdelve ForgeOs-8gmt4 (Regent docket 2026-10-27 item C): A HELD BEAD WHOSE BRANCH
 # STOPS MERGING IS HANDED TO THE MAYOR BEFORE A SIGNATURE IS SPENT. stc is held
 # (ESCALATE) and conflicts with main on conf-8gmt4.txt; stk is held and merges
 # cleanly; sta conflicts the same way but its stored verdict is APPROVE (not
@@ -1776,7 +1776,7 @@ else
   mkstc() {
     rm -rf "$work/state/workers" "$work/stc.bd"; mkdir -p "$work/state/workers" "$work/state/logs"
     for s in stc stk sta; do
-      mkdir -p "$work/state/workers/$s"; printf 'ForgeOs-%s\n' "$s" > "$work/state/workers/$s/bead"
+      mkdir -p "$work/state/workers/$s"; printf 'fortkit-%s\n' "$s" > "$work/state/workers/$s/bead"
       printf 'settled|R0|held\n' > "$work/state/workers/$s/state"
     done
     printf 'ESCALATE\n' > "$work/state/workers/stc/verdict"; printf 'ESCALATE\n' > "$work/state/workers/stk/verdict"
@@ -1792,20 +1792,20 @@ else
     cp "$keep" "$work/gov.sh"
   }
   mkstc; out="$(stc_run "$work/gov.sh" 0)"
-  if grep -q ' update ForgeOs-stc --add-label mayor-review --assignee marrek' "$work/stc.bd" 2>/dev/null \
-     && grep -q ' comment ForgeOs-stc --file .*stale-signature-ForgeOs-stc.txt' "$work/stc.bd" \
-     && grep -q 'conflicts on: conf-8gmt4.txt' "$work/state/logs/stale-signature-ForgeOs-stc.txt" 2>/dev/null \
+  if grep -q ' update fortkit-stc --add-label mayor-review --assignee emrith' "$work/stc.bd" 2>/dev/null \
+     && grep -q ' comment fortkit-stc --file .*stale-signature-fortkit-stc.txt' "$work/stc.bd" \
+     && grep -q 'conflicts on: conf-8gmt4.txt' "$work/state/logs/stale-signature-fortkit-stc.txt" 2>/dev/null \
      && grep -q '^EMIT fleet.stale-signature' <<<"$out" && [ -s "$work/state/workers/stc/stale-merge" ]; then
     ok "8gmt4: the held bead whose branch stopped merging gets mayor-review, the Mayor as assignee, and one comment naming conf-8gmt4.txt"
   else no "8gmt4: held + conflicting is handed to the Mayor" "bd: $(tr '\n' '|' < "$work/stc.bd" 2>/dev/null) out: $(printf '%s' "$out" | tr '\n' '|' | cut -c1-200)"; fi
-  if ! grep -qE 'ForgeOs-(stk|sta)' "$work/stc.bd" 2>/dev/null; then
+  if ! grep -qE 'fortkit-(stk|sta)' "$work/stc.bd" 2>/dev/null; then
     ok "8gmt4: a held bead that still merges, and a conflicting bead that is not held (APPROVE), are left alone"
   else no "8gmt4: only held + conflicting is touched" "bd: $(tr '\n' '|' < "$work/stc.bd")"; fi
   rm -f "$work/stc.bd"; stc_run "$work/gov.sh" 0 >/dev/null
   if [ ! -s "$work/stc.bd" ]; then ok "8gmt4: the next pass on the same conflict is silent (no second label write, no second comment)"
   else no "8gmt4: dedupe" "second pass wrote: $(tr '\n' '|' < "$work/stc.bd")"; fi
   mkstc; out="$(stc_run "$work/gov.sh" 1)"
-  if [ ! -s "$work/stc.bd" ] && grep -q 'DRY-RUN would hand ForgeOs-stc to the Mayor' <<<"$out" && [ ! -e "$work/state/workers/stc/stale-merge" ]; then
+  if [ ! -s "$work/stc.bd" ] && grep -q 'DRY-RUN would hand fortkit-stc to the Mayor' <<<"$out" && [ ! -e "$work/state/workers/stc/stale-merge" ]; then
     ok "8gmt4: a dry run says what it would do and writes nothing"
   else no "8gmt4: dry run" "bd: $(tr '\n' '|' < "$work/stc.bd" 2>/dev/null) out: $(printf '%s' "$out" | tr '\n' '|' | cut -c1-200)"; fi
   # shellcheck disable=SC2016  # the literal launcher spelling is what is searched for
@@ -1823,10 +1823,10 @@ else
     no "8gmt4 RED" "a variant could not be generated (sed matched nothing)"
   else
     mkstc; stc_run "$gv_nofp" 0 >/dev/null; rm -f "$work/stc.bd"; stc_run "$gv_nofp" 0 >/dev/null
-    if grep -q ' comment ForgeOs-stc' "$work/stc.bd" 2>/dev/null; then ok "8gmt4 RED: without the fingerprint the same conflict is commented on every pass"
+    if grep -q ' comment fortkit-stc' "$work/stc.bd" 2>/dev/null; then ok "8gmt4 RED: without the fingerprint the same conflict is commented on every pass"
     else no "8gmt4 RED: no fingerprint" "the second pass was silent anyway; the dedupe case cannot discriminate"; fi
     mkstc; stc_run "$gv_nohold" 0 >/dev/null
-    if grep -q ' update ForgeOs-sta --add-label mayor-review' "$work/stc.bd" 2>/dev/null; then ok "8gmt4 RED: without the held-verdict filter an APPROVE bead is handed to the Mayor too"
+    if grep -q ' update fortkit-sta --add-label mayor-review' "$work/stc.bd" 2>/dev/null; then ok "8gmt4 RED: without the held-verdict filter an APPROVE bead is handed to the Mayor too"
     else no "8gmt4 RED: no hold filter" "sta was not touched; the filter case cannot discriminate"; fi
   fi
 fi

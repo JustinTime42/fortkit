@@ -10,12 +10,12 @@ import sys
 import tempfile
 from pathlib import Path
 
-SCHEMA = "proofdelve/unattended-mayor-loop/status/v1"
+SCHEMA = "manyhalls/unattended-mayor-loop/status/v1"
 HERE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("SWEEP_ROOT", HERE.parent.parent)).resolve()
-STATE = Path(os.environ.get("MAYOR_STATUS_STATE", Path.home() / ".local/state/proofdelve-mayor"))
-FLEET_STATE = Path(os.environ.get("FLEET_STATE", Path.home() / ".local/state/proofdelve-fleet"))
-KEEP_STATE = Path(os.environ.get("MAYOR_KEEP_STATE", Path.home() / ".local/state/proofdelve-keep"))
+STATE = Path(os.environ.get("MAYOR_STATUS_STATE", Path.home() / ".local/state/manyhalls-mayor"))
+FLEET_STATE = Path(os.environ.get("FLEET_STATE", Path.home() / ".local/state/manyhalls-fleet"))
+KEEP_STATE = Path(os.environ.get("MAYOR_KEEP_STATE", Path.home() / ".local/state/manyhalls-keep"))
 
 
 def run(args, *, stdin=None, env=None):
@@ -208,7 +208,7 @@ def main():
     health = {
         "fleet_halt": (FLEET_STATE / "HALT").exists(),
         "mayor_halt": (KEEP_STATE / "mayor-halt").exists(),
-        "fleet_run_live": run(["pgrep", "-f", "proofdelve-fleet-run-"]).returncode == 0,
+        "fleet_run_live": run(["pgrep", "-f", "manyhalls-fleet-run-"]).returncode == 0,
         "disk_free_gb": round(shutil.disk_usage(ROOT).free / (1024 ** 3), 2),
         "ssh_identity": {0: True, 1: False}.get(run(["ssh-add", "-l"]).returncode),
     }

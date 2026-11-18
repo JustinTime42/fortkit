@@ -1,6 +1,6 @@
 #!/bin/bash
-# Harness for fleet.sh's landability condition (ForgeOs-vikl, ForgeOs-5m7a, and
-# since ForgeOs-dx34.1 the NARROWING of it). Tests the SHIPPED functions,
+# Harness for fleet.sh's landability condition (Proofdelve ForgeOs-vikl, Proofdelve ForgeOs-5m7a, and
+# since Proofdelve ForgeOs-dx34.1 the NARROWING of it). Tests the SHIPPED functions,
 # extracted from the real launcher, against real git fixtures. Refuses on an
 # incomplete extraction.
 #
@@ -9,7 +9,7 @@
 #
 # Landability used to be a RUN-START condition: preflight called
 # assert_landable() and exited 64, so a dirty root meant the fleet did not start.
-# ForgeOs-dx34.1 moved the decision to merge time, where land() defers, and cases
+# Proofdelve ForgeOs-dx34.1 moved the decision to merge time, where land() defers, and cases
 # 2-7 inverted from `rc=64` to exit 0 with the reason named.
 #
 # THAT WENT ONE CONDITION TOO FAR, AND THIS FILE IS HOW IT SHIPPED. landable_why()
@@ -19,10 +19,10 @@
 # overreach instead of catching it; case 3 did the same for a detached HEAD, and
 # they are one path rather than two (tree_branch() returns the literal
 # DETACHED-HEAD and landable_why() compares it against $main_branch like any
-# other name). Tova Marrowassay's covenant-4.5 review blocked on it.
+# other name). The Warden's covenant-4.5 review blocked on it.
 #
 # AND THEN THE BRANCH HALF TOOK BACK, ON ITS OWN SIDE, THE ONE PROPERTY THE DIRT
-# HALF HAD JUST BOUGHT (ForgeOs-geym, the Overseer's ruling of 2026-09-09).
+# HALF HAD JUST BOUGHT (Proofdelve ForgeOs-geym, the Overseer's ruling of 2026-09-09).
 # --dry-run is the path this file offers for TESTING its guards, and the restored
 # branch refusal applied to it — so the mode built to exercise the guard refused
 # on the condition the guard checks. Cases 2d, 3d and 3bd are that exemption, and
@@ -65,7 +65,7 @@ no(){ echo "  FAIL  $1 -- $2"; fail=$((fail+1)); }
 # reporting path would restore the old behaviour and those cases would not see
 # it. So: preflight must consult the REPORT exactly once, through
 # report_landability, and report_landability must contain no exit at all.
-# WHY THESE CHECKS DO NOT USE `grep -q` ON A PIPE (ForgeOs-g0ev, 2026-09-10).
+# WHY THESE CHECKS DO NOT USE `grep -q` ON A PIPE (Proofdelve ForgeOs-g0ev, 2026-09-10).
 # MEASURED: 92 failures in 300 runs of the case-0 check below, every one with
 # pipeline status 141 (SIGPIPE), awk exit 0, a complete 24513-byte block, and
 # the pattern PRESENT (grep on the same bytes from a file matched every time).
@@ -82,7 +82,7 @@ no(){ echo "  FAIL  $1 -- $2"; fail=$((fail+1)); }
 # 2026-09-10 that named a documentation-only merge as the cause.
 pf_block=$(awk '/^preflight\(\)[[:space:]]*\{/{f=1} f{print} /^\}$/{if(f) exit}' "$launcher")
 rl_block=$(awk '/^report_landability\(\)[[:space:]]*\{/{f=1} f{print} /^\}$/{if(f) exit}' "$launcher")
-# HOISTED, NOT INLINE (ForgeOs-g0ev). Each grep runs ONCE, above the branch,
+# HOISTED, NOT INLINE (Proofdelve ForgeOs-g0ev). Each grep runs ONCE, above the branch,
 # and the branches test a plain variable. That satisfies SC2143 honestly
 # rather than by silencing it, and keeps the property that matters: no -q,
 # so grep reads all input and can never SIGPIPE the writer mid-flush.
@@ -212,15 +212,15 @@ mkrepo() { # $1 name -> prints path
 # halt() and exit-by-any-other-name are stubbed LOUD so that any path reaching
 # stop-the-world is VISIBLE rather than silent; cases 4-7 must reach none.
 # `dry` IS SET EXPLICITLY IN BOTH RUNNERS AND IS NOT DEFAULTED. Since
-# ForgeOs-geym the branch guard reads it, and under `set -u` an unset $dry is a
+# Proofdelve ForgeOs-geym the branch guard reads it, and under `set -u` an unset $dry is a
 # death rather than a failing assertion — a harness that vanishes instead of
 # reporting is the shape recorded on 2026-08-14. fleet.sh itself sets it at :151,
 # above preflight, on every path.
 # THE COMPOSED SCRIPT GOES THROUGH A FILE, NEVER THROUGH AN ARGUMENT
-# (2026-09-17, the ForgeOs-ubgx sitting). These runners used to read
+# (2026-09-17, the Proofdelve ForgeOs-ubgx sitting). These runners used to read
 # `bash -c "... $(cat guard.sh) ..."`, which hands the whole extracted function
 # table to execve as ONE argv string, and Linux caps a single argument at
-# 128 KiB (MAX_ARG_STRLEN -- the same limit ForgeOs-4hzq met on a large bead's
+# 128 KiB (MAX_ARG_STRLEN -- the same limit Proofdelve ForgeOs-4hzq met on a large bead's
 # prompt). The extraction crossed it when fleet.sh gained its signed-landing
 # block, and every runner died `Argument list too long`, rc=126: sixteen
 # failures that read exactly like defects in the launcher. The text each
@@ -237,7 +237,7 @@ declare -F assert_on_main_branch >/dev/null || assert_on_main_branch(){ echo 'NO
 assert_on_main_branch; report_landability; echo PREFLIGHT-CONTINUED
 EOF
 }
-run_dry() { # $1 repo -- THE SAME SEQUENCE UNDER --dry-run (ForgeOs-geym)
+run_dry() { # $1 repo -- THE SAME SEQUENCE UNDER --dry-run (Proofdelve ForgeOs-geym)
   runsh <<EOF
 set -uo pipefail
 root='$1'; dry=1; say(){ echo "SAY \$*"; }; warn(){ echo "WARN \$*" >&2; }
@@ -266,7 +266,7 @@ narrates() { # $1 output, $2 substring the reason must contain
 }
 
 # A REFUSING FIXTURE MUST DO THREE THINGS: stop, stop at 64, and NAME what it
-# found. THE WORDING IS NOT ASSERTED, deliberately (ForgeOs-8zb7 step 2): a case
+# found. THE WORDING IS NOT ASSERTED, deliberately (Proofdelve ForgeOs-8zb7 step 2): a case
 # that pins a sentence goes red for the next correct rewording and teaches its
 # fort to ignore it (fortkit-or2.8). What is asserted is the property — the run
 # did not continue, the status is the file's own refusal code, and the operator
@@ -277,14 +277,14 @@ refuses() { # $1 output, $2 rc, $3 substring naming the condition
     && ! grep -q 'PREFLIGHT-CONTINUED' <<<"$1"
 }
 
-# THE --dry-run HALF (ForgeOs-geym) MUST DO FOUR THINGS: continue, exit 0, NAME
+# THE --dry-run HALF (Proofdelve ForgeOs-geym) MUST DO FOUR THINGS: continue, exit 0, NAME
 # the branch state it found, and SAY THAT A REAL RUN WOULD REFUSE. The fourth is
 # the one that makes the exemption honest rather than silent — it is 5m7a's own
 # shape, which the dirt half has had since it was narrowed, and without it a dry
 # run on a wrong branch reports a queue no real run would ever cut and says
 # nothing about it. THE WORDING IS NOT PINNED: what is asserted is that the
 # operator was told a real run refuses and at what status, not the sentence that
-# tells them (ForgeOs-8zb7 step 2).
+# tells them (Proofdelve ForgeOs-8zb7 step 2).
 reports_dry() { # $1 output, $2 rc, $3 substring naming the condition
   [ "$2" -eq 0 ] \
     && grep -q "$3" <<<"$1" \
@@ -301,7 +301,7 @@ reports_dry() { # $1 output, $2 rc, $3 substring naming the condition
 # SIGPIPE. MEASURED 2026-09-18 on this host: with the pipeline form,
 # 64 KiB of filler gives PIPESTATUS 0 0 (printf's remainder fits the drained
 # buffer before grep exits), 128 KiB and above give 141 0. Three earlier
-# shapes did not discriminate (Tova on c815 and c815.1, and the Mayor's own
+# shapes did not discriminate (the Warden on c815 and c815.1, and the Mayor's own
 # first repair): tokens at the END of one line; tokens first with no newline;
 # tokens on line 1 with only 64 KiB after. The size is the property.
 large_output="PREFLIGHT-CONTINUED is landable REAL RUN WOULD REFUSE 64
@@ -357,7 +357,7 @@ if refuses "$out" "$rc" 'UNKNOWN-HEAD' && ! grep -q 'DETACHED-HEAD' <<<"$out"; t
   ok "a root whose branch cannot be determined REFUSES at 64 and is named UNKNOWN-HEAD, not DETACHED"
 else no "undeterminable branch not discriminated" "rc=$rc $out"; fi
 
-# 2d-3bd  THE SAME THREE FIXTURES UNDER --dry-run (ForgeOs-geym). Each is the
+# 2d-3bd  THE SAME THREE FIXTURES UNDER --dry-run (Proofdelve ForgeOs-geym). Each is the
 # inversion of the case immediately above it: identical repository, one variable
 # different, opposite required outcome. That pairing is what makes either half
 # evidence — a guard that refused everything and a guard that refused nothing
@@ -394,7 +394,7 @@ if [ $rc -eq 0 ] && grep -q PREFLIGHT-CONTINUED <<<"$out" \
 else no "the dry-run path reports a refusal on a clean tree" "rc=$rc $out"; fi
 
 # ---------------------------------------------------------------------------
-# 4-7  THE DIRT HALF: THE NARROWING (ForgeOs-dx34.1), and it stands. Each of
+# 4-7  THE DIRT HALF: THE NARROWING (Proofdelve ForgeOs-dx34.1), and it stands. Each of
 # these used to exit 64. Each must now CONTINUE, name the condition, and say that
 # merges will be parked.
 
@@ -431,12 +431,12 @@ if [ $rc -eq 0 ] && grep -q 'untracked file' <<<"$out" \
   ok "untracked files do not make a tree unlandable, and are reported"; else no "untracked" "rc=$rc $out"; fi
 
 # ---------------------------------------------------------------------------
-# 8-10  ForgeOs-5m7a: THE DECISION AND THE SEVERITY ARE SEPARATE. land() must
+# 8-10  Proofdelve ForgeOs-5m7a: THE DECISION AND THE SEVERITY ARE SEPARATE. land() must
 # DEFER on an unlandable tree, never halt(): the condition is caused by a third
 # party (concurrent sessions share this checkout), so one Mayor edit at 03:00
 # would otherwise write $FLEET_STATE/HALT and disable every LATER run until a
 # person deleted it by hand -- the "a successful night disables the fleet" shape
-# ForgeOs-feeq removed from the budget path, re-entering through this one.
+# Proofdelve ForgeOs-feeq removed from the budget path, re-entering through this one.
 
 # 8 landable_why REPORTS and never halts or exits
 r=$(mkrepo whyonly); echo two >> "$r/src/a.txt"
@@ -457,7 +457,7 @@ if [ $rc -eq 0 ] && [ -z "$out" ]; then
 # worktree and a real bd; scripts/fleet-e2e-harness.sh is what exercises it.
 #
 # THE ASSERTION IS THE PROPERTY, NOT THE SPELLING (repaired 2026-09-08, Regent
-# sitting, after ForgeOs-usz6). This pinned the literal `fleet.deferred` inside
+# sitting, after Proofdelve ForgeOs-usz6). This pinned the literal `fleet.deferred` inside
 # land()'s own prologue. usz6 moved the emit into defer_merge(), which land()
 # now calls — the behaviour identical, the branch still deferring, still not
 # halting — and this case went RED for a correct fix. A control that pins a
@@ -467,14 +467,14 @@ if [ $rc -eq 0 ] && [ -z "$out" ]; then
 # there: the property is chased rather than loosened.
 land_block=$(awk '/^land\(\)[[:space:]]*\{/{f=1} f{print} /^  local into; into=/{if(f) exit}' "$launcher")
 defer_block=$(awk '/^defer_merge\(\)[[:space:]]*\{/{f=1} f{print} /^\}$/{if(f) exit}' "$launcher")
-# HOISTED, NOT INLINE (ForgeOs-g0ev). Each grep runs ONCE, above the branch,
+# HOISTED, NOT INLINE (Proofdelve ForgeOs-g0ev). Each grep runs ONCE, above the branch,
 # and the branches test a plain variable. That satisfies SC2143 honestly
 # rather than by silencing it, and keeps the property that matters: no -q,
 # so grep reads all input and can never SIGPIPE the writer mid-flush.
 lb_halt=$(printf '%s' "$land_block" | grep -E '^\s*halt ')
 lb_defer=$(printf '%s' "$land_block" | grep 'fleet.deferred')
 # The two remaining pipelines of this block were still inline `grep -q` after
-# the 53c50a6 repair (ForgeOs-g0ev, 2026-09-11): the same SIGPIPE, reading as
+# the 53c50a6 repair (Proofdelve ForgeOs-g0ev, 2026-09-11): the same SIGPIPE, reading as
 # a FALSE RED here because neither carries a leading `!`. Hoisted like the two
 # above. defer_block is 1.6KB today, which is one flush, but it is a function
 # extraction and its size is not a property to rely on.
@@ -502,7 +502,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 12-13  ForgeOs-dx34.1's OWN VISIBILITY CASES (case 0 is the third).
+# 12-13  Proofdelve ForgeOs-dx34.1's OWN VISIBILITY CASES (case 0 is the third).
 
 
 # 12 THE VISIBILITY THE NARROWING OWES. Under it the queue drains into parked
@@ -533,7 +533,7 @@ else no "parked_merges miscounts" "[$got], expected 2"; fi
 # 13 and it must print A NUMBER AND NOTHING ELSE. Its stdout is its return value
 # and both call sites do arithmetic on it; one stray diagnostic line there is a
 # syntax error that kills the run and lets the EXIT trap record a clean drain
-# for a crash (ForgeOs-0d0i, and live_forges() again on 2026-09-04).
+# for a crash (Proofdelve ForgeOs-0d0i, and live_forges() again on 2026-09-04).
 st2="$work/state2"; mkdir -p "$st2/workers/x"; echo deferred-merge > "$st2/workers/x/state"
 got=$(pmcount "$st2")
 if [ "$(printf '%s' "$got" | wc -l)" -eq 0 ] && [ "$got" = 1 ]; then

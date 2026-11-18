@@ -1,9 +1,9 @@
 #!/bin/bash
-# bead-citation-check.sh -- every ForgeOs-<id> cited in shipped source resolves
+# bead-citation-check.sh -- every fortkit-<id> cited in shipped source resolves
 # to a bead, none was created AFTER the commit that first cited it, and explicit
 # identifier references in open bead work still name symbols in the tree.
 #
-# WHY (ForgeOs-x5u9). bd reissues ids it has no record of: ForgeOs-u65j.3.3.4
+# WHY (Proofdelve ForgeOs-x5u9). bd reissues ids it has no record of: Proofdelve ForgeOs-u65j.3.3.4
 # was issued twice, and five source files cite the first meaning. A citation
 # in a kernel-read-only launcher can therefore silently come to mean something
 # else, and nothing goes red. Two signals, both cheap:
@@ -13,7 +13,7 @@
 #               reused (or the cite was a guess).
 #
 # READS the tracked export .beads/issues.jsonl, never bd: the check must run
-# inside the Warden's mask (no bd there, ForgeOs-278) and in the verifier at
+# inside the Warden's mask (no bd there, Proofdelve ForgeOs-278) and in the verifier at
 # harness speed. A stale export is queue-lint's finding, not this one's; an
 # absent export is a refusal (exit 3), never a clean sheet.
 #
@@ -36,7 +36,7 @@
 #   CITATION_UNRESOLVED=warn   UNRESOLVED is reported but does not fail. THE
 #     VERIFIER RUNS IN THIS MODE, measured 2026-09-17 23:44: the first
 #     post-merge verify with this step as a hard gate went RED on
-#     ForgeOs-ubgx.5, a bead filed that evening and cited in a README before
+#     Proofdelve ForgeOs-ubgx.5, a bead filed that evening and cited in a README before
 #     the tracked export was next refreshed, and HALTED the fleet on a green
 #     product. The tracked export always lags beads filed today, so an
 #     unresolved id in the gate is "not exported yet" far more often than
@@ -74,7 +74,7 @@ if os.path.exists(allow_path):
 skip = re.compile(r"(harness|/test/|fixtures|\.test\.)")
 scan = ["src", "tests", "web/src", "scripts", "fort/scripts", "tools", "docs"]
 scan = [d for d in scan if os.path.isdir(os.path.join(root, d))]
-g = subprocess.run(["grep", "-rnoE", r"ForgeOs-[a-z0-9]+(\.[0-9]+)*", *scan,
+g = subprocess.run(["grep", "-rnoE", r"fortkit-[a-z0-9]+(\.[0-9]+)*", *scan,
                     "--exclude-dir=node_modules", "--exclude-dir=bin", "--exclude-dir=obj"],
                    capture_output=True, text=True, cwd=root)
 if g.returncode not in (0, 1):

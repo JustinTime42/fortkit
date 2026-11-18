@@ -19,7 +19,7 @@
 # names are matched against that whitelist; there is no path from a request to an
 # arbitrary command. Anything not declared there cannot be asked for.
 #
-# WHAT A COMPLETED OPERATION ANNOUNCES (ForgeOs-x6hq, ForgeOs-5fyc). `run` has
+# WHAT A COMPLETED OPERATION ANNOUNCES (Proofdelve ForgeOs-x6hq, Proofdelve ForgeOs-5fyc). `run` has
 # always emitted airlock.result with the exit code; what nothing emitted was the
 # category the digest and the Keep read for the action itself. Four successful
 # staging deploys on 2026-08-31 produced one `deploy` event, and a fifth on
@@ -40,7 +40,7 @@
 # this verb's credentials whatever the root says, and `run` executes only what
 # the root's own operations.json declares.
 #
-# WHERE APPROVAL LIVES (ForgeOs-72ot.1, Regent edict 2026-10-06, the Overseer's
+# WHERE APPROVAL LIVES (Proofdelve ForgeOs-72ot.1, Regent edict 2026-10-06, the Overseer's
 # ruling of 2026-10-05 with the store placed at civilization level). Until this
 # edit an approval was `.status = "approved"` inside the request file, and
 # requests/ is seat-writable because a seat must be able to REQUEST -- so the
@@ -67,7 +67,7 @@
 # Overseer's real record.
 #
 # A PINNED OPERATION RUNS THE COMMIT HE APPROVED, NOT WHATEVER HEAD IS AT RUN
-# TIME (ForgeOs-mbv54 item B, Regent edict 2026-10-15, the Overseer's choice of
+# TIME (Proofdelve ForgeOs-mbv54 item B, Regent edict 2026-10-15, the Overseer's choice of
 # shape). `request` has always written `commit` (HEAD at request time) into the
 # request file, and the approval hash covers it, but `run` executed the script
 # from $root and so built whatever HEAD was when it ran: the fleet and the
@@ -84,13 +84,13 @@
 # never copied: no second copy of a secret exists on disk.
 #
 # ONE RUN AT A TIME. `run` holds $WORK/run.lock for its whole loop, so the host
-# runner unit (fort/systemd/proofdelve-airlock-runner.*, which calls
+# runner unit (fort/systemd/manyhalls-airlock-runner.*, which calls
 # fort/scripts/airlock-runner.sh on every write to the approvals store) and a
 # person typing `run` never execute side by side. The lock's descriptor (8) is
 # CLOSED for the operation's script, so a script that leaves a process behind
 # on purpose (preview) does not hold every later run off.
 #
-# SEAT-REQUESTABLE HOST OPERATIONS (ForgeOs-emshb, Regent docket 2026-10-22
+# SEAT-REQUESTABLE HOST OPERATIONS (Proofdelve ForgeOs-emshb, Regent docket 2026-10-22
 # item A, gate 6, the Overseer's approval on the bead before any edit). Four
 # additions, each read ONLY from operations.json, never from a request file:
 #
@@ -130,7 +130,7 @@
 #                it as a link; results/ is seat-writable, so the Keep checks it
 #                again before rendering).
 #
-# WHAT AUTO-RUN COSTS, decided at the sitting (comment on ForgeOs-emshb,
+# WHAT AUTO-RUN COSTS, decided at the sitting (comment on Proofdelve ForgeOs-emshb,
 # 2026-10-23): host-test is not read-only. It builds and tests the named bead
 # worktree, and a --mutate patch, on the host, unmasked, with Docker. That is
 # the exposure the fleet's host verify already carries for every Forge branch
@@ -138,7 +138,7 @@
 # trigger, not a capability. The Overseer chose to build it as approved.
 set -euo pipefail
 
-root="${AIRLOCK_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/ForgeOs)}"
+root="${AIRLOCK_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || echo /home/justin/dev/fortkit)}"
 AIR="$root/fort/airlock"
 REQ="$AIR/requests"; RES="$AIR/results"; OPS="$AIR/operations.json"
 emit="$root/fort/scripts/emit.sh"
@@ -160,8 +160,8 @@ req_sha() { sha256sum "$1" | cut -d' ' -f1; }
 # the request file's hash right now. Malformed lines are skipped, never fatal:
 # `fromjson?` drops a line that is not JSON and `objects` drops one that is
 # JSON but not an object (a bare `5` made jq ERROR on `.repo` before
-# ForgeOs-72ot.1.1, which failed closed for EVERY id in the store at once).
-# $2, when given, is the private snapshot `run` judges (Tova, finding A1 on the
+# Proofdelve ForgeOs-72ot.1.1, which failed closed for EVERY id in the store at once).
+# $2, when given, is the private snapshot `run` judges (the Warden, finding A1 on the
 # 2026-10-06 sitting): the hash and every field must come from ONE read of the
 # request, or a seat racing the host could show one set of bytes to the field
 # reads and another to the hash. jq -e over the whole store, never a pipe into
@@ -225,7 +225,7 @@ op_url() {  # $1 op, $2 log
   return 0
 }
 op_emits() { jq -r --arg n "$1" --arg f "$2" '.operations[] | select(.name==$n) | .emits[$f] // empty' "$OPS"; }
-# The declared success event for an operation (ForgeOs-x6hq). $1 op, $2 record
+# The declared success event for an operation (Proofdelve ForgeOs-x6hq). $1 op, $2 record
 # id, $3 commit, $4 hand (true|false), $5 detail. Emits nothing for an operation
 # that declares no `emits`; never emits on a nonzero exit (the caller decides).
 announce_op() {
@@ -255,7 +255,7 @@ request)
     esac
   done
   [ -n "$reason" ] || die "--reason is required: the record must say why this was asked for"
-  # --commit (ForgeOs-mbv54) names the commit to pin when it is not HEAD, e.g.
+  # --commit (Proofdelve ForgeOs-mbv54) names the commit to pin when it is not HEAD, e.g.
   # a deliberate re-deploy of what staging already runs. Resolved to a full sha
   # here so the request, the Keep and the approval all carry the same 40 hex.
   if [ -n "$pin" ]; then
@@ -335,7 +335,7 @@ run)
   exec 8>>"$WORK/run.lock" || die "could not open $WORK/run.lock"
   flock -w "${AIRLOCK_RUN_LOCK_WAIT:-7200}" 8 || die "another airlock run held $WORK/run.lock past the wait; nothing run"
   # The snapshot and a pinned worktree are removed on EVERY exit, a die
-  # included (ForgeOs-72ot.1.1: a die between mktemp and rm left the snapshot
+  # included (Proofdelve ForgeOs-72ot.1.1: a die between mktemp and rm left the snapshot
   # in host /tmp).
   snap=""; wt=""
   drop_wt() {
@@ -430,7 +430,7 @@ run)
     rundir="$root"; ran_commit="$(git -C "$root" rev-parse HEAD 2>/dev/null || echo unknown)"
     scriptpath="$root/$script"
     if [ "$(op_field "$op" runs_from)" = "bead-worktree" ] && [ "$target" != main ] && ! [[ "$target" =~ ^[0-9a-f]{40}$ ]]; then
-      bwt="${AIRLOCK_WORKTREES:-$root-worktrees}/${target#ForgeOs-}"
+      bwt="${AIRLOCK_WORKTREES:-$root-worktrees}/${target#fortkit-}"
       if [ -z "$target" ] || [ ! -e "$bwt/.git" ]; then
         refuse_run "$id" "$op" "$commit" "no worktree for target '$target' at $bwt" 65; continue
       fi
@@ -478,7 +478,7 @@ run)
     tmp=$(mktemp); jq --argjson rc "$rc" '.status = (if $rc == 0 then "completed" else "failed" end)' "$f" > "$tmp" && mv "$tmp" "$f"
     "$emit" airlock.result "Airlock $op for $id exited $rc" -a overseer -t "$id" -p "{\"exit\":$rc}" 2>/dev/null || true
     echo "airlock: $op exited $rc (log: $log)"
-    # The operation's own event, on success only (ForgeOs-x6hq). The commit is
+    # The operation's own event, on success only (Proofdelve ForgeOs-x6hq). The commit is
     # what the script ran from: the pinned commit for a pinned operation
     # (mbv54), otherwise the checkout's HEAD when the run started.
     if [ "$rc" -eq 0 ]; then
@@ -489,7 +489,7 @@ run)
   ;;
 
 announce)
-  # A RUN MADE BY HAND (ForgeOs-5fyc). The Overseer executed the operation's
+  # A RUN MADE BY HAND (Proofdelve ForgeOs-5fyc). The Overseer executed the operation's
   # script himself, outside the airlock, and records it here so the stream
   # carries the action. Writes the same request+result pair `run` would have,
   # marked hand:true, and emits the operation's declared event. Nothing is

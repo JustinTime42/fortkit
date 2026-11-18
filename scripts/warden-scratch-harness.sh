@@ -1,9 +1,9 @@
 #!/bin/bash
 # warden-scratch-harness.sh — warden.sh clears a read-only scratch rig before
-# removing it (ForgeOs-owhuw, Regent edict 2026-11-09).
+# removing it (Proofdelve ForgeOs-owhuw, Regent edict 2026-11-09).
 # Usage: scripts/warden-scratch-harness.sh [warden.sh]
 #
-# 2026-11-09 15:21 the fleet's review of ForgeOs-0o16s died at launch in five
+# 2026-11-09 15:21 the fleet's review of Proofdelve ForgeOs-0o16s died at launch in five
 # seconds: the Warden's own round-2 inversion rig had chmod a-w directories
 # inside her scratch copy, and warden.sh's plain rm -rf could not remove them.
 # This extracts the SHIPPED clear_scratch() and drives it against a fixture

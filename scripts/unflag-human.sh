@@ -3,8 +3,8 @@
 # claim an answered decision. If the emit fails, restore the label: the durable
 # record must never leave a label change without its matching event.
 #
-# WHOSE MOVE IS THE ASSIGNEE (ForgeOs-29j3g, from 2026-10-19): his answer
-# recorded means the move is the Mayor's, so the same update assigns marrek and
+# WHOSE MOVE IS THE ASSIGNEE (Proofdelve ForgeOs-29j3g, from 2026-10-19): his answer
+# recorded means the move is the Mayor's, so the same update assigns emrith and
 # the bead leaves his board; a restore puts it back on his board (justin).
 set -euo pipefail
 
@@ -28,8 +28,8 @@ esac
 main_root="$(cd "$(dirname "$git_common")" && pwd -P)"
 emitter="$main_root/fort/scripts/emit.sh"
 
-bd -C "$main_root" update "$bead_id" --remove-label human --assignee marrek || exit 3
-if ! "$emitter" decision.answered "$decision" -a "${FORT_ACTOR:-marrek}" -s "${FORT_SEAT:-mayor}" -t "$bead_id"; then
+bd -C "$main_root" update "$bead_id" --remove-label human --assignee emrith || exit 3
+if ! "$emitter" decision.answered "$decision" -a "${FORT_ACTOR:-emrith}" -s "${FORT_SEAT:-mayor}" -t "$bead_id"; then
   if ! bd -C "$main_root" update "$bead_id" --add-label human --assignee justin; then
     printf 'unflag-human: failed to restore human label for %s; label is absent and decision.answered was not recorded\n' "$bead_id" >&2
   fi

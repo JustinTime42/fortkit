@@ -21,12 +21,12 @@ def timestamp(days_ago):
     return (now - dt.timedelta(days=days_ago)).isoformat().replace("+00:00", "Z")
 
 rows=[
- {"id":"ForgeOs-old","created_at":timestamp(15),"status":"closed","closed_at":timestamp(15),"description":"old","acceptance_criteria":"old criteria","close_reason":"r"*350,"comments":[{}]},
- {"id":"ForgeOs-recent","created_at":timestamp(1),"status":"closed","closed_at":timestamp(1),"description":"recent","acceptance_criteria":"recent criteria","comments":[{}]},
+ {"id":"fortkit-old","created_at":timestamp(15),"status":"closed","closed_at":timestamp(15),"description":"old","acceptance_criteria":"old criteria","close_reason":"r"*350,"comments":[{}]},
+ {"id":"fortkit-recent","created_at":timestamp(1),"status":"closed","closed_at":timestamp(1),"description":"recent","acceptance_criteria":"recent criteria","comments":[{}]},
  # The exporter trims only timestamps strictly older than its calculated cutoff.
  # By export time, this timestamp is microscopically older than a fresh 14-day cutoff.
- {"id":"ForgeOs-boundary","created_at":timestamp(14),"status":"closed","closed_at":timestamp(14),"description":"boundary","acceptance_criteria":"boundary criteria","comments":[{}]},
- {"id":"ForgeOs-open","created_at":timestamp(1),"status":"open","description":"open","acceptance_criteria":"open criteria","comments":[{}]}]
+ {"id":"fortkit-boundary","created_at":timestamp(14),"status":"closed","closed_at":timestamp(14),"description":"boundary","acceptance_criteria":"boundary criteria","comments":[{}]},
+ {"id":"fortkit-open","created_at":timestamp(1),"status":"open","description":"open","acceptance_criteria":"open criteria","comments":[{}]}]
 with open(sys.argv[1],"w") as f:
  for row in rows: f.write(json.dumps(row)+"\n")
 PY
@@ -49,7 +49,7 @@ import sys
 
 path, mode = sys.argv[1:]
 rows = {row.get("id"): row for row in map(json.loads, open(path, encoding="utf-8"))}
-expected_ids = {"ForgeOs-old", "ForgeOs-recent", "ForgeOs-boundary", "ForgeOs-open"}
+expected_ids = {"fortkit-old", "fortkit-recent", "fortkit-boundary", "fortkit-open"}
 
 try:
     if mode == "ids":
@@ -57,16 +57,16 @@ try:
     elif mode == "comments":
         assert all("comments" not in row for row in rows.values()), "comments were retained"
     elif mode == "old":
-        old = rows.get("ForgeOs-old", {})
+        old = rows.get("fortkit-old", {})
         assert "description" not in old and "acceptance_criteria" not in old, "15-day bead retained details"
         assert len(old.get("close_reason", "")) == 300, "15-day close reason was not limited to 300 characters"
     elif mode == "recent":
-        assert rows.get("ForgeOs-recent", {}).get("description") == "recent", "1-day bead lost its description"
+        assert rows.get("fortkit-recent", {}).get("description") == "recent", "1-day bead lost its description"
     elif mode == "boundary":
-        boundary = rows.get("ForgeOs-boundary", {})
+        boundary = rows.get("fortkit-boundary", {})
         assert "description" not in boundary and "acceptance_criteria" not in boundary, "14-day boundary bead retained details"
     elif mode == "open":
-        assert rows.get("ForgeOs-open", {}).get("description") == "open", "open bead lost its description"
+        assert rows.get("fortkit-open", {}).get("description") == "open", "open bead lost its description"
 except AssertionError as error:
     print(f"FAIL {mode}: {error}")
     raise SystemExit(1)

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Which fleet-safe beads declare a blocker in PROSE and carry no bd edge for it?
 
-The failure, measured on ForgeOs-vlyo.1 (Tova, 2026-09-15): the bead's
-description said it was blocked on ForgeOs-vlyo so the fallback message would
+The failure, measured on Proofdelve ForgeOs-vlyo.1 (the Warden, 2026-09-15): the bead's
+description said it was blocked on Proofdelve ForgeOs-vlyo so the fallback message would
 exist before the guard hid it. That dependency lived in a sentence, not in bd, so
 the fleet dispatched it anyway and one acceptance criterion was unsatisfiable in
 the tree it ran against. Her instruction: "if 'blocked on' is meant to gate
@@ -13,13 +13,13 @@ passing. So this reports CANDIDATES with the matched sentence, for a person to
 judge. It never acts.
 
 --expired INVERTS THE QUESTION, and it is the same parse read the other way
-(ForgeOs-mfyq, 2026-09-21). The default mode asks "may this dispatch?" and so it
+(Proofdelve ForgeOs-mfyq, 2026-09-21). The default mode asks "may this dispatch?" and so it
 skips a gate whose bead has CLOSED, because a satisfied gate does not block
 anything. That skip is correct there and it is exactly why nothing ever noticed
-ForgeOs-aqc6.2.4: its criteria said "Deal variant once aqc6.2.3 lands" -- note the
-BARE id, with no ForgeOs- prefix, which is why GATE_EXPIRED below exists --
+Proofdelve ForgeOs-aqc6.2.4: its criteria said "Deal variant once aqc6.2.3 lands" -- note the
+BARE id, with no fortkit- prefix, which is why GATE_EXPIRED below exists --
 aqc6.2.3 closed on 2026-09-17, and the deferral silently came due. A P1
-(ForgeOs-sk3c.3) sat blocked behind it for weeks.
+(Proofdelve ForgeOs-sk3c.3) sat blocked behind it for weeks.
 
 So --expired reports the branch the default mode `continue`s past: open beads
 whose prose defers to a bead that has since CLOSED. Those are not blocked. They
@@ -38,29 +38,29 @@ import sys
 
 # Phrases that read as a gate rather than a reference.
 GATE = re.compile(
-    r"(blocked on|blocks on|depends on|after\s+\S*(?:ForgeOs-|\b\d)\S*\s+lands|"
-    r"once\s+\S*ForgeOs-\S+\s+(?:lands|has landed|merges)|"
-    r"must land first|requires?\s+ForgeOs-\S+\s+to land)",
+    r"(blocked on|blocks on|depends on|after\s+\S*(?:fortkit-|\b\d)\S*\s+lands|"
+    r"once\s+\S*fortkit-\S+\s+(?:lands|has landed|merges)|"
+    r"must land first|requires?\s+fortkit-\S+\s+to land)",
     re.I,
 )
-# "This bead must land before ForgeOs-X" makes X a dependent of this bead;
+# "This bead must land before fortkit-X" makes X a dependent of this bead;
 # it does not say this bead is blocked on X. Capture the complete target span,
 # not just its first id, so every comma- or "and"-separated target is checked.
 MUST_LAND_BEFORE = re.compile(
-    r"must land before\s+(ForgeOs-[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]"
-    r"(?:\s*(?:,|and)\s*ForgeOs-[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9])*)",
+    r"must land before\s+(fortkit-[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]"
+    r"(?:\s*(?:,|and)\s*fortkit-[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9])*)",
     re.I,
 )
-# "ForgeOs-X must land before this bead" is subject-first prose for the same
+# "fortkit-X must land before this bead" is subject-first prose for the same
 # dependency direction as a normal gate: this bead cannot land before X.
 SUBJECT_FIRST_GATE = re.compile(
-    r"ForgeOs-[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]\s+must land before\s+this bead",
+    r"fortkit-[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]\s+must land before\s+this bead",
     re.I,
 )
 # Trailing "." and "-" are sentence punctuation, not part of an id. Without
-# this, "Blocked on ForgeOs-vlyo." captures "ForgeOs-vlyo." and never matches
+# this, "Blocked on Proofdelve ForgeOs-vlyo." captures "Proofdelve ForgeOs-vlyo." and never matches
 # the real dependency id (measured 2026-09-15, outcome (d) of the harness).
-BEAD = re.compile(r"ForgeOs-[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]")
+BEAD = re.compile(r"fortkit-[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]")
 
 NONBLOCKING = (
     "tracks", "related", "parent-child", "discovered-from", "until",
@@ -118,12 +118,12 @@ def expired_main():
     Two reasons this reads the board rather than querying per bead. It is the
     whole open set (134 beads = ~47s of `bd show` at 0.35s each, measured
     2026-09-21) where the default mode queries only the handful that matched.
-    And a gate named in prose is frequently written WITHOUT the `ForgeOs-`
-    prefix -- ForgeOs-aqc6.2.4's own criterion says "Deal variant once aqc6.2.3
+    And a gate named in prose is frequently written WITHOUT the `fortkit-`
+    prefix -- Proofdelve ForgeOs-aqc6.2.4's own criterion says "Deal variant once aqc6.2.3
     lands" -- so a bare token has to be resolved against the board to be
     recognised at all. Holding the board makes that a dict lookup, and makes it
     SAFE: a bare token is only ever treated as a bead reference when
-    `ForgeOs-<token>` is a real id, so no regex looseness can invent one.
+    `fortkit-<token>` is a real id, so no regex looseness can invent one.
     """
     try:
         board = json.load(sys.stdin)
@@ -146,9 +146,9 @@ def expired_main():
     prefix = beads and next(iter(beads)).split("-", 1)[0] + "-"
     BARE = re.compile(r"\b([a-z0-9]{3,}(?:\.[0-9]+)+)\b", re.I)
 
-    # GATE (shared with the default mode) requires a literal "ForgeOs-" inside
+    # GATE (shared with the default mode) requires a literal "fortkit-" inside
     # the "once X lands" form, so it does not see a deferral written with a bare
-    # id. ForgeOs-aqc6.2.4's criterion is exactly that: "Deal variant once
+    # id. Proofdelve ForgeOs-aqc6.2.4's criterion is exactly that: "Deal variant once
     # aqc6.2.3 lands". Its harness case failed on the first run and that failure
     # is the reason this exists -- without it the bead is still found, but only
     # through an UNRELATED sentence naming a DIFFERENT bead, which would have
@@ -274,7 +274,7 @@ def main():
             # A GATE WHOSE BEAD HAS CLOSED IS SATISFIED, NOT MISSING, and in
             # THIS mode it is correctly skipped. `--expired` is the other half:
             # it reports exactly this branch, because a deferral that came due
-            # unnoticed is its own failure (ForgeOs-mfyq).
+            # unnoticed is its own failure (Proofdelve ForgeOs-mfyq).
             if (o.get("status") or "").lower() in ("closed", "done"):
                 continue
             missing.add(n)
