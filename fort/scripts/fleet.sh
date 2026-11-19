@@ -4685,8 +4685,14 @@ not by a citizen." \
   bd -C "$root" merge-slot release >/dev/null 2>&1 || true
   landings=$((landings + 1))
   say "$bead: merged to $into"
+  # THE EVENT NAMES THE MERGE COMMIT (Regent sitting 2026-11-19, fortkit-awlc; the
+  # Warden's finding 2 on 664de85). scripts/merge-event-check.sh matches a main
+  # merge to its event exactly when the event carries payload.mergeCommit, and
+  # otherwise falls back to counting one event per bead. Resolved here, right
+  # after the merge and before anything else can move HEAD.
+  local merged_sha; merged_sha="$(git -C "$root" rev-parse HEAD 2>/dev/null || echo "")"
   emit merge "Fleet merged bead/$sfx into $into on $verdict" \
-    -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"$verdict\",\"into\":\"$into\"}"
+    -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"$verdict\",\"into\":\"$into\",\"mergeCommit\":\"$merged_sha\"}"
 
   # POST-MERGE VERIFIER, AND A RED MAIN HALTS THE RUN (Overseer amendment,
   # 2026-09-02, recorded on Proofdelve ForgeOs-9mfw.3). There is a measured instance of

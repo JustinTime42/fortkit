@@ -18,6 +18,23 @@
 #
 # Usage: scripts/supervisor-harness.sh            (SUPERVISOR_SH overrides the file; SUPERVISOR_SH_PRE_IP9Z supplies the pre-ip9z control)
 set -uo pipefail
+# NOTHING THIS HARNESS STARTS OUTLIVES IT (Regent sitting 2026-11-19, fortkit-awlc).
+# Its fixtures start long sleeps (lock holders, processes for a reaper to find).
+# Killing the pid that was started is not enough: `flock f sleep 300` and
+# `bash -c 'sleep 300; :'` leave the sleep behind as an orphan, and 20 of those
+# were found holding the fleet's run lock after a verifier run. Every process
+# this harness starts inherits FORT_HARNESS_TAG, and the EXIT trap kills every
+# process that carries it, whoever its parent is by then.
+export FORT_HARNESS_TAG="fh-$$-$RANDOM"
+reap_tagged() {
+  local p pid
+  for p in /proc/[0-9]*; do
+    pid="${p#/proc/}"
+    [ "$pid" = "$$" ] && continue
+    if grep -qzx "FORT_HARNESS_TAG=$FORT_HARNESS_TAG" "$p/environ" 2>/dev/null; then kill -KILL "$pid" 2>/dev/null; fi
+  done
+  return 0
+}
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
 subject="${SUPERVISOR_SH:-$here/fort/scripts/fleet-supervisor.sh}"
@@ -31,7 +48,7 @@ b7_failed=0
 b8_failed=0
 
 scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+trap 'reap_tagged; rm -rf "$scratch"' EXIT
 
 # --- the scratch fort and the stubs -----------------------------------------
 fort="$scratch/fort"
