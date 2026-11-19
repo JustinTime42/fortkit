@@ -284,6 +284,6 @@ observation, filed here before the essay was read.
   insufficient, drop to seven primitives and refile latch when the fort builds
   one. Shipping an eighth primitive justified by an imagined need would violate
   standing order 11 inside the spec that cites it.
-- **Portability is not assumed.** Per standing order 13 this reaches the elder
+- **Portability is not assumed.** Per standing order 17 this reaches the elder
   forts as an advisory (A6) and declining is a complete answer. A fort that
   distinguishes its controls some other way is right to keep its own.
