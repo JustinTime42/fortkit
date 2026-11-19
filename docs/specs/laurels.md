@@ -163,5 +163,5 @@ memory for the same session-start budget:
   caught something real" is not currently an observable event. Until that lands,
   sources 1 and 2 are the live ones and source 3 is inert. Say so in the
   generator's output rather than silently rendering nothing.
-- **Portability is not assumed.** Per standing order 13 this reaches the elder
+- **Portability is not assumed.** Per standing order 17 this reaches the elder
   forts as an advisory, and declining is a complete answer.
