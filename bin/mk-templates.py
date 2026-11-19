@@ -38,6 +38,8 @@ SKIP = {
     "scripts/beads-export-check.sh", "scripts/mask-harness.sh", "scripts/run-pixellab-trial.mjs",
     "scripts/run-pixellab-trial.d.mts", "scripts/verify-impl.sh", "scripts/seat-lint.mjs",
     "scripts/merge-event-check.sh", "scripts/control-fingerprints.json", "scripts/control-lint.mjs",
+    # measures a bind that exists only in Manyhalls's forge.sh (the capital's gate-1 surface)
+    "scripts/forge-gate1-mask-harness.sh",
 }
 GATE1 = "bin/*|civ/*|templates/*|schema/*|skills/*"
 GATE1_RE = r"bin/\*|civ/\*|templates/\*|schema/\*|skills/\*"
@@ -122,6 +124,8 @@ SPECIAL = [
     ("scripts/forge-refresh-harness.sh", "grep -qF 'run npm ci FIRST' <<<\"$hi\"", "grep -qF 'install them FIRST' <<<\"$hi\""),
     ("fort/airlock/operations.json", "Manyhalls ships this table EMPTY (Regent sitting 2026-11-18, fortkit-ttpk): the mechanism", "A founded fort ships this table EMPTY: the mechanism"),
     (None, "Emrith Cairnwright of Manyhalls", "Emrith Cairnwright of \x01MH\x01"),
+    # the capital's gate-1 bind is Manyhalls's alone: a founded fort's gate 1 is its own to define
+    ("fort/scripts/forge.sh", '# MANYHALLS: THE GATE-1 SURFACE OF THE ROOT CHECKOUT IS READ-ONLY TO THE FORGE\n# (Regent sitting 2026-11-19, fortkit-ttpk; the Overseer\'s word after the boundary\n# smokes: "do the forge bind"). In secrets-only the root checkout is writable to\n# this seat, and charter gate 1 says templates/, schema/, skills/ and civ/ land\n# only on the Overseer\'s signature. bin/ and civ/scripts were already read-only;\n# these were held by prose alone, for the one seat that cannot ask first.\n# Measured before this line: root templates/ WRITABLE from this mask. The Forge\n# still edits its OWN WORKTREE\'s copies, which is how a gate-1 bead is built and\n# then held for signature. Appended after build_mask because a later bind wins,\n# and nothing the Forge legitimately writes lies under these four directories.\n# scripts/forge-gate1-mask-harness.sh measures it, with a red arm.\nfor gate1_dir in templates schema skills civ; do\n  if [ -d "$root/$gate1_dir" ]; then mask+=(--ro-bind "$root/$gate1_dir" "$root/$gate1_dir"); fi\ndone\n# END MANYHALLS GATE-1 BIND\n', ""),
     # identity the general rules do not reach (the Warden's finding 7, review 2 on fortkit-ttpk)
     ("fort/airlock/README.md", "~/.local/share/airlock/fortkit/<id>", "~/.local/share/airlock/{{PROJECT}}/<id>"),
     ("fort/systemd/manyhalls-nightly-verify.timer", " (an hour after Proofdelve's nightly on this host)", ""),

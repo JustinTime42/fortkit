@@ -779,6 +779,21 @@ fi
 # byte count.
 keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/civ-keep/signing-token"
 build_mask codex "$root" --rw-tree "$wt" --mask-ssh-auth-sock --mask-file "$keep_token"
+# MANYHALLS: THE GATE-1 SURFACE OF THE ROOT CHECKOUT IS READ-ONLY TO THE FORGE
+# (Regent sitting 2026-11-19, fortkit-ttpk; the Overseer's word after the boundary
+# smokes: "do the forge bind"). In secrets-only the root checkout is writable to
+# this seat, and charter gate 1 says templates/, schema/, skills/ and civ/ land
+# only on the Overseer's signature. bin/ and civ/scripts were already read-only;
+# these were held by prose alone, for the one seat that cannot ask first.
+# Measured before this line: root templates/ WRITABLE from this mask. The Forge
+# still edits its OWN WORKTREE's copies, which is how a gate-1 bead is built and
+# then held for signature. Appended after build_mask because a later bind wins,
+# and nothing the Forge legitimately writes lies under these four directories.
+# scripts/forge-gate1-mask-harness.sh measures it, with a red arm.
+for gate1_dir in templates schema skills civ; do
+  if [ -d "$root/$gate1_dir" ]; then mask+=(--ro-bind "$root/$gate1_dir" "$root/$gate1_dir"); fi
+done
+# END MANYHALLS GATE-1 BIND
 mask_env codex
 # SEAT-NAMED MASK MARKER (fortkit-ugw4; the shape Farlantern has shipped
 # since longburn-5v4). mayor.sh refuses under ANY non-empty FORT_MASKED and
