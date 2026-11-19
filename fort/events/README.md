@@ -1,16 +1,14 @@
-# the civilization (canonical copy: fortkit/schema) event stream
+# Manyhalls event stream
 
-Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `fort/scripts/emit.sh`. This is the fort's replayable history: the data source for the future Dwarf-Fortress-style visualizer (bead ForgeOs-din) and for any digest/monitoring consumer. Daily files are **gitignored** (worktree-concurrent appends would make tracked files a merge hazard); this README and the schema are tracked.
+Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `fort/scripts/emit.sh`. This is the fort's replayable history: the data source for the future Dwarf-Fortress-style visualizer (bead Proofdelve ForgeOs-din) and for any digest/monitoring consumer. Daily files are **gitignored** (worktree-concurrent appends would make tracked files a merge hazard); this README and the schema are tracked.
 
 ## Schema
 
-**Time basis (decided 2026-08-04, fortkit-dpu):** `ts` carries an explicit offset and is an unambiguous instant; consumers group and order by **parsed UTC, never by filename**. The daily filename (`events-YYYY-MM-DD.jsonl`, writer-local date) is a **shard key, not a fact** — a file may contain instants from adjacent UTC days. Reader implementations must include the pinning test: an event stamped `23:24-08:00` belongs to the NEXT UTC day (`07:24Z`).
-
 ```json
-{"ts":"2026-08-03T17:30:00-08:00","actor":"veyra","seat":"forge","category":"bead.claimed","target":"ForgeOs-mij","detail":"Veyra claims the CI bead","payload":null}
+{"ts":"2026-08-03T17:30:00-08:00","actor":"kethra","seat":"forge","category":"bead.claimed","target":"Proofdelve ForgeOs-mij","detail":"the Forge claims the CI bead","payload":null}
 ```
 
-- **ts**: ISO-8601 with offset. **actor**: who did it (`marrek`, `veyra`, `tova`, `overseer`, `harness`, `watcher:<name>`). **seat**: office if applicable (`mayor|forge|warden`). **category**: dotted event type (below). **target**: bead ID, commit hash, seat, or path. **detail**: one human-readable line (this becomes the DF announcement text). **payload**: optional JSON (model used, tokens, verdicts, tallies).
+- **ts**: ISO-8601 with offset. **actor**: who did it (`emrith`, `kethra`, `ilva`, `overseer`, `harness`, `watcher:<name>`). **seat**: office if applicable (`mayor|forge|warden`). **category**: dotted event type (below). **target**: bead ID, commit hash, seat, or path. **detail**: one human-readable line (this becomes the DF announcement text). **payload**: optional JSON (model used, tokens, verdicts, tallies).
 
 ## Categories (extend freely; never rename existing ones)
 
@@ -18,7 +16,7 @@ Append-only JSONL, one file per day (`events-YYYY-MM-DD.jsonl`), written by `for
 - `seat.founded`, `seat.named`, `session.start`, `session.end`, `handoff.written`
 - `bead.filed`, `bead.claimed`, `bead.closed`, `bead.blocked`, `bead.unblocked`
 - `verify.run`, `verify.pass`, `verify.fail`, `review.verdict`, `merge`, `push`, `deploy`
-- `incident`, `incident.corrected`, `laurel`, `overseer.decision`, `watcher.alert`
+- `incident`, `incident.corrected`, `laurel`, `overseer.decision`, `watcher.alert`, `watcher.cleared` (the loop watchdog: an alerted condition no longer holds, `Proofdelve ForgeOs-dycc9`), `loop.heartbeat` (the Mayor, once per `/loop` iteration; what the loop watchdog reads as liveness)
 
 ## Emission points (who must emit, when)
 

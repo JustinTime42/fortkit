@@ -67,13 +67,30 @@ fi
 # partial fort. `if` rather than `&&`: a false test as the last command of a
 # loop body makes the loop return 1 and `set -e` aborts the founding, which is
 # the trap already recorded at the seat-roster loop below.
-for f in scripts/verify-impl.sh scripts/seat-lint.mjs \
-         scripts/digest.sh scripts/quiescent.sh scripts/digest-hook.sh scripts/merge-event-check.sh; do
-  if [ -e "$f" ]; then
-    echo "fort-init: $REPO/$f already exists - refusing to overwrite it" >&2
+# THE LIST IS THE TEMPLATE TREE ITSELF (Regent sitting 2026-11-18, fortkit-ttpk, docket
+# item T11). It was six hand-named files while the factory enumerated what it
+# rendered; the factory now renders templates/ by tree (see "THE TREE RENDER"
+# below), so the refusal walks the same tree and the two cannot disagree.
+# fort/ is already refused whole above; this covers scripts/, .claude/agents and
+# docs/, which a repository may well have.
+FORT_SLUG="$(printf '%s' "$PROJECT" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9]\{1,\}/-/g' -e 's/^-//' -e 's/-$//')"
+if [ -z "$FORT_SLUG" ]; then
+  echo "fort-init: the project name '$PROJECT' has no letter or digit in it, so no state directory or unit name can be derived from it" >&2
+  exit 1
+fi
+template_files() { ( cd "$T" && find fort scripts claude docs -type f | sort ); }
+dest_of() {  # $1 a path under templates/ -> where it lands in the fort
+  local d="$1"
+  case "$d" in claude/*) d=".$d" ;; esac
+  printf '%s' "${d//__FORT_SLUG__/$FORT_SLUG}"
+}
+while IFS= read -r rel; do
+  case "$rel" in fort/*) continue ;; esac
+  if [ -e "$(dest_of "$rel")" ]; then
+    echo "fort-init: $REPO/$(dest_of "$rel") already exists - refusing to overwrite it" >&2
     exit 1
   fi
-done
+done < <(template_files)
 # THE CIVILIZATION REGISTRY, RESOLVED AND PROBED BEFORE ANYTHING IS BUILT
 # (fortkit-fg7s, measured 2026-08-31 from a masked Mayor session).
 # $HOME/.claude/civilization.json is a read-only single-file BIND MOUNT in a
@@ -119,6 +136,15 @@ fi
 if [ ! -f "$REG" ]; then
   echo "fort-init: NOTE — there is no civilization registry at $REG, so this founding will mint one. For a real civilization that is a once-ever event. If you did not expect it: check FORT_REGISTRY, and check whether you are inside a Forge seat mask, where \$HOME/.claude is a tmpfs and a registry written there dies with the session." >&2
 fi
+# The roster check belongs to the preflight: it reads templates/ only.
+SEATS=(mayor forge warden workbench)
+SEAT_OFFICES=$(IFS=/; echo "${SEATS[*]}")
+for s in "${SEATS[@]}"; do
+  if [ ! -f "$T/fort/seats/$s.md" ]; then
+    echo "fort-init: templates/fort/seats/$s.md is missing, so the roster names a seat the factory cannot found. Nothing has been written." >&2
+    exit 1
+  fi
+done
 # ------------------------------- end of the no-mutation block; writes begin here
 [ -d .beads ] || bd init
 
@@ -164,108 +190,63 @@ touch fort/handoffs/.gitkeep
 # scripts/verify-impl.sh:231-234 for the render lint's own pass values.
 sed_rhs() { printf '%s' "${1-}" | sed -e 's/[\\&|]/\\&/g' -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g'; }
 render_stream() {
-  local repo project date home spec purpose banner
+  local repo project date home spec purpose banner prefix
   repo=$(sed_rhs "$REPO"); project=$(sed_rhs "$PROJECT"); date=$(sed_rhs "$DATE")
   home=$(sed_rhs "$HOME"); spec=$(sed_rhs "$SPEC"); purpose=$(sed_rhs "$PURPOSE")
-  banner=$(sed_rhs "${PROJECT^^} FORT STATUS (moot pending)")
+  banner=$(sed_rhs "${PROJECT^^} FORT STATUS (moot pending)"); prefix=$(sed_rhs "$BEAD_PREFIX")
+  # FORT_SLUG is [a-z0-9-] by construction, so it needs no escaping. The seat
+  # ids are the seat OFFICES until the Founding Moot names citizens (no
+  # personhood ships from the factory); {{KEEP_ID}} is the Civ Keep's key for
+  # this fort, which is the slug of the project name (civ/keep/lib/forts.mjs).
   sed -e "s|{{REPO_PATH}}|$repo|g" -e "s|{{PROJECT}}|$project|g" -e "s|{{DATE}}|$date|g" \
     -e "s|{{HOME}}|$home|g" \
     -e "s|{{FORT_NAME}}|(unnamed — moot pending)|g" -e "s|{{FORT_BANNER}}|$banner|g" \
+    -e "s|{{FORT_SLUG}}|$FORT_SLUG|g" -e "s|{{FORT_SLUG_UPPER}}|${FORT_SLUG^^}|g" \
+    -e "s|{{KEEP_ID}}|$FORT_SLUG|g" -e "s|{{BEAD_PREFIX}}|$prefix|g" \
+    -e "s|{{MAYOR_ID}}|mayor|g" -e "s|{{FORGE_ID}}|forge|g" \
+    -e "s|{{WARDEN_ID}}|warden|g" -e "s|{{WORKBENCH_ID}}|workbench|g" \
     -e "s|{{FOUNDING_SPEC}}|$spec|g" -e "s|{{PURPOSE}}|$purpose|g" \
     -e "s|{{EXTRA_GATES}}||g" -e "s|{{EXTRA_ORDERS}}||g" "$1"
 }
 render() { render_stream "$1" > "$2"; }
-render "$T/fort/charter.md" fort/charter.md
-# THE SEAT ROSTER — one list, four consumers (fortkit-naju): the seat files and
-# launchers here, the permission profiles below, the founding fact, and the
-# seat.founded events. Those were four hand-maintained enumerations until
-# 2026-08-14, and the Researcher — whose four templates had all shipped — was in
-# none of them, so a fort founded today was born without the seat and its own
-# audit stream said nothing about it.
+# THE SEAT ROSTER (fortkit-naju; Overseer decision 2026-11-18, docket Q1: Mayor,
+# Forge, Warden, Workbench; the Scholar seat is retired from the factory). One
+# list, read by the founding fact and the seat.founded events below. The seat
+# FILES, launchers and profiles are no longer derived from it: they are whatever
+# templates/ holds, rendered by the tree render.
 #
 # SEATS ONLY, NO PERSONHOOD (Overseer ruling, 2026-08-14): no names, no pronouns,
 # no personalities. Those belong to the Founding Moot and to the citizens
 # themselves; a fort must never inherit another settlement's citizen.
-#
-# Deriving the roster from the template directories was considered and is worse,
-# recorded so nobody re-derives it: templates/fort/scripts/ mixes seat launchers
-# with emit/status/verify, and templates/fort/profiles/ holds a profile for only
-# some of the seats. Derivation needs a naming convention that does not exist.
-# An explicit list is still ONE place, which was the whole objective.
-#
-# Each artifact is rendered IF ITS TEMPLATE EXISTS — a seat with no boundary
-# probe or no profile of its own is normal, and an `if` rather than a `&&` chain
-# because a trailing false test under `set -e` would abort the founding.
-SEATS=(mayor forge warden scholar)
-SEAT_OFFICES=$(IFS=/; echo "${SEATS[*]}")
-for s in "${SEATS[@]}"; do
-  if [ -f "$T/fort/seats/$s.md" ]; then render "$T/fort/seats/$s.md" "fort/seats/$s.md"; fi
-  if [ -f "$T/fort/scripts/$s.sh" ]; then render "$T/fort/scripts/$s.sh" "fort/scripts/$s.sh"; fi
-  if [ -f "$T/fort/scripts/probe-$s-boundaries.sh" ]; then
-    render "$T/fort/scripts/probe-$s-boundaries.sh" "fort/scripts/probe-$s-boundaries.sh"
-  fi
-done
-for sc in emit status verify; do render "$T/fort/scripts/$sc.sh" "fort/scripts/$sc.sh"; done
-mkdir -p fort/scripts/lib
-render "$T/fort/scripts/lib/seat-sandbox.sh" fort/scripts/lib/seat-sandbox.sh
-# The verifier is a SHIM in fort/scripts and an IMPLEMENTATION out here (Shape B,
-# fortkit-6ovg / fortkit-x9ou). fort/scripts is a whole-directory read-only bind
-# in every seat mask, so the one tool in that set the fort evolves has to live
-# where the Mayor can still rewrite it. Founding a fort without this file leaves
-# a shim that exits 70 and verifies nothing — which is exactly how the founding
-# smoke test caught the omission when Shape B first landed.
-# (the refusal on a pre-existing scripts/verify-impl.sh now runs in the
-# no-mutation preflight at the head of this script — fortkit-2twy)
-mkdir -p scripts
-render "$T/scripts/verify-impl.sh" scripts/verify-impl.sh
-chmod +x scripts/verify-impl.sh
-# The seat-file lint, beside the verifier that runs it (fortkit-bucl, the Regent
-# half of fortkit-e69p). It lints fort/seats/ and the civilization registry, so it
-# lives in scripts/ with its subject rather than under fort/memory/ with the memory
-# lints — the same reasoning that put each memory lint where it sits.
-#
-# THIS LINE AND templates/scripts/seat-lint.mjs ARE ONE CHANGE AND MUST NOT BE
-# SEPARATED. This line without the file is a cp of nothing; the file and the
-# template's verifier step without this line kills every founded fort's verifier at
-# its first step. Neither is a state a settlement should be founded in.
-# (its pre-existence refusal is in the preflight — fortkit-2twy)
-cp "$T/scripts/seat-lint.mjs" scripts/seat-lint.mjs
-# The session digest and its gates (fortkit-zj8e.10, adopting ADV-0008 from
-# Proofdelve). THE SAME COUPLING THE seat-lint COMMENT ABOVE RECORDS:
-# templates/scripts/verify-impl.sh already wires merge-event-check as a stage.
-# The template verifier ANNOUNCES A SKIP for that stage while the script is
-# absent rather than failing, so a fort founded before these lines is honest
-# rather than broken - but it does not get the control until they exist.
-# RENDER, not cp: merge-event-check.sh carries {{DATE}} (its audit lower bound,
-# so a new fort audits from its founding rather than the epoch) and {{PROJECT}}.
-# (these four pre-existence refusals are in the preflight — fortkit-2twy)
-for sc in digest quiescent digest-hook merge-event-check; do
-  render "$T/scripts/$sc.sh" "scripts/$sc.sh"
-  chmod +x "scripts/$sc.sh"
-done
-mkdir -p fort/profiles
-for s in "${SEATS[@]}"; do
-  if [ -f "$T/fort/profiles/$s-settings.json" ]; then
-    render "$T/fort/profiles/$s-settings.json" "fort/profiles/$s-settings.json"
-  fi
-done
-chmod +x fort/scripts/*.sh
-cp "$T/fort/events/README.md" fort/events/README.md
+# SEATS and SEAT_OFFICES are set, and every seat's template checked, in the
+# preflight above the first write (the Warden's finding 6, review 2 on
+# fortkit-ttpk): checked here, a missing seat file left a half-founded tree
+# that the "already has a fort/" refusal then would not touch.
 
-# The advisory answer ledger (fortkit-p5mr.2). Standing order 13 tells every fort to
-# record its answer to an advisory in fort/advisories.md — "checked, result,
-# decision" — so a fort founded without the file receives a constitutional
-# instruction to write to a path it does not have. Founded WITH the mechanism
-# rather than taught it later; the first answer just appends a row.
-render "$T/fort/advisories.md" fort/advisories.md
-
-# Memory: the facts ledger (docs/specs/memory.md). Since fortkit-xgul.1 a fort is
-# founded ON the ledger, not on a flat remember.md. The index generator and the
-# schema linter travel with the fort (a ledger with no consolidate step produces
-# no current.md); the founding operational facts are written AS ledger facts; and
-# fort/remember.md becomes a pointer stub so every fort has the identical shape.
-cp "$T/fort/memory/consolidate-memory.mjs" fort/memory/consolidate-memory.mjs
-cp "$T/fort/memory/memory-lint.mjs" fort/memory/memory-lint.mjs
+# THE TREE RENDER (Regent sitting 2026-11-18, fortkit-ttpk, docket items T10/T11).
+# Everything under templates/fort, templates/scripts, templates/claude and
+# templates/docs is rendered to the same path in the fort (claude/ lands in
+# .claude/, and __FORT_SLUG__ in a file name becomes this fort's slug). The
+# factory used to name each artifact; four times a template shipped with no line
+# here to install it (fortkit-naju and its successors), and a fort was founded
+# without it and without any error. A file added to templates/ is now installed
+# by being there. What this cannot catch is a template that should exist and does
+# not, which is why the roster loop above refuses on a missing seat file.
+#
+# The bead prefix is whatever bd chose at `bd init` (the directory's name, not
+# the project name), so it is read back from bd rather than derived.
+BEAD_PREFIX="$(bd config get issue_prefix 2>/dev/null | tr -d '[:space:]')"
+if [ -z "$BEAD_PREFIX" ]; then
+  echo "fort-init: bd did not report an issue prefix for $REPO, so the machinery's bead ids cannot be rendered. fort/ exists but holds no machinery yet: remove $REPO/fort and run fort-init again once bd answers." >&2
+  exit 1
+fi
+while IFS= read -r rel; do
+  dest="$(dest_of "$rel")"
+  mkdir -p "$(dirname "$dest")"
+  render "$T/$rel" "$dest"
+  if [ -x "$T/$rel" ]; then chmod +x "$dest"; fi
+done < <(template_files)
+mkdir -p fort/airlock/requests fort/airlock/results
 
 cat > fort/remember.md <<'EOF'
 # Operational memory — pointer stub
@@ -337,8 +318,12 @@ provenance:
   date: $DATE
   origin: trusted
 ---
-No verifiers exist yet. Standing up fort/scripts/verify.sh and CI from commit
-one is an early bead; until it exists, treat every green as unproven.
+The verifier's product gate is a STUB. fort/scripts/verify.sh runs every
+machinery step (lints, shellcheck, the harness suite) and then fails at the
+step named product-gate, by design, until this fort wires its own build, lint
+and tests into scripts/verify-impl.sh. Until then no green exists to cite. The
+fleet ships disabled (FLEET_ENABLED=0 in fort/scripts/fleet.conf) and no unit
+in fort/systemd/ is installed.
 EOF
 cat > fort/memory/facts/founding-spec.md <<EOF
 ---
@@ -474,5 +459,10 @@ fi
 
 echo ""
 echo "fort-init: the $PROJECT fort is founded at $REPO"
-echo "Next: (1) commit; (2) hold the Founding Moot (names, pronouns, personalities, fort name — ballot per charter moot law);"
-echo "      (3) update charter/seats/banner/registry with moot outcomes; (4) file founding beads; (5) maiden bead, supervised."
+echo "Next: (1) commit; (2) hold the Founding Moot (names, pronouns, personalities, fort name), then update"
+echo "      charter, seats, the launchers' prompts, seat_identity in fort/scripts/lib/seat-sandbox.sh and the registry;"
+echo "      (3) wire the product gate in scripts/verify-impl.sh (it fails by design until you do);"
+echo "      (4) name this fort's gate-1 paths in the charter and in the gate-1-surface arms of fleet.sh and warden.sh;"
+echo "      (5) file founding beads. The fleet ships DISABLED and no systemd unit is installed: enabling either is the Overseer's."
+echo "      State dir: ~/.local/state/$FORT_SLUG-fleet (the Civ Keep derives it from the fort NAME once the moot sets one;"
+echo "      if the name's slug differs from '$FORT_SLUG', that is a rename the Regent carries: fort/scripts and fort/systemd)."

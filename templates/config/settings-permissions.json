@@ -81,6 +81,17 @@
     "additionalDirectories": ["{{REPO_PATH}}-worktrees"]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(Agent|Task)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{REPO_PATH}}/fort/scripts/agent-gate.sh"
+          }
+        ]
+      }
+    ],
     "PermissionRequest": [
       {
         "matcher": "",

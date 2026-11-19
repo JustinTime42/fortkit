@@ -1,0 +1,44 @@
+# {{FORT_NAME}} fleet supervisor — one firing (Proofdelve ForgeOs-dx34.4, spec section 4
+# layer 3). Drafted and installed under Regent edict 2026-09-10, gate 6, with
+# the Overseer's signature recorded on the bead; installed by hand into
+# ~/.config/systemd/user/ — this file does nothing where it lives in the repo.
+#
+# Each firing runs fort/scripts/fleet-supervisor.sh once. Its header is the
+# design; in one line: halt file -> nothing; run live -> exit 75, silent but
+# COUNTED in $FLEET_STATE/supervisor.streak; nothing fleet-safe -> nothing;
+# otherwise start a run as its own transient unit ({{FORT_SLUG}}-fleet-run-<id>)
+# and exit at once.
+#
+# EXIT 75 IS SUCCESS HERE, BY DESIGN (criterion 3): it is the normal outcome
+# of firing during a live run, and a unit that went "failed" forty times over
+# an eighty-minute run would train its reader to ignore `--failed`. The two
+# exits that DO fail the unit are 64s: a masked launch, bd not answering, or
+# a run that could not be started — each with one stderr line in the journal.
+#
+# WHY THIS IS NOT Type=simple WITH THE FLEET AS ITS MAIN PROCESS: the timer
+# will not start a unit that is already active, so a service that lasted the
+# whole run would never fire DURING one, and the streak could never count. The
+# fleet runs in its own unit instead; see the supervisor's header.
+#
+# A firing under a halt file is a no-op, which is how the first night was made
+# safe: the halt file stayed in place overnight and the Overseer removed it
+# while watching. That removal is the recorded first unattended pickup.
+
+[Unit]
+Description={{FORT_NAME}} fleet supervisor — start a fleet run when work appears
+
+[Service]
+Type=oneshot
+WorkingDirectory={{REPO_PATH}}
+# User units do not inherit a login shell PATH. bd and claude live in
+# ~/.local/bin; node, npm and codex under nvm. THIS IS THE ONE LIST (Proofdelve ForgeOs-eedj):
+# the supervisor forwards its own $PATH to each fleet run it starts and
+# resolves the run's tools on it first, so a node upgrade that breaks this line
+# refuses in the journal instead of presenting as a Forge that never starts.
+# Edit here; the installed copy under ~/.config/systemd/user/ is the Overseer's
+# to refresh (systemctl --user daemon-reload after copying).
+Environment=PATH={{HOME}}/.local/bin:{{HOME}}/.nvm/versions/node/v24.14.0/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart={{REPO_PATH}}/fort/scripts/fleet-supervisor.sh
+SuccessExitStatus=75
+# One bd query and one flock probe; anything longer is bd hanging.
+TimeoutStartSec=2min

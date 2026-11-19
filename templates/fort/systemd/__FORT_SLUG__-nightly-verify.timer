@@ -1,0 +1,20 @@
+# {{FORT_NAME}} nightly full verify timer (Proofdelve ForgeOs-s1reg). Installed by hand into
+# ~/.config/systemd/user/ under the Regent edict of 2026-10-19.
+#
+# 04:30 on the wall clock, when the Overseer is least likely to be using the
+# machine. Persistent, so a night the machine slept runs at the next boot.
+#
+# TO STOP IT: `systemctl --user disable --now {{FORT_SLUG}}-nightly-verify.timer`.
+# While it is off, tiered host verifies and reused post-merge passes have no
+# backstop: turn FLEET_VERIFY_TIERS and FLEET_VERIFY_REUSE off in fleet.conf too.
+
+[Unit]
+Description={{FORT_NAME}} nightly full verify -- 04:30
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

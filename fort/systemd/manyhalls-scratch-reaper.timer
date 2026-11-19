@@ -1,0 +1,26 @@
+# Manyhalls scratch reaper timer (Proofdelve ForgeOs-nv0j). Installed by hand into
+# ~/.config/systemd/user/ under Regent edict 2026-09-12 with the Overseer's
+# gate-6 signature.
+#
+# HOURLY, ON THE WALL CLOCK. The floor inside the script is two hours, so a
+# scratch copy is swept between two and three hours after its review ended --
+# long enough that a person reading a review's leftovers after the fact still
+# finds them, short enough that a day of thirty reviews never approaches the
+# quota that ended 2026-09-12's afternoon. Persistent, because a missed hour
+# (the machine asleep) has exactly the same work waiting when it wakes and
+# should not wait for the next boundary.
+#
+# TO STOP IT: `systemctl --user disable --now manyhalls-scratch-reaper.timer`.
+# It has no halt file: it starts nothing and touches no fleet state, so there
+# is nothing a halt would protect.
+
+[Unit]
+Description=Manyhalls scratch reaper — hourly
+
+[Timer]
+OnCalendar=hourly
+AccuracySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

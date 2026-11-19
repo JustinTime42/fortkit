@@ -27,6 +27,17 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "^(Agent|Task)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/justin/dev/fortkit/fort/scripts/agent-gate.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
@@ -137,7 +148,32 @@
       "Edit(fort/profiles/**)",
       "Edit(fort/scripts/**)",
       "Read(**/.env*)",
-      "Read(.env*)"
+      "Read(.env*)",
+      "Edit(..env*)",
+      "Edit(**/..env*)",
+      "Edit(.#*env*)",
+      "Edit(**/.#*env*)",
+      "Edit(#*env*#)",
+      "Edit(**/#*env*#)",
+      "Edit(.*env*.sw*)",
+      "Edit(**/.*env*.sw*)",
+      "Edit(*env*~)",
+      "Edit(**/*env*~)",
+      "Edit(//home/justin/.claude.json)",
+      "Edit(//home/justin/.claude/commands/**)",
+      "Edit(//home/justin/.claude/plugins/**)",
+      "Edit(//home/justin/.claude/skills/**)",
+      "Edit(//home/justin/dev/fortkit-worktrees/**/fort/profiles/**)",
+      "Read(..env*)",
+      "Read(**/..env*)",
+      "Read(.#*env*)",
+      "Read(**/.#*env*)",
+      "Read(#*env*#)",
+      "Read(**/#*env*#)",
+      "Read(.*env*.sw*)",
+      "Read(**/.*env*.sw*)",
+      "Read(*env*~)",
+      "Read(**/*env*~)"
     ],
     "additionalDirectories": [
       "/home/justin/dev/fortkit-worktrees"

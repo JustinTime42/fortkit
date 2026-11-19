@@ -1,0 +1,6 @@
+# bead-citation-check.sh allowlist: one id per line, then a reason. A row here
+# is a RECORDED finding, not a pardon: remove it when the citation is fixed.
+{{BEAD_PREFIX}}-worktrees   the worktrees directory name, not a bead id
+{{BEAD_PREFIX}}-merge       a truncation of {{BEAD_PREFIX}}-merge-slot by the id regex
+{{BEAD_PREFIX}}-nosuchbead  stranded-sweep.sh:112, a deliberate unknown-id fixture inline
+Proofdelve ForgeOs-u65j.3.3.4  the known reissue (Proofdelve ForgeOs-x5u9): five source files cite the first meaning; the bead is a signpost to u65j.3.4

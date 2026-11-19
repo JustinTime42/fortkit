@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "{{FORT_SLUG}}/unattended-mayor-loop/status/v1",
+  "title": "Mayor sweep status record (Proofdelve ForgeOs-initf.1, consumed by initf.2 and initf.4)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "written_at",
+    "head",
+    "health",
+    "inbox",
+    "depth",
+    "queue_lint",
+    "sweeps",
+    "work",
+    "errors"
+  ],
+  "properties": {
+    "schema": { "const": "{{FORT_SLUG}}/unattended-mayor-loop/status/v1" },
+    "written_at": { "type": "string", "format": "date-time" },
+    "head": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "main's commit when the sweep ran"
+    },
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fleet_halt",
+        "mayor_halt",
+        "fleet_run_live",
+        "disk_free_gb",
+        "ssh_identity"
+      ],
+      "properties": {
+        "fleet_halt": {
+          "type": ["boolean", "null"],
+          "description": "~/.local/state/{{FORT_SLUG}}-fleet/HALT exists"
+        },
+        "mayor_halt": {
+          "type": ["boolean", "null"],
+          "description": "the Mayor supervisor halt in the Overseer store exists"
+        },
+        "fleet_run_live": { "type": ["boolean", "null"] },
+        "disk_free_gb": { "type": ["number", "null"] },
+        "ssh_identity": {
+          "type": ["boolean", "null"],
+          "description": "ssh-add -l lists at least one identity"
+        }
+      }
+    },
+    "inbox": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": [
+        "mayor_review",
+        "fleet_escalated",
+        "fleet_return",
+        "gate_ready",
+        "human",
+        "findings_untriaged"
+      ],
+      "properties": {
+        "mayor_review": { "type": "integer", "minimum": 0 },
+        "fleet_escalated": { "type": "integer", "minimum": 0 },
+        "fleet_return": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "beads carrying any fleet-return-N"
+        },
+        "gate_ready": { "type": "integer", "minimum": 0 },
+        "human": { "type": "integer", "minimum": 0 },
+        "findings_untriaged": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "open fleet-filed 'Triage the findings' beads"
+        }
+      }
+    },
+    "depth": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["fleet_safe_unblocked", "hours", "in_progress"],
+      "properties": {
+        "fleet_safe_unblocked": { "type": "integer", "minimum": 0 },
+        "hours": { "type": "number", "minimum": 0 },
+        "in_progress": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "read beside depth, so zero depth is not read as starvation while beads are being built"
+        }
+      }
+    },
+    "queue_lint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exit", "headings"],
+      "properties": {
+        "exit": {
+          "type": ["integer", "null"],
+          "description": "0 clean, 1 findings, 3 could not ask, null did not run"
+        },
+        "headings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "sweeps": {
+      "type": "object",
+      "description": "one entry per deterministic sweep, keyed by script name",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["exit", "findings"],
+        "properties": {
+          "exit": { "type": ["integer", "null"] },
+          "findings": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exists", "reasons"],
+      "properties": {
+        "exists": {
+          "type": ["boolean", "null"],
+          "description": "true work, false no work, null COULD NOT ASK (never read as false)"
+        },
+        "reasons": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "which predicate terms fired, or why the sweep could not ask"
+        }
+      }
+    },
+    "errors": { "type": "array", "items": { "type": "string" } }
+  }
+}

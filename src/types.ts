@@ -1,11 +1,43 @@
-import type {
-  Bead,
-  BeadDependency,
-  BeadStatus,
-  GitState,
-} from "./page-types.ts";
+export type GitState = {
+  branch: string | null;
+  ahead: number | null;
+  behind: number | null;
+  dirty: boolean | null;
+  worktrees: string[] | null;
+};
 
-export type { Bead, BeadDependency, BeadStatus, GitState };
+export type BeadStatus = "open" | "in_progress" | "blocked" | "closed";
+
+export type BeadDependency = {
+  issueId: string;
+  dependsOnId: string;
+  type: string;
+  createdAt: string | null;
+  createdBy: string | null;
+  metadata: string | null;
+};
+
+export type Bead = {
+  id: string;
+  title: string | null;
+  description: string | null;
+  design: string | null;
+  notes: string | null;
+  acceptanceCriteria: string | null;
+  status: BeadStatus;
+  priority: number | null;
+  issueType: string | null;
+  assignee: string | null;
+  owner: string | null;
+  labels: string[] | null;
+  dependencies: BeadDependency[] | null;
+  createdAt: string | null;
+  createdBy: string | null;
+  updatedAt: string | null;
+  startedAt: string | null;
+  closedAt: string | null;
+  closeReason: string | null;
+};
 
 export type BeadCounts = {
   open: number;

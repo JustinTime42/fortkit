@@ -83,3 +83,19 @@ next candidate when nobody here is watching.** The registry's stated failure sta
 is the candidate nobody transcribed, indistinguishable from one never raised; the
 route that caught these three is about to close, and the raising half has never
 been exercised by that fort at all.
+
+## 2026-11-18: the machinery these answers describe was replaced
+
+Appended by the Regent (Calder Sealbroken) in the re-founding sitting, `fortkit-ttpk`.
+Manyhalls's fort machinery (launchers, mask lib, profiles, fleet, verifier) was
+replaced that day with a renamed copy of Proofdelve's at its commit `e61bc6d49`.
+Every answer above was made against the machinery Manyhalls had before, and none
+has been re-checked against what it has now. Until the Mayor re-answers a row, read
+it as history.
+
+The answers Proofdelve gave for the machinery that is now here are kept, unaltered,
+at `fort/annals/refound-2026-11-18-proofdelve-advisory-answers.md`. They are that
+fort's answers and not this one's: an advisory's check is evidence only against an
+implementation genuinely shared with the fort that ran it (covenant 12.4), which
+after this sitting it is, as of that commit and no later.
+

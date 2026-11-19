@@ -1,0 +1,43 @@
+# {{FORT_NAME}} scratch reaper — one sweep (Proofdelve ForgeOs-nv0j, the durable half of
+# incident Proofdelve ForgeOs-7gag; Proofdelve ForgeOs-mpaw's worktree half). Drafted under Regent
+# edict 2026-09-12, gate 6, the Overseer's signature recorded on the bead;
+# installed by hand into ~/.config/systemd/user/ — this file does nothing where
+# it lives in the repo.
+#
+# Each firing runs fort/scripts/scratch-reaper.sh once. Its header is the
+# design; in one line: remove Warden scratch copies older than two hours whose
+# review lock nobody holds (what a SIGKILL leaves, since warden.sh removes its
+# own copy on exit), and remove bead worktrees that stranded-sweep.sh --reapable
+# lists (merged into main, bead closed) when the tree is clean and no launcher
+# holds its .forge.lock -- branch and worktree together, or neither.
+#
+# WHY A TIMER AND NOT tmpfiles.d: tmpfiles runs daily, and on 2026-09-12 the
+# Warden's litter filled the 12764M /tmp quota inside one working day and took a
+# Warden, the host verifier and two Forges down in the same second. Hourly is
+# the cadence a busy day needs; the age floor inside the script is what keeps
+# an hourly sweep from touching anything a review could still want.
+#
+# It reads nothing of the fleet's state and never touches the halt file. It
+# exits 1 when a removal FAILED (the unit then shows in --failed, which is the
+# point: a reaper that cannot reap is a disk that keeps filling) and 64 when the
+# worktree list could not be obtained.
+
+[Unit]
+Description={{FORT_NAME}} scratch reaper — Warden scratch and merged bead worktrees
+
+[Service]
+Type=oneshot
+WorkingDirectory={{REPO_PATH}}
+# User units do not inherit a login shell PATH. bd lives in ~/.local/bin and
+# stranded-sweep.sh asks it per candidate; git, flock and jq are in /usr/bin.
+Environment=PATH={{HOME}}/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart={{REPO_PATH}}/fort/scripts/scratch-reaper.sh
+# stranded-sweep.sh asks bd ONCE, via a single `bd export`, and answers every
+# branch and worktree from that snapshot (Proofdelve ForgeOs-56d6.1). It used to run one
+# `bd show` per branch, which is what this comment said until 2026-09-23 and
+# what made a session-start sweep take 7m09s against 385 branches; the timeout
+# below was sized for that shape and is left generous on purpose.
+#
+# A sweep is normally well under a minute. Anything longer is bd hanging, and a
+# hung reaper must not sit on the next hour.
+TimeoutStartSec=15min

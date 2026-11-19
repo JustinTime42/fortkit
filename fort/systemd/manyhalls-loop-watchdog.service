@@ -1,0 +1,28 @@
+# Manyhalls loop watchdog, one firing (Proofdelve ForgeOs-dycc9, Proofdelve ForgeOs-76uob.6). Drafted
+# under the Regent sitting of 2026-11-16, gate 6, the Overseer present. Installed
+# by hand into ~/.config/systemd/user/; this file does nothing where it lives in
+# the repo.
+#
+# Each firing runs fort/scripts/loop-watchdog.sh once. Its header is the design.
+# In one line: when the Mayor has been silent for an hour while fleet or Mayor
+# work waits, or silent for six hours at all, or the fleet pool has been dry for
+# two hours while open work exists, it files one bead for the Overseer, emits
+# watcher.alert and shows a desktop notification, once per episode.
+#
+# It starts nothing, stops nothing and never writes the halt file.
+
+[Unit]
+Description=Manyhalls loop watchdog: alert the Overseer when nobody is minding the fort
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/justin/dev/fortkit
+# User units do not inherit a login shell PATH. bd lives in ~/.local/bin;
+# python3, jq (emit.sh), git, flock, timeout and notify-send are in /usr/bin.
+Environment=PATH=/home/justin/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/justin/dev/fortkit/fort/scripts/loop-watchdog.sh
+# Exit 64 means bd would not answer (or a refusal); the unit then shows in
+# `systemctl --user --failed`, which is where a watchdog that cannot watch
+# should show.
+# A firing is six bd reads and a scan of 14 day files, normally seconds.
+TimeoutStartSec=5min

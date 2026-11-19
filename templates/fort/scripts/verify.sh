@@ -1,5 +1,5 @@
 #!/bin/bash
-# {{PROJECT}} verifier — fill in the fort's own gates below. Exit 0 only after every required quality gate passes.
+# {{FORT_NAME}} verifier. Exit 0 only after every required quality gate passes.
 #
 # ENTRY POINT ONLY. The verifier itself is scripts/verify-impl.sh. This file is a
 # read-only bind inside a read-only directory and no seat can edit it; the

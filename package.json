@@ -13,7 +13,6 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit --project tsconfig.json",
-    "typecheck:browser": "tsc --noEmit --project tsconfig.browser.json",
     "lint": "biome check .",
     "test": "vitest run",
     "recall": "node src/cli.ts recall"

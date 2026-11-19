@@ -105,7 +105,7 @@ describe("Mayor template launcher", () => {
     const source = await readFile(templateLauncher, "utf8");
 
     expect(source).toContain(
-      "Never push or deploy on your own initiative, in a batch of other work, or because it seems implied.",
+      "Never push on your own initiative, in a batch of other work, or because it seems implied.",
     );
     expect(source).toContain(
       "If you are unsure whether he has approved this specific action, you have not been approved.",
@@ -115,7 +115,14 @@ describe("Mayor template launcher", () => {
   test("sets only a seat-named child mask marker", async () => {
     const source = await readFile(templateLauncher, "utf8");
 
-    expect(source).toContain("mask+=(--setenv FORT_MASKED mayor)");
+    // The marker is set by the shared lib's seat_identity since the 2026-11-18 template
+    // refresh; the launcher names its seat and the lib carries the one --setenv.
+    expect(source).toContain("seat_identity mayor");
+    const lib = await readFile(
+      join(repoRoot, "templates/fort/scripts/lib/seat-sandbox.sh"),
+      "utf8",
+    );
+    expect(lib).toMatch(/mayor\)\s+mask\+=\(--setenv FORT_MASKED mayor /);
     expect(source).not.toMatch(/^export FORT_MASKED=/m);
   });
 });
