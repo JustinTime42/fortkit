@@ -846,6 +846,11 @@ env FORT_MASKED="$marker" MAYOR_NO_MASK=1 "$FAKE_BWRAP_ROOT/fort/scripts/mayor.s
         // this it used the developer's real HOME, and failed in a read-only one
         // (the Warden's finding 5, review 2 on fortkit-ttpk).
         XDG_DATA_HOME: join(root, ".xdg-data"),
+        // The mask lib creates <slug>-keep under $HOME/.local/state at every
+        // launch. With the real HOME this test left an empty "mask-keep" in the
+        // developer's state directory (found 2026-11-19 after the merge of
+        // fortkit-ttpk; the Warden's verifier run had made one).
+        HOME: join(root, ".home"),
       };
       const refusal = (marker: string) =>
         expect.stringContaining(`already inside the '${marker}' seat mask`);
