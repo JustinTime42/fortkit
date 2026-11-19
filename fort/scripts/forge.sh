@@ -778,22 +778,30 @@ fi
 # both resolve the same file; the probe asserts 0 bytes against the host's
 # byte count.
 keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/civ-keep/signing-token"
-build_mask codex "$root" --rw-tree "$wt" --mask-ssh-auth-sock --mask-file "$keep_token"
 # MANYHALLS: THE GATE-1 SURFACE OF THE ROOT CHECKOUT IS READ-ONLY TO THE FORGE
 # (Regent sitting 2026-11-19, fortkit-ttpk; the Overseer's word after the boundary
 # smokes: "do the forge bind"). In secrets-only the root checkout is writable to
 # this seat, and charter gate 1 says templates/, schema/, skills/ and civ/ land
 # only on the Overseer's signature. bin/ and civ/scripts were already read-only;
 # these were held by prose alone, for the one seat that cannot ask first.
-# Measured before this line: root templates/ WRITABLE from this mask. The Forge
-# still edits its OWN WORKTREE's copies, which is how a gate-1 bead is built and
-# then held for signature. Appended after build_mask because a later bind wins,
-# and nothing the Forge legitimately writes lies under these four directories.
-# scripts/forge-gate1-mask-harness.sh measures it, with a red arm.
+# Measured before this: root templates/ WRITABLE from this mask. The Forge still
+# edits its OWN WORKTREE's copies, which is how a gate-1 bead is built and then
+# held for signature.
+# PASSED TO build_mask AS EXTRA READ-ONLY PATHS, NEVER APPENDED AFTER IT. The
+# first form of this block appended --ro-bind lines after build_mask, on the
+# reasoning that a later bind wins. It does, and that was the defect: a subtree
+# bind laid after the lib's per-file secret masks covers them, so a secret-named
+# file under these directories read in full from the Forge's mask (the Warden,
+# review of f083518, measured with decoys; the lib's own header forbids exactly
+# this ordering). The positional form binds before the mask pass, and the lib's
+# secret sweep includes extra read-only roots.
+# scripts/forge-gate1-mask-harness.sh measures both properties, each with a red arm.
+gate1_ro=()
 for gate1_dir in templates schema skills civ; do
-  if [ -d "$root/$gate1_dir" ]; then mask+=(--ro-bind "$root/$gate1_dir" "$root/$gate1_dir"); fi
+  if [ -d "$root/$gate1_dir" ]; then gate1_ro+=("$root/$gate1_dir"); fi
 done
 # END MANYHALLS GATE-1 BIND
+build_mask codex "$root" --rw-tree "$wt" --mask-ssh-auth-sock --mask-file "$keep_token" "${gate1_ro[@]}"
 mask_env codex
 # SEAT-NAMED MASK MARKER (fortkit-ugw4; the shape Farlantern has shipped
 # since longburn-5v4). mayor.sh refuses under ANY non-empty FORT_MASKED and
