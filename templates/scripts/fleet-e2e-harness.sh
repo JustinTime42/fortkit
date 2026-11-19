@@ -666,9 +666,17 @@ case "$cmd" in
     echo "$out]" ;;
   merge-slot)
     case "${args[1]}" in
-      check)   [ -e "$db.slot" ] ;;
+      # AS STRICT AS THE REAL TOOL (Regent sitting 2026-11-19, fortkit-ttpk). Real
+      # bd exits 0 from `check` whether the slot is absent, free or held, says
+      # which only in its output, and refuses `acquire` on a slot never created.
+      # This stub used to exit nonzero from `check` on absence and to acquire a
+      # slot that did not exist, so a launcher that never created one passed
+      # every scenario here and deferred its first real landing.
+      check)   if [ -e "$db.slot" ]; then echo '{"available":true,"holder":null,"id":"E2E-merge-slot"}'
+               else echo '{"available":false,"error":"not found","id":"E2E-merge-slot"}'; fi ;;
       create)  : > "$db.slot" ;;
-      acquire) [ -e "$db.slot.held" ] && exit 1; : > "$db.slot.held" ;;
+      acquire) [ -e "$db.slot" ] || exit 1
+               [ -e "$db.slot.held" ] && exit 1; : > "$db.slot.held" ;;
       release) rm -f "$db.slot.held" ;;
     esac ;;
   *) : ;;

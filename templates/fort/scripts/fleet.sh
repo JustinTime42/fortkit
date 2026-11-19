@@ -462,6 +462,18 @@ bead_json() {  # $1 bead id
 # ---------------------------------------------------------------------------
 # preflight
 # ---------------------------------------------------------------------------
+merge_slot_exists() {  # 0 only when bd's --json names a slot and reports no error
+  bd -C "$root" merge-slot check --json 2>/dev/null | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+if isinstance(d, dict) and isinstance(d.get("data"), dict):
+    d = d["data"]
+sys.exit(0 if isinstance(d, dict) and d.get("id") and not d.get("error") else 1)
+' 2>/dev/null
+}
 preflight() {
   if [ -n "${FORT_MASKED:-}" ]; then
     echo "fleet.sh: REFUSED — this is a masked seat session (FORT_MASKED=${FORT_MASKED})." >&2
@@ -563,9 +575,16 @@ preflight() {
   # one already existed, so its status cannot discriminate the property. A
   # preflight measured as passing while the slot was absent is exactly the
   # failure this file exists to avoid.
-  bd -C "$root" merge-slot check >/dev/null 2>&1 \
-    || bd -C "$root" merge-slot create >/dev/null 2>&1 || true
-  bd -C "$root" merge-slot check >/dev/null 2>&1 \
+  # AND NOT check's EXIT CODE EITHER (Regent sitting 2026-11-19, fortkit-ttpk;
+  # measured at this fort's first fleet landing, fortkit-798f). `bd merge-slot
+  # check` exits 0 whether the slot is absent, free or held; only its words and
+  # its --json differ. The two lines that stood here trusted that exit code, so
+  # a fort that had never had a slot passed preflight without one, and its
+  # first landing deferred with "the merge slot is held by someone else". The
+  # fort this file came from never met it because its slot already existed.
+  # merge_slot_exists() reads the --json: an id and no error.
+  merge_slot_exists || bd -C "$root" merge-slot create >/dev/null 2>&1 || true
+  merge_slot_exists \
     || { echo "fleet.sh: REFUSED — no merge slot exists after trying to create one" >&2; exit 64; }
   # Proofdelve ForgeOs-vikl asked for BOTH halves of this at preflight. Proofdelve ForgeOs-dx34.1
   # moved the DIRT half's decision to land(), which DEFERS rather than refusing,

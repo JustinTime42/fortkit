@@ -154,6 +154,12 @@ def transform(rel, t):
                "fort/checklists/fleet-eligible-bead.md"):
         t, n = NOTE_RE.subn("\n", t)
         assert n == 1, (rel, "re-founding note", n)
+    if rel == "fort/scripts/fleet.conf":
+        # A founded fort ships its fleet DISABLED whatever Manyhalls runs. Found
+        # 2026-11-19: with Manyhalls's fleet enabled for a test, a regeneration
+        # wrote FLEET_ENABLED=1 into the factory.
+        t, n = re.subn(r"(?m)^FLEET_ENABLED=[01]$", "FLEET_ENABLED=0", t)
+        assert n == 1, (rel, "FLEET_ENABLED", n)
     if rel == "fort/scripts/agent-gate.sh":
         t, n = GATE_CARVE_RE.subn("", t)
         assert n == 1, (rel, "capital carve", n)
