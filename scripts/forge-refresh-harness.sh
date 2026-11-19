@@ -676,7 +676,7 @@ if [ -n "$hi_line" ]; then
   else no "9x3vj: the seat is still told its window is ~30 s" "measured false 2026-10-06 (200 s foreground returned)"; fi
   # The secrets-only posture rewrites one prompt sentence by exact match; if the
   # sentence and its pattern drift apart the rewrite silently does nothing.
-  pl="$(grep -m1 '^prompt="You are ' "$launcher")"
+  pl="$(grep -m1 '^prompt="You ' "$launcher")"
   # shellcheck disable=SC2016  # literal launcher text
   pat="$(grep -m1 'prompt="${prompt//"Do not push (mechanically blocked)' "$launcher" | sed 's/^  prompt="\${prompt\/\/"//; s#"/".*##')"
   if [ -n "$pat" ] && grep -qF -- "$pat" <<<"$pl"; then ok "gfuc1 A1: the secrets-only posture's push sentence still matches the prompt it rewrites"

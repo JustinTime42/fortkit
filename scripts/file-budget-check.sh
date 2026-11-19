@@ -44,7 +44,7 @@ while IFS= read -r -d '' status; do
   esac
 
   case "$path" in
-    src/*|tests/*|web/src/*) ;;
+    src/*|test/*) ;;
     *) continue ;;
   esac
   case "$path" in
@@ -57,6 +57,6 @@ while IFS= read -r -d '' status; do
   if [ "$after" -gt 1000 ] && [ "$after" -gt "$before" ]; then
     printf 'file-budget: WARN %s %s -> %s lines (coding-standards rule 4)\n' "$path" "$before" "$after"
   fi
-done < <(git diff --name-status -z -M --diff-filter=AMR "$base..$tip" -- src tests web/src 2>/dev/null)
+done < <(git diff --name-status -z -M --diff-filter=AMR "$base..$tip" -- src test 2>/dev/null)
 
 exit 0

@@ -72,7 +72,7 @@ if os.path.exists(allow_path):
             line = line.strip()
             if line and not line.startswith("#"): allow.add(line.split()[0])
 skip = re.compile(r"(harness|/test/|fixtures|\.test\.)")
-scan = ["src", "tests", "web/src", "scripts", "fort/scripts", "tools", "docs"]
+scan = ["src", "test", "scripts", "fort/scripts", "bin", "civ/scripts", "docs"]
 scan = [d for d in scan if os.path.isdir(os.path.join(root, d))]
 g = subprocess.run(["grep", "-rnoE", r"fortkit-[a-z0-9]+(\.[0-9]+)*", *scan,
                     "--exclude-dir=node_modules", "--exclude-dir=bin", "--exclude-dir=obj"],
@@ -134,7 +134,7 @@ if reissued:
 # S256 remain excluded. Dotted identifiers are explicit enough to retain their
 # two-segment form.
 identifier = re.compile(r"`([A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)+|[A-Z](?:[a-z0-9]+|(?=[A-Z]))(?:[A-Z]+(?=[A-Z][a-z]|$)|[A-Z][a-z0-9]+)+)`")
-symbol_paths = [p for p in ("src", "tests", "web/src", "tools") if os.path.isdir(os.path.join(root, p))]
+symbol_paths = [p for p in ("src", "test") if os.path.isdir(os.path.join(root, p))]
 unresolved_identifiers = []
 if not symbol_paths:
     print("bead-citation-check: identifier search paths absent; skipping identifier pass")

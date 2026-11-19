@@ -544,23 +544,77 @@ build_mask() {
   # THE OVERSEER STORE (Proofdelve ForgeOs-72ot.1 + Proofdelve ForgeOs-ubgx.4, Regent edict
   # 2026-10-06, the Overseer's ruling of 2026-10-05 with the store placed at
   # civilization level the same morning). ~/.local/state is granted rw below,
-  # so until this line every masked seat in every fort could write the Keeps'
-  # records: a signature, and from now on an airlock approval, written by the
-  # seat that wanted it. Two directories, read-only to BOTH seat types in every
-  # fort, because a record in a civilization-level file names its fort and a
-  # seat in any fort could otherwise forge one for another:
-  #   civ-keep/        the Civ Keep's signing desk (fortkit civ/keep), and the
-  #                    airlock approvals it records
-  #   manyhalls-keep/ the Proofdelve Keep's signing desk, still live
-  # Only the two Keep services write here, and they run on the host as user
-  # units, outside every mask. RO binds land after the rw grants, so they win.
-  # CREATED HERE IF ABSENT: an RO bind is existence-guarded, and a directory a
-  # seat could create first is a directory a seat could seed. A nested launch
-  # finds it already present: the outer launch created it before binding it.
+  # so without this every masked seat in every fort could write the Keeps'
+  # records: a signature, or an airlock approval, written by the seat that
+  # wanted it. A record in a civilization-level file names its fort, and a seat
+  # in any fort could otherwise forge one for another.
+  #
+  # EVERY KEEP STORE ON THIS HOST, BY GLOB, NOT BY NAME (Regent sitting
+  # 2026-11-18, fortkit-ttpk; the Warden's blocking finding 2 on that bead). This
+  # lib was copied from the fort whose own Keep store it named beside civ-keep/,
+  # and the rename pass that made the copy Manyhalls's turned that name into a
+  # directory that does not exist: the other fort's live signature records became
+  # writable to every seat here, and the isolation gate could not see it, because
+  # it looks for another fort's name and this was a name REMOVED. A protective
+  # list must keep covering other forts' stores; naming none of them and binding
+  # every *-keep directory is the form that survives a rename.
+  # civ-keep/ is created if absent: an RO bind is existence-guarded, and a
+  # directory a seat could create first is a directory a seat could seed.
   local store
-  for store in "$HOME/.local/state/civ-keep" "$HOME/.local/state/manyhalls-keep"; do
-    [ -d "$store" ] || mkdir -m 700 "$store" 2>/dev/null || true
-    RO_PATHS+=("$store")
+  [ -d "$HOME/.local/state/civ-keep" ] || mkdir -m 700 "$HOME/.local/state/civ-keep" 2>/dev/null || true
+  for store in "$HOME"/.local/state/*-keep; do
+    if [ -d "$store" ]; then RO_PATHS+=("$store"); fi
+  done
+
+  # FOREIGN FORTS ARE READ-ONLY (Regent sitting 2026-11-18, fortkit-ttpk; the
+  # Overseer's decision recorded on that bead, on the Warden's finding 4). In the
+  # secrets-only posture the mask starts from a writable /, so nothing but this
+  # block stands between a seat here and another fort's repository, worktrees,
+  # fleet state (its HALT file, its locks) and config directory. Every fort in
+  # either registry whose repo is not this one is bound read-only: its repo, its
+  # <repo>-worktrees, and the state, config and data directories its own
+  # machinery derives from its name. Read from the registries at launch, so it
+  # names no fort and a fort founded tomorrow is covered at the next launch.
+  # In the full posture $HOME is already read-only and these binds repeat it.
+  # WHAT IT DOES NOT COVER: a fort outside both registries; a path a fort keeps
+  # somewhere its name does not predict; and Docker, which is root.
+  # "This fort" is $root, or the main checkout $root is a worktree of: a mask built
+  # for a worktree must not find its own fort foreign (measured at the sitting: it
+  # did, and the tree it was built for came back read-only).
+  local reg frepo fname fslug here_real here_main
+  here_real="$(readlink -f "$root" 2>/dev/null || printf '%s' "$root")"
+  here_main="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+  here_main="$(readlink -f "${here_main%/.git}" 2>/dev/null || printf '%s' "$here_real")"
+  if command -v jq >/dev/null 2>&1; then
+    for reg in "${FORT_REGISTRY:-$HOME/.claude/civilization.json}" "$HOME/.claude/greenlab.json"; do
+      [ -r "$reg" ] || continue
+      while IFS=$'\t' read -r frepo fname; do
+        [ -n "$frepo" ] || continue
+        frepo="$(readlink -f "$frepo" 2>/dev/null || printf '%s' "$frepo")"
+        if [ "$frepo" = "$here_real" ] || [ "$frepo" = "$here_main" ]; then continue; fi
+        fslug="$(printf '%s' "$fname" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9]\{1,\}/-/g' -e 's/^-//' -e 's/-$//')"
+        RO_PATHS+=("$frepo" "$frepo-worktrees")
+        if [ -n "$fslug" ]; then
+          RO_PATHS+=("$HOME/.local/state/$fslug-fleet" "$HOME/.local/state/$fslug-mayor" "$HOME/.config/$fslug"
+                     "$HOME/.local/share/$fslug" "$HOME/.local/share/$fslug-watchdog")
+        fi
+      done < <(jq -r '.forts[]? | [(.repo // ""), (.fort_name // .project // "")] | @tsv' "$reg" 2>/dev/null)
+    done
+  fi
+  [ -d "$HOME/.local/state/greenlab" ] && RO_PATHS+=("$HOME/.local/state/greenlab")
+
+  # EVERY KEEP AND FEEDBACK TOKEN UNDER ~/.config IS MASKED, whichever fort's (the
+  # Warden's blocking finding 3 on fortkit-ttpk). ~ is readable in every posture.
+  # The Civ Keep, which this fort uses, reads one civilization-wide token at
+  # civ-keep/signing-token; each launcher also names that file with --mask-file,
+  # and this glob covers the tokens of forts this lib cannot name. Existence-
+  # guarded like every mask: a token written while a session is live is visible
+  # to that session.
+  local tok cfg
+  for cfg in "$HOME/.config" "${XDG_CONFIG_HOME:-$HOME/.config}"; do
+    for tok in "$cfg"/civ-keep/signing-token "$cfg"/*/keep-signing-token "$cfg"/*/feedback-read-token; do
+      if [ -f "$tok" ]; then MASK_FILES+=("$tok"); fi
+    done
   done
 
   # FILESYSTEM SCOPING (cycle 5). Before this, the sandbox was "everything

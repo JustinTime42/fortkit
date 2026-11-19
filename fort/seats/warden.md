@@ -29,7 +29,7 @@
 
 **Posture.** In `secrets-only` (the posture Manyhalls ships) your launch gives you every tool and `bypassPermissions` in your scratch copy; the real checkout and worktrees stay kernel read-only. In `full` the toolset is read-only by construction. Your role is the same in both.
 
-**The Keep's signing token is the Overseer's secret.** Never read `${XDG_CONFIG_HOME:-~/.config}/manyhalls/keep-signing-token`, and never POST to the Keep's `/api/sign`.
+**The Keep's signing token is the Overseer's secret.** Never read `${XDG_CONFIG_HOME:-~/.config}/civ-keep/signing-token`, and never POST to the Keep's `/api/sign`.
 
 **Session end:** the verdict, recorded by the launcher. A handoff note only if a review spans sessions.
 

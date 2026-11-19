@@ -375,7 +375,7 @@ else
         # the same path). A missing or mis-aimed line exits the subshell
         # nonzero and seat-mask-build FAILs naming it -- never a silent
         # fallback to a hand copy, which is the class this closes.
-        mayor)  keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/manyhalls/keep-signing-token"; feedback_token="$feedback_fixture"; REPO="$root"; t3_line="$(launcher_build_line "$root/fort/scripts/mayor.sh")"; case "$t3_line" in "build_mask claude "*) ;; *) echo "mayor.sh: no column-one 'build_mask claude' line to evaluate (got: ${t3_line:-nothing})" >&2; exit 1 ;; esac; eval "$t3_line"; mayor_warden_data="$HOME/.local/share/manyhalls/warden"; mkdir -p "$mayor_warden_data"; mask+=(--bind "$mayor_warden_data" "$mayor_warden_data"); [ -d "$HOME/.local/share/atuin" ] && mask+=(--bind "$HOME/.local/share/atuin" "$HOME/.local/share/atuin"); mask_env claude; seat_identity mayor; seat_build_env ;;
+        mayor)  keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/civ-keep/signing-token"; feedback_token="$feedback_fixture"; REPO="$root"; t3_line="$(launcher_build_line "$root/fort/scripts/mayor.sh")"; case "$t3_line" in "build_mask claude "*) ;; *) echo "mayor.sh: no column-one 'build_mask claude' line to evaluate (got: ${t3_line:-nothing})" >&2; exit 1 ;; esac; eval "$t3_line"; mayor_warden_data="$HOME/.local/share/manyhalls/warden"; mkdir -p "$mayor_warden_data"; mask+=(--bind "$mayor_warden_data" "$mayor_warden_data"); [ -d "$HOME/.local/share/atuin" ] && mask+=(--bind "$HOME/.local/share/atuin" "$HOME/.local/share/atuin"); mask_env claude; seat_identity mayor; seat_build_env ;;
         # warden.sh: build_mask claude "$root" "$root" "$root-worktrees" "$src"
         # — src defaults to the main checkout, ro-binding the tree over itself;
         # $root-worktrees joined it in E2 (fortkit-1q9), because the seat that is
@@ -397,7 +397,7 @@ else
         # sitting, repaired so the warden-lock probe could run at all).
         # warden.sh says $scratch and $src; here they are the probe's scratch
         # and the main checkout (warden.sh's own default for src).
-        warden) keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/manyhalls/keep-signing-token"; feedback_token="$feedback_fixture"; scratch="$t3_scratch"; src="$root"; t3_line="$(launcher_build_line "$root/fort/scripts/warden.sh")"; case "$t3_line" in "build_mask claude "*) ;; *) echo "warden.sh: no column-one 'build_mask claude' line to evaluate (got: ${t3_line:-nothing})" >&2; exit 1 ;; esac; eval "$t3_line"; mask_env claude; seat_identity warden; seat_build_env ;;
+        warden) keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/civ-keep/signing-token"; feedback_token="$feedback_fixture"; scratch="$t3_scratch"; src="$root"; t3_line="$(launcher_build_line "$root/fort/scripts/warden.sh")"; case "$t3_line" in "build_mask claude "*) ;; *) echo "warden.sh: no column-one 'build_mask claude' line to evaluate (got: ${t3_line:-nothing})" >&2; exit 1 ;; esac; eval "$t3_line"; mask_env claude; seat_identity warden; seat_build_env ;;
       esac
       printf '%s\0' "${mask[@]}"
     )
@@ -433,7 +433,7 @@ else
   # when no worktree-dir was given, a THROWAWAY DETACHED WORKTREE is cut at
   # HEAD for the build and removed at exit; the one thing it writes is git's
   # own .git/worktrees entry, gone with it.
-  keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/manyhalls/keep-signing-token"
+  keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/civ-keep/signing-token"
   # shellcheck disable=SC2034  # read by forge.sh's own build line under eval (Proofdelve ForgeOs-15k.10)
   feedback_token="$feedback_fixture"
   # shellcheck disable=SC2034  # forge_wt is read by forge.sh's own line under eval (its $wt, renamed)

@@ -44,7 +44,7 @@
 # NO UNMASKED ESCAPE HATCH. mayor.sh has MAYOR_NO_MASK for pushing; this seat
 # never pushes, so it has none.
 
-workbench_actor() { printf '%s' 'dunmar'; }   # declared by the occupant, seated by the Overseer 2026-11-09
+workbench_actor() { printf '%s' 'dunmar'; }   # named by the Regent at the re-founding, 2026-11-18 (docket Q1)
 
 # wb_mask <repo> <worktree>: fills the global mask[] exactly as the session
 # gets it. A function so scripts/workbench-mask-harness.sh probes the SHIPPED
@@ -57,7 +57,7 @@ wb_mask() {
   source "$repo/fort/scripts/lib/seat-sandbox.sh" || return 70
   # Spelled as mayor.sh spells it (Proofdelve ForgeOs-o6ky.5): this launcher runs where
   # the Keep's install ran, on the host.
-  keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/manyhalls/keep-signing-token"
+  keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/civ-keep/signing-token"
   build_mask claude "$repo" --rw-tree "$wt" --mask-file "$keep_token" || return $?
   # The Overseer's atuin PreToolUse hook writes its history DB on every Bash
   # call (Proofdelve ForgeOs-sa14); this seat loads user settings as the Mayor does.

@@ -375,7 +375,7 @@ else
   diff_class_line="$(warden_diff_class "$root" "$range")"
   host_verify_line="$(warden_host_verify "$root" "$range" "$src" "$root/fort/events")"
   wip_line="$(warden_wip_line "$root" "$range")"
-  prompt="You are Ilva Trueglass (she/her), holder of the Warden seat of Manyhalls, the fortkit fort. Fresh context, read-only by construction. Read fort/charter.md, fort/memory/current.md (distilled view; facts ledger in fort/memory/facts/), fort/seats/warden.md (in cwd, a scratch copy of the candidate tree at $src — safe for build/test re-runs; it has no .git and no secrets). The Keep's signing token at ${XDG_CONFIG_HOME:-~/.config}/manyhalls/keep-signing-token is the Overseer's secret (Proofdelve ForgeOs-o6ky.5): never read it and never POST to the Keep's /api/sign. In a masked session it is bound to /dev/null and denied at the policy layer, and the never-read, never-POST rule holds whether or not a mask is in effect; a signature the Overseer did not make with his own hand is the compromise signature the standing orders escalate.
+  prompt="You are Ilva Trueglass (she/her), holder of the Warden seat of Manyhalls, the fortkit fort. Fresh context, read-only by construction. Read fort/charter.md, fort/memory/current.md (distilled view; facts ledger in fort/memory/facts/), fort/seats/warden.md (in cwd, a scratch copy of the candidate tree at $src — safe for build/test re-runs; it has no .git and no secrets). The Keep's signing token at ${XDG_CONFIG_HOME:-~/.config}/civ-keep/signing-token is the Overseer's secret (Proofdelve ForgeOs-o6ky.5): never read it and never POST to the Keep's /api/sign. In a masked session it is bound to /dev/null and denied at the policy layer, and the never-read, never-POST rule holds whether or not a mask is in effect; a signature the Overseer did not make with his own hand is the compromise signature the standing orders escalate.
 
 REVIEW: bead $bead. Diff spec against the real repo: '$range' (use git -C $root diff $range / git -C $root show as appropriate). If the range is written with THREE dots (main...bead/X) it diffs from the MERGE BASE and shows this branch's own changes and nothing else; do not rewrite it with two dots -- the two-dot form compares the two TIPS, and during a multi-bead run every sibling bead that landed first renders as hundreds of deletions that are not this branch's (Proofdelve ForgeOs-hifw: three such false reds in one run, 2026-09-12; the fleet merges --no-ff and nothing is reverted by landing). A legitimate deletion in THIS branch still shows under three dots. Judge against the bead's spec, the charter's standing orders and human gates, and Justin's bar: good-sense changes adhering to best practices, no hacky nonsense. Reproduce verifiers yourself in cwd when code changed (npm ci first: the copy carries no node_modules). Note which model produced the work and weight scrutiny accordingly.
 
@@ -443,7 +443,7 @@ require_bwrap || exit $?
 # re-masked here regardless of which tree is under review.
 # THE KEEP'S SIGNING TOKEN (Proofdelve ForgeOs-o6ky.5, Regent edict 2026-09-13, Overseer
 # present; gate 4, the BOTH-LISTS rule). tools/keep/install.sh writes
-# ${XDG_CONFIG_HOME:-$HOME/.config}/manyhalls/keep-signing-token (0600), and
+# ${XDG_CONFIG_HOME:-$HOME/.config}/civ-keep/signing-token (0600), and
 # POST /api/sign with that bearer records a decision under the Overseer's own
 # actor id. ~ is --ro-bind in every posture, so until this line a seat could
 # READ it. The Warden already binds her whole checkout read-only, which is why
@@ -456,7 +456,7 @@ require_bwrap || exit $?
 # ran (the host, or the Mayor mask which does not forward the variable), so
 # both resolve the same file; the probe asserts 0 bytes against the host's
 # byte count.
-keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/manyhalls/keep-signing-token"
+keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/civ-keep/signing-token"
 # THE WARDEN WRITES NO SKILLS (Regent sitting 2026-10-27, docket item D, the
 # Overseer's choice). The lib now leaves ~/.claude/skills and ~/.claude/commands
 # writable to Claude seats and carves the project pair writable (Proofdelve ForgeOs-yhn44),

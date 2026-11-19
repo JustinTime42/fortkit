@@ -115,7 +115,7 @@ print(json.dumps([json.loads(l) for l in open(sys.argv[1]) if l.strip()]))' "$bo
 fi
 
 # Kernel read-only to the Forge. Sources: fort/scripts/forge.sh mask list,
-# fort/memory/facts/cycle7-write-boundaries.md, charter "Prose gates" cycle 7.
+# fort/scripts/lib/seat-sandbox.sh, charter "Prose gates" cycle 7.
 FORGE_RO=(
   "scripts/verify-impl.sh"
   "fort/scripts/"

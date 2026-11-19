@@ -38,7 +38,7 @@ src_proj='[Ff]orge[Oo][Ss]'
 pattern="${ISOLATION_PATTERN:-proofdelve|PROOFDELVE|ForgeOs|ForgeOS|(^|[^A-Za-z0-9])forgeos([^A-Za-z0-9]|\$)|deploy-azure}"
 provenance="${ISOLATION_PROVENANCE:-Proofdelve ForgeOs-[A-Za-z0-9][A-Za-z0-9.]*}"
 : "$src_fort" "$src_proj"
-read -r -a scope <<< "${ISOLATION_SCOPE:-fort/scripts fort/seats fort/profiles fort/systemd fort/checklists fort/airlock fort/charter.md fort/remember.md fort/events/README.md scripts .claude/agents .claude/commands .claude/settings.json}"
+read -r -a scope <<< "${ISOLATION_SCOPE:-fort/scripts fort/seats fort/profiles fort/systemd fort/checklists fort/airlock fort/charter.md fort/events/README.md scripts .claude/agents .claude/commands .claude/settings.json}"
 
 files=0
 hits=0

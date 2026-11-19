@@ -44,12 +44,21 @@ mkfixture() {  # $1 tree
   echo src > "$1/src/a.txt"
 }
 mkfixture "$root"; mkfixture "$wt"; mkfixture "$other"; git -C "$root" init -q
-mkdir -p "$fx/cfg/manyhalls"; printf 'FIXTURE-TOKEN\n' > "$fx/cfg/manyhalls/keep-signing-token"
+mkdir -p "$fx/cfg/civ-keep"; printf 'FIXTURE-TOKEN\n' > "$fx/cfg/civ-keep/signing-token"
+# A FOREIGN FORT (Regent sitting 2026-11-18, fortkit-ttpk; the Warden's findings 2 to 4):
+# another fort in the registry, with its repo, its worktrees directory and a Keep token of
+# its own, none of which this fort's seat may write or read. The registry is a fixture
+# (FORT_REGISTRY), so the lib reads this one and not the host's.
+foreign="$fx/foreign"; mkdir -p "$foreign/src" "$foreign-worktrees/b1" "$fx/cfg/otherfort"
+echo src > "$foreign/src/a.txt"; echo src > "$foreign-worktrees/b1/a.txt"
+printf 'FIXTURE-FOREIGN-TOKEN\n' > "$fx/cfg/otherfort/keep-signing-token"
+printf 'FIXTURE-FOREIGN-FEEDBACK\n' > "$fx/cfg/otherfort/feedback-read-token"
+printf '{"civilization":"fixture","forts":[{"project":"repo","repo":"%s","fort_name":"Fixturefort"},{"project":"foreign","repo":"%s","fort_name":"Otherfort"}]}\n' "$root" "$foreign" > "$fx/registry.json"
 
 # The in-mask probe is a plain file in the fixture (visible inside the mask,
 # since $HOME is readable), so no quoting is nested.
 cat > "$fx/inmask.sh" <<'INMASK'
-r="$1"; w="$2"; o="$3"; t="$4"
+r="$1"; w="$2"; o="$3"; t="$4"; f="$5"; ft="$6"
 by() { cat "$1" 2>/dev/null | wc -c; }
 can() { ( : >> "$1" ) 2>/dev/null && echo yes || echo no; }
 echo "env_root=$(by "$r/.env.staging.local")"
@@ -63,6 +72,10 @@ for d in .ssh .aws .azure .config/gh; do
   # pinning, 2026-08-13) and carries no credential, so it is not counted.
   echo "$k=${fs:-none}:$(ls -A "$p" 2>/dev/null | grep -cv '^known_hosts$')"
 done
+echo "foreign_repo_w=$(can "$f/src/a.txt")"
+echo "foreign_wt_w=$(can "$f-worktrees/b1/a.txt")"
+echo "foreign_token=$(by "$ft/keep-signing-token")"
+echo "foreign_feedback=$(by "$ft/feedback-read-token")"
 echo "scripts_root_w=$(can "$r/fort/scripts/x.sh")"
 echo "scripts_wt_w=$(can "$w/fort/scripts/x.sh")"
 echo "scripts_new=$( ( : > "$w/fort/scripts/new.sh" ) 2>/dev/null && echo yes || echo no)"
@@ -74,12 +87,12 @@ echo "marker=${FORT_MASKED:-}:${BEADS_ACTOR:-}"
 INMASK
 
 probe() {  # $1 subject file, $2 posture -> key=value lines from inside the mask
-  ( export FORT_SANDBOX="$2" XDG_CONFIG_HOME="$fx/cfg"
+  ( export FORT_SANDBOX="$2" XDG_CONFIG_HOME="$fx/cfg" FORT_REGISTRY="${3-$fx/registry.json}"
     # shellcheck disable=SC1090  # the subject is a parameter by design
     source "$1" 2>/dev/null || { echo "mask=FAILED"; exit 0; }
     wb_mask "$root" "$wt" >/dev/null 2>&1 || { echo "mask=FAILED"; exit 0; }
     # shellcheck disable=SC2154  # wb_mask fills mask[]
-    bwrap "${mask[@]}" -- /bin/bash "$fx/inmask.sh" "$root" "$wt" "$other" "$fx/cfg/manyhalls/keep-signing-token" 2>/dev/null )
+    bwrap "${mask[@]}" -- /bin/bash "$fx/inmask.sh" "$root" "$wt" "$other" "$fx/cfg/civ-keep/signing-token" "$foreign" "$fx/cfg/otherfort" 2>/dev/null )
 }
 
 pass=0; fail=0; skip=0
@@ -100,6 +113,10 @@ for posture in full secrets-only; do
     if [ ! -d "$HOME/$d" ]; then echo "SKIP  [$posture] ~/$d absent on this host, so no mask can be shown for it"; skip=$((skip+1)); continue; fi
     check "[$posture] ~/$d is an empty tmpfs" "$(val "$out" "$k")" "tmpfs:0"
   done
+  check "[$posture] a FOREIGN fort's repository is read-only" "$(val "$out" foreign_repo_w)" no
+  check "[$posture] a FOREIGN fort's worktrees are read-only" "$(val "$out" foreign_wt_w)" no
+  check "[$posture] a FOREIGN fort's Keep token reads empty" "$(val "$out" foreign_token)" 0
+  check "[$posture] a FOREIGN fort's feedback token reads empty" "$(val "$out" foreign_feedback)" 0
   check "[$posture] fort/scripts read-only (root)" "$(val "$out" scripts_root_w)" no
   check "[$posture] fort/scripts read-only (session worktree)" "$(val "$out" scripts_wt_w)" no
   check "[$posture] no new file in fort/scripts (session worktree)" "$(val "$out" scripts_new)" no
@@ -150,14 +167,30 @@ sed 's/ --mask-file "\$keep_token"//' "$wb" > "$red1"
 sed 's/build_mask claude "\$repo" --rw-tree "\$wt" /build_mask claude "$repo" /' "$wb" > "$red2"
 if cmp -s "$red1" "$wb"; then echo "NOT RUN  red arm 1: the generator matched nothing in $wb"; fail=$((fail+1))
 else
-  out="$(probe "$red1" full)"
-  check "RED ARM 1 (the Keep token mask dropped): the token becomes readable" "$([ "$(val "$out" token)" -gt 0 ] 2>/dev/null && echo yes || echo no)" yes
+  # The token is masked twice: by name in the launcher, and by the lib's glob over every
+  # Keep and feedback token. Both are dropped here (the lib's from the fixture's own copy,
+  # which is the one wb_mask sources), or the arm could not go red.
+  # shellcheck disable=SC2016  # the sed program matches the lib's literal $-spelling
+  sed -i 's/if \[ -f "\$tok" \]; then MASK_FILES+=("\$tok"); fi/:/' "$root/fort/scripts/lib/seat-sandbox.sh"
+  if cmp -s "$root/fort/scripts/lib/seat-sandbox.sh" "$lib"; then echo "NOT RUN  red arm 1: the lib's token glob was not found to drop"; fail=$((fail+1))
+  else
+    out="$(probe "$red1" full)"
+    check "RED ARM 1 (the launcher's token mask AND the lib's token glob dropped): the token becomes readable" "$([ "$(val "$out" token)" -gt 0 ] 2>/dev/null && echo yes || echo no)" yes
+    check "RED ARM 1: and so does a foreign fort's token" "$([ "$(val "$out" foreign_token)" -gt 0 ] 2>/dev/null && echo yes || echo no)" yes
+  fi
+  cp "$lib" "$root/fort/scripts/lib/seat-sandbox.sh"
 fi
 if cmp -s "$red2" "$wb"; then echo "NOT RUN  red arm 2: the generator matched nothing in $wb"; fail=$((fail+1))
 else
   out="$(probe "$red2" full)"
   check "RED ARM 2 (--rw-tree dropped): another worktree becomes writable" "$(val "$out" other_src_w)" yes
 fi
+
+# RED ARM 4: with no registry to read, the foreign fort is not known to be one, and in
+# secrets-only (a writable /) its repository is writable. This is what the lib's
+# registry read buys, and what the full posture gets from its read-only HOME instead.
+out="$(probe "$wb" secrets-only /nonexistent/registry.json)"
+check "RED ARM 4 (no registry, secrets-only): the foreign fort's repository becomes writable" "$(val "$out" foreign_repo_w)" yes
 
 echo "RESULT pass=$pass fail=$fail skip=$skip"
 [ "$fail" -eq 0 ]

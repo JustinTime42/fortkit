@@ -189,7 +189,11 @@ tree_dirty_count() {  # -> number of modified TRACKED non-record files; never fa
 }
 dirty_start_count="$(tree_dirty_count)"
 dirty_at_start=false; [ "${dirty_start_count:-0}" -gt 0 ] && dirty_at_start=true
-untracked_start_count="$(git -C "$repo_root" ls-files --others --exclude-standard -- src test 2>/dev/null | wc -l | tr -d ' ')"  # Proofdelve ForgeOs-ju6r8: recorded on every event; the untracked-source-clean step refuses the pass
+# OUTSIDE A GIT TREE THIS IS 0, NOT A DEATH (the Warden's blocking finding 1 on fortkit-ttpk,
+# 2026-11-18): under pipefail a failing `git ls-files` failed the whole assignment, set -e
+# ended the run before its first step with exit 128 and no message, and every Warden scratch
+# copy is such a tree. The steps below say what they could not check; this line only counts.
+untracked_start_count="$( { git -C "$repo_root" ls-files --others --exclude-standard -- src test 2>/dev/null || true; } | wc -l | tr -d ' ')"  # Proofdelve ForgeOs-ju6r8: recorded on every event; the untracked-source-clean step refuses the pass
 tree_payload="\"tree\":\"${repo_root}\",\"branch\":\"${tree_branch}\",\"commit\":\"${tree_commit}\",\"treeMismatch\":${tree_mismatch},\"harnessRef\":\"${harness_ref:0:12}\",\"dirtyAtStart\":${dirty_at_start},\"untrackedAtStart\":${untracked_start_count:-0}"
 [ "$dirty_at_start" = false ] || printf 'verify: NOTE the tree is DIRTY at start (%s tracked file(s) modified); this run scores the working tree, not commit %s alone (Proofdelve ForgeOs-l3l8)\n' "$dirty_start_count" "$tree_commit" >&2
 tree_end_json() {  # -> commitAtEnd, dirtyAtEnd, headMoved for the terminal event; never fails
@@ -818,7 +822,11 @@ run_step template-render template_render_lint
 # Proofdelve ForgeOs-3p3c): the Keep's install.sh and uninstall.sh are host-run by the
 # Overseer and were outside every lint until then, so their bead's shellcheck
 # criterion was met by hand rather than by the gate.
-run_step shellcheck shellcheck -x bin/fort-init bin/regent fort/scripts/*.sh fort/scripts/lib/*.sh "${TEMPLATE_SH[@]}" civ/scripts/*.sh scripts/*.sh
+# The template scripts are NOT in this list (Regent sitting 2026-11-18, fortkit-ttpk): they
+# are generated from this fort's machinery with placeholders in unquoted positions, which
+# raw shellcheck reads as literal braces. template-render above is their gate: it renders
+# every one of them three ways and shellchecks the rendered output.
+run_step shellcheck shellcheck -x bin/fort-init bin/regent bin/refresh-templates fort/scripts/*.sh fort/scripts/lib/*.sh civ/scripts/*.sh scripts/*.sh
 # HARNESS SOURCE PINS (Proofdelve ForgeOs-fqle7, from Proofdelve ForgeOs-t2mw1; the w8iez class). Every
 # harness_path step below runs from a temp copy at harness_ref, so a default derived from
 # its own directory ($0, BASH_SOURCE) resolves into that temp dir and scores the
@@ -1111,7 +1119,14 @@ run_step bead-citation-harness env CITATION_CHECK_SRC="$repo_root/scripts/bead-c
 # CITATION_UNRESOLVED=warn in the gate: the first hard-gate run (23:44 on
 # 2026-09-17) halted the fleet on Proofdelve ForgeOs-ubgx.5, a bead filed that evening and
 # cited in a README before the tracked export was refreshed. REISSUED still fails.
-if [ -r "$repo_root/.beads/issues.jsonl" ]; then
+# AN EMPTY EXPORT IS NOT A REFUSAL (Regent sitting 2026-11-18, fortkit-ttpk, found by
+# founding a fort and running its verifier): the check exits 3 when the export holds no
+# id, which is right for a damaged export and wrong for a fort that has filed no bead
+# yet. A newly founded fort is exactly that, and its verifier stopped here before it
+# reached its product gate. No bead means no citation can be wrong; say so and go on.
+if [ -r "$repo_root/.beads/issues.jsonl" ] && [ ! -s "$repo_root/.beads/issues.jsonl" ]; then
+  echo "verify: bead-citation-check SKIPPED: .beads/issues.jsonl is empty (this fort has filed no bead yet); the harness above still ran" >&2
+elif [ -r "$repo_root/.beads/issues.jsonl" ]; then
   run_step bead-citation-check env CITATION_UNRESOLVED=warn bash "$repo_root/scripts/bead-citation-check.sh" "$repo_root"
 else
   echo "verify: bead-citation-check SKIPPED: no .beads/issues.jsonl in this tree (the Warden scratch shape); the harness above still ran" >&2

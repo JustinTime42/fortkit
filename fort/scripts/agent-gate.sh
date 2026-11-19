@@ -42,7 +42,7 @@ in=$(cat)
 # The gate binds the marked sessions and lets the others through unrecorded.
 # The fort this file came from has no such sessions and gates every one.
 # (Regent sitting 2026-11-18, fortkit-ttpk.)
-[ -n "${FORT_MASKED:-}" ] || exit 0
+[ -n "${FORT_MASKED:-}${FORT_SEAT_UNMASKED:-}" ] || exit 0
 t=$(printf '%s' "$in" | jq -r '.tool_input.subagent_type // "general-purpose"' 2>/dev/null) || t="unparseable"
 log="$(dirname "$0")/../../fort/telemetry/agent-spawns.jsonl"
 case "$t" in

@@ -70,7 +70,7 @@ J
 }
 # Every fixture brings its own Overseer store (Proofdelve ForgeOs-72ot.1): AIRLOCK_STORE
 # points inside the fixture, so no case can append to the real civ-keep record.
-air() { AIRLOCK_ROOT="$1" AIRLOCK_STORE="$1/.store" AIRLOCK_WORKTREES="$1-wt" FORT_ACTOR=emrith FORT_SEAT=mayor bash "$AIRLOCK_SH" "${@:2}"; }
+air() { AIRLOCK_ROOT="$1" AIRLOCK_STORE="$1/.store" AIRLOCK_WORKTREES="$1-wt" FORT_ACTOR="emrith" FORT_SEAT=mayor bash "$AIRLOCK_SH" "${@:2}"; }
 cat_events() { local r="$1" c="$2"; grep -c "^$c " "$r/emitted" 2>/dev/null || true; }   # the CATEGORY at column one, never the word
 last_id() { find "$1/fort/airlock/requests" -maxdepth 1 -name '*.json' -printf '%f\n' 2>/dev/null | sort | tail -1 | sed 's/\.json$//'; }
 
@@ -173,7 +173,7 @@ else no "72ot.1: an approval replayed" "rc=$rc deploys before=$before after=$(ca
 
 # 11. a fixture root without a fixture store is refused, so no harness can write the real store
 r=$(mkfix g5) || exit 3
-AIRLOCK_ROOT="$r" FORT_ACTOR=emrith FORT_SEAT=mayor bash "$AIRLOCK_SH" list >/dev/null 2>&1; rc=$?
+AIRLOCK_ROOT="$r" FORT_ACTOR="emrith" FORT_SEAT=mayor bash "$AIRLOCK_SH" list >/dev/null 2>&1; rc=$?
 if [ "$rc" -ne 0 ]; then ok "72ot.1: AIRLOCK_ROOT without AIRLOCK_STORE is refused (rc $rc)"
 else no "72ot.1: a fixture root ran against the default store" "rc=$rc"; fi
 

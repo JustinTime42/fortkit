@@ -83,5 +83,25 @@ check "6 untracked files outside src and test pass" 0 "$f6" ""
 f7="$work/not-git"; mkdir -p "$f7/src"; printf 'x\n' > "$f7/src/a.cs"
 check "7 outside a git tree says NOT CHECKED and does not claim green silently" 0 "$f7" "NOT CHECKED"
 
+# 8. THE START-OF-RUN COUNT OUTSIDE A GIT TREE (the Warden's blocking finding 1 on fortkit-ttpk,
+# 2026-11-18). The verifier counts untracked source at start, under set -euo pipefail, before
+# its first step. In a tree with no .git the count's git call fails; the assignment must
+# still succeed with a number, or the verifier dies at exit 128 with no message, which is what
+# every Warden scratch copy saw. The SHIPPED line is extracted and run in such a tree.
+count_line="$(grep -m1 '^untracked_start_count=' "$subject" || true)"
+if [ -z "$count_line" ]; then
+  fail=$((fail + 1)); printf 'FAIL 8 the verifier has no untracked_start_count line to test\n'
+else
+  # Run from a file: the line carries quotes of its own.
+  # shellcheck disable=SC2016  # the $-spellings are for the generated script, not this shell
+  { printf 'set -euo pipefail\nrepo_root="$PWD"\n'; printf '%s\n' "$count_line"; printf 'printf "%%s" "$untracked_start_count"\n'; } > "$work/count.sh"
+  out="$(cd "$f7" && bash "$work/count.sh" 2>&1)"; got=$?
+  if [ "$got" = 0 ] && [ "$out" = 0 ]; then
+    pass=$((pass + 1)); printf 'PASS 8 outside a git tree the start-of-run count is 0 and the run goes on (exit 0)\n'
+  else
+    fail=$((fail + 1)); printf 'FAIL 8 outside a git tree the start-of-run count kills the run: exit %s, output: %s\n' "$got" "$out"
+  fi
+fi
+
 printf 'RESULT: %d pass / %d fail\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
