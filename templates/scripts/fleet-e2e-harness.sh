@@ -232,7 +232,7 @@ pre_d="${FLEET_SH_PRE_D:-}"
 # /tmp record that this harness will neither refuse on nor remove, which is
 # precisely the shared-path residue the block above exists to prevent -- so
 # adding a scenario means adding its suffix in the same commit.
-E2E_SUFFIXES="jba jbb jbc fsa fsb wbn pix prn pna pov pdj puc pru pnd pgr pgw wba wbe wbr wbs wbo wbx kpe kpf rdh rda rdb rdc rdd rde rdf rdg kpa kpb kpc kpd aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp qqq rrr sss ttt uuu vvv www dla dlb dlc dld
+E2E_SUFFIXES="lk1 jba jbb jbc fsa fsb wbn pix prn pna pov pdj puc pru pnd pgr pgw wba wbe wbr wbs wbo wbx kpe kpf rdh rda rdb rdc rdd rde rdf rdg kpa kpb kpc kpd aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp qqq rrr sss ttt uuu vvv www dla dlb dlc dld
 mpo apo mpx mpr xaw xmp n18 b18 w19 g19 par st1 st2 zs1 lg1 lg2 ng1 ng2 rs1 dfx dfy dgx dgy en1 en2 en3 en4 rc1 rd1 rd2 rd3 rd4 hf1 hf2 hf3 hf4 hf5 tsa tsb tsc tsd tse tsf tsg tsh tsi tsj tsk tsl tsm tsn tso tsp tsq tsr tss tst tsu
 uba ubb ubc ubd ube ubf sla slb ubg ubh ubi ubj ubk ubl ubm ubn
 pbk pbl hla hlb hlc hld hle hlf hlg cza czb rga rgb rgc uwa uwb lva lvb oca ocb
@@ -5243,6 +5243,48 @@ if [ -n "${FLEET_SH_PRE_FORGE_STRONG:-}" ]; then
   else no "RED forge-strong" "forge=$(tr '\n' '|' < "$r/forge-calls" 2>/dev/null)"; fi
 else
   skip "RED forge-strong" "FLEET_SH_PRE_FORGE_STRONG not set (git show 7e40aeb5d:fort/scripts/fleet.sh)"
+fi
+
+echo "=========================================================================="
+echo "SCENARIO 71 — THE RUN LOCK DOES NOT OUTLIVE THE RUN (Regent sitting 2026-11-19)"
+echo "=========================================================================="
+# The real verifier's harness fixtures leave `sleep 300` processes behind. Each
+# inherited the run lock's descriptor, so fleet.lock stayed held for minutes
+# after the run ended: the next run was refused at 75 and --status called a
+# finished run live. Here the stub verifier leaves one such grandchild, the run
+# lands one bead and drains, and the lock must be FREE the moment it returns.
+lk_run() { # $1 fixture name, $2 launcher; sets r st db rc
+  r=$(mkfort "$1" ok); unpoison "$r"; mk_launcher "$2" "$work/$1-fleet.sh" "$r" || exit 3
+  # line 2 of the stub: a grandchild that outlives the verifier and inherits its descriptors
+  # COMMITTED, because an uncommitted edit to a tracked file makes the tree
+  # unlandable and the merge would park (the first draft of this case did that).
+  sed -i '2i ( sleep 20 & )' "$r/fort/scripts/verify.sh"
+  git -C "$r" commit -qam "fixture: the verifier leaves a grandchild"
+  st="$work/$1-state"; mkdir -p "$st"; db="$work/$1.bd"
+  printf 'E2E-lk1|open||fleet-safe\n' > "$db"
+  run_loop "$work/$1-fleet.sh" "$st" "$db" 60; rc=$?
+}
+lk_state() { # $1 state dir -> free | held
+  if ( exec 7<"$1/fleet.lock" && flock -n -s 7 ) 2>/dev/null; then echo free; else echo held; fi
+}
+lk_run s71 "$launcher"
+if [ "$rc" -eq 0 ] && merged_in "$r" lk1 && [ "$(grep -c '^E2E-lk1|closed' "$db")" -eq 1 ]; then
+  ok "the fixture landed and closed its bead with a verifier that leaves a grandchild behind"
+else no "the lock-leak fixture did not land its bead, so nothing below is measured" "rc=$rc
+$(cat "$st/out.txt")"; fi
+if [ "$(lk_state "$st")" = free ]; then
+  ok "fleet.lock is FREE as soon as the run returns, though the verifier's grandchild is still alive"
+else no "fleet.lock is still held after the run ended" "$(fuser "$st/fleet.lock" 2>&1 | head -1)"; fi
+# RED ARM, generated: the verifier call without its 8>&-.
+lkred="$work/lk-red.sh"
+# shellcheck disable=SC2016  # the sed program matches the launcher's literal $-spelling
+sed 's/ > "\$2" 2>&1 8>&-$/ > "$2" 2>\&1/' "$launcher" > "$lkred"
+if cmp -s "$lkred" "$launcher"; then skip "RED lock leak" "the verifier call's 8>&- was not found in the launcher to remove"
+else
+  chmod +x "$lkred"; lk_run s71r "$lkred"
+  if [ "$(lk_state "$st")" = held ]; then
+    ok "RED lock leak: without 8>&- on the verifier call the grandchild holds fleet.lock after the run ended"
+  else no "RED lock leak" "the lock was free with the descriptor left open, so the case above cannot discriminate"; fi
 fi
 
 echo; echo "RESULT $pass pass / $fail fail / $notrun not run"
