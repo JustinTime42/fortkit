@@ -5883,3 +5883,17 @@ should name the seat if it matters who learned it.
 
 - 2026-11-16: **The capital's root holds an untracked file named `-a`** (86 bytes, 2026-11-11 14:08, six lines of `emit <category>`), most likely a stub emitter's log from a harness I ran from the capital's cwd on 2026-11-11 with an argument parsed as a path. Left in place and reported. A stub that writes to a path taken from its arguments can write a file named after a flag; give stubs a fixed log path from the environment.
 
+
+- 2026-11-18/19 (edict 83, the Manyhalls re-founding, fortkit-ttpk): **A PROTECTIVE LIST THAT NAMES A FORT DOES NOT SURVIVE A COPY-AND-RENAME, AND MY FIX FOR THAT INTRODUCED THE NEXT HOLE.** The rename turned Proofdelve's Keep store name into Manyhalls's, so Proofdelve's store lost its read-only bind (Warden review 1). I replaced the names with a glob over existing `*-keep` stores, which stopped CREATING this fort's own store, and an RO bind is existence-guarded: a seat could create and seed the directory the fleet trusts as the Overseer's (Warden review 2). The lib now creates the stores it protects, then binds by glob. When a fix changes "name it" to "bind what exists", ask what no longer exists at launch.
+
+- 2026-11-18: **Manyhalls runs Proofdelve's machinery since merge ee79251.** Posture `secrets-only` (the Overseer's choice). The lib binds every other registered fort read-only (repo, -worktrees, state, config, data dirs) and masks `civ-keep/signing-token`, `*/keep-signing-token`, `*/feedback-read-token`. Seats: mayor, forge, warden, workbench (Dunmar Trestle, they/them). Gate 1 is the factory and civ tooling; gate 6 the constitution. Fleet disabled, no unit installed. Templates come from `bin/refresh-templates`; in a worktree pass `REFRESH_EXPORT=<fresh bd export>`, because a stale export rewrites citations of recent beads as data.
+
+- 2026-11-18: **MANYHALLS'S `merge-event-check` WANTS THE MERGE SUBJECT `Merge fortkit-<id>: ...` AND A `merge` EVENT** (payload `mergeCommit` or target the bead). A plain `Merge branch` subject turns the verifier red on main. Write the subject that way the first time.
+
+- 2026-11-18: **MASK HARNESSES NEED A SCRATCH HOME THAT IS NOT UNDER /tmp** (/tmp is private inside a mask). I used `~/.cache/<name>` with a copy of the registry and the skill symlinks. And any test or harness that runs a real launcher must set HOME: the lib writes under `$HOME/.local/state` at launch, and a vitest run left `mask-keep` in the real state dir.
+
+- 2026-11-18: **FOUNDING A THROWAWAY FORT FOUND SEVERAL TEMPLATE DEFECTS NO LINT SAW** (a non-executable stub, a harness grep on a prompt line, a generator rule with no file scope that rewrote a harness's own path, and others). A generator's rewrite rules are scoped per file. Run the founded fort's verifier, and run its rendered harnesses.
+
+- 2026-11-18: **WHEN ASKING THE OVERSEER TO CHOOSE A POSTURE, LIST WHAT EACH OPTION MAKES WRITABLE.** My question named the Herald and Chronicler and left out that `secrets-only` makes every other fort writable. The Warden supplied it.
+
+- 2026-11-19: **A NIGHTLY JOB COMMITS TO THE CAPITAL'S MAIN AT 03:00** (memory consolidation), so a sitting that crosses it cannot fast-forward a branch cut the day before. `git merge-tree --write-tree main <branch>` previews the merge without touching anything.
