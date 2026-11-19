@@ -344,6 +344,82 @@ describe("scripts/digest.sh", () => {
     );
   });
 
+  test("merge-event check reads the fleet's merge subject as well as the Mayor's", async () => {
+    // fort/scripts/fleet.sh land() writes "<bead>: merged by the fleet on
+    // <verdict> (run <id>)" and emits a merge event whose target is the bead.
+    // Before 2026-11-19 the check knew only "Merge <bead>: ..." and failed
+    // every fleet landing with "cannot identify bead" (fortkit-798f).
+    const root = await createFort();
+    await installMergeEventCheck(root);
+    const git = (...args: string[]) =>
+      execFileAsync(
+        "git",
+        [
+          "-c",
+          "user.name=test",
+          "-c",
+          "user.email=test@example.invalid",
+          ...args,
+        ],
+        { cwd: root },
+      );
+    await writeFile(join(root, "tracked"), "tracked\n");
+    await git("add", ".");
+    await git("commit", "--quiet", "-m", "initial");
+    await git("branch", "-M", "main");
+    await git("checkout", "--quiet", "-b", "bead/fl1");
+    await writeFile(join(root, "change"), "change\n");
+    await git("add", "change");
+    await git("commit", "--quiet", "-m", "change");
+    await git("checkout", "--quiet", "main");
+    await git(
+      "merge",
+      "--no-ff",
+      "-m",
+      "fortkit-fl1: merged by the fleet on APPROVE (run 20261119T000000)",
+      "bead/fl1",
+    );
+    const check = () =>
+      execFileAsync(
+        "bash",
+        ["scripts/merge-event-check.sh", "--since", "2020-01-01T00:00:00Z"],
+        { cwd: root },
+      );
+
+    // Identified, and therefore reported as a MISSING EVENT, not as unreadable.
+    await expect(check()).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining("missing merge event"),
+    });
+
+    await writeFile(
+      join(root, "fort", "events", "events-2026-11-19.jsonl"),
+      `${JSON.stringify({ ts: "2026-11-19T00:00:00Z", actor: "fleet", seat: "fleet", category: "merge", target: "fortkit-fl1", detail: "Fleet merged bead/fl1 into main on APPROVE", payload: { run: "20261119T000000" } })}\n`,
+    );
+    const result = await check();
+    expect(result.stderr + result.stdout).toContain(
+      "1 of 1 main commits matched",
+    );
+
+    // A subject that names a bead in neither convention is still refused.
+    await git("checkout", "--quiet", "-b", "bead/fl2");
+    await writeFile(join(root, "change2"), "change\n");
+    await git("add", "change2");
+    await git("commit", "--quiet", "-m", "change2");
+    await git("checkout", "--quiet", "main");
+    await git(
+      "merge",
+      "--no-ff",
+      "-m",
+      "fortkit-fl2: landed somehow",
+      "bead/fl2",
+    );
+    await expect(check()).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining("cannot identify bead"),
+    });
+  });
+
   test("merge-event check consumes legacy bead events one merge at a time", async () => {
     const root = await createFort();
     await installMergeEventCheck(root);

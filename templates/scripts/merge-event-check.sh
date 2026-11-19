@@ -50,6 +50,12 @@ if ! git -C "$main_root" show-ref --verify --quiet "$audit_ref"; then
   exit 0
 fi
 
+# TWO SUBJECT CONVENTIONS, BOTH NAMING THE BEAD (Regent sitting 2026-11-19,
+# fortkit-ttpk). The Mayor's hand merge is "Merge <bead>: ...". The fleet's is
+# "<bead>: merged by the fleet on <verdict> (run <id>)", written by
+# fort/scripts/fleet.sh land(), which also emits the merge event with the bead
+# as its target. Until this line knew the second, every fleet landing turned
+# main red at this step and halted the fleet (measured on fortkit-798f).
 # The Mayor's no-ff merge convention names the bead in the subject. Refusing an
 # unparseable post-checkpoint merge makes a changed convention visible instead
 # of silently letting it bypass the correspondence check.
@@ -60,7 +66,8 @@ declare -A legacy_matches
 while IFS=$'\t' read -r commit subject; do
   [ -n "$commit" ] || continue
   commit_count=$((commit_count + 1))
-  if [[ "$subject" =~ ^Merge\ ([[:alnum:].-]+): ]]; then
+  if [[ "$subject" =~ ^Merge\ ([[:alnum:].-]+): ]] \
+    || [[ "$subject" =~ ^([[:alnum:].-]+):\ merged\ by\ the\ fleet\  ]]; then
     target="${BASH_REMATCH[1]}"
     # A commit hash is an exact correspondence. Older events have only a bead
     # target, so consume those one at a time rather than allowing one event to
