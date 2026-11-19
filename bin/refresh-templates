@@ -18,11 +18,17 @@
 # usage: bin/refresh-templates          (from anywhere; it writes templates/ in this checkout)
 set -euo pipefail
 kit="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-[ -r "$kit/.beads/issues.jsonl" ] || { echo "refresh-templates: no $kit/.beads/issues.jsonl (run: bd export -o .beads/issues.jsonl)" >&2; exit 1; }
+# The bead export decides which bead ids are the capital's own (kept as
+# provenance) and which are data (rendered with the new fort's prefix), so a
+# STALE export silently rewrites citations of recent beads. In a worktree the
+# tracked export is as old as the branch: pass a fresh one in REFRESH_EXPORT
+# (bd export -o <scratch file>, run from the main checkout).
+export_file="${REFRESH_EXPORT:-$kit/.beads/issues.jsonl}"
+[ -r "$export_file" ] || { echo "refresh-templates: no $export_file (run: bd export -o .beads/issues.jsonl)" >&2; exit 1; }
 out="$(mktemp -d)"; trap 'rm -rf "$out"' EXIT
 cp "$kit/templates/fort/charter.md" "$out/previous-charter.md"
 mkdir "$out/t"
-python3 -W error::SyntaxWarning "$kit/bin/mk-templates.py" "$kit" "$out/t" "$kit/.beads/issues.jsonl"
+python3 -W error::SyntaxWarning "$kit/bin/mk-templates.py" "$kit" "$out/t" "$export_file"
 python3 -W error::SyntaxWarning "$kit/bin/mk-templates-hand.py" "$kit" "$out/t" "$out/previous-charter.md"
 # Files the generators own are replaced; files kept by hand in templates/ are left.
 ( cd "$out/t" && find . -type f | sort ) | while IFS= read -r rel; do

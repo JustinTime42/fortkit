@@ -136,6 +136,15 @@ fi
 if [ ! -f "$REG" ]; then
   echo "fort-init: NOTE — there is no civilization registry at $REG, so this founding will mint one. For a real civilization that is a once-ever event. If you did not expect it: check FORT_REGISTRY, and check whether you are inside a Forge seat mask, where \$HOME/.claude is a tmpfs and a registry written there dies with the session." >&2
 fi
+# The roster check belongs to the preflight: it reads templates/ only.
+SEATS=(mayor forge warden workbench)
+SEAT_OFFICES=$(IFS=/; echo "${SEATS[*]}")
+for s in "${SEATS[@]}"; do
+  if [ ! -f "$T/fort/seats/$s.md" ]; then
+    echo "fort-init: templates/fort/seats/$s.md is missing, so the roster names a seat the factory cannot found. Nothing has been written." >&2
+    exit 1
+  fi
+done
 # ------------------------------- end of the no-mutation block; writes begin here
 [ -d .beads ] || bd init
 
@@ -209,14 +218,10 @@ render() { render_stream "$1" > "$2"; }
 # SEATS ONLY, NO PERSONHOOD (Overseer ruling, 2026-08-14): no names, no pronouns,
 # no personalities. Those belong to the Founding Moot and to the citizens
 # themselves; a fort must never inherit another settlement's citizen.
-SEATS=(mayor forge warden workbench)
-SEAT_OFFICES=$(IFS=/; echo "${SEATS[*]}")
-for s in "${SEATS[@]}"; do
-  if [ ! -f "$T/fort/seats/$s.md" ]; then
-    echo "fort-init: templates/fort/seats/$s.md is missing, so the roster names a seat the factory cannot found. Nothing of the fort's machinery has been rendered." >&2
-    exit 1
-  fi
-done
+# SEATS and SEAT_OFFICES are set, and every seat's template checked, in the
+# preflight above the first write (the Warden's finding 6, review 2 on
+# fortkit-ttpk): checked here, a missing seat file left a half-founded tree
+# that the "already has a fort/" refusal then would not touch.
 
 # THE TREE RENDER (Regent sitting 2026-11-18, fortkit-ttpk, docket items T10/T11).
 # Everything under templates/fort, templates/scripts, templates/claude and
@@ -232,7 +237,7 @@ done
 # the project name), so it is read back from bd rather than derived.
 BEAD_PREFIX="$(bd config get issue_prefix 2>/dev/null | tr -d '[:space:]')"
 if [ -z "$BEAD_PREFIX" ]; then
-  echo "fort-init: bd did not report an issue prefix for $REPO, so the machinery's bead ids cannot be rendered. Nothing of the fort's machinery has been rendered." >&2
+  echo "fort-init: bd did not report an issue prefix for $REPO, so the machinery's bead ids cannot be rendered. fort/ exists but holds no machinery yet: remove $REPO/fort and run fort-init again once bd answers." >&2
   exit 1
 fi
 while IFS= read -r rel; do

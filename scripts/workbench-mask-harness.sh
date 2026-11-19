@@ -87,6 +87,7 @@ echo "marker=${FORT_MASKED:-}:${BEADS_ACTOR:-}"
 INMASK
 
 probe() {  # $1 subject file, $2 posture -> key=value lines from inside the mask
+  # shellcheck disable=SC2030,SC2031  # each probe sets its own environment in its own subshell, by design
   ( export FORT_SANDBOX="$2" XDG_CONFIG_HOME="$fx/cfg" FORT_REGISTRY="${3-$fx/registry.json}"
     # shellcheck disable=SC1090  # the subject is a parameter by design
     source "$1" 2>/dev/null || { echo "mask=FAILED"; exit 0; }
@@ -191,6 +192,51 @@ fi
 # registry read buys, and what the full posture gets from its read-only HOME instead.
 out="$(probe "$wb" secrets-only /nonexistent/registry.json)"
 check "RED ARM 4 (no registry, secrets-only): the foreign fort's repository becomes writable" "$(val "$out" foreign_repo_w)" yes
+
+# THE OVERSEER'S KEEP STORES (the Warden's blocking finding 1 and finding 4, review 2,
+# fortkit-ttpk). fleet.sh and scripts/unattended-fleet read ~/.local/state/manyhalls-keep
+# as his record, and ~/.local/state is writable to every seat, so a store that does not
+# exist at launch is one a seat can create and seed. Measured under a FIXTURE HOME, so
+# the lib's own mkdir lands in the fixture and the red arm (which leaves the store
+# creatable) cannot touch the host's. Nothing is written from inside the mask: the probe
+# reads permissions only. otherfort-keep stands for another fort's store, which the
+# lib's glob must bind without being told its name.
+cat > "$fx/inkeep.sh" <<'INKEEP'
+s="$HOME/.local/state"
+st() { if [ ! -e "$1" ]; then [ -w "$(dirname "$1")" ] && echo creatable || echo absent; elif [ -w "$1" ]; then echo writable; else echo held; fi; }
+echo "keep_own=$(st "$s/manyhalls-keep")"
+echo "keep_civ=$(st "$s/civ-keep")"
+echo "keep_other=$(st "$s/otherfort-keep")"
+echo "state_w=$( [ -w "$s" ] && echo yes || echo no)"
+INKEEP
+probe_keep() {  # $1 subject, $2 posture, $3 fixture HOME -> key=value lines
+  # shellcheck disable=SC2030,SC2031  # each probe sets its own environment in its own subshell, by design
+  ( export HOME="$3" FORT_SANDBOX="$2" XDG_CONFIG_HOME="$fx/cfg" FORT_REGISTRY="$fx/registry.json"
+    mkdir -p "$HOME/.local/state/otherfort-keep"
+    # shellcheck disable=SC1090  # the subject is a parameter by design
+    source "$1" 2>/dev/null || { echo "mask=FAILED"; exit 0; }
+    wb_mask "$root" "$wt" >/dev/null 2>&1 || { echo "mask=FAILED"; exit 0; }
+    bwrap "${mask[@]}" -- /bin/bash "$fx/inkeep.sh" 2>/dev/null )
+}
+for posture in full secrets-only; do
+  out="$(probe_keep "$wb" "$posture" "$fx/home-$posture")"
+  [ "$(val "$out" mask)" = FAILED ] && { echo "FAIL  [$posture] wb_mask could not build the mask under a fixture HOME"; fail=$((fail+1)); continue; }
+  check "[$posture] this fort's own Keep store exists and is read-only, though the host never had one" "$(val "$out" keep_own)" held
+  check "[$posture] the Civ Keep store is read-only" "$(val "$out" keep_civ)" held
+  check "[$posture] another fort's Keep store is read-only, unnamed by the lib" "$(val "$out" keep_other)" held
+  check "[$posture] VACUITY: ~/.local/state itself IS writable" "$(val "$out" state_w)" yes
+done
+# RED ARM 5: the lib without its own-store line. The store is then absent at launch, the
+# glob has nothing to bind, and a seat could create it.
+# shellcheck disable=SC2016  # the sed program matches the lib's literal $-spelling
+sed -i 's| "\$HOME/.local/state/manyhalls-keep"; do|; do|' "$root/fort/scripts/lib/seat-sandbox.sh"
+if cmp -s "$root/fort/scripts/lib/seat-sandbox.sh" "$lib"; then echo "NOT RUN  red arm 5: the lib's own-store line was not found to drop"; fail=$((fail+1))
+else
+  out="$(probe_keep "$wb" secrets-only "$fx/home-red5")"
+  check "RED ARM 5 (the lib's own-store line dropped): a seat could create this fort's Keep store" "$(val "$out" keep_own)" creatable
+  check "RED ARM 5: the stores that do exist stay read-only (the glob still binds them)" "$(val "$out" keep_other)" held
+fi
+cp "$lib" "$root/fort/scripts/lib/seat-sandbox.sh"
 
 echo "RESULT pass=$pass fail=$fail skip=$skip"
 [ "$fail" -eq 0 ]

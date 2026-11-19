@@ -2224,9 +2224,14 @@ print(sha if isinstance(sha, str) else "")
 # their own audit, and that audit now lives in the Overseer store, which
 # lib/seat-sandbox.sh binds read-only in every seat mask of every fort. So a
 # landing needs the SAME sha in both places: the stream (newest sign event,
-# question 2 below) and a Keep record. Either Keep's desk counts, because both
-# are live: the Civ Keep (civ-keep/, lines carry fort "fortkit") and this fort's
-# own (manyhalls-keep/).
+# question 2 below) and a Keep record. Either desk counts: the Civ Keep
+# (civ-keep/, lines carry fort "fortkit") and this fort's own store
+# (manyhalls-keep/). The lib creates BOTH directories at every launch if they are
+# absent and binds them read-only, so the own store is the Overseer's whether or
+# not this fort runs a Keep of its own; where it runs none the store is empty
+# and only the Civ Keep's record can corroborate. A store a seat could create
+# first is a signature a seat could seed (the Warden, review 2 on fortkit-ttpk;
+# scripts/workbench-mask-harness.sh measures it, red arm 5).
 # THE DATED CUTOVER (the Overseer's choice, 2026-10-06). Signatures given before
 # the Keeps wrote pin lines have no sha in any record. Rather than trust stream
 # events by their timestamp -- which a seat writes, so a backdated forgery would

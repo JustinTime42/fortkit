@@ -76,7 +76,7 @@ A staging deploy costs the Overseer one click and no typed command:
 
 **What runs is the commit he approved, not main's HEAD.** `deploy-staging`
 declares `"runs_from": "pinned-commit"`: `run` cuts a temporary detached
-worktree of the request's `commit` under `~/.local/share/airlock/fortkit/<id>`
+worktree of the request's `commit` under `~/.local/share/airlock/{{PROJECT}}/<id>`
 (no seat can write there), symlinks the declared `env_files` from the root
 (never copies them), runs the script there, and removes the worktree. A pin
 that is not a full sha, not in the repository, or not on main is REFUSED and

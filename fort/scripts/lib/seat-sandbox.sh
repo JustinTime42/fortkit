@@ -558,10 +558,21 @@ build_mask() {
   # it looks for another fort's name and this was a name REMOVED. A protective
   # list must keep covering other forts' stores; naming none of them and binding
   # every *-keep directory is the form that survives a rename.
-  # civ-keep/ is created if absent: an RO bind is existence-guarded, and a
-  # directory a seat could create first is a directory a seat could seed.
+  # civ-keep/ AND THIS FORT'S OWN STORE are created if absent: an RO bind is
+  # existence-guarded, and a directory a seat could create first is a directory a
+  # seat could seed. The own store is named here because fleet.sh
+  # (keep_corroborates) and scripts/unattended-fleet read it as the Overseer's
+  # record whether or not this fort runs a Keep of its own; the glob below binds
+  # only what exists, so without this line the store a fort has never had is the
+  # one store a seat can make (the Warden's blocking finding 1, review 2,
+  # fortkit-ttpk). A store that cannot be created is said aloud, since the
+  # launch then proceeds with that record unprotected.
   local store
-  [ -d "$HOME/.local/state/civ-keep" ] || mkdir -m 700 "$HOME/.local/state/civ-keep" 2>/dev/null || true
+  mkdir -p "$HOME/.local/state" 2>/dev/null || true
+  for store in "$HOME/.local/state/civ-keep" "$HOME/.local/state/manyhalls-keep"; do
+    [ -d "$store" ] || mkdir -m 700 "$store" 2>/dev/null \
+      || echo "seat-sandbox: WARNING: could not create $store; that Overseer store is NOT read-only in this mask" >&2
+  done
   for store in "$HOME"/.local/state/*-keep; do
     if [ -d "$store" ]; then RO_PATHS+=("$store"); fi
   done
@@ -585,6 +596,14 @@ build_mask() {
   here_real="$(readlink -f "$root" 2>/dev/null || printf '%s' "$root")"
   here_main="$(git -C "$root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
   here_main="$(readlink -f "${here_main%/.git}" 2>/dev/null || printf '%s' "$here_real")"
+  # FAILS OPEN, AND SAYS SO (the Warden's finding 2, review 2): with jq missing or
+  # the civilization registry unreadable, no fort is known to be foreign and
+  # nothing here binds. The launch proceeds, because refusing would stop every
+  # seat on a host with a damaged registry; the warning is the record.
+  reg="${FORT_REGISTRY:-$HOME/.claude/civilization.json}"
+  if ! command -v jq >/dev/null 2>&1 || [ ! -r "$reg" ]; then
+    echo "seat-sandbox: WARNING: cannot read the fort registry ($reg) or jq is missing; other forts are NOT bound read-only in this mask" >&2
+  fi
   if command -v jq >/dev/null 2>&1; then
     for reg in "${FORT_REGISTRY:-$HOME/.claude/civilization.json}" "$HOME/.claude/greenlab.json"; do
       [ -r "$reg" ] || continue

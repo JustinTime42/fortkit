@@ -122,6 +122,9 @@ SPECIAL = [
     ("scripts/forge-refresh-harness.sh", "grep -qF 'run npm ci FIRST' <<<\"$hi\"", "grep -qF 'install them FIRST' <<<\"$hi\""),
     ("fort/airlock/operations.json", "Manyhalls ships this table EMPTY (Regent sitting 2026-11-18, fortkit-ttpk): the mechanism", "A founded fort ships this table EMPTY: the mechanism"),
     (None, "Emrith Cairnwright of Manyhalls", "Emrith Cairnwright of \x01MH\x01"),
+    # identity the general rules do not reach (the Warden's finding 7, review 2 on fortkit-ttpk)
+    ("fort/airlock/README.md", "~/.local/share/airlock/fortkit/<id>", "~/.local/share/airlock/{{PROJECT}}/<id>"),
+    ("fort/systemd/manyhalls-nightly-verify.timer", " (an hour after Proofdelve's nightly on this host)", ""),
 ]
 NOTE_RE = re.compile(r"\n> \*\*(?:Manyhalls, 2026-11-18|Carried from Proofdelve at Manyhalls's re-founding)[^\n]*\n(?:> [^\n]*\n)+")
 GATE_CARVE_RE = re.compile(r"# MANYHALLS: SEATS ONLY\..*?\n\[ -n \"\$\{FORT_MASKED:-\}\$\{FORT_SEAT_UNMASKED:-\}\" \] \|\| exit 0\n", re.S)

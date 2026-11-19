@@ -842,6 +842,10 @@ env FORT_MASKED="$marker" MAYOR_NO_MASK=1 "$FAKE_BWRAP_ROOT/fort/scripts/mayor.s
         ...process.env,
         FAKE_BWRAP_ROOT: root,
         PATH: `${fakeBin}:${process.env.PATH}`,
+        // warden.sh makes its per-review directory under XDG_DATA_HOME. Without
+        // this it used the developer's real HOME, and failed in a read-only one
+        // (the Warden's finding 5, review 2 on fortkit-ttpk).
+        XDG_DATA_HOME: join(root, ".xdg-data"),
       };
       const refusal = (marker: string) =>
         expect.stringContaining(`already inside the '${marker}' seat mask`);
