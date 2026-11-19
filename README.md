@@ -17,3 +17,14 @@ fort/scripts/verify.sh
 
 The Bartizan viewer (world and colony views) was retired on 2026-11-18; its spec is
 kept at `fort/annals/fortress-visualizer-spec-retired-2026-11-18.md`.
+
+## CLI
+
+Run `node src/cli.ts <command>` with one of these commands:
+
+- `status [--json]`
+- `herald-lint <draft.md> [--json]`
+- `digest --since <timestamp> [--until <timestamp>] [--max-events-per-fort <positive integer>] [--fetch <id>[,<id>...]] [--json]`
+- `recall <query> [--seat <seat>] [--topic <topic>] [--bead <bead>] [--since <timestamp>] [--until <timestamp>] [--limit <positive integer>]`
+
+Recall also runs as `npm run -s recall -- <words>`.
