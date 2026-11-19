@@ -1,0 +1,34 @@
+# {{FORT_NAME}} airlock host runner (Proofdelve ForgeOs-mbv54 item A). Drafted under Regent
+# edict 2026-10-15 with the Overseer present; installed by hand into
+# ~/.config/systemd/user/ -- this file does nothing where it lives in the repo.
+#
+# Started by {{FORT_SLUG}}-airlock-runner.path (a write to the approvals store,
+# or a new request in fort/airlock/requests) and {{FORT_SLUG}}-airlock-runner.timer
+# (the safety net). Runs fort/scripts/airlock-runner.sh, which loops
+# `airlock.sh run` (no id) until nothing runnable is left. Runnable means
+# approved IN THE STORE (read-only in every seat mask: his click), or, since
+# Proofdelve ForgeOs-emshb, an operation operations.json declares auto_run (host-test,
+# preview-stop), which a seat's request starts with no click by his decision.
+# See fort/airlock/README.md and fort/systemd/README.md.
+
+[Unit]
+Description={{FORT_NAME}} airlock runner: execute approved requests and auto_run operations
+
+[Service]
+Type=oneshot
+WorkingDirectory={{REPO_PATH}}
+# User units do not inherit a login shell PATH. The deploy needs az, docker,
+# dotnet, git, jq, curl (all /usr/bin on this host) and emit.sh needs nothing
+# else; ~/.local/bin is kept first for parity with the supervisor unit.
+Environment=PATH={{HOME}}/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart={{REPO_PATH}}/fort/scripts/airlock-runner.sh
+# A staging deploy builds three images and migrates; an hour is generous.
+TimeoutStartSec=90min
+# A preview's servers must outlive the run (Proofdelve ForgeOs-emshb). With the default
+# KillMode=control-group systemd kills every process left in the unit's cgroup
+# when the oneshot exits: measured 2026-10-23 with a transient oneshot, a
+# setsid'd child was killed at unit exit under control-group and survived under
+# process. The cost: a runner killed by its timeout leaves its script's
+# children running too. preview-stop (or `scripts/preview.sh stop`) ends a
+# preview.
+KillMode=process

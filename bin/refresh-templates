@@ -1,0 +1,33 @@
+#!/bin/bash
+# refresh-templates: regenerate the factory's templates FROM MANYHALLS.
+#
+# The factory (bin/fort-init + templates/) founds new forts. Its machinery
+# templates are not written by hand: they are Manyhalls's own machinery with
+# every fort-specific value turned into a fort-init placeholder
+# (bin/mk-templates.py), plus a charter, four seat files and a product-gate stub
+# derived from Manyhalls's (bin/mk-templates-hand.py). Regent sitting
+# 2026-11-18, fortkit-ttpk, docket items T10 to T12.
+#
+# Run it after Manyhalls's machinery changes and the change should reach new
+# forts. Both generators REFUSE when a rule of theirs matches nothing, which
+# means the tree moved under them: read the rule, do not delete it.
+# bin/ and templates/ are gate-1 surface and kernel read-only to every seat:
+# this is Regent work, and the proof is founding a throwaway fort and running
+# its verifier (the product-gate stub red, every machinery step green).
+#
+# usage: bin/refresh-templates          (from anywhere; it writes templates/ in this checkout)
+set -euo pipefail
+kit="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+[ -r "$kit/.beads/issues.jsonl" ] || { echo "refresh-templates: no $kit/.beads/issues.jsonl (run: bd export -o .beads/issues.jsonl)" >&2; exit 1; }
+out="$(mktemp -d)"; trap 'rm -rf "$out"' EXIT
+cp "$kit/templates/fort/charter.md" "$out/previous-charter.md"
+mkdir "$out/t"
+python3 -W error::SyntaxWarning "$kit/bin/mk-templates.py" "$kit" "$out/t" "$kit/.beads/issues.jsonl"
+python3 -W error::SyntaxWarning "$kit/bin/mk-templates-hand.py" "$kit" "$out/t" "$out/previous-charter.md"
+# Files the generators own are replaced; files kept by hand in templates/ are left.
+( cd "$out/t" && find . -type f | sort ) | while IFS= read -r rel; do
+  mkdir -p "$kit/templates/$(dirname "$rel")"
+  cp -p "$out/t/$rel" "$kit/templates/$rel"
+done
+echo "refresh-templates: $(cd "$out/t" && find . -type f | wc -l) template files written under $kit/templates"
+echo "refresh-templates: now found a throwaway fort (FORT_REGISTRY at a scratch path) and run its verifier."

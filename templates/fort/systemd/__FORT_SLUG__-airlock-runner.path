@@ -1,0 +1,27 @@
+# {{FORT_NAME}} airlock runner trigger (Proofdelve ForgeOs-mbv54 item A). Fires the runner
+# whenever the Overseer's approvals store is created or written (the Civ Keep's
+# Approve button, or `airlock.sh approve` on the host). Measured 2026-10-15:
+# creation of the absent file fires it; an append while the runner is active
+# does NOT re-fire afterwards, which is why the runner loops and the timer
+# exists. Watches the one file, not the directory, so the Keep's signature
+# audit beside it does not start runs.
+#
+# Proofdelve ForgeOs-emshb (Regent docket 2026-10-22 item A): it ALSO fires on a change in
+# fort/airlock/requests, because an auto_run request (host-test, preview-stop)
+# has no approval to write and would otherwise wait for the ten-minute timer.
+# requests/ is seat-writable, so a seat can start the runner; that buys a seat
+# nothing, since the runner executes only store-approved requests and the
+# operations the table declares auto_run. PathChanged on a directory fires on
+# a file created, renamed or deleted in it (airlock.sh files a request by
+# renaming a draft into place).
+
+[Unit]
+Description={{FORT_NAME}} airlock runner trigger: a write to the Overseer approvals store
+
+[Path]
+PathModified={{HOME}}/.local/state/civ-keep/airlock-approvals.jsonl
+PathChanged={{REPO_PATH}}/fort/airlock/requests
+Unit={{FORT_SLUG}}-airlock-runner.service
+
+[Install]
+WantedBy=default.target

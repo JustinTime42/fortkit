@@ -1,0 +1,4 @@
+{
+  "$comment": "Privileged operations this fort permits seats to REQUEST. The airlock runner executes only what is named here; a seat cannot submit an arbitrary command. Adding an operation is a constitution-tier change (charter gate 6): it widens what an agent can cause to happen. fort/airlock/README.md is the contract. A founded fort ships this table EMPTY: the mechanism is installed and no operation is permitted until one is added under gate 6.",
+  "operations": []
+}

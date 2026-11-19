@@ -550,7 +550,13 @@ describe("scripts/quiescent.sh and digest-hook.sh", () => {
   });
 });
 
-describe("fort-init", () => {
+// RETIRED AT THE RE-FOUNDING (2026-11-18, fortkit-ttpk, docket T10): three tests of the
+// former template verifier's npm stages (skip with no package.json, skip an absent script,
+// fail on a failing script). That verifier is replaced by a product-gate STUB, so those
+// stages no longer exist in a founded fort; the stub's contract is asserted in "executes
+// the founded fort's unattended artifacts" below. Founding renders about 140 files now,
+// so every case here gets a longer timeout than the suite default.
+describe("fort-init", { timeout: 120_000 }, () => {
   test.skipIf(!foundingSmokeToolsAvailable)(
     "renders the Mayor's Codex deny with the founding home path",
     async () => {
@@ -623,11 +629,48 @@ describe("fort-init", () => {
       await expect(
         execFileAsync("bash", ["fort/scripts/status.sh"], { cwd: root }),
       ).resolves.toMatchObject({ stdout: expect.any(String) });
-      await expect(
-        execFileAsync("bash", ["fort/scripts/verify.sh", "--no-emit"], {
+      // THE PRODUCT GATE IS A STUB (Regent sitting 2026-11-18, fortkit-ttpk, docket
+      // T10): the founded verifier runs its own lints and then fails at the step
+      // named product-gate, by design, until the fort wires its build and tests.
+      // The server tier runs the lints and the product gate and skips the
+      // machinery harnesses, which take minutes and are proved by founding a
+      // fort and running the whole verifier (the docket's T12). The tree is
+      // committed first: the verifier refuses untracked files where the host
+      // executes.
+      await execFileAsync(
+        "git",
+        ["add", "--", "fort", "scripts", ".claude", "docs", "package.json"],
+        { cwd: root },
+      );
+      await execFileAsync(
+        "git",
+        [
+          "-c",
+          "user.email=h@example.invalid",
+          "-c",
+          "user.name=harness",
+          "commit",
+          "--quiet",
+          "-m",
+          "found",
+        ],
+        { cwd: root },
+      );
+      let stub: { code?: number; stderr?: string } | undefined;
+      try {
+        await execFileAsync("bash", ["fort/scripts/verify.sh", "--no-emit"], {
           cwd: root,
-        }),
-      ).resolves.toMatchObject({ stdout: expect.any(String) });
+          env: { ...process.env, VERIFY_TIER: "server" },
+        });
+      } catch (error) {
+        stub = error as { code?: number; stderr?: string };
+      }
+      expect(stub?.code).toBe(1);
+      expect(stub?.stderr).toContain("NO PRODUCT GATE IS WIRED");
+      expect(stub?.stderr).toContain("step 'product-gate' FAILED");
+      expect(
+        (stub?.stderr ?? "").match(/verify: step '[a-z-]+' FAILED/g),
+      ).toHaveLength(1);
 
       // The clean founding beside the three deliberate failures below
       // (fortkit-2twy). A refusal control set proves only that the script says
@@ -665,168 +708,6 @@ describe("fort-init", () => {
           await readFile(join(registryDirectory, "civilization.json"), "utf8"),
         ).forts,
       ).toHaveLength(1);
-    },
-  );
-
-  test.skipIf(!foundingSmokeToolsAvailable)(
-    `skips npm stages when the founded repository has no package.json (${foundingSmokeSkipReason})`,
-    async () => {
-      const root = await createFort();
-      const registryDirectory = join(root, "registry");
-      await mkdir(registryDirectory);
-
-      await execFileAsync(
-        "bash",
-        [
-          join(repoRoot, "bin/fort-init"),
-          root,
-          "no-package",
-          "Smoke test fort.",
-        ],
-        {
-          env: {
-            ...process.env,
-            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
-          },
-        },
-      );
-
-      const result = await execFileAsync(
-        "bash",
-        ["fort/scripts/verify.sh", "--no-emit"],
-        { cwd: root },
-      );
-      expect(result.stderr).toContain("typecheck: SKIPPED — no package.json.");
-      expect(result.stderr).toContain("lint: SKIPPED — no package.json.");
-      expect(result.stderr).toContain("test: SKIPPED — no package.json.");
-    },
-  );
-
-  test.skipIf(!foundingSmokeToolsAvailable)(
-    `skips absent npm scripts and records them in verify.pass (${foundingSmokeSkipReason})`,
-    async () => {
-      const root = await createFort();
-      const registryDirectory = join(root, "registry");
-      await mkdir(registryDirectory);
-      await writeFile(
-        join(root, "package.json"),
-        JSON.stringify({ private: true, scripts: { build: "node -e '0'" } }),
-      );
-
-      await execFileAsync(
-        "bash",
-        [
-          join(repoRoot, "bin/fort-init"),
-          root,
-          "missing-scripts",
-          "Smoke test fort.",
-        ],
-        {
-          env: {
-            ...process.env,
-            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
-          },
-        },
-      );
-
-      const result = await execFileAsync("bash", ["fort/scripts/verify.sh"], {
-        cwd: root,
-        env: { ...process.env, CI: "" },
-      });
-      expect(result.stderr).toContain(
-        "typecheck: SKIPPED — no typecheck script in package.json.",
-      );
-      expect(result.stderr).toContain(
-        "lint: SKIPPED — no lint script in package.json.",
-      );
-      expect(result.stderr).toContain(
-        "test: SKIPPED — no test script in package.json.",
-      );
-
-      const emitted = (
-        await Promise.all(
-          (
-            await readdir(join(root, "fort", "events"))
-          )
-            .filter((name) => name.endsWith(".jsonl"))
-            .map(async (name) =>
-              (
-                await readFile(join(root, "fort", "events", name), "utf8")
-              )
-                .trim()
-                .split("\n")
-                .map(
-                  (line) =>
-                    JSON.parse(line) as { category: string; payload: unknown },
-                ),
-            ),
-        )
-      ).flat();
-      const pass = emitted.find((event) => event.category === "verify.pass");
-      expect(pass).toMatchObject({
-        payload: {
-          steps: ["seat-lint", "merge-events", "shellcheck"],
-          skippedSteps: ["typecheck", "lint", "test"],
-        },
-      });
-    },
-  );
-
-  test.skipIf(!foundingSmokeToolsAvailable)(
-    `fails a founded verifier when an existing npm script fails (${foundingSmokeSkipReason})`,
-    async () => {
-      const root = await createFort();
-      const registryDirectory = join(root, "registry");
-      await mkdir(registryDirectory);
-      await writeFile(
-        join(root, "package.json"),
-        JSON.stringify({
-          private: true,
-          scripts: { typecheck: "node -e 'process.exit(23)'" },
-        }),
-      );
-
-      await execFileAsync(
-        "bash",
-        [
-          join(repoRoot, "bin/fort-init"),
-          root,
-          "failing-script",
-          "Smoke test fort.",
-        ],
-        {
-          env: {
-            ...process.env,
-            FORT_REGISTRY: join(registryDirectory, "civilization.json"),
-          },
-        },
-      );
-
-      await expect(
-        execFileAsync("bash", ["fort/scripts/verify.sh"], {
-          cwd: root,
-          env: { ...process.env, CI: "" },
-        }),
-      ).rejects.toMatchObject({ code: 23 });
-
-      const events = await Promise.all(
-        (await readdir(join(root, "fort", "events")))
-          .filter((name) => name.endsWith(".jsonl"))
-          .map(async (name) =>
-            (await readFile(join(root, "fort", "events", name), "utf8"))
-              .trim()
-              .split("\n")
-              .map(
-                (line) =>
-                  JSON.parse(line) as { category: string; payload: unknown },
-              ),
-          ),
-      );
-      expect(
-        events.flat().find((event) => event.category === "verify.fail"),
-      ).toMatchObject({
-        payload: { step: "typecheck", exitCode: 23 },
-      });
     },
   );
 
@@ -971,19 +852,54 @@ env FORT_MASKED="$marker" MAYOR_NO_MASK=1 "$FAKE_BWRAP_ROOT/fort/scripts/mayor.s
           env: { ...runtimeEnvironment, FORT_MASKED: "mayor" },
         }),
       ).rejects.toMatchObject({ code: 77, stderr: refusal("mayor") });
-      await expect(
-        execFileAsync("bash", ["fort/scripts/forge.sh", "fortkit-mask"], {
-          cwd: root,
-          env: runtimeEnvironment,
-        }),
-      ).resolves.toMatchObject({ stdout: refusal("forge") });
-      await expect(
-        execFileAsync(
-          "bash",
-          ["fort/scripts/warden.sh", "fortkit-mask", "HEAD", root],
-          { cwd: root, env: runtimeEnvironment },
-        ),
-      ).rejects.toMatchObject({ code: 65, stdout: refusal("warden") });
+      // The launchers of the 2026-11-18 template refresh read their bead from the
+      // tracker and work in a worktree cut from HEAD, so the founded tree is
+      // committed and a real bead is filed, as a real founding would have. What
+      // is asserted is unchanged: the Mayor launcher, run inside each seat's
+      // mask, refuses and names the mask. The launchers' own exit codes are not
+      // pinned: with a runtime that only refuses, each ends on its no-result path.
+      await execFileAsync(
+        "git",
+        ["add", "--", "fort", "scripts", ".claude", "docs"],
+        { cwd: root },
+      );
+      await execFileAsync("git", ["commit", "--quiet", "-m", "found"], {
+        cwd: root,
+      });
+      const { stdout: created } = await execFileAsync(
+        "bd",
+        [
+          "create",
+          "--title",
+          "mask probe",
+          "--description",
+          "nested launch refusal",
+          "-t",
+          "task",
+          "-p",
+          "3",
+          "--silent",
+        ],
+        { cwd: root },
+      );
+      const bead = created.trim();
+      const output = async (launcher: string, args: string[]) => {
+        try {
+          const done = await execFileAsync(
+            "bash",
+            [`fort/scripts/${launcher}`, ...args],
+            { cwd: root, env: runtimeEnvironment },
+          );
+          return `${done.stdout}${done.stderr}`;
+        } catch (error) {
+          const failed = error as { stdout?: string; stderr?: string };
+          return `${failed.stdout ?? ""}${failed.stderr ?? ""}`;
+        }
+      };
+      expect(await output("forge.sh", [bead])).toEqual(refusal("forge"));
+      expect(await output("warden.sh", [bead, "HEAD", root])).toEqual(
+        refusal("warden"),
+      );
     },
   );
 
