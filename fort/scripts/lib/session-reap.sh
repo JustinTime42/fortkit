@@ -36,9 +36,9 @@
 # log says what was killed. It never fails: a process that is already gone, or
 # a /proc entry that cannot be read, is skipped.
 #
-# scripts/preview-sweep.sh stays as the Mayor's backstop: it covers previews
-# started through scripts/preview.sh from a pinned tree, and sessions whose
-# launcher was itself killed before this ran.
+# preview-sweep.sh and preview.sh are Proofdelve product tooling, not shipped
+# by the factory. A fort without them has no backstop for sessions whose
+# launcher was killed before this ran.
 
 session_reap_count=0
 
