@@ -1,0 +1,3 @@
+{"ts":"2026-11-20T05:00:02-09:00","actor":"halric","seat":"herald","category":"session.start","target":null,"detail":"Halric begins the daily run (opus)","payload":{"model":"opus","mode":"daily"}}
+{"ts":"2026-11-20T05:03:59-09:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Herald 2026-11-20: one draft filed (the-check-that-only-ever-said-yes), herald-lint pass; no constitution diffs; report filed","payload":{"drafts":1}}
+{"ts":"2026-11-20T05:04:07-09:00","actor":"halric","seat":"herald","category":"session.end","target":null,"detail":"Halric's daily run ended (exit 0); report filed","payload":{"exit":0,"mode":"daily","report":"/home/justin/Documents/Obsidian Vault/herald/reports/2026-11-20.md","report_filed":true}}
