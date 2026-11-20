@@ -14,6 +14,23 @@
 # unlisted (open-bead) worktree KEPT. A reaper that removed everything or
 # nothing fails half of each pair.
 set -uo pipefail
+# NOTHING THIS HARNESS STARTS OUTLIVES IT (Regent sitting 2026-11-19, fortkit-awlc).
+# Its fixtures start long sleeps (lock holders, processes for a reaper to find).
+# Killing the pid that was started is not enough: `flock f sleep 300` and
+# `bash -c 'sleep 300; :'` leave the sleep behind as an orphan, and 20 of those
+# were found holding the fleet's run lock after a verifier run. Every process
+# this harness starts inherits FORT_HARNESS_TAG, and the EXIT trap kills every
+# process that carries it, whoever its parent is by then.
+export FORT_HARNESS_TAG="fh-$$-$RANDOM"
+reap_tagged() {
+  local p pid
+  for p in /proc/[0-9]*; do
+    pid="${p#/proc/}"
+    [ "$pid" = "$$" ] && continue
+    if grep -qzx "FORT_HARNESS_TAG=$FORT_HARNESS_TAG" "$p/environ" 2>/dev/null; then kill -KILL "$pid" 2>/dev/null; fi
+  done
+  return 0
+}
 reaper="${REAPER_SH:-$(dirname "$0")/../fort/scripts/scratch-reaper.sh}"
 # verify-impl.sh copies an unchanged harness to a temporary directory before
 # running it.  REAPER_SH is pinned there, but a default derived from $0 would
@@ -42,7 +59,7 @@ work="$(mktemp -d)"
 # Lock holders run with their stdio CLOSED: they outlive each case and would
 # otherwise hold this harness's stdout open, so `harness | tail` never ends.
 lockholders=()
-cleanup() { for p in "${lockholders[@]:-}"; do [ -n "$p" ] || continue; pkill -TERM -P "$p" 2>/dev/null; kill "$p" 2>/dev/null; done; chmod -R u+w "$work" 2>/dev/null; rm -rf "$work"; }
+cleanup() { for p in "${lockholders[@]:-}"; do [ -n "$p" ] || continue; pkill -TERM -P "$p" 2>/dev/null; kill "$p" 2>/dev/null; done; reap_tagged; chmod -R u+w "$work" 2>/dev/null; rm -rf "$work"; }
 trap cleanup EXIT
 pass=0; fail=0
 ok(){ echo "  PASS  $1"; pass=$((pass+1)); }

@@ -331,8 +331,14 @@ if [ "${WARDEN_BRIEF_ONLY:-0}" != "1" ]; then
     exit 70
   fi
   mkdir -p "$scratch"
+# '/.beads' IS ANCHORED (Regent sitting 2026-11-19, fortkit-awlc; the Warden's own
+# finding on 7738e76). Unanchored, it also dropped the tracked fixture
+# test/fixtures/fort-alpha/.beads/issues.jsonl from every scratch copy, three
+# vitest cases failed there, and her verifier stopped at the test step before
+# any harness ran. Only the ROOT's tracker is excluded; the launcher seeds a
+# fresh export of it into the copy below.
   rsync -a \
-    --exclude '.git' --exclude '.env*' --exclude '.beads' \
+    --exclude '.git' --exclude '.env*' --exclude '/.beads' \
     --exclude '/node_modules' \
     "$src/" "$scratch/"
   # BEADS ACCESS FOR THE SEAT (Proofdelve ForgeOs-40rj / Proofdelve ForgeOs-278; the shape Farlantern

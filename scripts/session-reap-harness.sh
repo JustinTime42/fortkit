@@ -13,6 +13,23 @@
 # file's parent. Exit: 0 all passed; 1 a case failed or did not run; 3 refused.
 # shellcheck disable=SC2016  # file-wide: the single-quoted strings are stub bodies and source assertions on the launchers' own $-bearing lines
 set -uo pipefail
+# NOTHING THIS HARNESS STARTS OUTLIVES IT (Regent sitting 2026-11-19, fortkit-awlc).
+# Its fixtures start long sleeps (lock holders, processes for a reaper to find).
+# Killing the pid that was started is not enough: `flock f sleep 300` and
+# `bash -c 'sleep 300; :'` leave the sleep behind as an orphan, and 20 of those
+# were found holding the fleet's run lock after a verifier run. Every process
+# this harness starts inherits FORT_HARNESS_TAG, and the EXIT trap kills every
+# process that carries it, whoever its parent is by then.
+export FORT_HARNESS_TAG="fh-$$-$RANDOM"
+reap_tagged() {
+  local p pid
+  for p in /proc/[0-9]*; do
+    pid="${p#/proc/}"
+    [ "$pid" = "$$" ] && continue
+    if grep -qzx "FORT_HARNESS_TAG=$FORT_HARNESS_TAG" "$p/environ" 2>/dev/null; then kill -KILL "$pid" 2>/dev/null; fi
+  done
+  return 0
+}
 unset SESSION_REAP_GRACE_S
 here="$(cd "$(dirname "$0")" && pwd)"
 lib="${SESSION_REAP_LIB:-$here/../fort/scripts/lib/session-reap.sh}"
@@ -23,7 +40,7 @@ grep -q '^session_reap() {' "$lib" || { echo "HARNESS REFUSES: no session_reap()
 work="$(mktemp -d "${TMPDIR:-/tmp}/session-reap-harness.XXXXXX")"
 case "$work" in /*) ;; *) echo "HARNESS REFUSES: scratch dir is not absolute"; exit 3 ;; esac
 started=()
-cleanup() { local p; for p in "${started[@]:-}"; do [ -n "$p" ] && kill -KILL "$p" 2>/dev/null; done; rm -rf "$work"; }
+cleanup() { local p; for p in "${started[@]:-}"; do [ -n "$p" ] && kill -KILL "$p" 2>/dev/null; done; reap_tagged; rm -rf "$work"; }
 trap cleanup EXIT
 pass=0; fail=0; notrun=0
 ok()  { pass=$((pass+1)); echo "PASS $1"; }

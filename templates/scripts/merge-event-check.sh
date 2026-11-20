@@ -59,7 +59,15 @@ fi
 # The Mayor's no-ff merge convention names the bead in the subject. Refusing an
 # unparseable post-checkpoint merge makes a changed convention visible instead
 # of silently letting it bypass the correspondence check.
-git -C "$main_root" log "$audit_ref" --merges --since="$since" --format='%H%x09%s' >"$merges"
+# FIRST-PARENT ONLY: merges INTO main, which is what this audit is for. A bead
+# branch can carry merges of its own, from main into the branch: the fleet's
+# pre-landing refresh ("<bead>: refresh -- merge main into bead/x before
+# verify") and forge.sh's refresh before a re-dispatch. Landing the branch
+# makes those reachable from main without their ever having changed main, and
+# no merge event is owed for them. Without --first-parent the first landing
+# whose branch had been refreshed turned main red here (fortkit-h2l0,
+# 2026-11-19, the second fleet run at Manyhalls).
+git -C "$main_root" log "$audit_ref" --merges --first-parent --since="$since" --format='%H%x09%s' >"$merges"
 commit_count=0
 missing=0
 declare -A legacy_matches

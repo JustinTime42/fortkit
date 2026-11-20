@@ -3325,7 +3325,15 @@ run_verifier() {  # $1 tree, $2 output file, [$3 require-docker], [$4 tier], [$5
   if [ "${3:-}" = require-docker ]; then venv+=(VERIFY_REQUIRE_DOCKER=1); fi
   if [ -n "${4:-}" ]; then venv+=("VERIFY_TIER=$4"); fi
   if [ -n "${5:-}" ]; then venv+=("VERIFY_RESULT_FILE=$5"); fi
-  ( cd "$1" && env "${venv[@]}" ./fort/scripts/verify.sh ) > "$2" 2>&1
+  # 8>&- : THE RUN LOCK DOES NOT TRAVEL INTO THE VERIFIER (Regent sitting
+  # 2026-11-19, fortkit-ttpk). The verifier's harness fixtures leave `sleep 300`
+  # processes behind; each inherited fd 8 and kept fleet.lock held for up to
+  # five minutes after the run had ended. The next run was refused at exit 75
+  # (09:46 and 12:22 that day) and --status called a finished run LIVE. Measured
+  # with fuser: 20 holders, every one a `sleep 300` orphaned from a harness
+  # fixture. The Forge dispatch has closed this descriptor since the l1ef fix;
+  # the verifier, the review and the scratch reaper now do too.
+  ( cd "$1" && env "${venv[@]}" ./fort/scripts/verify.sh ) > "$2" 2>&1 8>&-
 }
 
 # ---------------------------------------------------------------------------
@@ -4677,8 +4685,14 @@ not by a citizen." \
   bd -C "$root" merge-slot release >/dev/null 2>&1 || true
   landings=$((landings + 1))
   say "$bead: merged to $into"
+  # THE EVENT NAMES THE MERGE COMMIT (Regent sitting 2026-11-19, fortkit-awlc; the
+  # Warden's finding 2 on 664de85). scripts/merge-event-check.sh matches a main
+  # merge to its event exactly when the event carries payload.mergeCommit, and
+  # otherwise falls back to counting one event per bead. Resolved here, right
+  # after the merge and before anything else can move HEAD.
+  local merged_sha; merged_sha="$(git -C "$root" rev-parse HEAD 2>/dev/null || echo "")"
   emit merge "Fleet merged bead/$sfx into $into on $verdict" \
-    -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"$verdict\",\"into\":\"$into\"}"
+    -a "$fleet_actor" -s fleet -t "$bead" -p "{\"run\":\"$run_id\",\"verdict\":\"$verdict\",\"into\":\"$into\",\"mergeCommit\":\"$merged_sha\"}"
 
   # POST-MERGE VERIFIER, AND A RED MAIN HALTS THE RUN (Overseer amendment,
   # 2026-09-02, recorded on Proofdelve ForgeOs-9mfw.3). There is a measured instance of
@@ -5120,7 +5134,7 @@ review_one() {  # $1 bead, $2 worktree
     if fix_forward_pending "$sfx"; then
       ff_env=("WARDEN_FIX_FORWARD_BASE=$(head -1 "$(fix_forward_dir "$sfx")/base")" "WARDEN_FIX_FORWARD_ITEMS=$(fix_forward_dir "$sfx")/brief")
     fi
-    env "${ff_env[@]}" "$root/fort/scripts/warden.sh" "$bead" "$main_branch...bead/$sfx" "$wt" "$rung" > "$wlog" 2>&1
+    env "${ff_env[@]}" "$root/fort/scripts/warden.sh" "$bead" "$main_branch...bead/$sfx" "$wt" "$rung" > "$wlog" 2>&1 8>&-
     wrc=$?
     set -e
     # A BROKEN HOST IS CHECKED BEFORE THE GOVERNOR AND BEFORE THE LADDER
@@ -6234,7 +6248,7 @@ operator_halt_stop() {
 tmp_check() {
   local r="$root/fort/scripts/scratch-reaper.sh" out
   [ -f "$r" ] || return 0
-  out="$(bash "$r" --tmp-check 2>&1)" || true
+  out="$(bash "$r" --tmp-check 2>&1 8>&-)" || true
   [ -z "$out" ] || printf '%s\n' "$out" | while IFS= read -r l; do say "  $l"; done
   return 0
 }

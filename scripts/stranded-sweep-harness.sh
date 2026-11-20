@@ -3,6 +3,23 @@
 # commit is CLAIMED-NO-WORK; branches at main's exact tip and live locks are
 # silent; a fleet --no-ff landing remains MERGED-NOT-CLOSED.
 set -uo pipefail
+# NOTHING THIS HARNESS STARTS OUTLIVES IT (Regent sitting 2026-11-19, fortkit-awlc).
+# Its fixtures start long sleeps (lock holders, processes for a reaper to find).
+# Killing the pid that was started is not enough: `flock f sleep 300` and
+# `bash -c 'sleep 300; :'` leave the sleep behind as an orphan, and 20 of those
+# were found holding the fleet's run lock after a verifier run. Every process
+# this harness starts inherits FORT_HARNESS_TAG, and the EXIT trap kills every
+# process that carries it, whoever its parent is by then.
+export FORT_HARNESS_TAG="fh-$$-$RANDOM"
+reap_tagged() {
+  local p pid
+  for p in /proc/[0-9]*; do
+    pid="${p#/proc/}"
+    [ "$pid" = "$$" ] && continue
+    if grep -qzx "FORT_HARNESS_TAG=$FORT_HARNESS_TAG" "$p/environ" 2>/dev/null; then kill -KILL "$pid" 2>/dev/null; fi
+  done
+  return 0
+}
 sweep="${SWEEP_SH:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/stranded-sweep.sh}"
 real_python="$(command -v python3)" \
   || { echo "HARNESS REFUSES: could not ask python3 for its path" >&2; exit 3; }
@@ -14,7 +31,7 @@ fi
 
 work="$(mktemp -d)"
 lockholders=()
-trap 'kill "${lockholders[@]}" 2>/dev/null || true; rm -rf "$work"' EXIT
+trap 'kill "${lockholders[@]}" 2>/dev/null || true; reap_tagged; rm -rf "$work"' EXIT
 if [ "${SWEEP_DISABLE_CLASSIFIER:-0}" = 1 ]; then
   # Negative control: remove the ahead>0 class selection from a disposable
   # copy. Fixture 6 must fail, proving its assertion reaches that classifier.

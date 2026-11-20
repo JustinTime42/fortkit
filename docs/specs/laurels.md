@@ -103,7 +103,7 @@ ungated.
 
 Category `laurel`; `target` is the seat; `payload` carries the citation and the
 conferring actor. Emitted through `fort/scripts/emit.sh` like every other event,
-and append-only under standing order 7 like every other record.
+and append-only under standing order 12 like every other record.
 
 **The payload keys are pinned, and this paragraph exists because leaving them
 unpinned cost a defect within hours.** `conferred_by` is the conferring actor.
@@ -125,7 +125,7 @@ global instruction forbids for exactly this reason: two components agreed on the
 sentence and disagreed on the key. Generator half tracked in `fortkit-35uf.7`.
 
 **A laurel is a record of what happened, not a current-state fact.** It is
-therefore governed by SO7 in full and is not eligible for the ledger treatment
+therefore governed by SO12 in full and is not eligible for the ledger treatment
 that memory and law receive. A laurel is never corrected, superseded, or
 withdrawn; a mistaken one is answered by an appended correction, exactly as any
 other record is.
@@ -163,5 +163,5 @@ memory for the same session-start budget:
   caught something real" is not currently an observable event. Until that lands,
   sources 1 and 2 are the live ones and source 3 is inert. Say so in the
   generator's output rather than silently rendering nothing.
-- **Portability is not assumed.** Per standing order 13 this reaches the elder
+- **Portability is not assumed.** Per standing order 17 this reaches the elder
   forts as an advisory, and declining is a complete answer.

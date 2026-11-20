@@ -401,6 +401,37 @@ describe("scripts/digest.sh", () => {
       "1 of 1 main commits matched",
     );
 
+    // A merge of main INTO a bead branch (the fleet's pre-landing refresh) is
+    // not a merge into main. Landing the branch makes it reachable from main,
+    // and the audit must not ask it for an event (fortkit-h2l0, 2026-11-19).
+    await git("checkout", "--quiet", "-b", "bead/fl3", "HEAD~1");
+    await writeFile(join(root, "change3"), "change\n");
+    await git("add", "change3");
+    await git("commit", "--quiet", "-m", "change3");
+    await git(
+      "merge",
+      "--no-ff",
+      "-m",
+      "fortkit-fl3: refresh \u2014 merge main into bead/fl3 before verify (by fleet.sh)",
+      "main",
+    );
+    await git("checkout", "--quiet", "main");
+    await git(
+      "merge",
+      "--no-ff",
+      "-m",
+      "fortkit-fl3: merged by the fleet on APPROVE (run 20261119T000001)",
+      "bead/fl3",
+    );
+    await writeFile(
+      join(root, "fort", "events", "events-2026-11-20.jsonl"),
+      `${JSON.stringify({ ts: "2026-11-20T00:00:00Z", actor: "fleet", seat: "fleet", category: "merge", target: "fortkit-fl3", detail: "Fleet merged bead/fl3 into main on APPROVE", payload: { run: "20261119T000001" } })}\n`,
+    );
+    const afterRefresh = await check();
+    expect(afterRefresh.stderr + afterRefresh.stdout).toContain(
+      "2 of 2 main commits matched",
+    );
+
     // A subject that names a bead in neither convention is still refused.
     await git("checkout", "--quiet", "-b", "bead/fl2");
     await writeFile(join(root, "change2"), "change\n");
