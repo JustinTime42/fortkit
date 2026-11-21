@@ -64,7 +64,7 @@ read or update the Keep's summary state.
 
 ## What "needs you" means, per fort (`lib/forts.mjs`)
 
-- Proofdelve, plot, Scionhall, Farlantern, Kithmason: the `human` label, or a
+- plot, Scionhall, Farlantern, Kithmason: the `human` label, or a
   latest review verdict of ESCALATE with no later decision. Same rule as
   Proofdelve's Keep (measured identical on 2026-10-03: the same ten beads).
 - Manyhalls and Proofdelve set `whoseMove`: the board is the open beads
