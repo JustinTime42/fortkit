@@ -238,6 +238,21 @@ build_mask() {
   done
   if [ "$mask_ssh_auth_sock" = "1" ]; then
     MASK_FILES+=("${SSH_AUTH_SOCK:-/nonexistent}")
+    # AND THE AGENT SOCKETS THAT EXIST WHETHER OR NOT THE LAUNCHING SHELL NAMES ONE
+    # (Regent sitting 2026-11-20, fortkit-awlc). The line above masks the path in
+    # SSH_AUTH_SOCK. A launcher started from an environment without that
+    # variable (cron, a login with no agent, a unit whose manager does not carry
+    # it) masked nothing, and the agent's socket is a fixed, guessable path.
+    # Measured from the Forge's mask on this host: launched with the variable,
+    # the agent refuses; launched without it, /run/user/<uid>/ssh-agent.socket
+    # answers and lists an identity, so the unattended seat could set the
+    # variable itself and push. The well-known per-user sockets are masked by
+    # path; each is existence-guarded like every other mask.
+    local agent_sock agent_run="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    for agent_sock in "$agent_run/ssh-agent.socket" "$agent_run/keyring/ssh" "$agent_run/gcr/ssh" \
+                      "$agent_run/gnupg/S.gpg-agent.ssh" "$agent_run/openssh_agent"; do
+      MASK_FILES+=("$agent_sock")
+    done
   fi
   # Caller-declared masks (--mask-file). Joined here so they ride the same
   # existence-guarded bind pass as every other MASK_FILES entry, and are
@@ -601,8 +616,10 @@ build_mask() {
   # nothing here binds. The launch proceeds, because refusing would stop every
   # seat on a host with a damaged registry; the warning is the record.
   reg="${FORT_REGISTRY:-$HOME/.claude/civilization.json}"
-  if ! command -v jq >/dev/null 2>&1 || [ ! -r "$reg" ]; then
-    echo "seat-sandbox: WARNING: cannot read the fort registry ($reg) or jq is missing; other forts are NOT bound read-only in this mask" >&2
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "seat-sandbox: WARNING: jq is missing, so no registry can be read; other forts are NOT bound read-only in this mask" >&2
+  elif [ ! -r "$reg" ]; then
+    echo "seat-sandbox: WARNING: cannot read the civilization registry ($reg); the forts it lists are NOT bound read-only in this mask (a second registry, if readable, is still honoured)" >&2
   fi
   if command -v jq >/dev/null 2>&1; then
     for reg in "${FORT_REGISTRY:-$HOME/.claude/civilization.json}" "$HOME/.claude/greenlab.json"; do

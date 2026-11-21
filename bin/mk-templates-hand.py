@@ -130,6 +130,15 @@ v = v[:a] + v[b:]
 v = sub1(v, "run_step shellcheck shellcheck -x bin/fort-init bin/regent bin/refresh-templates fort/scripts/*.sh fort/scripts/lib/*.sh civ/scripts/*.sh scripts/*.sh", "run_step shellcheck shellcheck -x fort/scripts/*.sh fort/scripts/lib/*.sh scripts/*.sh")
 v = sub1(v, "run_step beads-export scripts/beads-export-check.sh\n",
          "# THE PRODUCT GATE, A STUB (see the head of this file). Replace the function body\n# with this fort's own build, lint and tests, split into run_step calls of their own\n# above this line if a tier should be able to skip them, and delete the stub.\nproduct_gate_stub() {\n  echo 'product-gate: NO PRODUCT GATE IS WIRED. Every machinery step above ran; this fort has not yet said how its own code is built and tested. Edit scripts/verify-impl.sh.' >&2\n  return 1\n}\nrun_step product-gate product_gate_stub\n")
+# The Forge's gate-1 bind and its harness are Manyhalls's alone (mk-templates.py does
+# not ship scripts/forge-gate1-mask-harness.sh), so the factory's verifier must not
+# call it. The workbench mask harness is shipped and its step stays.
+v = sub1(v, 'run_step forge-gate1-mask-harness mask_harness_step forge-gate1-mask-harness "$repo_root/fort/scripts/forge.sh"\n', "")
+v = sub1(v, "workbench-mask-harness and forge-gate1-mask-harness build a real mask", "workbench-mask-harness builds a real mask")
+v = sub1(v, "the tokens, the gate-1 surface, the ssh agent. They refuse inside a seat mask", "the tokens. It refuses inside a seat mask")
+v = sub1(v, "(a mask cannot build a mask), and until now that meant they ran only when", "(a mask cannot build a mask), and until now that meant it ran only when")
+v = sub1(v, "Regent) they now run as steps. Inside a seat mask, or where bwrap is absent,", "Regent) it now runs as a step. Inside a seat mask, or where bwrap is absent,")
+v = sub1(v, "# THE MASK HARNESSES ARE GATE STEPS ON THE HOST, AND SAY SO WHERE THEY CANNOT RUN", "# THE MASK HARNESS IS A GATE STEP ON THE HOST, AND SAYS SO WHERE IT CANNOT RUN")
 v = v.replace("/home/justin/dev/fortkit", "{{REPO_PATH}}").replace("/home/justin", "{{HOME}}")
 v = common(v)
 v = re.sub(r"fortkit-(?![a-z0-9{])", "{{BEAD_PREFIX}}-", v)

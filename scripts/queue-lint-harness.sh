@@ -1,6 +1,23 @@
 #!/bin/bash
 # Hermetic regression harness for Proofdelve ForgeOs-eng3.12 turn-taking checks.
 set -uo pipefail
+# NOTHING THIS HARNESS STARTS OUTLIVES IT (Regent sitting 2026-11-19, fortkit-awlc).
+# Its fixtures start long sleeps (a stub bd that sleeps past the linter's timeout).
+# Killing the pid that was started is not enough: `flock f sleep 300` and
+# `bash -c 'sleep 300; :'` leave the sleep behind as an orphan, and 20 of those
+# were found holding the fleet's run lock after a verifier run. Every process
+# this harness starts inherits FORT_HARNESS_TAG, and the EXIT trap kills every
+# process that carries it, whoever its parent is by then.
+export FORT_HARNESS_TAG="fh-$$-$RANDOM"
+reap_tagged() {
+  local p pid
+  for p in /proc/[0-9]*; do
+    pid="${p#/proc/}"
+    [ "$pid" = "$$" ] && continue
+    if grep -qzx "FORT_HARNESS_TAG=$FORT_HARNESS_TAG" "$p/environ" 2>/dev/null; then kill -KILL "$pid" 2>/dev/null; fi
+  done
+  return 0
+}
 
 # The production default must not be inherited from a caller running this
 # harness. Individual timeout cases set their value explicitly below.
@@ -52,7 +69,7 @@ fi
 tmp_base="$(mktemp -d)"; tmp_link="${tmp_base}-link"
 ln -s "$tmp_base" "$tmp_link"
 TMPDIR="$tmp_link"; export TMPDIR
-work="$(mktemp -d "$TMPDIR/queue-lint.XXXXXX")"; trap 'rm -rf "$tmp_link" "$tmp_base"' EXIT
+work="$(mktemp -d "$TMPDIR/queue-lint.XXXXXX")"; trap 'reap_tagged; rm -rf "$tmp_link" "$tmp_base"' EXIT
 repo="$work/repo"; stub="$work/stub"; workers="$work/fleet/workers"
 real_python3="$(command -v python3)"
 mkdir -p "$repo/scripts/unattended-fleet" "$repo/fort/scripts" "$stub" "$workers"

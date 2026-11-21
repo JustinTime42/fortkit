@@ -379,7 +379,10 @@ else echo "  FAIL  smoke: incomplete run left no honest result.json -- $(cat "$w
 echo
 echo "SMOKE PROMPT (Proofdelve ForgeOs-ixud)"
 smoke_prompt="$work/smoke-prompt.txt"
-if WARDEN_SMOKE=1 WARDEN_BRIEF_ONLY=1 bash "$target" HARNESS-1 HEAD~1..HEAD >"$smoke_prompt" 2>"$work/smoke-prompt.err"; then
+# XDG_DATA_HOME points into the scratch directory: warden.sh makes its per-review root
+# under it before anything else, and with the real HOME this case failed wherever HOME
+# is read-only, the Warden's own reproduction included (her finding 3 on 98b6dd1).
+if XDG_DATA_HOME="$work/xdg-data" WARDEN_SMOKE=1 WARDEN_BRIEF_ONLY=1 bash "$target" HARNESS-1 HEAD~1..HEAD >"$smoke_prompt" 2>"$work/smoke-prompt.err"; then
   smoke_prompt_case() {  # $1 name, $2 fixed string that must appear in the generated prompt, $3 fixed string that must NOT (or -)
     if grep -qF -- "$2" "$smoke_prompt" && { [ "$3" = - ] || ! grep -qF -- "$3" "$smoke_prompt"; }; then
       echo "  PASS  smoke-prompt: $1"; pass=$((pass+1))

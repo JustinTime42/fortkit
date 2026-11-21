@@ -787,6 +787,28 @@ run_step signature-source-harness env FLEET_SH="$repo_root/fort/scripts/fleet.sh
 # main into the session branch on the host before the seat starts, because the seat cannot
 # once main has changed fort/scripts. Five outcomes on fixture repositories.
 run_step workbench-merge-harness env WORKBENCH_SH="$repo_root/fort/scripts/workbench.sh" bash "$(harness_path workbench-merge-harness)"
+# THE MASK HARNESS IS A GATE STEP ON THE HOST, AND SAYS SO WHERE IT CANNOT RUN
+# (Regent sitting 2026-11-20, fortkit-awlc; the Warden's findings on 98b6dd1 and
+# 7738e76). workbench-mask-harness builds a real mask
+# with bwrap and read permissions from inside it: the Keep stores, other forts,
+# the tokens. It refuses inside a seat mask
+# (a mask cannot build a mask), and until now that meant it ran only when
+# someone remembered to. On the host (the fleet's own verify, the nightly, the
+# Regent) it now runs as a step. Inside a seat mask, or where bwrap is absent,
+# the step prints NOT CHECKED and passes: a seat's green says nothing about
+# these properties and its output says so.
+mask_harness_step() {  # $1 harness basename, $2 the launcher it measures
+  if [ -n "${FORT_MASKED:-}" ]; then
+    echo "verify: $1 NOT CHECKED — this run is inside the '$FORT_MASKED' seat mask, and a mask cannot build a mask. The host verify runs it." >&2
+    return 0
+  fi
+  if ! command -v bwrap >/dev/null 2>&1 || ! bwrap --bind / / --dev /dev -- /bin/true >/dev/null 2>&1; then
+    echo "verify: $1 NOT CHECKED — bwrap is missing or user namespaces are unavailable here." >&2
+    return 0
+  fi
+  bash "$(harness_path "$1")" "$2"
+}
+run_step workbench-mask-harness mask_harness_step workbench-mask-harness "$repo_root/fort/scripts/workbench.sh"
 # branch-reaper-harness (Proofdelve ForgeOs-043u item A, from the Warden's finding 1 on
 # Proofdelve ForgeOs-u1m3: "Until wired, the harness exists and nothing runs it"). It landed
 # with u1m3 and nothing executed it for two days, for the same reason the sweep

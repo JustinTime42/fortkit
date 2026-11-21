@@ -46,22 +46,30 @@ for d in templates schema skills civ; do echo "root_$d=$(c "$r/$d")"; echo "wt_$
 echo "root_src=$(c "$r/src")"
 echo "decoy_civ=$(cat "$r/civ/keep/.env.local" 2>/dev/null | wc -c)"
 echo "decoy_src=$(cat "$r/src/.env.local" 2>/dev/null | wc -c)"
+echo "agent=$(cat "$3/ssh-agent.socket" 2>/dev/null | wc -c)"
 IN
 
 # The launcher's own mask lines, cut from the subject. Refuse on an empty cut.
 block_of() { sed -n '/^keep_token=/,/^seat_build_env/p' "$1"; }
-probe() {  # $1 forge.sh, $2 posture -> key=value lines
-  local b; b="$(block_of "$1")"
+# A STAND-IN AGENT SOCKET (Regent sitting 2026-11-20, fortkit-awlc). The lib masks the
+# well-known per-user agent sockets under XDG_RUNTIME_DIR whether or not the launching
+# shell has SSH_AUTH_SOCK. A plain file stands in for the socket: masked, it reads 0
+# bytes. Every probe here runs WITHOUT SSH_AUTH_SOCK, the case that used to mask nothing.
+mkdir -p "$fx/run"; printf 'FIXTURE-AGENT\n' > "$fx/run/ssh-agent.socket"
+agent_host="$(wc -c < "$fx/run/ssh-agent.socket")"
+probe() {  # $1 forge.sh, $2 posture, [$3 lib] -> key=value lines
+  local b use_lib="${3:-$lib}"; b="$(block_of "$1")"
   [ -n "$b" ] || { echo "cut=EMPTY"; return; }
   # shellcheck disable=SC2030,SC2031  # each probe sets its own environment in its own subshell
-  ( export FORT_SANDBOX="$2" FORT_REGISTRY="$fx/registry.json"
+  ( export FORT_SANDBOX="$2" FORT_REGISTRY="$fx/registry.json" XDG_RUNTIME_DIR="$fx/run"
+    unset SSH_AUTH_SOCK
     mask=()
-    # shellcheck disable=SC1090  # the lib beside the subject, by design
-    source "$lib" 2>/dev/null || { echo "mask=FAILED"; exit 0; }
+    # shellcheck disable=SC1090  # the lib beside the subject (or a red-arm copy), by design
+    source "$use_lib" 2>/dev/null || { echo "mask=FAILED"; exit 0; }
     # shellcheck disable=SC2034  # root, wt and bead are read by the evaluated block
     bead=fixture-b1
     eval "$b" >/dev/null 2>&1 || { echo "mask=FAILED"; exit 0; }
-    bwrap "${mask[@]}" -- /bin/bash "$fx/in.sh" "$root" "$wt" 2>/dev/null )
+    bwrap "${mask[@]}" -- /bin/bash "$fx/in.sh" "$root" "$wt" "$fx/run" 2>/dev/null )
 }
 pass=0; fail=0
 check() { if [ "$2" = "$3" ]; then echo "PASS  $1 ($2)"; pass=$((pass+1)); else echo "FAIL  $1 (got '$2', want '$3')"; fail=$((fail+1)); fi; }
@@ -76,6 +84,7 @@ for posture in full secrets-only; do
   check "[$posture] VACUITY: the Forge's own worktree templates/ IS writable" "$(val "$out" wt_templates)" yes
   check "[$posture] a secret-named file under the root's civ/ reads empty" "$(val "$out" decoy_civ)" 0
   check "[$posture] and one under the root's src/ reads empty (the lib's own sweep)" "$(val "$out" decoy_src)" 0
+  check "[$posture] the agent socket is masked with NO SSH_AUTH_SOCK in the launching environment" "$(val "$out" agent)" 0
 done
 check "VACUITY: the decoy is non-empty on the host" "$([ "$decoy_host" -gt 0 ] && echo yes || echo no)" yes
 
@@ -97,6 +106,15 @@ else
   out="$(probe "$red2" secrets-only)"
   check "RED ARM 2 (paths appended after build_mask): the root's templates/ is read-only" "$(val "$out" root_templates)" no
   check "RED ARM 2: and the decoy secret under civ/ reads in full" "$(val "$out" decoy_civ)" "$decoy_host"
+fi
+# RED ARM 3: the lib without its well-known-socket loop masks only what SSH_AUTH_SOCK
+# names, and with the variable unset that is nothing.
+redlib="$fx/lib-red.sh"
+sed '/^    local agent_sock agent_run=/,/^    done$/d' "$lib" > "$redlib"
+if cmp -s "$redlib" "$lib"; then echo "NOT RUN  red arm 3: the agent-socket loop was not found in $lib"; fail=$((fail+1))
+else
+  out="$(probe "$forge" secrets-only "$redlib")"
+  check "RED ARM 3 (the lib's agent-socket loop removed): the stand-in agent reads in full" "$(val "$out" agent)" "$agent_host"
 fi
 echo "RESULT pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]
