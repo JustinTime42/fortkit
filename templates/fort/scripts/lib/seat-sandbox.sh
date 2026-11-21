@@ -737,31 +737,49 @@ build_mask() {
   # ~/.ssh stays masked: keys are never readable here. An agent-held identity
   # signs instead, so a seat uses a key it cannot read (`ssh-add`, or
   # AddKeysToAgent yes in ~/.ssh/config).
-  # NO SOURCE FILE A SEAT CAN REACH (Regent sitting 2026-11-20, fortkit-awlc; the
-  # Warden's findings on batch 1 and on 52f09b2). This config was first written to
-  # /tmp/fort-ssh-<pid>, which no launcher can remove (they exec into bwrap): 239
-  # directories stood in /tmp after two days, and in secrets-only /tmp is shared,
-  # so a seat could plant a symlink at the next launcher's guessable name and have
-  # the UNMASKED launcher write through it. Moving it under ~/.cache kept the
-  # plant and widened it to the full posture, where ~/.cache is a seat's to write.
-  # Now: a temp file made with mktemp (a random name, created exclusively, so
-  # nothing can be planted in its place), opened on a descriptor and unlinked at
-  # once. bwrap copies the descriptor's content into the mask (--ro-bind-data);
-  # no path to it exists after this function returns, and nothing accumulates.
-  # ONE MASK, ONE bwrap: the descriptor is read to its end by the first bwrap
-  # that uses this mask. A caller that runs bwrap twice on one mask (a probe)
-  # gives the second an EMPTY ssh client config, which is harmless there and
-  # would be wrong for a seat. Every launcher builds a mask and execs once.
-  local fort_ssh_tmp fort_ssh_fd
-  fort_ssh_tmp="$(mktemp "${TMPDIR:-/tmp}/fort-ssh.XXXXXXXXXX")" || { echo "seat-sandbox: cannot create a temp file for the ssh client config" >&2; return 1; }
-  {
-    printf '# Generated per launch by seat-sandbox.sh; copied into the mask, no file on disk.\n'
-    printf 'Host *\n'
-    printf '  StrictHostKeyChecking accept-new\n'
-    printf '  UserKnownHostsFile %s/.ssh/known_hosts\n' "$HOME"
-  } > "$fort_ssh_tmp"
-  exec {fort_ssh_fd}<"$fort_ssh_tmp"
-  rm -f "$fort_ssh_tmp"
+  # NO FILE, AT ANY MOMENT (Regent sitting 2026-11-20, fortkit-awlc; the Warden's
+  # findings on batch 1, on 52f09b2 and on 87139a9). The history is the reason
+  # for the shape:
+  #   /tmp/fort-ssh-<pid>      no launcher can remove it (they exec into bwrap):
+  #                            239 directories in two days. In secrets-only /tmp
+  #                            is shared, so a seat could plant a symlink at the
+  #                            next launcher's guessable name and have the
+  #                            UNMASKED launcher write through it.
+  #   ~/.cache/fort-ssh        the same plant, now in the full posture too.
+  #   mktemp, open, unlink     a random name, but a name: she raced it with an
+  #                            inotify watcher and swapped in a symlink 292
+  #                            times in 300.
+  # So the text goes from this shell's memory into a PIPE (a here-document) and
+  # bwrap copies it into the mask from that descriptor (--ro-bind-data). There
+  # is nothing on disk to plant, swap or leave behind. The pipe is asserted: a
+  # bash that backed a here-document with a temp file would bring the race back.
+  #
+  # TWO CONSEQUENCES FOR A CALLER, both real:
+  #  - ONE MASK, ONE bwrap. The first bwrap reads the descriptor to its end. A
+  #    second bwrap on the same mask[] gets an EMPTY config.
+  #  - THE MASK DOES NOT TRAVEL. The descriptor belongs to the shell that called
+  #    build_mask. A mask[] printed from a subshell and run by its parent names a
+  #    descriptor that is closed there, and bwrap fails ("Bad file descriptor").
+  # A caller in either position (a pre-flight before the session, a probe that
+  # builds in a subshell or reuses a mask) calls mask_sans_ssh_config and uses
+  # probe_mask[], which omits the config. Every seat launcher builds one mask in
+  # its own shell and runs bwrap on it once.
+  local fort_ssh_fd fort_ssh_kind
+  exec {fort_ssh_fd}<<FORT_SSH_CONFIG
+# Generated per launch by seat-sandbox.sh; copied into the mask from a pipe.
+Host *
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile $HOME/.ssh/known_hosts
+FORT_SSH_CONFIG
+  # /proc/self, read by readlink itself: the descriptor is inherited by that
+  # child, and $$ is the wrong process when build_mask runs in a subshell (the
+  # harnesses do; the first draft used $$ and refused every one of them).
+  fort_ssh_kind="$(readlink "/proc/self/fd/$fort_ssh_fd" 2>/dev/null || true)"
+  case "$fort_ssh_kind" in
+    pipe:*) ;;
+    *) echo "seat-sandbox: REFUSED: the ssh client config's descriptor is '${fort_ssh_kind:-unreadable}', not a pipe; this shell backs here-documents with a file a seat could race" >&2
+       return 1 ;;
+  esac
   mask+=(--tmpfs /etc/ssh --ro-bind-data "$fort_ssh_fd" /etc/ssh/ssh_config)
 
   # Git hooks under .beads run on the HOST, unsandboxed, on the next commit or
@@ -847,12 +865,12 @@ build_mask() {
   return 0
 }
 
-# A MASK FOR A PRE-FLIGHT, WITHOUT THE ssh CLIENT CONFIG. build_mask hands the ssh
-# config to bwrap on a descriptor that the FIRST bwrap reads to its end (see "NO
-# SOURCE FILE A SEAT CAN REACH" above). A launcher that must run bwrap on its
-# mask before the session's own bwrap (civ/scripts/herald.sh proves a bind with
-# one) calls this and uses probe_mask[] for that earlier run, so the session
-# still gets the config. Fills probe_mask[] from mask[].
+# A MASK WITHOUT THE ssh CLIENT CONFIG, for any use of a mask other than the one
+# bwrap that starts the seat (see "NO FILE, AT ANY MOMENT" above): a pre-flight
+# before the session (civ/scripts/herald.sh proves a bind with one), a probe
+# that runs bwrap several times on one mask, and a probe that builds the mask
+# in a subshell and prints it for its parent to run (probe-boundaries.sh).
+# Fills probe_mask[] from mask[].
 mask_sans_ssh_config() {
   probe_mask=()
   local a skip=0

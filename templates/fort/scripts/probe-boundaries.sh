@@ -399,7 +399,12 @@ else
         # and the main checkout (warden.sh's own default for src).
         warden) keep_token="${XDG_CONFIG_HOME:-$HOME/.config}/civ-keep/signing-token"; feedback_token="$feedback_fixture"; scratch="$t3_scratch"; src="$root"; t3_line="$(launcher_build_line "$root/fort/scripts/warden.sh")"; case "$t3_line" in "build_mask claude "*) ;; *) echo "warden.sh: no column-one 'build_mask claude' line to evaluate (got: ${t3_line:-nothing})" >&2; exit 1 ;; esac; eval "$t3_line"; mask_env claude; seat_identity warden; seat_build_env ;;
       esac
-      printf '%s\0' "${mask[@]}"
+      # probe_mask[], not mask[]: the mask carries the ssh client config on a
+      # descriptor that is closed in this subshell's parent and is consumed by
+      # the first bwrap in any case (lib/seat-sandbox.sh, mask_sans_ssh_config).
+      mask_sans_ssh_config
+      # shellcheck disable=SC2154  # probe_mask is filled by mask_sans_ssh_config
+      printf '%s\0' "${probe_mask[@]}"
     )
   }
   t3_scratch="$(mktemp -d "${TMPDIR:-/tmp}/warden-probe-XXXXXX")"
@@ -463,7 +468,12 @@ else
       # is substituted, so the line stays the launcher's.
       eval "${t3_line//\$wt/\$forge_wt}"
       mask_env codex; seat_identity forge; seat_build_env
-      printf '%s\0' "${mask[@]}"
+      # probe_mask[], not mask[]: the mask carries the ssh client config on a
+      # descriptor that is closed in this subshell's parent and is consumed by
+      # the first bwrap in any case (lib/seat-sandbox.sh, mask_sans_ssh_config).
+      mask_sans_ssh_config
+      # shellcheck disable=SC2154  # probe_mask is filled by mask_sans_ssh_config
+      printf '%s\0' "${probe_mask[@]}"
     )
   }
   if build_forge_mask > "$runs/mask-forge.bin" 2>"$runs/mask-forge.bin.err" && [ -s "$runs/mask-forge.bin" ]; then
