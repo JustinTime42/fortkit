@@ -163,8 +163,12 @@ mask+=(--ro-bind "$lockfile" "$lockfile")
 bind_ok=1
 if [ -f "$voice" ]; then
   bind_ok=0
-  # shellcheck disable=SC2016  # $1 is meant for the inner sh, not this shell
-  if ! bind_err="$(bwrap "${mask[@]}" 9>&- -- sh -c ': >> "$1"' _ "$voice" 2>&1 >/dev/null)" \
+  # probe_mask[], not mask[]: the mask carries the ssh client config on a
+  # descriptor the first bwrap consumes, and this pre-flight runs before the
+  # session (lib/seat-sandbox.sh, mask_sans_ssh_config; fortkit-awlc).
+  mask_sans_ssh_config
+  # shellcheck disable=SC2016,SC2154  # $1 is meant for the inner sh; probe_mask is filled by mask_sans_ssh_config
+  if ! bind_err="$(bwrap "${probe_mask[@]}" 9>&- -- sh -c ': >> "$1"' _ "$voice" 2>&1 >/dev/null)" \
      && grep -q 'Read-only file system' <<<"$bind_err"; then
     bind_ok=1
   fi
