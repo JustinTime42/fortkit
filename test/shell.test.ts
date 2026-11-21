@@ -736,6 +736,13 @@ describe("fort-init", { timeout: 120_000 }, () => {
       await expect(
         execFileAsync("bash", ["fort/scripts/status.sh"], { cwd: root }),
       ).resolves.toMatchObject({ stdout: expect.any(String) });
+      // A FOUNDED FORT SHIPS ITS FLEET DISABLED, whatever the capital is running
+      // (the Warden's finding 1 on 664de85). The only other control is a rule in
+      // bin/mk-templates.py; with Manyhalls's fleet enabled for a test, a
+      // regeneration once wrote FLEET_ENABLED=1 into the factory.
+      expect(
+        await readFile(join(root, "fort/scripts/fleet.conf"), "utf8"),
+      ).toMatch(/^FLEET_ENABLED=0$/m);
       // THE PRODUCT GATE IS A STUB (Regent sitting 2026-11-18, fortkit-ttpk, docket
       // T10): the founded verifier runs its own lints and then fails at the step
       // named product-gate, by design, until the fort wires its build and tests.

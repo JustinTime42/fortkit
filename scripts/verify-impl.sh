@@ -467,6 +467,16 @@ emit verify.run "Verifier started on ${tree_branch}" -p "{\"steps\":${steps_json
 # to all of them) and said so on the bead, and all three directories were then
 # measured clean of untracked files before this widening was written. A gate that
 # goes red on day one and stays red is a gate somebody disables.
+# A STEP THAT COULD NOT CHECK SAYS SO IN THE RECORD, NOT ONLY ON STDERR (Regent
+# sitting 2026-11-20, fortkit-awlc; the Warden's finding 1 on batch 1). Printing
+# NOT CHECKED and returning 0 left the step reading PASS in quiet mode and the
+# verify.pass event carrying skippedSteps: []. run_step's skip file is the
+# mechanism for exactly this (Proofdelve ForgeOs-4webo): one line of why, and
+# the step is shown as SKIP and listed. The exit code is unchanged.
+step_not_checked() {  # $1 one line of why
+  if [ -n "${VERIFY_STEP_SKIP_FILE:-}" ]; then printf '%s\n' "$1" > "$VERIFY_STEP_SKIP_FILE" 2>/dev/null || true; fi
+  return 0
+}
 locked_dirs=(fort/scripts .claude fort/profiles)
 
 locked_dir_clean() {
@@ -474,6 +484,7 @@ locked_dir_clean() {
   if ! git rev-parse --git-dir >/dev/null 2>&1; then
     echo "verify: locked-dir-clean NOT CHECKED — not inside a git tree, so untracked" >&2
     echo "        files under ${locked_dirs[*]} cannot be enumerated here (Proofdelve ForgeOs-x0ki)." >&2
+    step_not_checked "not inside a git tree"
     return 0
   fi
   # NAMED PER DIRECTORY, not as one merged list: a reader has to know WHICH
@@ -511,6 +522,7 @@ root_evidence_clean() {
   local stray
   if ! git rev-parse --git-dir >/dev/null 2>&1; then
     echo "verify: root-evidence-clean NOT CHECKED — not inside a git tree (Proofdelve ForgeOs-hmdo8)." >&2
+    step_not_checked "not inside a git tree"
     return 0
   fi
   stray="$( { git ls-files; git ls-files --others --exclude-standard; } \
@@ -541,6 +553,7 @@ untracked_source_clean() {
   local stray
   if ! git rev-parse --git-dir >/dev/null 2>&1; then
     echo "verify: untracked-source-clean NOT CHECKED — not inside a git tree (Proofdelve ForgeOs-ju6r8)." >&2
+    step_not_checked "not inside a git tree"
     return 0
   fi
   stray="$(git ls-files --others --exclude-standard -- "${untracked_source_paths[@]}")"
@@ -999,15 +1012,18 @@ run_step workbench-merge-harness env WORKBENCH_SH="$repo_root/fort/scripts/workb
 # (a mask cannot build a mask), and until now that meant they ran only when
 # someone remembered to. On the host (the fleet's own verify, the nightly, the
 # Regent) they now run as steps. Inside a seat mask, or where bwrap is absent,
-# the step prints NOT CHECKED and passes: a seat's green says nothing about
-# these properties and its output says so.
+# the step prints NOT CHECKED, is recorded as SKIP (step_not_checked), and does
+# not fail the run: a seat's green says nothing about these properties, and
+# both its output and its verify.pass event say so.
 mask_harness_step() {  # $1 harness basename, $2 the launcher it measures
   if [ -n "${FORT_MASKED:-}" ]; then
     echo "verify: $1 NOT CHECKED — this run is inside the '$FORT_MASKED' seat mask, and a mask cannot build a mask. The host verify runs it." >&2
+    step_not_checked "inside the '$FORT_MASKED' seat mask"
     return 0
   fi
   if ! command -v bwrap >/dev/null 2>&1 || ! bwrap --bind / / --dev /dev -- /bin/true >/dev/null 2>&1; then
     echo "verify: $1 NOT CHECKED — bwrap is missing or user namespaces are unavailable here." >&2
+    step_not_checked "bwrap or user namespaces unavailable"
     return 0
   fi
   bash "$(harness_path "$1")" "$2"

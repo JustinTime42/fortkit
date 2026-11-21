@@ -8,6 +8,9 @@ set -uo pipefail
 # were found holding the fleet's run lock after a verifier run. Every process
 # this harness starts inherits FORT_HARNESS_TAG, and the EXIT trap kills every
 # process that carries it, whoever its parent is by then.
+# TWO SHAPES IT CANNOT REACH (the Warden, measured): a forked subshell that never
+# execs, and a child started with `env -i`. /proc/<pid>/environ is the environment
+# at exec time. No fixture here uses either; one that does needs its own kill.
 export FORT_HARNESS_TAG="fh-$$-$RANDOM"
 reap_tagged() {
   local p pid

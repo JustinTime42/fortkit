@@ -7,7 +7,8 @@
 # Evaluates the SHIPPED forge.sh's own mask lines (from the keep_token line to
 # seat_build_env) against a fixture fort under ~/dev, and reads permissions from
 # inside bwrap. Nothing is written from inside the mask. HOST ONLY: it refuses
-# inside a seat mask, so it is not a verifier step (the verifier runs in masks).
+# inside a seat mask. It is a verifier step all the same (scripts/verify-impl.sh,
+# mask_harness_step): the step runs it on the host and records SKIP inside a mask.
 #
 # TWO PROPERTIES. (1) The four root directories are read-only. (2) A secret-named
 # file under them still reads EMPTY: a subtree bind laid after the lib's secret

@@ -3816,6 +3816,39 @@ describe("civ keep allowlist", () => {
       loaded.find((fort: { key: string }) => fort.key === "out")?.registryPath,
     ).toBe(greenlab);
   });
+
+  // The per-fort table in lib/forts.mjs decides whose board is "assigned to the
+  // Overseer" and who a declined bead goes back to. Manyhalls joined Proofdelve
+  // there on 2026-11-20 (fortkit-awlc): without its entry a signed bead was
+  // never handed back and the fleet's first signed landing stalled. Nothing
+  // pinned the table until this case (the Warden's finding 6 on batch 1).
+  test("the real per-fort table gives fortkit and ForgeOs a whoseMove, and no other fort", () => {
+    const home = "/home/reader";
+    const production = join(home, ".claude/civilization.json");
+    const loaded = loadForts({
+      env: { HOME: home },
+      fileSystem: {
+        readFileSync: (file: string) => {
+          if (file !== production) throw new Error("absent");
+          return JSON.stringify({
+            civilization: "Justin",
+            forts: [
+              { repo: "/srv/f", project: "fortkit", fort_name: "Manyhalls" },
+              { repo: "/srv/p", project: "ForgeOs", fort_name: "Proofdelve" },
+              { repo: "/srv/l", project: "longburn", fort_name: "Farlantern" },
+            ],
+          });
+        },
+        existsSync: () => false,
+      },
+    });
+    const move = (project: string) =>
+      loaded.find((fort: { project: string }) => fort.project === project)
+        ?.whoseMove;
+    expect(move("fortkit")).toEqual({ assignee: "justin", mayor: "emrith" });
+    expect(move("ForgeOs")).toEqual({ assignee: "justin", mayor: "marrek" });
+    expect(move("longburn")).toBeNull();
+  });
 });
 
 // The Overseer store (ForgeOs-72ot.1, ForgeOs-ubgx.4): airlock approvals and the
