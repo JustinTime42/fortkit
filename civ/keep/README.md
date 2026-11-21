@@ -67,8 +67,12 @@ read or update the Keep's summary state.
 - Proofdelve, plot, Scionhall, Farlantern, Kithmason: the `human` label, or a
   latest review verdict of ESCALATE with no later decision. Same rule as
   Proofdelve's Keep (measured identical on 2026-10-03: the same ten beads).
-- Manyhalls: `gate-1`, `gate-2`, `gate-3` or `human` (the capital's documented
-  "waiting on the Overseer" signal).
+- Manyhalls and Proofdelve set `whoseMove`: the board is the open beads
+  ASSIGNED to the Overseer, and an answer hands the bead back (to the fleet on
+  an approval, to the fort's Mayor otherwise). Manyhalls joined on 2026-11-20,
+  after its re-founding on Proofdelve's fleet; until then its board was the
+  `gate-1`, `gate-2`, `gate-3` and `human` labels, which are still removed on
+  an answer.
 
 ## What the desk writes
 

@@ -26,8 +26,17 @@ import fs from "node:fs";
 import path from "node:path";
 
 const waitingOverrides = { fortkit: ["gate-1", "gate-2", "gate-3", "human"] };
+// fortkit joined on 2026-11-20 (fortkit-awlc, the Overseer's approval recorded on
+// the bead). Manyhalls was re-founded on Proofdelve's fleet, which assigns a bead
+// to the Overseer when it holds it for his signature; without an entry here the
+// Keep never handed a signed bead back, the fleet's claim was refused and its
+// first signed landing stalled (fortkit-p97b). fortkit's waitingOverrides entry
+// above stays: with whoseMove set those labels no longer decide the board, and
+// they are still removed on an answer, which clears the old gate-1/2/3 labels
+// as the beads that carry them are answered.
 const whoseMoveOverrides = {
   ForgeOs: { assignee: "justin", mayor: "marrek" },
+  fortkit: { assignee: "justin", mayor: "emrith" },
 };
 
 function readRegistry(file, fileSystem) {
