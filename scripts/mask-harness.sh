@@ -216,8 +216,23 @@ assert_ro "A7e civ/profiles not writable"   "$ROOT/civ/profiles/regent.json"
 assert_ro "A7f .git/config not writable"    "$ROOT/.git/config"
 assert_rw "A7g src/ IS writable (real work)" "$ROOT/src/app.ts"
 assert_ro "A8a 5sk ~/.claude/civilization.json RO" "$HOME/.claude/civilization.json"
-assert_ro "A8b 5sk ~/.claude/skills RO"            "$HOME/.claude/skills/civ/SKILL.md"
-assert_ro "A8c 5sk ~/.claude/commands RO"          "$HOME/.claude/commands/park.md"
+# A8b: this entry is a symlink into the capital's skills/ tree, which is gate 1
+# and read-only to every masked seat. The link's target is what is protected.
+assert_ro "A8b 5sk ~/.claude/skills/civ (a link into the capital's gate-1 skills/) RO" "$HOME/.claude/skills/civ/SKILL.md"
+# A8c and A8f: USER-LEVEL skills and commands are WRITABLE in a Manyhalls mask.
+# The lib has provided that since the re-founding (Proofdelve ForgeOs-yhn44) and
+# the Overseer confirmed it for this fort on 2026-11-23 (fortkit-prf3). Until
+# then A8c expected read-only and was this harness's one failure. Tested with
+# [ -w ], which writes nothing: these are his real files, and assert_rw appends
+# a byte (the fortkit-qbq2 scar, described above).
+for a8 in "A8c ~/.claude/commands/park.md|$HOME/.claude/commands/park.md" \
+          "A8f ~/.claude/skills (the directory, for a new user-level skill)|$HOME/.claude/skills"; do
+  out="$(inmask "[ -w '${a8#*|}' ] && echo WRITABLE || echo READONLY")"
+  case "$out" in
+    WRITABLE) ok  "${a8%%|*} IS writable (user-level, by decision)" "test -w" ;;
+    *)        bad "${a8%%|*} is writable" "$out" ;;
+  esac
+done
 assert_ro "A8d 5sk ~/.claude/plugins RO"           "$HOME/.claude/plugins/installed_plugins.json"
 out="$(inmask "touch '$HOME/.claude/teams/.e2-probe' && echo CREATED || echo BLOCKED")"
 if [ "$out" = "CREATED" ]; then
