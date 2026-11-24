@@ -1,131 +1,150 @@
 #!/bin/bash
-# Deterministic kernel-level verification of forge.sh's bwrap masks.
-# (Proofdelve ForgeOs-21f.3, Warden finding 3.) No model in the loop: a model asked to
-# probe its own boundary may DECLINE on policy grounds and report "blocked",
-# which proves nothing — that happened on the 2026-08-04 08:38 smoke run for
-# probes 9, 10, and 14. This script runs the same mask array from a shell.
+# Kernel-level checks of the Forge's mask, with no model in the loop.
+# (Proofdelve ForgeOs-21f.3, Warden finding 3: a model asked to probe its own
+# boundary may decline and report "blocked", which proves nothing.)
 #
-# Byte counts only; file CONTENTS are never printed. A masked file reads as
-# empty-and-successful, so 0 bytes = mask held, nonzero = mask FAILED.
-# Usage: fort/scripts/probe-forge-masks.sh [worktree-dir]
+# THE MASK UNDER TEST IS forge.sh's OWN (fortkit-awlc batch 2, 2026-11-24).
+# Until then this file built a mask of its own from lists kept "in lockstep
+# with forge.sh" by hand, so it measured what bwrap does with this file's
+# lists and said nothing about the launcher. It now takes the argv that
+# probe-boundaries.sh builds by evaluating forge.sh's build_mask line, and
+# runs every check inside that. It no longer runs alone: with no mask handed
+# to it, it refuses.
+#
+# Called by fort/scripts/probe-boundaries.sh as
+#   PROBE_SECRET=<decoy> PROBE_POSTURE=<full|secrets-only> \
+#     probe-forge-masks.sh <forge-worktree> 3< <(printf '%s\0' "${forge_mask[@]}")
+# The argv is the ssh-config-less form (lib: mask_sans_ssh_config), so it can
+# be run many times.
+#
+# NOTHING HERE WRITES. Writability is asked with `test -w` or by opening for
+# append without writing; where the mask is wrong, a probe that writes would
+# damage the thing it measures. Byte counts only; contents are never printed.
 set -uo pipefail
 root="{{REPO_PATH}}"
-# Default to the main checkout when no worktree is up (the original 21f.3
-# default was pruned 2026-08-04); pass the live worktree dir when one exists.
-wt="${1:-$root}"
+wt="${1:-}"
+secret="${PROBE_SECRET:-}"
+posture="${PROBE_POSTURE:-}"
 fail=0
 
-REQUIRED_MASK_FILES=(
-  "$root/.env.staging.local"
-)
-OPTIONAL_MASK_FILES=(
-  "$HOME/.netrc" "$HOME/.npmrc" "$HOME/.git-credentials"
-  /var/run/docker.sock /run/docker.sock "/run/user/$(id -u)/docker.sock"
-  "/run/user/$(id -u)/podman/podman.sock"
-  "${SSH_AUTH_SOCK:-/nonexistent}"
-)
-REQUIRED_MASK_DIRS=("$HOME/.ssh")
-OPTIONAL_MASK_DIRS=("$HOME/.aws" "$HOME/.config/gh" "$HOME/.claude" "$HOME/.docker" "$HOME/.config/git")
-# Keep in lockstep with forge.sh (Proofdelve ForgeOs-21f.5): configs readable, unwritable.
-REQUIRED_RO_PATHS=("$HOME/.codex/config.toml" "$wt/.claude" "$root/.claude")
+refuse() { echo "probe-forge-masks: REFUSES: $1" >&2; echo "PROBE refused: $1 -> FAIL"; exit 3; }
+{ true <&3; } 2>/dev/null || refuse "no mask on descriptor 3. Run fort/scripts/probe-boundaries.sh --quick, which builds forge.sh's own mask and hands it here"
+mask=(); while IFS= read -r -d '' a; do mask+=("$a"); done <&3
+exec 3<&-
+[ "${#mask[@]}" -gt 10 ] || refuse "the mask handed over has ${#mask[@]} entries; that is not a mask"
+[ -n "$wt" ] && [ -d "$wt" ] || refuse "no forge worktree given (the directory forge.sh's --rw-tree names)"
+[ "$wt" != "$root" ] || refuse "the worktree is the root checkout; forge.sh never runs there"
+[ -n "$secret" ] && [ -s "$secret" ] || refuse "PROBE_SECRET is unset, absent or empty on the host: the secret probe would have no target"
+case "$posture" in full|secrets-only) ;; *) refuse "PROBE_POSTURE='$posture' (want full or secrets-only)" ;; esac
 
-missing_target() { # <kind> <path>
-  echo "PROBE missing-target:$1:$2 -> FAIL"
-  fail=1
-}
-
-# bwrap fails a bind whose destination does not exist. Required protection
-# targets therefore fail closed before any probe runs. Defense-in-depth targets
-# are optional in forge.sh; keep those guards here too, but make every absence
-# visible so a skipped optional mask cannot be mistaken for verified coverage.
-for f in "${REQUIRED_MASK_FILES[@]}"; do [ -e "$f" ] || missing_target "mask-file" "$f"; done
-for d in "${REQUIRED_MASK_DIRS[@]}"; do [ -d "$d" ] || missing_target "mask-dir" "$d"; done
-for p in "${REQUIRED_RO_PATHS[@]}"; do [ -e "$p" ] || missing_target "ro-path" "$p"; done
-if [ "$fail" -ne 0 ]; then
-  echo "MASK PROBES FAILED — missing protected target(s)"
-  exit "$fail"
-fi
-
-mask=(--bind / / --dev /dev --die-with-parent)
-for f in "${REQUIRED_MASK_FILES[@]}"; do mask+=(--ro-bind /dev/null "$f"); done
-for d in "${REQUIRED_MASK_DIRS[@]}"; do mask+=(--tmpfs "$d"); done
-for p in "${REQUIRED_RO_PATHS[@]}"; do mask+=(--ro-bind "$p" "$p"); done
-for f in "${OPTIONAL_MASK_FILES[@]}"; do
-  if [ -e "$f" ]; then mask+=(--ro-bind /dev/null "$f")
-  else echo "PROBE optional-target-absent:$f -> NOTE"; fi
-done
-for d in "${OPTIONAL_MASK_DIRS[@]}"; do
-  if [ -d "$d" ]; then mask+=(--tmpfs "$d")
-  else echo "PROBE optional-target-absent:$d -> NOTE"; fi
-done
-while IFS= read -r h; do mask+=(--ro-bind "$h" "$h"); done \
-  < <(find "$root/.beads" -type d -name hooks 2>/dev/null)
-mask+=(--clearenv)
-for v in HOME USER LOGNAME SHELL TERM LANG LC_ALL PATH TMPDIR XDG_RUNTIME_DIR \
-         DOTNET_CLI_TELEMETRY_OPTOUT DOTNET_NOLOGO NUGET_PACKAGES \
-         CODEX_HOME OPENAI_API_KEY OPENAI_BASE_URL RUST_LOG; do
-  [ -n "${!v:-}" ] && mask+=(--setenv "$v" "${!v}")
-done
-
+inmask() { bwrap "${mask[@]}" -- bash -c "$1" 2>/dev/null; }
 check() { # <label> <expected> <actual>
   if [ "$2" = "$3" ]; then echo "PROBE $1: $3 -> PASS"
-  else echo "PROBE $1: expected $2, got $3 -> FAIL"; fail=1; fi
+  else echo "PROBE $1: expected $2, got ${3:-nothing} -> FAIL"; fail=1; fi
 }
-
-# A masked file may come back either as 0 bytes (read succeeds, content gone)
-# or as "unreadable" (EACCES — observed on this host, where SELinux refuses the
-# /dev/null device bind outright). Both mean no content is reachable; the second
-# is the stronger outcome. Anything else is a real failure.
+note() { echo "PROBE $1: $2 -> NOTE"; }
+# A masked file comes back as 0 bytes or as unreadable (EACCES; SELinux on this
+# host refuses the /dev/null bind outright). Both mean no content is reachable.
 check_unreadable() { # <label> <actual>
   if [ "$2" = "0" ] || [ "$2" = "unreadable" ]; then echo "PROBE $1: $2 -> PASS"
-  else echo "PROBE $1: expected 0 bytes or unreadable, got $2 -> FAIL"; fail=1; fi
+  else echo "PROBE $1: expected 0 bytes or unreadable, got ${2:-nothing} -> FAIL"; fail=1; fi
 }
 
-echo "=== forge.sh mask verification (kernel-level, no model) ==="
-# Keep the pass count honest (Warden finding 5, 21f.5 review): with no argument
-# the worktree probes degenerate into duplicates of the main-checkout ones.
-if [ "$wt" = "$root" ]; then
-  echo "MODE: main checkout only (no worktree arg — deploy-worktree and claude-settings-canary duplicate main-checkout paths)"
-else
-  echo "MODE: worktree $wt"
-fi
-check_unreadable "secrets-file"     "$(bwrap "${mask[@]}" -- bash -c "wc -c < '$root/.env.staging.local' 2>/dev/null || echo unreadable")"
-check "ssh-dir-entries"         0 "$(bwrap "${mask[@]}" -- bash -c "ls '$HOME/.ssh' 2>/dev/null | wc -l")"
-# shellcheck disable=SC2016 # The inner shell intentionally expands these variables.
-check "ssh-agent-sock-unset"    unset "$(bwrap "${mask[@]}" -- bash -c 'echo ${SSH_AUTH_SOCK:-unset}')"
-# shellcheck disable=SC2016 # The inner shell intentionally expands this variable.
-check "gh-token-unset"          unset "$(bwrap "${mask[@]}" -- bash -c 'echo ${GH_TOKEN:-unset}')"
-check "gh-hosts-bytes"          0 "$(bwrap "${mask[@]}" -- bash -c "wc -c < '$HOME/.config/gh/hosts.yml' 2>/dev/null || echo 0")"
-# Push must fail with no credentials reachable. Network is up in the real run,
-# so this is the honest test of "push is dead by credential denial".
-push_out=$(cd "$wt" && bwrap "${mask[@]}" -- bash -c 'GIT_TERMINAL_PROMPT=0 git push --dry-run origin HEAD 2>&1; echo "exit=$?"' | tail -1)
-check "push-dry-run"            "exit=128" "$push_out"
-check "docker-sock-bytes"       0 "$(bwrap "${mask[@]}" -- bash -c 'wc -c < /var/run/docker.sock 2>/dev/null || echo 0')"
+echo "=== forge.sh mask verification (kernel-level, no model; forge.sh's own argv, ${#mask[@]} entries, posture $posture) ==="
+echo "MODE: worktree $wt"
 
-echo "=== hooks (host-executed; every dir under .beads must be read-only) ==="
+# The mask must run at all, or every check below reads an empty string.
+check "mask-runs" ran "$(inmask 'echo ran')"
+
+echo "=== secrets and credentials ==="
+check_unreadable "secret-decoy" "$(inmask "wc -c < '$secret' 2>/dev/null || echo unreadable")"
+# The lib leaves one file in ~/.ssh, known_hosts, so host keys stay pinned.
+# No key and no config may be there.
+check "ssh-dir-other-entries" 0 "$(inmask "ls -A '$HOME/.ssh' 2>/dev/null | grep -v -x known_hosts | wc -l")"
+# shellcheck disable=SC2016 # the inner shell expands these
+check "ssh-agent-sock-unset" unset "$(inmask 'echo ${SSH_AUTH_SOCK:-unset}')"
+# shellcheck disable=SC2016
+check "gh-token-unset" unset "$(inmask 'echo ${GH_TOKEN:-unset}')"
+if [ -e "$HOME/.config/gh/hosts.yml" ]; then
+  check_unreadable "gh-hosts" "$(inmask "wc -c < '$HOME/.config/gh/hosts.yml' 2>/dev/null || echo unreadable")"
+else
+  note "gh-hosts" "no ~/.config/gh/hosts.yml on this host; nothing to mask"
+fi
+for f in "$HOME/.netrc" "$HOME/.npmrc" "$HOME/.git-credentials"; do
+  if [ -s "$f" ]; then check_unreadable "home-credential:${f##*/}" "$(inmask "wc -c < '$f' 2>/dev/null || echo unreadable")"
+  else note "home-credential:${f##*/}" "absent or empty on this host"; fi
+done
+# Push must fail with no credential reachable. The network is up, so this is
+# the honest form of "push is dead by credential denial".
+push_out="$(cd "$wt" && inmask 'GIT_TERMINAL_PROMPT=0 git push --dry-run origin HEAD 2>&1; echo "exit=$?"' | tail -1)"
+check "push-dry-run" "exit=128" "$push_out"
+
+echo "=== the Docker socket (differs by posture, on purpose) ==="
+# full masks it with /dev/null, so it is no longer a socket. secrets-only
+# leaves it: every seat has Docker there, and only the launcher prompts hold
+# against a container bind mount (the charter's posture note).
+dsock=/var/run/docker.sock
+if [ -S "$dsock" ]; then
+  d_in="$(inmask "[ -S '$dsock' ] && echo socket || echo not-a-socket")"
+  if [ "$posture" = full ]; then check "docker-socket:full" not-a-socket "$d_in"
+  else check "docker-socket:secrets-only" socket "$d_in"; fi
+else
+  note "docker-socket" "no $dsock on this host"
+fi
+
+echo "=== the user manager (fortkit-y7no) ==="
+for s in bus systemd/private systemd/io.systemd.Manager; do
+  p="/run/user/$(id -u)/$s"
+  if [ -S "$p" ]; then check "user-manager:$s" not-a-socket "$(inmask "[ -S '$p' ] && echo socket || echo not-a-socket")"
+  else note "user-manager:$s" "no $p on this host"; fi
+done
+
+echo "=== host-executed and constitutional paths are not writable ==="
 n=0
 while IFS= read -r h; do
-  n=$((n+1))
-  check "hooks-dir-$n-write" 1 "$(bwrap "${mask[@]}" -- bash -c "printf x >> '$h/pre-push' 2>/dev/null; echo \$?")"
+  n=$((n+1)); check "beads-hooks-dir-$n" readonly "$(inmask "[ -w '$h' ] && echo WRITABLE || echo readonly")"
 done < <(find "$root/.beads" -type d -name hooks 2>/dev/null)
 echo "  ($n hooks directories checked)"
+# The review-gated surface is read from forge.sh, not listed here: the
+# directories its `for gate1_dir in ...` line names (a fort with no factory has
+# no such line, and that is said), and bin/ where the lib binds it, which is a
+# fort that hosts the civilization layer.
+held=("$root/.git/config" "$root/.git/hooks" "$root/fort/scripts" "$root/fort/scripts/forge.sh" "$root/fort/profiles"
+      "$root/.claude" "$root/fort/charter.md" "$root/fort/seats" "$root/scripts/verify-impl.sh"
+      "$wt/.claude" "$wt/fort/scripts" "$wt/fort/charter.md" "$wt/fort/seats" "$wt/scripts/verify-impl.sh")
+g1_line="$(grep -E '^for gate1_dir in .*; do$' "$root/fort/scripts/forge.sh" | head -1)"
+if [ -n "$g1_line" ]; then
+  g1_line="${g1_line#for gate1_dir in }"; g1_line="${g1_line%; do}"
+  read -r -a g1_dirs <<< "$g1_line"
+  for d in "${g1_dirs[@]}"; do [ -d "$root/$d" ] && held+=("$root/$d"); done
+  echo "  (gate-1 directories named by forge.sh: ${g1_dirs[*]})"
+else
+  note "gate-1-surface" "forge.sh names no gate-1 directories in this fort"
+fi
+if [ -f "$root/civ/covenant.md" ] && [ -d "$root/bin" ]; then held+=("$root/bin"); fi
+for p in "${held[@]}"; do
+  [ -e "$p" ] || { echo "PROBE not-writable:$p: absent on the host -> FAIL"; fail=1; continue; }
+  check "not-writable:${p/#$HOME/\~}" readonly "$(inmask "[ -w '$p' ] && echo WRITABLE || echo readonly")"
+done
+# The control for the block above: the Forge's own work tree IS writable. A
+# mask that refused everything would pass every line above.
+check "control:worktree-writable" writable "$(inmask "[ -w '$wt' ] && echo writable || echo readonly")"
 
-echo "=== permission configs read-only (Proofdelve ForgeOs-21f.5) ==="
-# Opening the real masked path for append exercises its RO_PATHS bind, but does
-# not write a byte. The stat check is the safety net for that no-write contract.
+echo "=== the codex config: readable, not writable ==="
 config_path="$HOME/.codex/config.toml"
-config_stat_before="$(stat -c '%d:%i:%s:%Y:%Z' "$config_path")"
-check "codex-config-append" 1 "$(bwrap "${mask[@]}" -- bash -c "exec 3>>'$config_path' 2>/dev/null; echo \$?")"
-config_stat_after="$(stat -c '%d:%i:%s:%Y:%Z' "$config_path")"
-check "codex-config-stat-unchanged" "$config_stat_before" "$config_stat_after"
-# Real read, not a stat: [ -s ] succeeds on a file you cannot open, and masks
-# on this host surface as EACCES (Warden finding 4, 21f.5 review). A regression
-# leaving the config unreadable would break every Codex launch — catch it here.
-check "codex-config-readable" readable "$(bwrap "${mask[@]}" -- bash -c "b=\$(wc -c < '$HOME/.codex/config.toml' 2>/dev/null) && [ \"\$b\" -gt 0 ] && echo readable || echo unreadable")"
-check "claude-settings-canary" 1 "$(bwrap "${mask[@]}" -- bash -c "printf x > '$wt/.claude/probe-canary' 2>/dev/null; echo \$?")"
+if [ -e "$config_path" ]; then
+  config_stat_before="$(stat -c '%d:%i:%s:%Y:%Z' "$config_path")"
+  # Opening for append exercises the read-only bind and writes nothing.
+  check "codex-config-append" 1 "$(inmask "exec 4>>'$config_path' 2>/dev/null; echo \$?")"
+  check "codex-config-stat-unchanged" "$config_stat_before" "$(stat -c '%d:%i:%s:%Y:%Z' "$config_path")"
+  # A real read: a config the session cannot open breaks every Codex launch.
+  check "codex-config-readable" readable "$(inmask "b=\$(wc -c < '$config_path' 2>/dev/null) && [ \"\$b\" -gt 0 ] && echo readable || echo unreadable")"
+else
+  echo "PROBE codex-config: $config_path absent on the host -> FAIL"; fail=1
+fi
 
 echo "=== env allow-list ==="
-echo "  names passed through: $(bwrap "${mask[@]}" -- bash -c 'env | cut -d= -f1 | sort | tr "\n" " "')"
+echo "  names passed through: $(inmask 'env | cut -d= -f1 | sort | tr "\n" " "')"
 
 echo
 [ $fail -eq 0 ] && echo "ALL MASK PROBES PASSED" || echo "MASK PROBES FAILED — see above"
