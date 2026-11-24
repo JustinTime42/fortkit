@@ -57,7 +57,10 @@ echo "MODE: worktree $wt"
 check "mask-runs" ran "$(inmask 'echo ran')"
 
 echo "=== secrets and credentials ==="
-check_unreadable "secret-decoy" "$(inmask "wc -c < '$secret' 2>/dev/null || echo unreadable")"
+# The decoy must be THERE inside the mask and read empty. A mask that hides the
+# whole checkout would otherwise read as one that masks the secret (the
+# Warden, finding 2): absent is a FAIL, not a pass.
+check_unreadable "secret-decoy" "$(inmask "[ -e '$secret' ] || { echo ABSENT-INSIDE-THE-MASK; exit 0; }; wc -c < '$secret' 2>/dev/null || echo unreadable")"
 # The lib leaves one file in ~/.ssh, known_hosts, so host keys stay pinned.
 # No key and no config may be there.
 check "ssh-dir-other-entries" 0 "$(inmask "ls -A '$HOME/.ssh' 2>/dev/null | grep -v -x known_hosts | wc -l")"
@@ -102,9 +105,10 @@ done
 echo "=== host-executed and constitutional paths are not writable ==="
 n=0
 while IFS= read -r h; do
-  n=$((n+1)); check "beads-hooks-dir-$n" readonly "$(inmask "[ -w '$h' ] && echo WRITABLE || echo readonly")"
+  n=$((n+1)); check "beads-hooks-dir-$n" readonly "$(inmask "[ -e '$h' ] || { echo ABSENT-INSIDE-THE-MASK; exit 0; }; [ -w '$h' ] && echo WRITABLE || echo readonly")"
 done < <(find "$root/.beads" -type d -name hooks 2>/dev/null)
 echo "  ($n hooks directories checked)"
+[ "$n" -ge 1 ] || { echo "PROBE beads-hooks-dir: no hooks directory under $root/.beads on the host; these run on the host and there should be at least one -> FAIL"; fail=1; }
 # The review-gated surface is read from forge.sh, not listed here: the
 # directories its `for gate1_dir in ...` line names (a fort with no factory has
 # no such line, and that is said), and bin/ where the lib binds it, which is a
@@ -124,7 +128,7 @@ fi
 if [ -f "$root/civ/covenant.md" ] && [ -d "$root/bin" ]; then held+=("$root/bin"); fi
 for p in "${held[@]}"; do
   [ -e "$p" ] || { echo "PROBE not-writable:$p: absent on the host -> FAIL"; fail=1; continue; }
-  check "not-writable:${p/#$HOME/\~}" readonly "$(inmask "[ -w '$p' ] && echo WRITABLE || echo readonly")"
+  check "not-writable:${p/#$HOME/\~}" readonly "$(inmask "[ -e '$p' ] || { echo ABSENT-INSIDE-THE-MASK; exit 0; }; [ -w '$p' ] && echo WRITABLE || echo readonly")"
 done
 # The control for the block above: the Forge's own work tree IS writable. A
 # mask that refused everything would pass every line above.

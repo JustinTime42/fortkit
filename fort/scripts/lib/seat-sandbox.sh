@@ -47,6 +47,27 @@
 
 # OUTPUT: sets the global array `mask` (consumers declare mask=() before sourcing).
 # shellcheck disable=SC2034  # mask is consumed by the sourcing script
+# fort_posture <root> -- THE ONE RULE FOR WHICH POSTURE IS IN EFFECT
+# (the Warden's finding 1 on fortkit-awlc 5e85d93+60b6a5e, 2026-11-24).
+# FORT_SANDBOX, when set, overrides the one word in fort/scripts/sandbox-posture;
+# with neither, the posture is full. Prints the word and judges nothing:
+# build_mask refuses an unknown one.
+#
+# Until this function there were two rules. build_mask let the variable
+# override the file. The launchers turned their secrets-only grants on when the
+# file OR the variable said secrets-only. So FORT_SANDBOX=full over a
+# secrets-only file built full masks while the Warden still ran with
+# bypassPermissions and Codex still ran with its own sandbox off: a posture
+# that is neither, and one the smokes and the probe would have mislabelled.
+# Every launcher, both smokes and the boundary probe now ask here.
+fort_posture() {
+  local fp_root="$1" fp="${FORT_SANDBOX:-}"
+  if [ -z "$fp" ] && [ -r "$fp_root/fort/scripts/sandbox-posture" ]; then
+    fp="$(head -1 "$fp_root/fort/scripts/sandbox-posture" | tr -d '[:space:]')"
+  fi
+  printf '%s\n' "${fp:-full}"
+}
+
 build_mask() {
   local seat="$1" root="$2"; shift 2
   # SANDBOX POSTURE (Overseer experiment, 2026-10-26, Regent docket
@@ -64,11 +85,7 @@ build_mask() {
   #                 ~/.config/gh ~/.docker ~/.config/git), and every caller
   #                 --mask-file (the Keep signing token, the deploy scripts).
   # Anything else is refused loudly: an unknown posture must not launch.
-  local posture="${FORT_SANDBOX:-}"
-  if [ -z "$posture" ] && [ -r "$root/fort/scripts/sandbox-posture" ]; then
-    posture="$(head -1 "$root/fort/scripts/sandbox-posture" | tr -d '[:space:]')"
-  fi
-  posture="${posture:-full}"
+  local posture; posture="$(fort_posture "$root")"
   case "$posture" in
     full|secrets-only) ;;
     *) echo "build_mask: unknown sandbox posture '$posture' (want full or secrets-only)" >&2; return 2 ;;

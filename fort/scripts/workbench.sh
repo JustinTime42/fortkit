@@ -277,7 +277,7 @@ main() {
   require_bwrap || exit $?
 
   local launch=(claude --model "$model" --append-system-prompt "$(wb_prompt "$bead" "$wt" "$model")")
-  if [ "$(head -1 "$REPO/fort/scripts/sandbox-posture" 2>/dev/null | tr -d '[:space:]')" = secrets-only ] || [ "${FORT_SANDBOX:-}" = secrets-only ]; then
+  if [ "$(fort_posture "$REPO")" = secrets-only ]; then
     launch+=(--append-system-prompt "SANDBOX POSTURE: secrets-only (Manyhalls ships the posture its machinery came with; Overseer decision 2026-11-18, fortkit-ttpk). The read-only binds still hold (fort/scripts, fort/profiles, .claude, .git/config and hooks, the airlock operations and approval stores). You have the network and a writable home; Docker is reachable and this fort's gate does not use it. Held now by these rules rather than by the kernel: never read .env* in any spelling, the Keep signing token, ~/.ssh, ~/.aws, ~/.azure or ~/.config/gh; never publish, release or act on an external account (charter gate 3); never bind-mount \$HOME, ~/.config, ~/.ssh, any .env* path or / into a container, never --privileged or --pid=host; no state-changing requests to third parties (standing order 14).")
   fi
   launch+=(--append-system-prompt "MAIN AT LAUNCH (Proofdelve ForgeOs-guue7; state: $wb_merge_state): $wb_merge_note")

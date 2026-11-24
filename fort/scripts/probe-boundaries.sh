@@ -300,16 +300,16 @@ fi
 # every verdict they produced would carry a mislabeled posture.
 t3_mask_ok=1
 seatlib="$root/fort/scripts/lib/seat-sandbox.sh"
-# THE POSTURE, resolved the way the lib resolves it (fortkit-awlc batch 2). In
+# THE POSTURE, asked of the lib's own fort_posture() (fortkit-awlc batch 2). In
 # `secrets-only` the lib leaves $HOME writable and /tmp shared, on the Overseer's
 # decision (the charter's posture note). Three checks below measure exactly
 # those two properties: tmp-isolation, warden-lock and atuin-rw. In `full` a
 # miss there is a regression and a FAIL. In `secrets-only` it is the posture
 # itself, so posture_gap() records it as a GAP: an open hole, stated, counted,
 # and not a failure of the suite. It is never recorded as a PASS.
-probe_posture="${FORT_SANDBOX:-}"
-[ -z "$probe_posture" ] && [ -r "$root/fort/scripts/sandbox-posture" ] && probe_posture="$(head -1 "$root/fort/scripts/sandbox-posture" | tr -d '[:space:]')"
-probe_posture="${probe_posture:-full}"
+# shellcheck disable=SC1090  # $seatlib is the fort's lib or the fixture knob's
+probe_posture="$( source "$seatlib" 2>/dev/null && fort_posture "$root" )"
+[ -n "$probe_posture" ] || probe_posture="UNREADABLE (the lib at $seatlib has no fort_posture)"
 case "$probe_posture" in full|secrets-only) ;; *) verdict T1 "posture" FAIL "unknown sandbox posture '$probe_posture' (the lib would refuse to launch)"; t3_mask_ok=0 ;; esac
 posture_gap() { # <label> <what full would call it> <what is open>
   if [ "$probe_posture" = secrets-only ]; then
@@ -507,7 +507,13 @@ else
       # writable (found 2026-11-24 by the forge-mask-suite). The block is read
       # out of the launcher and evaluated first; a build line that names the
       # array with no block to fill it refuses.
-      t3_g1="$(sed -n '/^gate1_ro=()/,/^# END MANYHALLS GATE-1 BIND/p' "$root/fort/scripts/forge.sh")"
+      # The END marker must be there before the range is cut: without it sed
+      # runs to the end of forge.sh, and this subshell would eval the launch
+      # itself (the Warden, finding 3: 324 lines with the marker removed).
+      t3_g1=""
+      if grep -qx '# END MANYHALLS GATE-1 BIND' "$root/fort/scripts/forge.sh"; then
+        t3_g1="$(sed -n '/^gate1_ro=()/,/^# END MANYHALLS GATE-1 BIND/p' "$root/fort/scripts/forge.sh")"
+      fi
       case "$t3_line" in
         *gate1_ro*) [ -n "$t3_g1" ] || { echo "forge.sh's build line names gate1_ro[] and the marked block that fills it was not found" >&2; exit 1; }
                     eval "$t3_g1" ;;
