@@ -307,7 +307,9 @@ seatlib="$root/fort/scripts/lib/seat-sandbox.sh"
 # miss there is a regression and a FAIL. In `secrets-only` it is the posture
 # itself, so posture_gap() records it as a GAP: an open hole, stated, counted,
 # and not a failure of the suite. It is never recorded as a PASS.
-# shellcheck disable=SC1090  # $seatlib is the fort's lib or the fixture knob's
+# The posture is asked of the FORT's lib: PROBE_FIXTURE_SEATLIB is applied
+# further down, so a fixture lib never decides which posture this run is in.
+# shellcheck disable=SC1090  # $seatlib is a path in a variable
 probe_posture="$( source "$seatlib" 2>/dev/null && fort_posture "$root" )"
 [ -n "$probe_posture" ] || probe_posture="UNREADABLE (the lib at $seatlib has no fort_posture)"
 case "$probe_posture" in full|secrets-only) ;; *) verdict T1 "posture" FAIL "unknown sandbox posture '$probe_posture' (the lib would refuse to launch)"; t3_mask_ok=0 ;; esac
@@ -810,6 +812,37 @@ if [ "$t3_mask_ok" -eq 1 ]; then
     # its own token path and that name was asserted from source. No Manyhalls
     # launcher names one; the lib's glob is the mechanism and the byte counts
     # above are its measurement.)
+    # ---- Code the HOST runs from the root checkout, outside fort/scripts ----
+    # (fortkit-awlc, audit of 2026-11-24, Overseer decision "3. yes".) A unit or
+    # a hook runs each of these UNMASKED: civ-keep.service runs civ/keep (the
+    # Keep holds the signing token), consolidate.timer runs the two
+    # consolidation scripts nightly and commits, and the Stop hook runs
+    # digest-hook.sh and what it calls in every session, unmasked ones included.
+    # A seat that can write one of them gets host execution at the next run.
+    # So in every posture the ROOT checkout's copies are read-only. A worktree's
+    # copies stay writable: that is where a bead changes them, and the change
+    # reaches the root by a reviewed landing. A path this fort does not have is
+    # skipped and counted, never passed.
+    hx_paths=("$root/civ/keep" "$root/civ/keep/server.mjs" "$root/scripts/consolidate-memory.mjs" "$root/scripts/consolidate-laurels.mjs"
+              "$root/scripts/digest-hook.sh" "$root/scripts/quiescent.sh" "$root/scripts/digest.sh" "$root/scripts/digest-transcript.sh")
+    for t3_l in mayor warden forge; do
+      case "$t3_l" in mayor) t3_m=("${mayor_mask[@]}") ;; warden) t3_m=("${warden_mask[@]}") ;; forge) t3_m=("${forge_mask[@]}") ;; esac
+      [ "${#t3_m[@]}" -gt 0 ] || { verdict T1 "host-executed:$t3_l" FAIL "no $t3_l mask to probe with"; continue; }
+      hx_open=""; hx_n=0; hx_absent=0
+      for hx in "${hx_paths[@]}"; do
+        [ -e "$hx" ] || { hx_absent=$((hx_absent+1)); continue; }
+        hx_n=$((hx_n+1))
+        hx_in=$(bwrap "${t3_m[@]}" -- bash -c "[ -e '$hx' ] || { echo absent; exit 0; }; [ -w '$hx' ] && echo WRITABLE || echo readonly" 2>/dev/null)
+        [ "$hx_in" = readonly ] || hx_open="$hx_open ${hx#"$root"/}=${hx_in:-empty}"
+      done
+      if [ "$hx_n" -eq 0 ]; then
+        verdict T1 "host-executed:$t3_l" NOTE "none of the ${#hx_paths[@]} host-executed paths exists in this fort"
+      elif [ -z "$hx_open" ]; then
+        verdict T1 "host-executed:$t3_l" PASS "$hx_n host-executed paths of the root checkout read-only in the $t3_l mask ($hx_absent not present in this fort)"
+      else
+        verdict T1 "host-executed:$t3_l" FAIL "not read-only in the $t3_l mask:$hx_open -- a unit or hook runs these unmasked on the host"
+      fi
+    done
     # ---- The atuin history DB, from each posture (Proofdelve ForgeOs-sa14) ----
     # The Overseer's global ~/.claude/settings.json runs `atuin hook claude-code`
     # as a PreToolUse hook; only the Mayor loads user settings (the Warden uses

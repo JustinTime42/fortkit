@@ -45,8 +45,6 @@
 # Each seat type keeps its OWN runtime's credentials readable — masking them
 # breaks the launch outright — and masks the other runtime's entirely.
 
-# OUTPUT: sets the global array `mask` (consumers declare mask=() before sourcing).
-# shellcheck disable=SC2034  # mask is consumed by the sourcing script
 # fort_posture <root> -- THE ONE RULE FOR WHICH POSTURE IS IN EFFECT
 # (the Warden's finding 1 on fortkit-awlc 5e85d93+60b6a5e, 2026-11-24).
 # FORT_SANDBOX, when set, overrides the one word in fort/scripts/sandbox-posture;
@@ -68,6 +66,8 @@ fort_posture() {
   printf '%s\n' "${fp:-full}"
 }
 
+# OUTPUT: sets the global array `mask` (consumers declare mask=() before sourcing).
+# shellcheck disable=SC2034  # mask is consumed by the sourcing script
 build_mask() {
   local seat="$1" root="$2"; shift 2
   # SANDBOX POSTURE (Overseer experiment, 2026-10-26, Regent docket
@@ -350,6 +350,36 @@ build_mask() {
         [ -e "$hostpath" ] && RO_PATHS+=("$hostpath")
       done
     fi
+  done
+
+  # CODE THE HOST RUNS FROM THE ROOT CHECKOUT, OUTSIDE fort/scripts (fortkit-awlc,
+  # the audit of 2026-11-24; the Overseer's decision recorded there: "3. yes").
+  # The charter says every host-executed script is read-only to every seat.
+  # Measured that day it was not: the Mayor's mask could write all of these and
+  # the Forge's could write the scripts. Each is run UNMASKED by a unit or a
+  # hook, so a seat that can write one gets host execution at its next run:
+  #   civ/keep            civ-keep.service runs the Civ Keep from here, and the
+  #                       Keep holds the signing token. The capital only, so it
+  #                       is guarded on the covenant like bin/ above.
+  #   scripts/consolidate-*.mjs   consolidate.timer runs them nightly and commits.
+  #   scripts/digest-hook.sh and the three scripts it calls   the Stop hook in
+  #                       .claude/settings.json, which fires in unmasked sessions.
+  # ROOT CHECKOUT ONLY, on purpose, unlike the per-tree loop above: a bead that
+  # changes one of these is built in a WORKTREE, whose copies stay writable, and
+  # reaches the root by a landing the fleet makes on the host. THE COST, the same
+  # one fort/scripts carries: a masked seat cannot edit these in the root
+  # checkout, and cannot check out or merge a commit there that changes one (git
+  # replaces a file by unlinking it, and a read-only bind refuses that).
+  # WHAT THIS DOES NOT CLOSE, and no bind can: the host verifier runs the tests
+  # and scripts of whatever tree it is given, so code a seat wrote still runs
+  # unmasked there. That is what review before landing is for.
+  # fort/scripts/probe-boundaries.sh measures this list from each posture (the
+  # host-executed rows); keep the two lists the same.
+  local hx
+  if [ -e "$root/civ/covenant.md" ] && [ -e "$root/civ/keep" ]; then RO_PATHS+=("$root/civ/keep"); fi
+  for hx in "$root/scripts/consolidate-memory.mjs" "$root/scripts/consolidate-laurels.mjs" \
+            "$root/scripts/digest-hook.sh" "$root/scripts/quiescent.sh" "$root/scripts/digest.sh" "$root/scripts/digest-transcript.sh"; do
+    if [ -e "$hx" ]; then RO_PATHS+=("$hx"); fi
   done
 
   case "$seat" in
