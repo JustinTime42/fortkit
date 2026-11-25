@@ -1033,8 +1033,12 @@ run_step forge-gate1-mask-harness mask_harness_step forge-gate1-mask-harness "$r
 # mask-harness (fortkit-awlc, 2026-11-24): the lib's own assertion set on a
 # fixture fort, including the rename rows (A4c) that show a directory holding a
 # read-only path cannot be moved aside. It existed since August and no gate ran
-# it; the parent-rename hole it now measures stood the whole time. It reads the
-# real ~/.claude files with zero-byte appends and permission tests only.
+# it; the parent-rename hole it now measures stood the whole time. What it
+# touches on the host: a fixture fort of its own under ~/dev, removed on exit;
+# the real ~/.claude files, with zero-byte appends and permission tests only;
+# one probe file created and removed in ~/.claude/teams; and one transient
+# `systemd-run --user` unit, which is its control that the host CAN reach the
+# user manager (a host that cannot would fail that row).
 if [ -f "$repo_root/scripts/mask-harness.sh" ]; then
   run_step mask-harness mask_harness_step mask-harness "$repo_root/fort/scripts/lib/seat-sandbox.sh"
 fi

@@ -13,7 +13,21 @@
 set -uo pipefail
 
 LIB="${1:?usage: e2-harness.sh <candidate-lib> [probe-root]}"
-ROOT="${2:-$HOME/dev/e2probe}"
+# THE FIXTURE IS THIS RUN'S OWN (the Warden's finding 2 on 95874e1). It used
+# to be the fixed path ~/dev/e2probe, removed at the start of each run and
+# never afterwards: harmless while a person ran this by hand, and a collision
+# once the verifier ran it, because the nightly, the fleet and a sitting can
+# each be verifying at once. Now a fresh directory per run, under ~/dev because
+# /tmp is private inside a mask in the full posture, removed on exit. A second
+# argument still names a fixed root for a person who wants to look at it
+# afterwards; that one is left in place.
+if [ -n "${2:-}" ]; then
+  ROOT="$2"
+else
+  FXDIR="$(mktemp -d "$HOME/dev/.mask-harness.XXXXXX")" || { echo "HARNESS REFUSES: cannot make a fixture under ~/dev" >&2; exit 3; }
+  ROOT="$FXDIR/e2probe"
+  trap 'chmod -R u+w "$FXDIR" 2>/dev/null; rm -rf "$FXDIR"' EXIT
+fi
 WTS="$ROOT-worktrees"
 PASS=0; FAIL=0; declare -a FAILURES=()
 
