@@ -40,6 +40,8 @@ SKIP = {
     "scripts/merge-event-check.sh", "scripts/control-fingerprints.json", "scripts/control-lint.mjs",
     # measures a bind that exists only in Manyhalls's forge.sh (the capital's gate-1 surface)
     "scripts/forge-gate1-mask-harness.sh",
+    # measures civ/scripts/herald.sh, which only the capital has
+    "scripts/herald-launcher-harness.sh",
 }
 GATE1 = "bin/*|civ/*|templates/*|schema/*|skills/*"
 GATE1_RE = r"bin/\*|civ/\*|templates/\*|schema/\*|skills/\*"

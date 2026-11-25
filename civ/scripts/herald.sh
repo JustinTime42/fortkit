@@ -182,6 +182,14 @@ fi
 
 "$civemit" session.start "Halric begins $([ "${HERALD_SMOKE:-0}" = "1" ] && echo a boundary smoke-test || echo "the $mode run") ($model)" -a halric -s herald -p "{\"model\":\"$model\",\"mode\":\"$mode\"}"
 
+# WHAT THE REPORT WAS BEFORE THIS SESSION (fortkit-awlc, audit 2026-11-24 item
+# 5.1). The report path is fixed per day and mode, so a file can already be
+# there: the crash stub an earlier rung wrote, or an earlier run's real report.
+# The gate below used to ask only "is the file non-empty", so a session that
+# died without writing was recorded as "report filed" whenever anything was
+# already on disk, and the ladder's second rung could never be seen to fail.
+report_pre="$(sha256sum "$report" 2>/dev/null | cut -d' ' -f1 || true)"
+
 set +e
 (cd "$root" && printf '%s' "$prompt" | bwrap "${mask[@]}" 9>&- -- claude -p \
   --model "$model" \
@@ -199,6 +207,24 @@ if [ "${HERALD_SMOKE:-0}" = "1" ]; then
   echo "--- herald.sh: smoke run, no report required by design. Log: $log"
   rm -f "$vault/smoke-canary.md" "$root/civ/handoffs/herald-smoke-fallback.md"
   grep -q '^SMOKE-COMPLETE' "$log" || { echo "--- herald.sh: SMOKE-COMPLETE marker absent — read $log before trusting any probe"; exit 65; }
+  # THE SMOKE IS SCORED (fortkit-awlc, audit 2026-11-24 item 5.2). Until now the
+  # marker above was the whole gate, so a run in which a probe printed FAIL, or
+  # never printed at all, still exited 0. Every probe the prompt asks for owes
+  # a line; a missing one is INCOMPLETE (65, as a missing marker is) and a FAIL
+  # is a failed smoke (exit 1), with the lines named either way.
+  smoke_pass=0; smoke_fail_lines=""; smoke_missing=""
+  for smoke_n in 1 2 3 4 5 6 7 8 9 10; do
+    smoke_line="$(grep -E "^PROBE $smoke_n: (PASS|FAIL)" "$log" | tail -1 || true)"
+    case "$smoke_line" in
+      "PROBE $smoke_n: PASS"*) smoke_pass=$((smoke_pass + 1)) ;;
+      "PROBE $smoke_n: FAIL"*) smoke_fail_lines="$smoke_fail_lines
+$smoke_line" ;;
+      *) smoke_missing="$smoke_missing $smoke_n" ;;
+    esac
+  done
+  echo "--- herald.sh: SMOKE TABLE — $smoke_pass PASS of 10, missing [${smoke_missing# }]$([ -n "$smoke_fail_lines" ] && printf ', FAIL lines:%s' "$smoke_fail_lines")"
+  if [ -n "$smoke_missing" ]; then echo "--- herald.sh: SMOKE INCOMPLETE — probes [${smoke_missing# }] printed no PASS or FAIL line"; exit 65; fi
+  if [ -n "$smoke_fail_lines" ]; then echo "--- herald.sh: SMOKE FAILED — a probe reported FAIL; read $log"; exit 1; fi
   exit 0
 fi
 
@@ -213,6 +239,19 @@ fi
 # still emits incident + session.end naming the vault and exits 66: the maiden
 # run proved an unguarded stub write dies under set -e with nothing from the
 # launcher on the record at all.
+report_now="$(sha256sum "$report" 2>/dev/null | cut -d' ' -f1 || true)"
+if [ -s "$report" ] && [ -n "$report_pre" ] && [ "$report_now" = "$report_pre" ]; then
+  # A report was on disk before this session and is byte-identical now: this
+  # session wrote nothing. The file is an earlier run's (a real report or a
+  # crash stub) and is left exactly as it was; overwriting it with a new stub
+  # would destroy a record. Exit 65 so the ladder engages, as for any crash.
+  "$civemit" incident "Herald run filed NO report: the report on disk is an earlier run's and is unchanged (claude exit $rc) — relaunch, this was not a quiet morning" \
+    -a halric -s herald -p "{\"exit\":$rc,\"log\":\"$log\",\"report\":\"$report\",\"report_unchanged\":true}"
+  "$civemit" session.end "Halric's session ended without a report (exit $rc); an earlier run's file is on disk, unchanged" -a halric -s herald -p "{\"exit\":$rc,\"report_filed\":false}"
+  echo "--- herald.sh: NO REPORT FILED by this session — $report is an earlier run's and was left as it was"
+  echo "--- claude exit $rc. Log: $log  Errors: $log.err"
+  exit 65
+fi
 if [ ! -s "$report" ]; then
   stub_ok=1
   {
