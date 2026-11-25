@@ -68,10 +68,12 @@ fi
 
 # Part 2: no second rule. Comment lines are not code; the lib is the one place
 # allowed to read either source.
+# No line is exempted for mentioning fort_posture (the Warden, finding 2 on
+# 6096a97): a line that calls it AND tests FORT_SANDBOX itself is the second
+# rule this part exists to catch.
 offenders="$(grep -rnE 'sandbox-posture|FORT_SANDBOX' "$dir" --include='*.sh' 2>/dev/null \
   | grep -v "^$dir/lib/seat-sandbox.sh:" \
-  | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' \
-  | grep -vE 'fort_posture|PROBE_POSTURE' || true)"
+  | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' || true)"
 if [ -z "$offenders" ]; then
   ok "nothing under $(basename "$dir") but the lib reads the posture file or FORT_SANDBOX for itself"
 else
