@@ -1,3 +1,5 @@
+> **RETIRED 2026-11-24** by the Overseer's decision (recorded on `fortkit-awlc`: "5. yes retire these"), moved here from `docs/specs/herald.md` by the Regent. This is the 2026-08-04 draft. The applied and since-amended text is `civ/law/herald.md`, which governs. Kept as a record; nothing below was edited. Finding: `docs/assessments/2026-11-24-manyhalls-gold-standard-audit.md`, section 4.
+
 # The Herald: editorial spec
 
 Status: DRAFT pending Overseer approval (fortkit-r6x.2).

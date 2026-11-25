@@ -1,3 +1,5 @@
+> **RETIRED 2026-11-24** by the Overseer's decision (recorded on `fortkit-awlc`: "5. yes retire these"), moved here from `docs/specs/enforcement-vocabulary.md` by the Regent. It governed the control register, which was retired to `fort/annals/controls-retired-2026-11-18/` at the re-founding; every live citation in it points at files that were rewritten or removed then. Kept as a record; nothing below was edited. Finding: `docs/assessments/2026-11-24-manyhalls-gold-standard-audit.md`, section 4.
+
 # The enforcement vocabulary — what kind of thing each control is
 
 Status: DRAFT — pending Overseer approval on fortkit-4ah3.1 (gate-1).

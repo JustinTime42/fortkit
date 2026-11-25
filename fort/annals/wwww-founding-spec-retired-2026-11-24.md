@@ -1,3 +1,5 @@
+> **RETIRED 2026-11-24** by the Overseer's decision (recorded on `fortkit-awlc`: "5. yes retire these"), moved here from `docs/specs/wwww-founding.md` by the Regent. This is the founding spec of another fort, Kithmason, whose own copy is `docs/specs/founding.md` in its repository. It never described Manyhalls. Kept as a record; nothing below was edited. Finding: `docs/assessments/2026-11-24-manyhalls-gold-standard-audit.md`, section 4.
+
 # Founding spec — the Who Want Where When fort
 
 **Status: DRAFT, awaiting the Overseer's approval.** Written 2026-09-02 by Emrith

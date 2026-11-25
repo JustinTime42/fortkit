@@ -1,3 +1,5 @@
+> **RETIRED 2026-11-24** by the Overseer's decision (recorded on `fortkit-awlc`: "5. yes retire these"), moved here from `docs/specs/researcher-seat.md` by the Regent. The Researcher seat was retired at the re-founding of 2026-11-18 (`fort/charter.md`). What it protected against is now held by the agent allowlist (`fort/scripts/agent-gate.sh`) and the `web-research` agent. Kept as a record; nothing below was edited. Finding: `docs/assessments/2026-11-24-manyhalls-gold-standard-audit.md`, section 4.
+
 # The Researcher seat: read-only research, separated from action
 
 Status: DRAFT — pending Overseer approval on fortkit-vhk.1 (gate-1).
