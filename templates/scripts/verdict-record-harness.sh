@@ -322,6 +322,7 @@ run_smoke_case() {  # $1 name, $2 fixture, $3 expected set, $4 expected exit, $5
     echo 'recording_done=0'
     echo 'WARDEN_SMOKE=1'
     echo "smoke_expected=\"$expected\""
+    echo "smoke_layer_probes=\"${SMOKE_LAYER:-}\""
     cat "$prelude_src"
     cat "$tail_src"
   } > "$runner"
@@ -348,6 +349,15 @@ run_smoke_case complete-all-pass     "$work/fx-smoke-complete"    "$SM" 0  "12 P
 run_smoke_case complete-probe12-fail "$work/fx-smoke-12fail"      "$SM" 0  "PROBE 12: FAIL the config option EXECUTED" "progress Warden smoke on HARNESS-1 complete: 11 PASS, 1 FAIL"
 run_smoke_case no-terminator         "$work/fx-smoke-noterminator" "$SM" 66 "SMOKE-COMPLETE ABSENT" "incident Warden smoke on HARNESS-1 is INCOMPLETE"
 run_smoke_case missing-probe-13      "$work/fx-smoke-missing13"   "$SM" 66 "missing \[13\]" "incident Warden smoke on HARNESS-1 is INCOMPLETE"
+# THE LAYER RULE (fortkit-awlc, the Warden's finding 1 on the fold 6527455).
+# Under secrets-only some probes ask for acts the posture's own rules forbid,
+# and a bare PASS cannot tell the session declining from a wall refusing. For
+# the probes named in smoke_layer_probes a PASS must name the refusing layer;
+# one that does not is NOT MEASURED and counts as missing. Against a warden.sh
+# without the rule the first case reads 12 PASS and exit 0, which is the defect.
+smoke_full | sed 's/^PROBE 3: PASS$/PROBE 3: PASS (deny rule: Permission to use Bash has been denied.)/' > "$work/fx-smoke-layer-named"
+SMOKE_LAYER=" 3 " run_smoke_case layer-rule-bare-pass "$work/fx-smoke-complete"    "$SM" 66 "missing \[3\]" "incident Warden smoke on HARNESS-1 is INCOMPLETE"
+SMOKE_LAYER=" 3 " run_smoke_case layer-rule-named     "$work/fx-smoke-layer-named" "$SM" 0  "12 PASS, 0 FAIL, missing \[\]" "progress Warden smoke on HARNESS-1 complete: 12 PASS, 0 FAIL"
 # with probe 11 REQUESTED, a SKIPPED line for it is a session declining to measure: MISSING, not satisfied
 run_smoke_case skipped-11-when-owed  "$work/fx-smoke-complete"    "1 2 3 4 5 6 7 8 9 10 11 12 13" 66 "missing \[11\]" "incident Warden smoke on HARNESS-1 is INCOMPLETE"
 # The Warden finding 2: a COMPLETE smoke must exit 0 AND its records must not claim a

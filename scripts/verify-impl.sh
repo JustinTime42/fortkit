@@ -1030,6 +1030,18 @@ mask_harness_step() {  # $1 harness basename, $2 the launcher it measures
 }
 run_step workbench-mask-harness mask_harness_step workbench-mask-harness "$repo_root/fort/scripts/workbench.sh"
 run_step forge-gate1-mask-harness mask_harness_step forge-gate1-mask-harness "$repo_root/fort/scripts/forge.sh"
+# herald-launcher-harness (fortkit-awlc, audit 2026-11-24 items 5.1 and 5.2): the
+# Herald launcher's report gate and smoke gate, driven with a stub session in a
+# fixture civilization under the real mask. It builds a mask, so it runs on the
+# host and reads NOT CHECKED inside a seat mask. Only a fort that hosts the
+# civilization layer has the launcher.
+if [ -f "$repo_root/civ/scripts/herald.sh" ]; then
+  run_step herald-launcher-harness mask_harness_step herald-launcher-harness "$repo_root/civ/scripts/herald.sh"
+fi
+# posture-rule-harness (fortkit-awlc, the Warden's finding 3 on 6527455): the
+# lib's fort_posture() is the one rule for which sandbox posture is in effect,
+# and nothing else under fort/scripts decides it. No mask is built.
+run_step posture-rule-harness bash "$(harness_path posture-rule-harness)" "$repo_root/fort/scripts"
 # branch-reaper-harness (Proofdelve ForgeOs-043u item A, from the Warden's finding 1 on
 # Proofdelve ForgeOs-u1m3: "Until wired, the harness exists and nothing runs it"). It landed
 # with u1m3 and nothing executed it for two days, for the same reason the sweep
