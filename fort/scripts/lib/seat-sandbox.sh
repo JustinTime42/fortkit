@@ -759,6 +759,60 @@ build_mask() {
   # ~/.ssh/known_hosts re-bind (Proofdelve ForgeOs-q6m). (The ~/.codex/auth.json re-bind
   # was the second until fortkit-52vf.10 retired it with the tmpfs it was
   # compensating for.)
+  # ANCESTOR PINS (fortkit-awlc, 2026-11-24; the Warden's finding 1 on dc2b26e,
+  # and the parent case fortkit-x9ou left open in August). A read-only bind
+  # protects a path and not the directory that holds it. Measured by her with
+  # this lib in both postures: from the Mayor's mask
+  #     mv scripts scripts.aside; mkdir scripts; echo X > scripts/digest-hook.sh
+  # succeeded, and the host then saw X at the path a hook runs. The same worked
+  # for fort/ (so for fort/scripts, which Shape B made a mount point while its
+  # parent stayed a plain directory) and for civ/, and by reading for .git/.
+  # A mount point cannot be renamed. So every directory BETWEEN a writable tree's
+  # root and a protected path inside it is bound onto itself, read-write: its
+  # contents stay exactly as writable as before, and the directory can no longer
+  # be moved aside. The tree's root is already a mount point (RW_PATHS above).
+  # WHAT IS PINNED: the ancestors of RO_PATHS, of the caller's extra read-only
+  # paths, and of every .beads hooks directory, inside each writable tree. Also
+  # the directory of each masked Keep or feedback token and the config directory
+  # above it: the host trusts those files by path, a seat cannot read a masked
+  # token, and without the pin it could move the directory aside and put its
+  # own token there. Not under $HOME in full, where both are read-only already
+  # and a read-write bind would open what the posture closes.
+  # ORDER: after the RW grants, shortest path first, and BEFORE every read-only
+  # bind and mask below, which must stack over their pinned parents.
+  # THE COST: a rename ACROSS a pinned directory's edge fails with "Invalid
+  # cross-device link" (git mv between scripts/ and src/, for one); mv(1) copies
+  # instead. Renames inside one directory are unaffected.
+  # scripts/mask-harness.sh measures it by trying the rename on a fixture.
+  local pin_src pin_tr pin_anc pin_all=""
+  local -a pin_hooks=()
+  for pin_tr in "${rw_trees[@]}"; do
+    while IFS= read -r pin_src; do pin_hooks+=("$pin_src"); done \
+      < <(find "$pin_tr/.beads" -type d -name hooks 2>/dev/null)
+  done
+  for pin_src in "${RO_PATHS[@]}" "${extra_ro[@]}" "${pin_hooks[@]}"; do
+    [ -n "$pin_src" ] && [ -e "$pin_src" ] || continue
+    for pin_tr in "${rw_trees[@]}"; do
+      case "$pin_src" in "$pin_tr"/*) ;; *) continue ;; esac
+      pin_anc="$(dirname "$pin_src")"
+      while [ "$pin_anc" != "$pin_tr" ] && [ "${pin_anc#"$pin_tr"/}" != "$pin_anc" ]; do
+        pin_all="$pin_all$pin_anc"$'\n'
+        pin_anc="$(dirname "$pin_anc")"
+      done
+    done
+  done
+  for pin_src in "${MASK_FILES[@]}"; do
+    case "${pin_src##*/}" in signing-token|keep-signing-token|feedback-read-token) ;; *) continue ;; esac
+    [ -e "$pin_src" ] || continue
+    # The token's own directory and the config directory above it. Skipped
+    # under $HOME in full, where both are read-only already.
+    if [ "$posture" != secrets-only ]; then case "$pin_src" in "$HOME"/*) continue ;; esac; fi
+    pin_anc="$(dirname "$pin_src")"
+    pin_all="$pin_all$(dirname "$pin_anc")"$'\n'"$pin_anc"$'\n'
+  done
+  while IFS= read -r pin_anc; do
+    [ -n "$pin_anc" ] && [ -d "$pin_anc" ] && [ ! -L "$pin_anc" ] && mask+=(--bind "$pin_anc" "$pin_anc")
+  done < <(printf '%s' "$pin_all" | awk 'NF && !seen[$0]++ { print length($0) "\t" $0 }' | sort -n | cut -f2-)
   local p
   for p in "${RO_PATHS[@]}"; do [ -e "$p" ] && mask+=(--ro-bind "$p" "$p"); done
   # RW_CARVE: writable subdirectories INSIDE a read-only path (the project

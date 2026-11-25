@@ -42,6 +42,9 @@ mkfixture() {  # $1 tree
   echo 'echo x' > "$1/fort/scripts/x.sh"; echo '{}' > "$1/fort/profiles/p.json"; echo '{}' > "$1/.claude/settings.json"
   printf 'FIXTURE-NOT-A-SECRET\n' > "$1/.env.staging.local"
   echo src > "$1/src/a.txt"
+  # a host-executed script the lib binds read-only in the ROOT checkout, so
+  # scripts/ is a directory with something protected inside it (the rename rows)
+  printf '#!/bin/bash\n' > "$1/scripts/digest-hook.sh"
 }
 mkfixture "$root"; mkfixture "$wt"; mkfixture "$other"; git -C "$root" init -q
 mkdir -p "$fx/cfg/civ-keep"; printf 'FIXTURE-TOKEN\n' > "$fx/cfg/civ-keep/signing-token"
@@ -84,6 +87,21 @@ echo "claude_wt_w=$(can "$w/.claude/settings.json")"
 echo "wt_src_w=$(can "$w/src/a.txt")"
 echo "other_src_w=$(can "$o/src/a.txt")"
 echo "marker=${FORT_MASKED:-}:${BEADS_ACTOR:-}"
+# THE RENAME ROWS (fortkit-awlc, the Warden's finding 1 on dc2b26e). A read-only
+# bind protects a path, not the directory holding it: before the lib pinned the
+# ancestors, `mv scripts scripts.aside; mkdir scripts` put a seat's own file at
+# a path the host runs. Each directory that holds something protected must
+# refuse to be renamed. A rename that succeeds is undone at once, here, so the
+# fixture is whole for every later row; src/ holds nothing protected and is the
+# control: it MUST move, or "refused" would be true of a mask that refuses all.
+mvtest() { if mv "$1" "$1.aside" 2>/dev/null; then mv "$1.aside" "$1" 2>/dev/null; echo moved; else echo refused; fi; }
+echo "ren_fort=$(mvtest "$r/fort")"
+echo "ren_scripts=$(mvtest "$r/scripts")"
+echo "ren_git=$(mvtest "$r/.git")"
+echo "ren_wt_fort=$(mvtest "$w/fort")"
+echo "ren_tokdir=$(mvtest "$(dirname "$t")")"
+echo "ren_src=$(mvtest "$r/src")"
+echo "scripts_still_w=$( ( : > "$r/scripts/.pin-probe" ) 2>/dev/null && rm -f "$r/scripts/.pin-probe" && echo yes || echo no)"
 INMASK
 
 probe() {  # $1 subject file, $2 posture -> key=value lines from inside the mask
@@ -109,6 +127,13 @@ for posture in full secrets-only; do
   check "[$posture] .env in the session worktree reads empty" "$(val "$out" env_wt)" 0
   check "[$posture] .env by another spelling reads empty" "$(val "$out" env_spelling)" 0
   check "[$posture] the Keep signing token reads empty" "$(val "$out" token)" 0
+  check "[$posture] fort/ (holding fort/scripts) cannot be renamed aside" "$(val "$out" ren_fort)" refused
+  check "[$posture] scripts/ (holding a host-executed script) cannot be renamed aside" "$(val "$out" ren_scripts)" refused
+  check "[$posture] .git/ (holding config and hooks) cannot be renamed aside" "$(val "$out" ren_git)" refused
+  check "[$posture] the session worktree's fort/ cannot be renamed aside" "$(val "$out" ren_wt_fort)" refused
+  check "[$posture] the signing token's directory cannot be renamed aside" "$(val "$out" ren_tokdir)" refused
+  check "[$posture] CONTROL: src/, which holds nothing protected, CAN be renamed" "$(val "$out" ren_src)" moved
+  check "[$posture] CONTROL: a file can still be created in the pinned scripts/" "$(val "$out" scripts_still_w)" yes
   for d in .ssh .aws .azure .config/gh; do
     k="dir_${d//[.\/]/_}"
     if [ ! -d "$HOME/$d" ]; then echo "SKIP  [$posture] ~/$d absent on this host, so no mask can be shown for it"; skip=$((skip+1)); continue; fi

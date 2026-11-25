@@ -825,6 +825,14 @@ mask_harness_step() {  # $1 harness basename, $2 the launcher it measures
   bash "$(harness_path "$1")" "$2"
 }
 run_step workbench-mask-harness mask_harness_step workbench-mask-harness "$repo_root/fort/scripts/workbench.sh"
+# mask-harness (fortkit-awlc, 2026-11-24): the lib's own assertion set on a
+# fixture fort, including the rename rows (A4c) that show a directory holding a
+# read-only path cannot be moved aside. It existed since August and no gate ran
+# it; the parent-rename hole it now measures stood the whole time. It reads the
+# real ~/.claude files with zero-byte appends and permission tests only.
+if [ -f "$repo_root/scripts/mask-harness.sh" ]; then
+  run_step mask-harness mask_harness_step mask-harness "$repo_root/fort/scripts/lib/seat-sandbox.sh"
+fi
 # herald-launcher-harness (fortkit-awlc, audit 2026-11-24 items 5.1 and 5.2): the
 # Herald launcher's report gate and smoke gate, driven with a stub session in a
 # fixture civilization under the real mask. It builds a mask, so it runs on the

@@ -45,6 +45,11 @@ build_fixture() {
   printf '{}\n'            > "$ROOT/civ/profiles/regent.json"
   printf '# covenant\n'    > "$ROOT/civ/covenant.md"
   printf 'work\n'          > "$ROOT/src/app.ts"
+  # host-executed code outside fort/scripts (fortkit-awlc): the lib binds these
+  # read-only in the root checkout, which makes scripts/ and civ/ directories
+  # with something protected inside them (A4c)
+  printf '#!/bin/bash\n'   > "$ROOT/scripts/digest-hook.sh"; chmod +x "$ROOT/scripts/digest-hook.sh"
+  mkdir -p "$ROOT/civ/keep"; printf '// probe keep\n' > "$ROOT/civ/keep/server.mjs"
 
   # Secret canaries. Each has a KNOWN nonzero byte count on the host; each must
   # read ZERO bytes inside the mask. The first is the canonical spelling; the
@@ -205,6 +210,22 @@ assert_ro        "A5 lib/seat-sandbox.sh not writable"  "$ROOT/fort/scripts/lib/
 # DIRECTORY was not, so a seat could rename fort/scripts aside and have
 # ~/.local/bin/mayor exec its replacement on the host, unmasked (fortkit-x9ou).
 assert_dir_immovable "A4b fort/scripts DIRECTORY not renamable" "$ROOT/fort/scripts"
+# A4c — THE PARENT CASE x9ou LEFT OPEN (fortkit-awlc, the Warden's finding 1 on
+# dc2b26e, 2026-11-24). A4b made fort/scripts a mount point; its PARENT stayed a
+# plain directory, so `mv fort fort.aside; mkdir -p fort/scripts` still handed
+# the host a seat's launcher. The same held for every directory holding a
+# read-only path. The lib now binds each such ancestor onto itself.
+assert_dir_immovable "A4c fort/ (holds fort/scripts) not renamable"            "$ROOT/fort"
+assert_dir_immovable "A4c .git/ (holds config and hooks) not renamable"        "$ROOT/.git"
+assert_dir_immovable "A4c civ/ (holds civ/scripts, civ/keep) not renamable"    "$ROOT/civ"
+assert_dir_immovable "A4c scripts/ (holds host-executed scripts) not renamable" "$ROOT/scripts"
+assert_ro            "A4c scripts/digest-hook.sh (host-executed) read-only"    "$ROOT/scripts/digest-hook.sh"
+assert_ro            "A4c civ/keep/server.mjs (host-executed) read-only"       "$ROOT/civ/keep/server.mjs"
+# The control: src/ holds nothing protected and MUST be renamable, or every
+# "rename refused" above would be true of a mask that refuses all renames.
+out="$(inmask "mv '$ROOT/src' '$ROOT/src.moved' >/dev/null 2>&1 && mv '$ROOT/src.moved' '$ROOT/src' && echo MOVED-AND-BACK || echo REFUSED")"
+if [ "$out" = MOVED-AND-BACK ] && [ -d "$ROOT/src" ]; then ok "A4c CONTROL: src/ (nothing protected) IS renamable" "moved and moved back"
+else bad "A4c CONTROL: src/ is renamable" "$out"; [ -d "$ROOT/src" ] || { mv "$ROOT/src.moved" "$ROOT/src" 2>/dev/null; [ -d "$ROOT/src" ] || { echo "  ****  FIXTURE RESTORE FAILED: $ROOT/src. ABORTING." >&2; exit 3; }; }; fi
 # A6 — INVERTED BY SHAPE B. This asserted the disclosed new-file hole was OPEN.
 # There is no hole now: the directory is a single read-only bind again.
 assert_no_newfile "A6 SHAPE B: no new file in fort/scripts"    "$ROOT/fort/scripts"
